@@ -99,11 +99,40 @@ public class OllamaProvider : IAiProvider, IDisposable
                 ChatRole.System => "system",
                 _ => "user"
             };
-            messages.Add(new JsonObject
+
+            var imageAttachments = msg.Attachments
+                .Where(a => a.Type == AttachmentType.Image)
+                .ToList();
+            var textAttachments = msg.Attachments
+                .Where(a => a.Type == AttachmentType.TextFile)
+                .ToList();
+
+            // Append text file contents inline
+            var textContent = msg.Content;
+            foreach (var att in textAttachments)
+            {
+                var fileText = Encoding.UTF8.GetString(att.Data);
+                textContent += $"\n\n[File: {att.FileName}]\n{fileText}";
+            }
+
+            var msgObj = new JsonObject
             {
                 ["role"] = role,
-                ["content"] = msg.Content
-            });
+                ["content"] = textContent
+            };
+
+            // Ollama uses "images" field for base64 image data
+            if (imageAttachments.Count > 0)
+            {
+                var images = new JsonArray();
+                foreach (var att in imageAttachments)
+                {
+                    images.Add(Convert.ToBase64String(att.Data));
+                }
+                msgObj["images"] = images;
+            }
+
+            messages.Add(msgObj);
         }
 
         var body = new JsonObject

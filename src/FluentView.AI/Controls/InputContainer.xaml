@@ -5,39 +5,52 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d">
+    xmlns:local="using:FluentView.AI.Controls"
+    mc:Ignorable="d"
+    AllowDrop="True"
+    DragOver="OnDragOver"
+    Drop="OnDrop">
 
-    <Grid Padding="12" ColumnSpacing="8">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="Auto" />
-        </Grid.ColumnDefinitions>
+    <Grid Padding="12" RowSpacing="4">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
 
-        <Button x:Name="AttachButton"
-                Grid.Column="0"
-                VerticalAlignment="Bottom"
-                Style="{StaticResource SubtleButtonStyle}"
-                ToolTipService.ToolTip="Attach file"
-                IsEnabled="False">
-            <FontIcon Glyph="&#xE723;" FontSize="16" />
-        </Button>
+        <local:AttachmentPreviewBar x:Name="PreviewBar" Grid.Row="0" />
 
-        <TextBox x:Name="MessageTextBox"
-                 Grid.Column="1"
-                 AcceptsReturn="True"
-                 TextWrapping="Wrap"
-                 MaxHeight="120"
-                 PlaceholderText="{x:Bind Placeholder, Mode=OneWay}"
-                 KeyDown="MessageTextBox_KeyDown" />
+        <Grid Grid.Row="1" ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
 
-        <Button x:Name="SendButton"
-                Grid.Column="2"
-                VerticalAlignment="Bottom"
-                Style="{StaticResource AccentButtonStyle}"
-                Click="SendButton_Click"
-                ToolTipService.ToolTip="Send (Enter)">
-            <FontIcon Glyph="&#xE724;" FontSize="16" />
-        </Button>
+            <Button x:Name="AttachButton"
+                    Grid.Column="0"
+                    VerticalAlignment="Bottom"
+                    Style="{StaticResource SubtleButtonStyle}"
+                    ToolTipService.ToolTip="Attach file"
+                    Click="AttachButton_Click">
+                <FontIcon Glyph="&#xE723;" FontSize="16" />
+            </Button>
+
+            <TextBox x:Name="MessageTextBox"
+                     Grid.Column="1"
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     MaxHeight="120"
+                     PlaceholderText="{x:Bind Placeholder, Mode=OneWay}"
+                     KeyDown="MessageTextBox_KeyDown" />
+
+            <Button x:Name="SendButton"
+                    Grid.Column="2"
+                    VerticalAlignment="Bottom"
+                    Style="{StaticResource AccentButtonStyle}"
+                    Click="SendButton_Click"
+                    ToolTipService.ToolTip="Send (Enter)">
+                <FontIcon Glyph="&#xE724;" FontSize="16" />
+            </Button>
+        </Grid>
     </Grid>
 </UserControl>

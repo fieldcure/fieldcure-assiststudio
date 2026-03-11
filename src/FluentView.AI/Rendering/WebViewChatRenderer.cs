@@ -1,5 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using FluentView.AI.Models;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Web.WebView2.Core;
 using Windows.ApplicationModel.DataTransfer;
@@ -104,10 +106,38 @@ internal class WebViewChatRenderer
         return reader.ReadToEnd();
     }
 
-    public Task AppendUserMessageAsync(string id, string text, string timestamp)
+    public Task AppendUserMessageAsync(string id, string text, string timestamp,
+        IReadOnlyList<ChatAttachment>? attachments = null)
     {
-        var script = $"window.fluentChat.appendUserMessage({Js(id)}, {Js(text)}, {Js(timestamp)})";
+        var attachmentsJson = SerializeAttachments(attachments);
+        var script = $"window.fluentChat.appendUserMessage({Js(id)}, {Js(text)}, {Js(timestamp)}, {attachmentsJson})";
         return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
+    private static string SerializeAttachments(IReadOnlyList<ChatAttachment>? attachments)
+    {
+        if (attachments is null || attachments.Count == 0)
+            return "null";
+
+        var array = new JsonArray();
+        foreach (var att in attachments)
+        {
+            var obj = new JsonObject
+            {
+                ["fileName"] = att.FileName,
+                ["type"] = att.Type == AttachmentType.Image ? "image" : "file",
+                ["mimeType"] = att.MimeType ?? "application/octet-stream"
+            };
+
+            if (att.Type == AttachmentType.Image)
+            {
+                obj["base64"] = Convert.ToBase64String(att.Data);
+            }
+
+            array.Add(obj);
+        }
+
+        return array.ToJsonString();
     }
 
     public Task BeginAssistantMessageAsync(string id)

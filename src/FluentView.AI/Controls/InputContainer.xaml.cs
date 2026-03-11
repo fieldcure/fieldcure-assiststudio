@@ -1,12 +1,23 @@
+using System.Runtime.InteropServices.WindowsRuntime;
+using FluentView.AI.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Windows.ApplicationModel.DataTransfer;
+using Windows.Storage;
+using Windows.Storage.Pickers;
 using Windows.System;
 
 namespace FluentView.AI.Controls;
 
 public sealed partial class InputContainer : UserControl
 {
+    private static readonly HashSet<string> ImageExtensions =
+        [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp"];
+
+    private static readonly HashSet<string> TextExtensions =
+        [".txt", ".csv", ".log", ".md", ".json", ".xml"];
+
     public static readonly DependencyProperty PlaceholderProperty =
         DependencyProperty.Register(nameof(Placeholder), typeof(string), typeof(InputContainer),
             new PropertyMetadata("Type a message..."));
@@ -32,7 +43,7 @@ public sealed partial class InputContainer : UserControl
         set => SetValue(IsInputEnabledProperty, value);
     }
 
-    public event EventHandler<string>? MessageSent;
+    public event EventHandler<MessageSentEventArgs>? MessageSent;
 
     private void MessageTextBox_KeyDown(object sender, KeyRoutedEventArgs e)
     {
@@ -50,11 +61,118 @@ public sealed partial class InputContainer : UserControl
 
     private void TrySend()
     {
-        var text = MessageTextBox.Text?.Trim();
-        if (string.IsNullOrEmpty(text)) return;
+        var text = MessageTextBox.Text?.Trim() ?? "";
+        var attachments = PreviewBar.Attachments.ToList();
+
+        if (string.IsNullOrEmpty(text) && attachments.Count == 0) return;
 
         MessageTextBox.Text = string.Empty;
-        MessageSent?.Invoke(this, text);
+        PreviewBar.Clear();
+
+        MessageSent?.Invoke(this, new MessageSentEventArgs(text, attachments));
+    }
+
+    private async void AttachButton_Click(object sender, RoutedEventArgs e)
+    {
+        var picker = new FileOpenPicker();
+        foreach (var ext in ImageExtensions) picker.FileTypeFilter.Add(ext);
+        foreach (var ext in TextExtensions) picker.FileTypeFilter.Add(ext);
+
+        // WinUI 3: need to initialize picker with window handle
+        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(GetWindow());
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+
+        var files = await picker.PickMultipleFilesAsync();
+        if (files is null) return;
+
+        foreach (var file in files)
+        {
+            var attachment = await CreateAttachmentAsync(file);
+            if (attachment is not null)
+            {
+                PreviewBar.AddAttachment(attachment);
+            }
+        }
+    }
+
+    private void OnDragOver(object sender, DragEventArgs e)
+    {
+        if (e.DataView.Contains(StandardDataFormats.StorageItems))
+        {
+            e.AcceptedOperation = DataPackageOperation.Copy;
+        }
+    }
+
+    private async void OnDrop(object sender, DragEventArgs e)
+    {
+        if (!e.DataView.Contains(StandardDataFormats.StorageItems)) return;
+
+        var items = await e.DataView.GetStorageItemsAsync();
+        foreach (var item in items)
+        {
+            if (item is StorageFile file)
+            {
+                var attachment = await CreateAttachmentAsync(file);
+                if (attachment is not null)
+                {
+                    PreviewBar.AddAttachment(attachment);
+                }
+            }
+        }
+    }
+
+    private static async Task<ChatAttachment?> CreateAttachmentAsync(StorageFile file)
+    {
+        var ext = file.FileType.ToLowerInvariant();
+        var isImage = ImageExtensions.Contains(ext);
+        var isText = TextExtensions.Contains(ext);
+
+        if (!isImage && !isText) return null;
+
+        var buffer = await FileIO.ReadBufferAsync(file);
+        var data = buffer.ToArray();
+
+        return new ChatAttachment
+        {
+            FileName = file.Name,
+            Type = isImage ? AttachmentType.Image : AttachmentType.TextFile,
+            Data = data,
+            MimeType = isImage ? GetImageMimeType(ext) : "text/plain"
+        };
+    }
+
+    private static string GetImageMimeType(string extension) => extension switch
+    {
+        ".png" => "image/png",
+        ".jpg" or ".jpeg" => "image/jpeg",
+        ".gif" => "image/gif",
+        ".bmp" => "image/bmp",
+        ".webp" => "image/webp",
+        _ => "application/octet-stream"
+    };
+
+    private Window GetWindow()
+    {
+        // Walk up the XamlRoot to find the Window
+        if (XamlRoot?.Content is FrameworkElement fe)
+        {
+            var window = GetWindowForElement(fe);
+            if (window is not null) return window;
+        }
+        throw new InvalidOperationException("Unable to find the parent Window for FileOpenPicker.");
+    }
+
+    private static Window? GetWindowForElement(UIElement element)
+    {
+        if (element.XamlRoot is not null)
+        {
+            foreach (var window in WindowHelper.ActiveWindows)
+            {
+                if (window.Content?.XamlRoot == element.XamlRoot)
+                    return window;
+            }
+        }
+        return null;
     }
 
     private static bool IsShiftPressed()
@@ -70,6 +188,25 @@ public sealed partial class InputContainer : UserControl
             var enabled = (bool)e.NewValue;
             self.MessageTextBox.IsEnabled = enabled;
             self.SendButton.IsEnabled = enabled;
+            self.AttachButton.IsEnabled = enabled;
+        }
+    }
+}
+
+/// <summary>
+/// Helper to track active windows for FileOpenPicker initialization.
+/// Consumers must call <see cref="TrackWindow"/> in their App.OnLaunched.
+/// </summary>
+public static class WindowHelper
+{
+    internal static readonly List<Window> ActiveWindows = [];
+
+    public static void TrackWindow(Window window)
+    {
+        if (!ActiveWindows.Contains(window))
+        {
+            ActiveWindows.Add(window);
+            window.Closed += (_, _) => ActiveWindows.Remove(window);
         }
     }
 }

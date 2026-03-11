@@ -91,11 +91,71 @@ public class ClaudeProvider : IAiProvider, IDisposable
             }
 
             var role = msg.Role == ChatRole.User ? "user" : "assistant";
-            messages.Add(new JsonObject
+            var imageAttachments = msg.Attachments
+                .Where(a => a.Type == AttachmentType.Image)
+                .ToList();
+            var textAttachments = msg.Attachments
+                .Where(a => a.Type == AttachmentType.TextFile)
+                .ToList();
+
+            if (imageAttachments.Count > 0)
             {
-                ["role"] = role,
-                ["content"] = msg.Content
-            });
+                // Use multi-part content for messages with images
+                var contentParts = new JsonArray();
+
+                foreach (var att in imageAttachments)
+                {
+                    contentParts.Add(new JsonObject
+                    {
+                        ["type"] = "image",
+                        ["source"] = new JsonObject
+                        {
+                            ["type"] = "base64",
+                            ["media_type"] = att.MimeType ?? "image/png",
+                            ["data"] = Convert.ToBase64String(att.Data)
+                        }
+                    });
+                }
+
+                // Append text file contents inline
+                var textContent = msg.Content;
+                foreach (var att in textAttachments)
+                {
+                    var fileText = System.Text.Encoding.UTF8.GetString(att.Data);
+                    textContent += $"\n\n[File: {att.FileName}]\n{fileText}";
+                }
+
+                if (!string.IsNullOrEmpty(textContent))
+                {
+                    contentParts.Add(new JsonObject
+                    {
+                        ["type"] = "text",
+                        ["text"] = textContent
+                    });
+                }
+
+                messages.Add(new JsonObject
+                {
+                    ["role"] = role,
+                    ["content"] = contentParts
+                });
+            }
+            else
+            {
+                // Text-only message (possibly with text file attachments)
+                var textContent = msg.Content;
+                foreach (var att in textAttachments)
+                {
+                    var fileText = System.Text.Encoding.UTF8.GetString(att.Data);
+                    textContent += $"\n\n[File: {att.FileName}]\n{fileText}";
+                }
+
+                messages.Add(new JsonObject
+                {
+                    ["role"] = role,
+                    ["content"] = textContent
+                });
+            }
         }
 
         var body = new JsonObject

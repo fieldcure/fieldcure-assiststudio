@@ -8,6 +8,13 @@
     mc:Ignorable="d"
     Visibility="Collapsed">
 
-    <!-- Stub: Implemented in Phase 4 -->
-    <StackPanel Orientation="Horizontal" Spacing="8" Padding="8,4" />
+    <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                  VerticalScrollBarVisibility="Disabled"
+                  HorizontalScrollMode="Enabled"
+                  VerticalScrollMode="Disabled">
+        <StackPanel x:Name="ItemsPanel"
+                    Orientation="Horizontal"
+                    Spacing="8"
+                    Padding="4" />
+    </ScrollViewer>
 </UserControl>

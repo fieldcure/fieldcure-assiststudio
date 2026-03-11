@@ -86,14 +86,17 @@ public sealed partial class ChatPanel : UserControl
         }
     }
 
-    private async void OnMessageSent(object? sender, string text)
+    private async void OnMessageSent(object? sender, MessageSentEventArgs e)
     {
-        if (!_isInitialized || string.IsNullOrWhiteSpace(text)) return;
+        if (!_isInitialized) return;
+        if (string.IsNullOrWhiteSpace(e.Text) && e.Attachments.Count == 0) return;
 
-        // Add user message
-        var userMessage = new ChatMessage(ChatRole.User, text);
+        // Add user message with attachments
+        var userMessage = new ChatMessage(ChatRole.User, e.Text) { Attachments = e.Attachments };
         _messages.Add(userMessage);
-        await _renderer.AppendUserMessageAsync(userMessage.Id, userMessage.Content, userMessage.Timestamp.ToString("O"));
+        await _renderer.AppendUserMessageAsync(
+            userMessage.Id, userMessage.Content, userMessage.Timestamp.ToString("O"),
+            userMessage.Attachments);
         MessageAdded?.Invoke(this, userMessage);
 
         // Stream assistant response

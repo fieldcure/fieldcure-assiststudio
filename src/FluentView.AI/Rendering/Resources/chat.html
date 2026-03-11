@@ -309,6 +309,39 @@
     .hljs-addition { color: #2ea043; background: rgba(46, 160, 67, 0.1); }
     .hljs-deletion { color: #cf222e; background: rgba(207, 34, 46, 0.1); }
 
+    /* ===== Attachment Styles ===== */
+    .attachment-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+    .attachment-image {
+        max-width: 300px;
+        max-height: 300px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: opacity 0.15s;
+        object-fit: contain;
+    }
+    .attachment-image:hover {
+        opacity: 0.9;
+    }
+    .attachment-file {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 6px;
+        background: var(--code-bg);
+        border: 1px solid var(--code-border);
+        font-size: 12px;
+        color: var(--text-primary);
+    }
+    .attachment-file-icon {
+        font-size: 14px;
+    }
+
     /* ===== Animations ===== */
     @keyframes blink { 50% { opacity: 0; } }
     @keyframes fadeIn {
@@ -394,6 +427,25 @@
         });
     }
 
+    function renderAttachments(attachments) {
+        if (!attachments || attachments.length === 0) return '';
+        var html = '<div class="attachment-container">';
+        for (var i = 0; i < attachments.length; i++) {
+            var att = attachments[i];
+            if (att.type === 'image') {
+                html += '<img class="attachment-image" src="data:' +
+                    escapeHtml(att.mimeType || 'image/png') + ';base64,' + att.base64 +
+                    '" alt="' + escapeHtml(att.fileName) + '" title="' + escapeHtml(att.fileName) + '" />';
+            } else {
+                html += '<span class="attachment-file">' +
+                    '<span class="attachment-file-icon">&#128196;</span>' +
+                    escapeHtml(att.fileName) + '</span>';
+            }
+        }
+        html += '</div>';
+        return html;
+    }
+
     function renderMarkdown(fullText) {
         if (typeof marked !== 'undefined' && typeof hljs !== 'undefined') {
             return marked.parse(fullText);
@@ -403,12 +455,14 @@
     }
 
     window.fluentChat = {
-        appendUserMessage: function(id, text, timestamp) {
+        appendUserMessage: function(id, text, timestamp, attachments) {
             var msg = document.createElement('div');
             msg.className = 'message user';
             msg.id = 'msg-' + id;
+            var attachmentHtml = renderAttachments(attachments);
+            var textHtml = text ? escapeHtml(text) : '';
             msg.innerHTML =
-                '<div class="message-bubble">' + escapeHtml(text) + '</div>' +
+                '<div class="message-bubble">' + attachmentHtml + textHtml + '</div>' +
                 '<div class="message-timestamp">' + formatTimestamp(timestamp) + '</div>';
             container.appendChild(msg);
             doScroll('smooth');

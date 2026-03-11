@@ -44,6 +44,7 @@ namespace FluentView.AI.SampleApp
         protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
             _window = new MainWindow();
+            FluentView.AI.Controls.WindowHelper.TrackWindow(_window);
             _window.Activate();
         }
     }

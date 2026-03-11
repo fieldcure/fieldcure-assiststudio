@@ -8,8 +8,18 @@ public enum AttachmentType
 
 public class ChatAttachment
 {
-    public required string FileName { get; init; }
-    public required AttachmentType Type { get; init; }
-    public required byte[] Data { get; init; }
-    public string? MimeType { get; init; }
+    public ChatAttachment() { }
+
+    public ChatAttachment(string fileName, AttachmentType type, byte[] data, string? mimeType = null)
+    {
+        FileName = fileName;
+        Type = type;
+        Data = data;
+        MimeType = mimeType;
+    }
+
+    public string FileName { get; set; } = "";
+    public AttachmentType Type { get; set; }
+    public byte[] Data { get; set; } = [];
+    public string? MimeType { get; set; }
 }
