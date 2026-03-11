@@ -1,0 +1,8 @@
+<Project>
+
+  <PropertyGroup>
+    <!-- Fix for dotnet CLI builds: VS-installed AppxPackage tools path -->
+    <AppxMSBuildToolsPath Condition="'$(AppxMSBuildToolsPath)' == '' And Exists('C:\Program Files\Microsoft Visual Studio\2022\Professional\MSBuild\Microsoft\VisualStudio\v17.0\AppxPackage\')">C:\Program Files\Microsoft Visual Studio\2022\Professional\MSBuild\Microsoft\VisualStudio\v17.0\AppxPackage\</AppxMSBuildToolsPath>
+  </PropertyGroup>
+
+</Project>
