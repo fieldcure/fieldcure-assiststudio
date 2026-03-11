@@ -15,11 +15,14 @@
 - SampleApp: `MockProvider` (에코) + `ChatPanel` 연결 완료
 - 빌드 성공, 기본 채팅 흐름 동작 확인
 
+### Phase 2 완료 (2026-03-11)
+- marked.js 15.x + highlight.js 11.x 인라인 번들 (임베디드 리소스)
+- Markdown 렌더링 (finalizeMessage → marked.parse + hljs)
+- 코드블록 복사 버튼 + 클립보드 복사 (DataPackage)
+- GitHub-style 구문 하이라이팅 토큰 색상 (라이트/다크)
+- 스트리밍 중 instant 스크롤, finalize 후 smooth 스크롤
+
 ### 미구현 항목
-- Markdown 렌더링 (marked.js) — Phase 2
-- 코드 구문 하이라이팅 (highlight.js) — Phase 2
-- 코드블록 복사 버튼 — Phase 2
-- 다크/라이트 테마 CSS 확장 — Phase 2
 - Provider 구현 (Claude, OpenAI, Ollama) — Phase 3
 - 이미지/파일 첨부 — Phase 4
 - SampleApp 완성 + NuGet 배포 — Phase 5
@@ -56,11 +59,11 @@
 ### Phase 1: Core 골격 ✅ 완료
 Models + IAiProvider 인터페이스 + ChatPanel XAML 기본 구조 + WebView2 초기화
 
-### Phase 2: 렌더링 완성 (현재 단계)
+### Phase 2: 렌더링 완성 ✅ 완료
 Markdown 렌더링, 코드 하이라이팅, 코드블록 복사, 다크/라이트 테마 CSS 확장, 스크롤 동작 개선
 
-### Phase 3: Provider 구현
-ClaudeProvider (SSE), OpenAiProvider, OllamaProvider
+### Phase 3: Provider 구현 (현재 단계)
+ClaudeProvider (SSE), OpenAiProvider, OllamaProvider, SseReader 공용 유틸
 
 ### Phase 4: 첨부 & UX
 이미지 첨부, FilePicker 연동, AttachmentPreviewBar
@@ -241,66 +244,204 @@ Clipboard.SetContent(dp);
 ```
 
 ### 4.5.5 Phase 2 완료 기준
-- [ ] 스트리밍 완료 후 Markdown이 올바르게 렌더링 (헤더, 리스트, 볼드, 코드블록 등)
-- [ ] 코드블록에 언어별 구문 하이라이팅 적용
-- [ ] 코드블록 복사 버튼 클릭 시 클립보드에 코드 복사
-- [ ] 다크/라이트 테마 전환 시 코드 하이라이팅 테마도 함께 전환
-- [ ] 스트리밍 중 스크롤이 끊기지 않고 자연스럽게 동작
-- [ ] 솔루션 빌드 성공 (경고 0, 오류 0)
+- [x] 스트리밍 완료 후 Markdown이 올바르게 렌더링 (헤더, 리스트, 볼드, 코드블록 등)
+- [x] 코드블록에 언어별 구문 하이라이팅 적용
+- [x] 코드블록 복사 버튼 클릭 시 클립보드에 코드 복사
+- [x] 다크/라이트 테마 전환 시 코드 하이라이팅 테마도 함께 전환
+- [x] 스트리밍 중 스크롤이 끊기지 않고 자연스럽게 동작
+- [x] 솔루션 빌드 성공 (경고 0, 오류 0)
 
 ---
 
-## 5. Phase 2 요약 (렌더링 완성)
+## 5. Phase 2 (완료)
 
-> 상세 구현 계획은 위 섹션 4.5 참조.
-> 목표: Markdown 렌더링 + 코드 하이라이팅 + 코드 복사 + 테마 + 스크롤 완성
-- [ ] 스크롤 동작이 자연스러움
+Phase 2 완료 기준 — 모두 달성. 상세는 섹션 4.5 참조.
 
 ---
 
-## 6. Phase 3 상세 계획 (Provider 구현)
+## 6. Phase 3 상세 구현 계획 (Provider 구현)
 
-### 파일 목록
+### 목표
+**3개 LLM Provider (Claude, OpenAI, Ollama) 구현 + SampleApp Provider 선택 UI**
 
-#### `src/FluentView.AI/Providers/ClaudeProvider.cs` (P0)
+`IAiProvider` 인터페이스의 `StreamAsync()` → `IAsyncEnumerable<string>` 패턴을 활용하여
+각 Provider의 스트리밍 API를 통일된 토큰 스트림으로 변환.
+
+### 6.1 핵심 설계 결정
+
+#### HttpClient 관리
+- 각 Provider는 내부에 `HttpClient` 인스턴스를 소유 (DI 미사용, 라이브러리 특성상)
+- 소비자가 원할 경우 외부에서 `HttpClient`를 주입할 수 있도록 생성자 오버로드 제공
+- `IDisposable` 구현하여 HttpClient 정리
+
+#### SSE 파싱 공용화
+- Claude API와 OpenAI API 모두 SSE(Server-Sent Events) 프로토콜 사용
+- `SseReader` 유틸: `Stream` → `IAsyncEnumerable<SseEvent>` 변환
+- 각 Provider는 `SseReader`로 이벤트를 수신 후, 자체 JSON 구조에서 토큰 추출
+
+#### Ollama는 NDJSON
+- SSE가 아닌 줄 단위 JSON (Newline-Delimited JSON)
+- `SseReader`와 별도로 `StreamReader.ReadLineAsync()` + `JsonDocument.Parse()` 처리
+
+#### 모델 ID 기본값
+- Claude: `claude-sonnet-4-20250514`
+- OpenAI: `gpt-4o`
+- Ollama: `llama3.1`
+
+### 6.2 파일 목록 및 상세
+
+#### 1) `src/FluentView.AI/Providers/SseReader.cs` — 공용 SSE 파서
+
 ```csharp
 namespace FluentView.AI.Providers;
 
-public class ClaudeProvider : IAiProvider
-{
-    public ClaudeProvider(string apiKey, string model = "claude-sonnet-4-20250514");
+internal record SseEvent(string EventType, string Data);
 
-    // Anthropic Messages API: POST https://api.anthropic.com/v1/messages
-    // SSE 스트리밍: content_block_delta 이벤트에서 토큰 추출
-    // 헤더: x-api-key, anthropic-version
+internal static class SseReader
+{
+    // SSE 스펙: "event: xxx\ndata: yyy\n\n" 패턴
+    // 빈 줄(\n\n)이 이벤트 경계
+    // data가 여러 줄일 수 있음 (data: ...\ndata: ... → 개행으로 합산)
+    static async IAsyncEnumerable<SseEvent> ReadEventsAsync(
+        Stream stream,
+        [EnumeratorCancellation] CancellationToken ct);
 }
 ```
 
-#### `src/FluentView.AI/Providers/OpenAiProvider.cs` (P1)
-```csharp
-// OpenAI Chat Completions API: POST https://api.openai.com/v1/chat/completions
-// SSE 스트리밍: data: {"choices":[{"delta":{"content":"..."}}]}
+핵심 구현:
+- `StreamReader`로 줄 단위 읽기
+- `event:` 라인 → 이벤트 타입 저장
+- `data:` 라인 → 데이터 축적
+- 빈 줄 → `SseEvent` yield 후 리셋
+- `data:` prefix 제거 주의 (공백 1개 포함)
+
+#### 2) `src/FluentView.AI/Providers/ClaudeProvider.cs` — Anthropic Messages API
+
+```
+API: POST https://api.anthropic.com/v1/messages
+Headers:
+  x-api-key: {apiKey}
+  anthropic-version: 2023-06-01
+  content-type: application/json
+
+Request body:
+  { "model": "...", "max_tokens": N, "temperature": T,
+    "system": "...",
+    "messages": [{"role":"user","content":"..."}, ...],
+    "stream": true }
+
+SSE 이벤트 흐름:
+  event: message_start        → 무시
+  event: content_block_start  → 무시
+  event: content_block_delta  → data.delta.text 추출 (★토큰)
+  event: content_block_stop   → 무시
+  event: message_delta        → 무시
+  event: message_stop         → 종료
+
+ChatRole 매핑: User → "user", Assistant → "assistant", System → system param
 ```
 
-#### `src/FluentView.AI/Providers/OllamaProvider.cs` (P1)
-```csharp
-// Ollama API: POST http://localhost:11434/api/chat
-// NDJSON 스트리밍: {"message":{"content":"..."}}
+주요 구현 포인트:
+- `ChatRole.System` 메시지는 `messages` 배열이 아닌 `system` 파라미터로 전달
+- `content_block_delta` 이벤트의 `data` JSON: `{"type":"content_block_delta","delta":{"type":"text_delta","text":"토큰"}}`
+- `CompleteAsync`: `stream: false`로 호출, `content[0].text` 추출
+- 생성자: `ClaudeProvider(string apiKey, string model = "claude-sonnet-4-20250514")`
+- HttpClient 주입 오버로드: `ClaudeProvider(HttpClient httpClient, string apiKey, string model)`
+
+#### 3) `src/FluentView.AI/Providers/OpenAiProvider.cs` — OpenAI Chat Completions
+
+```
+API: POST https://api.openai.com/v1/chat/completions
+Headers:
+  Authorization: Bearer {apiKey}
+  content-type: application/json
+
+Request body:
+  { "model": "...", "max_tokens": N, "temperature": T,
+    "messages": [{"role":"system","content":"..."}, {"role":"user","content":"..."}, ...],
+    "stream": true }
+
+SSE 이벤트:
+  data: {"choices":[{"delta":{"content":"토큰"}}]}
+  data: [DONE]  → 종료
+
+ChatRole 매핑: User → "user", Assistant → "assistant", System → "system"
 ```
 
-### 공통 유틸
+주요 구현 포인트:
+- `ChatRole.System`을 `messages` 배열에 `"role": "system"`으로 포함 (Claude와 차이점)
+- `data: [DONE]` 수신 시 스트림 종료
+- `delta.content`가 null일 수 있음 (role-only delta 등) — null 체크 필요
+- 생성자: `OpenAiProvider(string apiKey, string model = "gpt-4o")`
 
-#### `src/FluentView.AI/Providers/SseReader.cs`
-```csharp
-// SSE 스트림(StreamReader)을 읽어 IAsyncEnumerable<string>으로 변환하는 헬퍼
-// Claude, OpenAI 공용
+#### 4) `src/FluentView.AI/Providers/OllamaProvider.cs` — Ollama Local API
+
+```
+API: POST {baseUrl}/api/chat
+Headers: content-type: application/json
+
+Request body:
+  { "model": "...", "messages": [...], "stream": true,
+    "options": { "temperature": T, "num_predict": N } }
+
+NDJSON 스트리밍 (줄 단위):
+  {"message":{"role":"assistant","content":"토큰"},"done":false}
+  {"message":{"role":"assistant","content":""},"done":true}  → 종료
+
+ChatRole 매핑: User → "user", Assistant → "assistant", System → "system"
+API 키 불필요 (로컬)
 ```
 
-### Phase 3 완료 기준
+주요 구현 포인트:
+- SSE가 아닌 NDJSON → `StreamReader.ReadLineAsync()` 사용
+- `done: true` 수신 시 스트림 종료
+- `baseUrl` 커스터마이징 가능 (Docker 등 포트 변경 시)
+- 생성자: `OllamaProvider(string model = "llama3.1", string baseUrl = "http://localhost:11434")`
+
+#### 5) `src/FluentView.AI.SampleApp/MainWindow.xaml` — Provider 선택 UI
+
+```
+상단 바: ComboBox(Provider 선택) + TextBox(API Key) + TextBox(Model) + Button(Apply)
+하단: ChatPanel (기존)
+```
+
+- Provider 선택 → API Key 필드 표시/숨김 (Mock, Ollama는 불필요)
+- Apply 버튼 → Provider 인스턴스 생성 → ChatPanel.Provider에 할당
+- 이전 Provider가 IDisposable이면 Dispose 호출
+
+### 6.3 구현 순서
+
+```
+1. SseReader.cs (공용 유틸, 의존성 없음)
+2. ClaudeProvider.cs (SseReader 의존)
+3. OpenAiProvider.cs (SseReader 의존)
+4. OllamaProvider.cs (독립, NDJSON)
+5. SampleApp MainWindow 업데이트 (Provider 선택 UI + 생성 로직)
+6. 빌드 및 테스트
+```
+
+### 6.4 JSON 직렬화 전략
+
+- `System.Text.Json` 사용 (추가 패키지 불필요)
+- 요청 body: `JsonSerializer.Serialize()` + anonymous object 또는 `JsonObject`
+- 응답 파싱: `JsonDocument.Parse()` + `RootElement.GetProperty()` 패턴
+- 별도 DTO 클래스 없이 `JsonDocument`로 직접 탐색 (외부 API 스키마 변경 대응 유연)
+
+### 6.5 에러 처리
+
+- HTTP 4xx/5xx → `HttpRequestException` throw (메시지에 상태 코드 + 응답 body 포함)
+- 네트워크 오류 → `HttpRequestException` 전파
+- JSON 파싱 실패 → `JsonException` 전파
+- `ChatPanel.OnMessageSent`에서 이미 catch하여 `[Error: ...]` 메시지 표시
+
+### 6.6 Phase 3 완료 기준
+- [ ] SseReader가 SSE 스트림을 올바르게 파싱
 - [ ] ClaudeProvider로 실제 API 호출 + 스트리밍 응답 수신
 - [ ] OpenAiProvider로 실제 API 호출 + 스트리밍 응답 수신
 - [ ] OllamaProvider로 로컬 Ollama 호출 + 스트리밍 응답 수신
-- [ ] SampleApp에서 Provider 선택 가능
+- [ ] SampleApp에서 Provider 선택 + API Key 입력 후 대화 가능
+- [ ] Provider 전환 시 이전 Provider가 올바르게 Dispose
+- [ ] 솔루션 빌드 성공 (경고 0, 오류 0)
 
 ---
 
