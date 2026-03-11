@@ -498,6 +498,7 @@ API 키 불필요 (로컬)
 3. **모델 목록 API 연동**: Claude/OpenAI/Ollama 모델 목록을 조회하여 ComboBox로 선택
 4. **로컬 모델 관리**: Ollama 모델 다운로드/삭제 + SampleApp 모델 선택 UI
 5. **API 연결 검증**: API Key 유효성 + 사용자/조직 정보 표시
+6. **GeminiProvider 추가**: Google Gemini API 연동 (무료 티어 활용 가능)
 
 ### 7.5.1 아키텍처 설계
 
@@ -514,6 +515,7 @@ Core 라이브러리 (FluentView.AI)
 │   ├── ClaudeProvider.cs             — usage 파싱 + ListModels (MODIFY)
 │   ├── OpenAiProvider.cs             — usage 파싱 + ListModels (MODIFY)
 │   ├── OllamaProvider.cs             — usage 파싱 + ListModels (MODIFY)
+│   ├── GeminiProvider.cs             — Google Gemini API (NEW)
 │   └── OllamaModelManager.cs         — Ollama 모델 관리 구현 (NEW)
 ├── Controls/
 │   └── ChatPanel.xaml.cs             — 자동 요약 로직 (MODIFY)
@@ -828,7 +830,99 @@ Apply 클릭 시:
 ✅ Connected: OpenAI (org: org-xxxx)     ← 상태 텍스트
 ```
 
-### 7.5.7 SampleApp UI 설계
+### 7.5.7 Feature F: GeminiProvider (Google Gemini API)
+
+#### API 개요
+```
+엔드포인트: POST https://generativelanguage.googleapis.com/v1beta/models/{model}:streamGenerateContent?key={apiKey}&alt=sse
+인증: API Key (URL query parameter)
+스트리밍: SSE
+무료 티어: 분당 15 요청, 일 1,500 요청 (gemini-2.0-flash)
+```
+
+#### 요청 형식
+```json
+{
+  "contents": [
+    {
+      "role": "user",
+      "parts": [{ "text": "Hello" }]
+    },
+    {
+      "role": "model",
+      "parts": [{ "text": "Hi there!" }]
+    }
+  ],
+  "systemInstruction": {
+    "parts": [{ "text": "You are a helpful assistant." }]
+  },
+  "generationConfig": {
+    "temperature": 0.7,
+    "maxOutputTokens": 4096
+  }
+}
+```
+
+#### ChatRole 매핑
+```
+User      → "user"
+Assistant → "model"    (⚠ OpenAI/Claude의 "assistant"와 다름)
+System    → systemInstruction 파라미터 (messages 배열 밖)
+```
+
+#### SSE 스트리밍 응답
+```json
+data: {"candidates":[{"content":{"parts":[{"text":"토큰"}]}}]}
+data: {"candidates":[{"content":{"parts":[{"text":""}]}}],
+       "usageMetadata":{"promptTokenCount":10,"candidatesTokenCount":50,"totalTokenCount":60}}
+```
+
+#### Vision 지원
+```json
+{
+  "contents": [{
+    "role": "user",
+    "parts": [
+      { "text": "이 이미지에 무엇이 보이나요?" },
+      { "inlineData": { "mimeType": "image/png", "data": "base64..." } }
+    ]
+  }]
+}
+```
+
+#### 모델 목록 API
+```
+GET https://generativelanguage.googleapis.com/v1beta/models?key={apiKey}
+→ { "models": [{ "name": "models/gemini-2.0-flash", "displayName": "Gemini 2.0 Flash", ... }] }
+```
+
+#### Usage 파싱
+스트리밍 마지막 chunk의 `usageMetadata`:
+```json
+{ "promptTokenCount": 1250, "candidatesTokenCount": 340, "totalTokenCount": 1590 }
+```
+
+#### 구현 파일
+```csharp
+// src/FluentView.AI/Providers/GeminiProvider.cs
+namespace FluentView.AI.Providers;
+
+public class GeminiProvider : IAiProvider, IDisposable
+{
+    // 생성자: GeminiProvider(string apiKey, string model = "gemini-2.0-flash")
+    // SseReader 재활용 가능 (SSE 프로토콜 동일)
+    // 기본 모델: gemini-2.0-flash (무료 티어)
+}
+```
+
+#### 연결 검증
+```
+GET https://generativelanguage.googleapis.com/v1beta/models?key={apiKey}
+→ 성공 (200): 키 유효
+→ 실패 (400/403): 키 무효
+```
+
+### 7.5.8 SampleApp UI 설계
 
 #### MainWindow 상단 바 변경
 ```
@@ -863,7 +957,7 @@ Apply 클릭 시:
 └─────────────────────────────────────────────┘
 ```
 
-### 7.5.8 구현 순서
+### 7.5.9 구현 순서
 
 ```
 Feature A: 토큰 사용량 추적
@@ -874,38 +968,46 @@ Feature A: 토큰 사용량 추적
   5. OllamaProvider usage 파싱 구현
   6. MockProvider LastUsage 스텁 구현
 
+Feature F: GeminiProvider
+  7. GeminiProvider.cs 구현 (SSE 스트리밍, SseReader 재활용)
+  8. Gemini Vision 지원 (inlineData)
+  9. Gemini usage 파싱 (usageMetadata)
+  10. SampleApp Provider ComboBox에 Gemini 추가
+
 Feature B: 자동 히스토리 요약
-  7. ChatPanel에 MaxInputTokens, AutoSummarize 옵션 추가
-  8. 요약 로직 구현 (임계값 초과 시 자동 트리거)
-  9. 요약 결과를 System 메시지로 삽입하는 로직
+  11. ChatPanel에 MaxInputTokens, AutoSummarize 옵션 추가
+  12. 요약 로직 구현 (임계값 초과 시 자동 트리거)
+  13. 요약 결과를 System 메시지로 삽입하는 로직
 
 Feature C: 모델 목록 API
-  10. AiModel.cs 모델 생성
-  11. IAiProvider에 ListModelsAsync() 추가
-  12. ClaudeProvider.ListModelsAsync() (GET /v1/models)
-  13. OpenAiProvider.ListModelsAsync() (GET /v1/models)
-  14. OllamaProvider.ListModelsAsync() (GET /api/tags)
-  15. MockProvider.ListModelsAsync() 스텁
-  16. SampleApp MainWindow Model ComboBox 변경
+  14. AiModel.cs 모델 생성
+  15. IAiProvider에 ListModelsAsync() 추가
+  16. ClaudeProvider.ListModelsAsync() (GET /v1/models)
+  17. OpenAiProvider.ListModelsAsync() (GET /v1/models)
+  18. OllamaProvider.ListModelsAsync() (GET /api/tags)
+  19. GeminiProvider.ListModelsAsync() (GET /v1beta/models)
+  20. MockProvider.ListModelsAsync() 스텁
+  21. SampleApp MainWindow Model ComboBox 변경
 
 Feature D: 로컬 모델 관리
-  17. LocalModel.cs 모델 생성
-  18. IModelManager.cs 인터페이스
-  19. OllamaModelManager.cs 구현
-  20. ModelSelectionDialog.xaml + .cs (SampleApp)
-  21. MainWindow Browse Models 버튼 연동
+  22. LocalModel.cs 모델 생성
+  23. IModelManager.cs 인터페이스
+  24. OllamaModelManager.cs 구현
+  25. ModelSelectionDialog.xaml + .cs (SampleApp)
+  26. MainWindow Browse Models 버튼 연동
 
 Feature E: API 연결 검증
-  22. ConnectionInfo record 생성
-  23. IAiProvider에 ValidateConnectionAsync() 추가
-  24. ClaudeProvider 연결 검증 (GET /v1/models → 200 여부)
-  25. OpenAiProvider 연결 검증 (GET /v1/models + organization 헤더)
-  26. OllamaProvider 연결 검증 (GET /api/tags → 서버 가용성)
-  27. MockProvider 스텁 (항상 유효)
-  28. SampleApp 상태 텍스트 표시 (✅ Connected / ❌ Invalid)
+  27. ConnectionInfo record 생성
+  28. IAiProvider에 ValidateConnectionAsync() 추가
+  29. ClaudeProvider 연결 검증 (GET /v1/models → 200 여부)
+  30. OpenAiProvider 연결 검증 (GET /v1/models + organization 헤더)
+  31. GeminiProvider 연결 검증 (GET /v1beta/models → 200 여부)
+  32. OllamaProvider 연결 검증 (GET /api/tags → 서버 가용성)
+  33. MockProvider 스텁 (항상 유효)
+  34. SampleApp 상태 텍스트 표시 (✅ Connected / ❌ Invalid)
 
 통합 테스트:
-  29. 빌드 및 전체 테스트
+  35. 빌드 및 전체 테스트
 ```
 
 ### 7.5.9 향후 확장 (ONNX Runtime GenAI)
@@ -923,9 +1025,10 @@ OnnxModelManager : IModelManager
 이 확장은 `Microsoft.ML.OnnxRuntimeGenAI` 패키지 의존성이 필요하며,
 별도 NuGet 패키지 (`FluentView.AI.Onnx`)로 분리하는 것이 좋다.
 
-### 7.5.10 Phase 4.5 완료 기준
+### 7.5.11 Phase 4.5 완료 기준
 - [ ] TokenUsage 모델 + IAiProvider.LastUsage 구현
-- [ ] 3개 Provider 모두 usage 파싱 동작
+- [ ] 4개 Provider 모두 usage 파싱 동작 (Claude, OpenAI, Ollama, Gemini)
+- [ ] GeminiProvider 스트리밍 + Vision 동작
 - [ ] AutoSummarize 옵션 활성화 시 자동 요약 동작
 - [ ] AiModel 모델 + IAiProvider.ListModelsAsync() 구현
 - [ ] SampleApp에서 Model ComboBox로 모델 선택 가능
@@ -944,7 +1047,7 @@ OnnxModelManager : IModelManager
 ## 8. Phase 5 상세 계획 (샘플앱 & 배포)
 
 ### SampleApp 완성
-- Provider 선택 UI (ComboBox: Claude / OpenAI / Ollama)
+- Provider 선택 UI (ComboBox: Claude / OpenAI / Gemini / Ollama)
 - API Key 입력 필드
 - System Prompt 설정
 - 대화 클리어 버튼
@@ -983,6 +1086,7 @@ src/FluentView.AI/
 │   ├── ClaudeProvider.cs
 │   ├── OpenAiProvider.cs
 │   ├── OllamaProvider.cs
+│   ├── GeminiProvider.cs          (Phase 4.5)
 │   ├── OllamaModelManager.cs      (Phase 4.5)
 │   └── SseReader.cs
 ├── Rendering/
