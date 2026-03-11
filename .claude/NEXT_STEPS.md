@@ -497,6 +497,7 @@ API 키 불필요 (로컬)
 2. **자동 히스토리 요약**: 토큰 임계값 초과 시 오래된 대화를 자동 요약하여 컨텍스트 압축
 3. **모델 목록 API 연동**: Claude/OpenAI/Ollama 모델 목록을 조회하여 ComboBox로 선택
 4. **로컬 모델 관리**: Ollama 모델 다운로드/삭제 + SampleApp 모델 선택 UI
+5. **API 연결 검증**: API Key 유효성 + 사용자/조직 정보 표시
 
 ### 7.5.1 아키텍처 설계
 
@@ -758,7 +759,76 @@ codellama      — Code Llama (코드 생성)
 llava          — LLaVA (Vision 지원)
 ```
 
-### 7.5.6 SampleApp UI 설계
+### 7.5.6 Feature E: API 연결 검증 (Connection Validation)
+
+#### 목적
+API Key 입력 후 Apply 시 키 유효성을 검증하고, 가능한 경우 사용자/조직 정보를 표시한다.
+
+#### Provider별 검증 방법
+
+**OpenAI** — 사용자/조직 정보 조회 가능:
+```
+GET https://api.openai.com/v1/models
+→ 성공 (200): 키 유효, 응답 헤더에서 organization 정보 확인
+→ 실패 (401): 키 무효
+```
+OpenAI는 응답 헤더 `openai-organization`에 조직 ID가 포함됨.
+
+**Claude** — 제한적:
+```
+GET https://api.anthropic.com/v1/models
+→ 성공 (200): 키 유효
+→ 실패 (401): 키 무효
+```
+Anthropic 일반 API 키로는 사용자/조직 정보 조회 불가 (Admin API 필요).
+키 유효성 검증만 수행.
+
+**Ollama** — 서버 연결 확인:
+```
+GET http://localhost:11434/api/tags
+→ 성공 (200): Ollama 서버 실행 중
+→ 실패 (연결 거부): 서버 미실행
+```
+API 키 없음, 서버 가용성만 확인.
+
+#### IAiProvider 추가
+```csharp
+public interface IAiProvider
+{
+    // 기존 ...
+
+    // 추가: 연결 검증 + 정보 조회
+    Task<ConnectionInfo> ValidateConnectionAsync(CancellationToken ct = default);
+}
+
+public record ConnectionInfo(
+    bool IsValid,
+    string? OrganizationId,     // OpenAI: org ID
+    string? OrganizationName,   // 표시용 이름 (가능한 경우)
+    string? ErrorMessage        // 실패 시 에러 메시지
+);
+```
+
+#### SampleApp UI 표시
+```
+Apply 클릭 시:
+  1. Provider 인스턴스 생성
+  2. ValidateConnectionAsync() 호출
+  3. 성공 시:
+     ✅ Connected (org: "ZFlow Inc.")  — 또는 키 유효 확인만
+     → Model ComboBox 활성화 + ListModelsAsync() 호출
+  4. 실패 시:
+     ❌ Invalid API Key / Server not running
+     → Model ComboBox 비활성화
+```
+
+상단 바 StatusText 영역에 연결 상태를 표시:
+```
+[Provider ▼] [API Key ●●●] [Model ▼] [Apply] [Clear]
+✅ Connected: OpenAI (org: org-xxxx)     ← 상태 텍스트
+```
+
+### 7.5.7 SampleApp UI 설계
 
 #### MainWindow 상단 바 변경
 ```
@@ -793,7 +863,7 @@ llava          — LLaVA (Vision 지원)
 └─────────────────────────────────────────────┘
 ```
 
-### 7.5.7 구현 순서
+### 7.5.8 구현 순서
 
 ```
 Feature A: 토큰 사용량 추적
@@ -825,11 +895,20 @@ Feature D: 로컬 모델 관리
   20. ModelSelectionDialog.xaml + .cs (SampleApp)
   21. MainWindow Browse Models 버튼 연동
 
+Feature E: API 연결 검증
+  22. ConnectionInfo record 생성
+  23. IAiProvider에 ValidateConnectionAsync() 추가
+  24. ClaudeProvider 연결 검증 (GET /v1/models → 200 여부)
+  25. OpenAiProvider 연결 검증 (GET /v1/models + organization 헤더)
+  26. OllamaProvider 연결 검증 (GET /api/tags → 서버 가용성)
+  27. MockProvider 스텁 (항상 유효)
+  28. SampleApp 상태 텍스트 표시 (✅ Connected / ❌ Invalid)
+
 통합 테스트:
-  22. 빌드 및 전체 테스트
+  29. 빌드 및 전체 테스트
 ```
 
-### 7.5.8 향후 확장 (ONNX Runtime GenAI)
+### 7.5.9 향후 확장 (ONNX Runtime GenAI)
 
 Phase 4.5에서는 Ollama만 지원하지만, `IModelManager` 인터페이스를 통해 향후 확장 가능:
 
@@ -844,7 +923,7 @@ OnnxModelManager : IModelManager
 이 확장은 `Microsoft.ML.OnnxRuntimeGenAI` 패키지 의존성이 필요하며,
 별도 NuGet 패키지 (`FluentView.AI.Onnx`)로 분리하는 것이 좋다.
 
-### 7.5.9 Phase 4.5 완료 기준
+### 7.5.10 Phase 4.5 완료 기준
 - [ ] TokenUsage 모델 + IAiProvider.LastUsage 구현
 - [ ] 3개 Provider 모두 usage 파싱 동작
 - [ ] AutoSummarize 옵션 활성화 시 자동 요약 동작
@@ -856,6 +935,8 @@ OnnxModelManager : IModelManager
 - [ ] OllamaModelManager로 모델 삭제
 - [ ] SampleApp ModelSelectionDialog 동작
 - [ ] 다이얼로그에서 선택한 모델이 OllamaProvider에 적용
+- [ ] ValidateConnectionAsync() 연결 검증 동작
+- [ ] SampleApp에서 연결 상태 + 조직 정보 표시
 - [ ] 솔루션 빌드 성공 (경고 0, 오류 0)
 
 ---
