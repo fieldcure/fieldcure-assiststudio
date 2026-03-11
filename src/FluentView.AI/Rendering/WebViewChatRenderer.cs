@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Web.WebView2.Core;
+using Windows.ApplicationModel.DataTransfer;
 
 namespace FluentView.AI.Rendering;
 
@@ -20,13 +21,45 @@ internal class WebViewChatRenderer
 
         _webView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
 
-        var html = LoadEmbeddedHtml();
+        var html = LoadEmbeddedResource("chat.html");
 
         _navigationTcs = new TaskCompletionSource();
         _webView.CoreWebView2.NavigationCompleted += OnNavigationCompleted;
         _webView.NavigateToString(html);
         await _navigationTcs.Task;
         _webView.CoreWebView2.NavigationCompleted -= OnNavigationCompleted;
+
+        // Inject vendor JS libraries after page load
+        await InjectVendorScriptsAsync();
+    }
+
+    private async Task InjectVendorScriptsAsync()
+    {
+        // Inject marked.js
+        var markedJs = LoadEmbeddedResource("marked.min.js");
+        await _webView.ExecuteScriptAsync(markedJs).AsTask();
+
+        // Inject highlight.js
+        var highlightJs = LoadEmbeddedResource("highlight.min.js");
+        await _webView.ExecuteScriptAsync(highlightJs).AsTask();
+
+        // Configure marked with highlight.js integration
+        var configScript = """
+            marked.setOptions({
+                breaks: true,
+                gfm: true,
+                highlight: function(code, lang) {
+                    if (lang && hljs.getLanguage(lang)) {
+                        try { return hljs.highlight(code, { language: lang }).value; }
+                        catch(e) {}
+                    }
+                    try { return hljs.highlightAuto(code).value; }
+                    catch(e) {}
+                    return '';
+                }
+            });
+            """;
+        await _webView.ExecuteScriptAsync(configScript).AsTask();
     }
 
     private void OnNavigationCompleted(CoreWebView2 sender, CoreWebView2NavigationCompletedEventArgs args)
@@ -41,7 +74,9 @@ internal class WebViewChatRenderer
             var message = args.TryGetWebMessageAsString();
             if (message?.StartsWith("copy:") == true)
             {
-                CopyRequested?.Invoke(this, message["copy:".Length..]);
+                var codeText = message["copy:".Length..];
+                CopyToClipboard(codeText);
+                CopyRequested?.Invoke(this, codeText);
             }
         }
         catch
@@ -50,11 +85,19 @@ internal class WebViewChatRenderer
         }
     }
 
-    private static string LoadEmbeddedHtml()
+    private static void CopyToClipboard(string text)
+    {
+        var dp = new DataPackage();
+        dp.SetText(text);
+        Clipboard.SetContent(dp);
+        Clipboard.Flush();
+    }
+
+    private static string LoadEmbeddedResource(string endsWith)
     {
         var assembly = Assembly.GetExecutingAssembly();
         var resourceName = assembly.GetManifestResourceNames()
-            .First(n => n.EndsWith("chat.html", StringComparison.OrdinalIgnoreCase));
+            .First(n => n.EndsWith(endsWith, StringComparison.OrdinalIgnoreCase));
 
         using var stream = assembly.GetManifestResourceStream(resourceName)!;
         using var reader = new StreamReader(stream);

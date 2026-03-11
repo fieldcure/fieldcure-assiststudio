@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
+    /* ===== Theme Variables ===== */
     :root {
         --bg-primary: #f5f5f5;
         --bg-user: #005fb8;
@@ -14,6 +15,19 @@
         --border-color: #e0e0e0;
         --shadow: 0 1px 3px rgba(0,0,0,0.08);
         --timestamp-color: #888;
+        --code-bg: #f6f8fa;
+        --code-border: #e1e4e8;
+        --code-header-bg: #e8eaed;
+        --code-text: #24292e;
+        --inline-code-bg: #eff1f3;
+        --blockquote-border: #d0d7de;
+        --blockquote-text: #656d76;
+        --link-color: #005fb8;
+        --table-border: #d0d7de;
+        --table-stripe: #f6f8fa;
+        --hr-color: #d0d7de;
+        --copy-btn-bg: #e8eaed;
+        --copy-btn-hover: #d0d4d8;
     }
 
     [data-theme="dark"] {
@@ -26,13 +40,23 @@
         --border-color: #404040;
         --shadow: 0 1px 3px rgba(0,0,0,0.3);
         --timestamp-color: #999;
+        --code-bg: #161b22;
+        --code-border: #30363d;
+        --code-header-bg: #21262d;
+        --code-text: #e6edf3;
+        --inline-code-bg: #343942;
+        --blockquote-border: #3b434b;
+        --blockquote-text: #8b949e;
+        --link-color: #58a6ff;
+        --table-border: #30363d;
+        --table-stripe: #161b22;
+        --hr-color: #30363d;
+        --copy-btn-bg: #30363d;
+        --copy-btn-hover: #484f58;
     }
 
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
+    /* ===== Base Reset ===== */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
         font-family: 'Segoe UI Variable', 'Segoe UI', sans-serif;
@@ -53,20 +77,15 @@
         min-height: 100vh;
     }
 
+    /* ===== Message Layout ===== */
     .message {
         display: flex;
         flex-direction: column;
         max-width: 80%;
         animation: fadeIn 0.2s ease-out;
     }
-
-    .message.user {
-        align-self: flex-end;
-    }
-
-    .message.assistant {
-        align-self: flex-start;
-    }
+    .message.user { align-self: flex-end; }
+    .message.assistant { align-self: flex-start; }
 
     .message-bubble {
         padding: 10px 14px;
@@ -74,15 +93,16 @@
         box-shadow: var(--shadow);
         word-wrap: break-word;
         overflow-wrap: break-word;
+    }
+    .message-bubble.streaming {
         white-space: pre-wrap;
     }
-
     .message.user .message-bubble {
         background: var(--bg-user);
         color: var(--text-user);
         border-bottom-right-radius: 4px;
+        white-space: pre-wrap;
     }
-
     .message.assistant .message-bubble {
         background: var(--bg-assistant);
         color: var(--text-assistant);
@@ -95,10 +115,7 @@
         margin-top: 4px;
         padding: 0 4px;
     }
-
-    .message.user .message-timestamp {
-        text-align: right;
-    }
+    .message.user .message-timestamp { text-align: right; }
 
     .cursor {
         display: inline;
@@ -107,10 +124,193 @@
         font-weight: bold;
     }
 
-    @keyframes blink {
-        50% { opacity: 0; }
+    /* ===== Markdown Content Styles ===== */
+    .message-bubble.rendered h1,
+    .message-bubble.rendered h2,
+    .message-bubble.rendered h3,
+    .message-bubble.rendered h4,
+    .message-bubble.rendered h5,
+    .message-bubble.rendered h6 {
+        margin-top: 16px;
+        margin-bottom: 8px;
+        line-height: 1.3;
+    }
+    .message-bubble.rendered h1:first-child,
+    .message-bubble.rendered h2:first-child,
+    .message-bubble.rendered h3:first-child {
+        margin-top: 0;
+    }
+    .message-bubble.rendered h1 { font-size: 1.4em; }
+    .message-bubble.rendered h2 { font-size: 1.25em; }
+    .message-bubble.rendered h3 { font-size: 1.1em; }
+
+    .message-bubble.rendered p {
+        margin-bottom: 8px;
+    }
+    .message-bubble.rendered p:last-child {
+        margin-bottom: 0;
     }
 
+    .message-bubble.rendered ul,
+    .message-bubble.rendered ol {
+        margin-bottom: 8px;
+        padding-left: 24px;
+    }
+    .message-bubble.rendered li {
+        margin-bottom: 2px;
+    }
+
+    .message-bubble.rendered blockquote {
+        border-left: 3px solid var(--blockquote-border);
+        color: var(--blockquote-text);
+        padding: 4px 12px;
+        margin: 8px 0;
+    }
+
+    .message-bubble.rendered hr {
+        border: none;
+        border-top: 1px solid var(--hr-color);
+        margin: 12px 0;
+    }
+
+    .message-bubble.rendered a {
+        color: var(--link-color);
+        text-decoration: none;
+    }
+    .message-bubble.rendered a:hover {
+        text-decoration: underline;
+    }
+
+    .message-bubble.rendered strong { font-weight: 600; }
+    .message-bubble.rendered em { font-style: italic; }
+
+    /* ===== Inline Code ===== */
+    .message-bubble.rendered code:not(pre code) {
+        background: var(--inline-code-bg);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: 'Cascadia Code', 'Consolas', monospace;
+        font-size: 0.9em;
+    }
+
+    /* ===== Code Blocks ===== */
+    .code-block {
+        margin: 10px 0;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid var(--code-border);
+    }
+    .code-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 12px;
+        background: var(--code-header-bg);
+        font-size: 12px;
+    }
+    .code-lang {
+        color: var(--timestamp-color);
+        font-family: 'Segoe UI Variable', 'Segoe UI', sans-serif;
+        text-transform: lowercase;
+    }
+    .copy-btn {
+        background: var(--copy-btn-bg);
+        border: none;
+        color: var(--text-primary);
+        padding: 3px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        font-family: 'Segoe UI Variable', 'Segoe UI', sans-serif;
+        transition: background 0.15s;
+    }
+    .copy-btn:hover {
+        background: var(--copy-btn-hover);
+    }
+    .copy-btn.copied {
+        color: #2ea043;
+    }
+
+    .code-block pre {
+        margin: 0;
+        padding: 12px;
+        background: var(--code-bg);
+        overflow-x: auto;
+    }
+    .code-block pre code {
+        font-family: 'Cascadia Code', 'Consolas', monospace;
+        font-size: 13px;
+        line-height: 1.45;
+        color: var(--code-text);
+        background: none;
+        padding: 0;
+    }
+
+    /* ===== Table Styles ===== */
+    .message-bubble.rendered table {
+        border-collapse: collapse;
+        margin: 8px 0;
+        width: 100%;
+        font-size: 13px;
+    }
+    .message-bubble.rendered th,
+    .message-bubble.rendered td {
+        border: 1px solid var(--table-border);
+        padding: 6px 10px;
+        text-align: left;
+    }
+    .message-bubble.rendered th {
+        font-weight: 600;
+        background: var(--code-header-bg);
+    }
+    .message-bubble.rendered tr:nth-child(even) td {
+        background: var(--table-stripe);
+    }
+
+    /* ===== highlight.js token colors (GitHub-style) ===== */
+    :root {
+        --hljs-keyword: #cf222e;
+        --hljs-string: #0a3069;
+        --hljs-number: #0550ae;
+        --hljs-comment: #6e7781;
+        --hljs-function: #8250df;
+        --hljs-class: #953800;
+        --hljs-variable: #24292e;
+        --hljs-literal: #0550ae;
+        --hljs-built-in: #0550ae;
+        --hljs-attr: #0550ae;
+        --hljs-type: #953800;
+    }
+    [data-theme="dark"] {
+        --hljs-keyword: #ff7b72;
+        --hljs-string: #a5d6ff;
+        --hljs-number: #79c0ff;
+        --hljs-comment: #8b949e;
+        --hljs-function: #d2a8ff;
+        --hljs-class: #ffa657;
+        --hljs-variable: #e6edf3;
+        --hljs-literal: #79c0ff;
+        --hljs-built-in: #79c0ff;
+        --hljs-attr: #79c0ff;
+        --hljs-type: #ffa657;
+    }
+    .hljs-keyword, .hljs-selector-tag { color: var(--hljs-keyword); }
+    .hljs-string, .hljs-doctag, .hljs-regexp { color: var(--hljs-string); }
+    .hljs-number { color: var(--hljs-number); }
+    .hljs-comment { color: var(--hljs-comment); font-style: italic; }
+    .hljs-function .hljs-title, .hljs-title.function_ { color: var(--hljs-function); }
+    .hljs-title.class_, .hljs-class .hljs-title { color: var(--hljs-class); }
+    .hljs-variable, .hljs-template-variable { color: var(--hljs-variable); }
+    .hljs-literal, .hljs-built_in { color: var(--hljs-built-in); }
+    .hljs-attr, .hljs-attribute { color: var(--hljs-attr); }
+    .hljs-type, .hljs-params { color: var(--hljs-type); }
+    .hljs-meta { color: var(--hljs-keyword); }
+    .hljs-symbol { color: var(--hljs-number); }
+    .hljs-addition { color: #2ea043; background: rgba(46, 160, 67, 0.1); }
+    .hljs-deletion { color: #cf222e; background: rgba(207, 34, 46, 0.1); }
+
+    /* ===== Animations ===== */
+    @keyframes blink { 50% { opacity: 0; } }
     @keyframes fadeIn {
         from { opacity: 0; transform: translateY(4px); }
         to { opacity: 1; transform: translateY(0); }
@@ -142,62 +342,118 @@
         try {
             const d = new Date(isoString);
             return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        } catch {
-            return '';
+        } catch { return ''; }
+    }
+
+    function doScroll(behavior) {
+        if (autoScroll) {
+            window.scrollTo({ top: document.body.scrollHeight, behavior: behavior || 'smooth' });
         }
+    }
+
+    function addCopyButtons(bubble) {
+        const pres = bubble.querySelectorAll('pre');
+        pres.forEach(function(pre) {
+            const code = pre.querySelector('code');
+            if (!code) return;
+
+            // Detect language from class
+            var lang = '';
+            var classes = code.className.split(/\s+/);
+            for (var i = 0; i < classes.length; i++) {
+                var m = classes[i].match(/^language-(.+)$/);
+                if (m) { lang = m[1]; break; }
+            }
+
+            // Wrap in .code-block container
+            var wrapper = document.createElement('div');
+            wrapper.className = 'code-block';
+
+            var header = document.createElement('div');
+            header.className = 'code-header';
+            header.innerHTML =
+                '<span class="code-lang">' + escapeHtml(lang || 'code') + '</span>' +
+                '<button class="copy-btn">Copy</button>';
+
+            pre.parentNode.insertBefore(wrapper, pre);
+            wrapper.appendChild(header);
+            wrapper.appendChild(pre);
+
+            // Copy button handler
+            var btn = header.querySelector('.copy-btn');
+            btn.addEventListener('click', function() {
+                var text = code.textContent || '';
+                window.chrome.webview.postMessage('copy:' + text);
+                btn.textContent = 'Copied!';
+                btn.classList.add('copied');
+                setTimeout(function() {
+                    btn.textContent = 'Copy';
+                    btn.classList.remove('copied');
+                }, 1500);
+            });
+        });
+    }
+
+    function renderMarkdown(fullText) {
+        if (typeof marked !== 'undefined' && typeof hljs !== 'undefined') {
+            return marked.parse(fullText);
+        }
+        // Fallback: plain text
+        return '<span class="content">' + escapeHtml(fullText) + '</span>';
     }
 
     window.fluentChat = {
         appendUserMessage: function(id, text, timestamp) {
-            const msg = document.createElement('div');
+            var msg = document.createElement('div');
             msg.className = 'message user';
             msg.id = 'msg-' + id;
             msg.innerHTML =
                 '<div class="message-bubble">' + escapeHtml(text) + '</div>' +
                 '<div class="message-timestamp">' + formatTimestamp(timestamp) + '</div>';
             container.appendChild(msg);
-            this.scrollToBottom();
+            doScroll('smooth');
         },
 
         beginAssistantMessage: function(id) {
-            const msg = document.createElement('div');
+            var msg = document.createElement('div');
             msg.className = 'message assistant';
             msg.id = 'msg-' + id;
             msg.innerHTML =
-                '<div class="message-bubble"><span class="content"></span><span class="cursor">&#9612;</span></div>' +
+                '<div class="message-bubble streaming"><span class="content"></span><span class="cursor">&#9612;</span></div>' +
                 '<div class="message-timestamp"></div>';
             container.appendChild(msg);
-            this.scrollToBottom();
+            doScroll('smooth');
         },
 
         appendToken: function(id, token) {
-            const msg = document.getElementById('msg-' + id);
+            var msg = document.getElementById('msg-' + id);
             if (!msg) return;
-            const content = msg.querySelector('.content');
+            var content = msg.querySelector('.content');
             if (content) {
                 content.textContent += token;
             }
-            this.scrollToBottom();
+            doScroll('instant');
         },
 
         finalizeMessage: function(id, fullText) {
-            const msg = document.getElementById('msg-' + id);
+            var msg = document.getElementById('msg-' + id);
             if (!msg) return;
-            const bubble = msg.querySelector('.message-bubble');
+            var bubble = msg.querySelector('.message-bubble');
             if (bubble) {
-                // Phase 1: plain text only. Phase 2 will add marked.js rendering.
-                bubble.innerHTML = '<span class="content">' + escapeHtml(fullText) + '</span>';
+                bubble.classList.remove('streaming');
+                bubble.classList.add('rendered');
+                bubble.innerHTML = renderMarkdown(fullText);
+                addCopyButtons(bubble);
             }
-            const ts = msg.querySelector('.message-timestamp');
+            var ts = msg.querySelector('.message-timestamp');
             if (ts) {
                 ts.textContent = formatTimestamp(new Date().toISOString());
             }
+            doScroll('smooth');
         },
 
         scrollToBottom: function() {
-            if (autoScroll) {
-                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-            }
+            doScroll('smooth');
         },
 
         setTheme: function(isDark) {

@@ -7,29 +7,72 @@ namespace FluentView.AI.SampleApp;
 public class MockProvider : IAiProvider
 {
     public string ProviderName => "Mock";
-    public string ModelId => "echo-1.0";
+    public string ModelId => "mock-markdown-1.0";
+
+    private const string MarkdownResponse = """
+        Here's a **Markdown** demo response!
+
+        ## Features
+
+        - **Bold text** and *italic text*
+        - Inline `code` formatting
+        - [Hyperlinks](https://example.com)
+
+        ### Code Block (C#)
+
+        ```csharp
+        public class HelloWorld
+        {
+            public static void Main(string[] args)
+            {
+                Console.WriteLine("Hello, FluentView.AI!");
+            }
+        }
+        ```
+
+        ### Code Block (Python)
+
+        ```python
+        def fibonacci(n):
+            if n <= 1:
+                return n
+            return fibonacci(n - 1) + fibonacci(n - 2)
+
+        for i in range(10):
+            print(fibonacci(i))
+        ```
+
+        ### Table
+
+        | Language | Typing | Use Case |
+        |----------|--------|----------|
+        | C# | Static | WinUI, .NET |
+        | Python | Dynamic | ML, Scripts |
+        | JavaScript | Dynamic | Web, Node.js |
+
+        > This is a blockquote. It demonstrates the styling of quoted text.
+
+        ---
+
+        That's the end of the demo!
+        """;
 
     public async Task<string> CompleteAsync(AiRequest request, CancellationToken ct = default)
     {
         await Task.Delay(100, ct);
-        var lastUserMessage = request.Messages.LastOrDefault(m => m.Role == ChatRole.User);
-        return lastUserMessage?.Content ?? "(no message)";
+        return MarkdownResponse;
     }
 
     public async IAsyncEnumerable<string> StreamAsync(AiRequest request, [EnumeratorCancellation] CancellationToken ct = default)
     {
-        var lastUserMessage = request.Messages.LastOrDefault(m => m.Role == ChatRole.User);
-        var text = lastUserMessage?.Content ?? "(no message)";
-        var response = $"Echo: {text}";
-
-        // Simulate token-by-token streaming
-        var words = response.Split(' ');
+        // Stream the markdown response token-by-token (word-level)
+        var words = MarkdownResponse.Split(' ');
         for (var i = 0; i < words.Length; i++)
         {
             ct.ThrowIfCancellationRequested();
             var token = (i > 0 ? " " : "") + words[i];
             yield return token;
-            await Task.Delay(50, ct);
+            await Task.Delay(30, ct);
         }
     }
 }
