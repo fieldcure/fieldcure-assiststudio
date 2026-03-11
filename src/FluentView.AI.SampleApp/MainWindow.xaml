@@ -14,6 +14,48 @@
         <MicaBackdrop />
     </Window.SystemBackdrop>
 
-    <fv:ChatPanel x:Name="ChatPanel"
-                  Placeholder="Type a message..." />
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Provider Settings Bar -->
+        <Border Grid.Row="0"
+                Padding="12,8"
+                BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <ComboBox x:Name="ProviderCombo"
+                          SelectedIndex="0"
+                          Width="130"
+                          SelectionChanged="ProviderCombo_SelectionChanged">
+                    <ComboBoxItem Content="Mock" />
+                    <ComboBoxItem Content="Claude" />
+                    <ComboBoxItem Content="OpenAI" />
+                    <ComboBoxItem Content="Ollama" />
+                </ComboBox>
+
+                <PasswordBox x:Name="ApiKeyBox"
+                             PlaceholderText="API Key"
+                             Width="280"
+                             Visibility="Collapsed" />
+
+                <TextBox x:Name="ModelBox"
+                         PlaceholderText="Model (optional)"
+                         Width="200" />
+
+                <Button Content="Apply"
+                        Style="{StaticResource AccentButtonStyle}"
+                        Click="OnApplyProvider" />
+
+                <Button Content="Clear"
+                        Click="OnClearChat" />
+            </StackPanel>
+        </Border>
+
+        <fv:ChatPanel x:Name="ChatPanel"
+                      Grid.Row="1"
+                      Placeholder="Type a message..." />
+    </Grid>
 </Window>
