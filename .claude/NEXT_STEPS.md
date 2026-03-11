@@ -68,6 +68,9 @@ ClaudeProvider (SSE), OpenAiProvider, OllamaProvider, SseReader 공용 유틸
 ### Phase 4: 첨부 & UX
 이미지 첨부, FilePicker 연동, AttachmentPreviewBar
 
+### Phase 4.5: 로컬 모델 관리
+IModelManager + OllamaModelManager (모델 목록/다운로드/삭제) + SampleApp 모델 선택 UI
+
 ### Phase 5: 샘플앱 & 문서 & 배포
 SampleApp 완성, README, NuGet 배포
 
@@ -470,6 +473,203 @@ API 키 불필요 (로컬)
 
 ---
 
+## 7.5 Phase 4.5 상세 구현 계획 (로컬 모델 관리)
+
+### 목표
+**AI Dev Gallery 패턴을 참고하여 로컬 모델 검색/다운로드/선택 기능 구현**
+
+Core 라이브러리에 모델 관리 API를 제공하고, SampleApp에서 모델 선택/다운로드 UI를 구현한다.
+Ollama 기반 모델 관리를 1차 목표로 하고, 향후 ONNX Runtime GenAI 확장 가능하도록 설계한다.
+
+### 7.5.1 아키텍처 설계
+
+#### 레이어 분리
+```
+Core 라이브러리 (FluentView.AI)
+├── Models/LocalModel.cs              — 로컬 모델 메타데이터
+├── Providers/IModelManager.cs        — 모델 관리 인터페이스
+├── Providers/OllamaModelManager.cs   — Ollama 모델 관리 구현
+└── (향후) Providers/OnnxModelManager.cs
+
+SampleApp (FluentView.AI.SampleApp)
+├── Pages/ModelSelectionDialog.xaml    — 모델 선택/다운로드 UI
+└── MainWindow.xaml                   — 모델 선택 버튼 추가
+```
+
+### 7.5.2 Core 라이브러리 추가 사항
+
+#### `src/FluentView.AI/Models/LocalModel.cs`
+```csharp
+namespace FluentView.AI.Models;
+
+public class LocalModel
+{
+    public required string Name { get; init; }        // e.g. "llama3.1:latest"
+    public required string Provider { get; init; }    // "Ollama", "ONNX" 등
+    public long SizeBytes { get; init; }
+    public string? Family { get; init; }              // "llama", "phi", "gemma" 등
+    public string? ParameterSize { get; init; }       // "8B", "70B" 등
+    public string? QuantizationLevel { get; init; }   // "Q4_0", "Q8_0" 등
+    public DateTime? ModifiedAt { get; init; }
+    public bool IsDownloaded { get; init; }
+}
+```
+
+#### `src/FluentView.AI/Providers/IModelManager.cs`
+```csharp
+namespace FluentView.AI.Providers;
+
+public interface IModelManager
+{
+    /// <summary>로컬에 이미 다운로드된 모델 목록</summary>
+    Task<IReadOnlyList<LocalModel>> ListLocalModelsAsync(CancellationToken ct = default);
+
+    /// <summary>원격에서 검색 가능한 모델 목록 (Ollama library 등)</summary>
+    Task<IReadOnlyList<LocalModel>> SearchAvailableModelsAsync(
+        string? query = null, CancellationToken ct = default);
+
+    /// <summary>모델 다운로드 (진행률 콜백 포함)</summary>
+    Task DownloadModelAsync(
+        string modelName,
+        IProgress<ModelDownloadProgress>? progress = null,
+        CancellationToken ct = default);
+
+    /// <summary>다운로드된 모델 삭제</summary>
+    Task DeleteModelAsync(string modelName, CancellationToken ct = default);
+}
+
+public record ModelDownloadProgress(
+    string Status,       // "pulling manifest", "downloading", "verifying", "success"
+    double Percent,      // 0.0 ~ 1.0
+    long? TotalBytes,
+    long? CompletedBytes
+);
+```
+
+#### `src/FluentView.AI/Providers/OllamaModelManager.cs`
+```csharp
+namespace FluentView.AI.Providers;
+
+public class OllamaModelManager : IModelManager, IDisposable
+{
+    // Ollama REST API 활용:
+    //
+    // GET  /api/tags         → 로컬 모델 목록
+    //   Response: { "models": [{ "name": "llama3.1:latest",
+    //     "size": 4661224676, "details": { "family": "llama",
+    //     "parameter_size": "8.0B", "quantization_level": "Q4_0" },
+    //     "modified_at": "..." }] }
+    //
+    // POST /api/pull         → 모델 다운로드 (NDJSON 스트리밍 진행률)
+    //   Request:  { "name": "llama3.1" }
+    //   Response (줄 단위):
+    //     {"status":"pulling manifest"}
+    //     {"status":"downloading ...","total":4661224676,"completed":1234567}
+    //     {"status":"verifying sha256 digest"}
+    //     {"status":"success"}
+    //
+    // DELETE /api/delete      → 모델 삭제
+    //   Request:  { "name": "llama3.1" }
+    //
+    // SearchAvailableModelsAsync:
+    //   Ollama 자체에는 검색 API가 없으므로,
+    //   인기 모델 목록을 하드코딩하거나 ollama.com/library를 파싱.
+    //   1차 구현에서는 추천 모델 목록을 내장한다.
+}
+```
+
+추천 모델 목록 (내장):
+```
+llama3.1       — Meta Llama 3.1 (8B, 범용)
+llama3.1:70b   — Meta Llama 3.1 (70B, 고성능)
+phi4           — Microsoft Phi-4 (14B, 소형 고성능)
+gemma2         — Google Gemma 2 (9B)
+qwen2.5        — Alibaba Qwen 2.5 (7B)
+mistral        — Mistral 7B
+deepseek-r1    — DeepSeek R1 (추론 특화)
+codellama      — Code Llama (코드 생성)
+```
+
+### 7.5.3 SampleApp UI 설계
+
+#### 모델 선택 다이얼로그 (`ModelSelectionDialog.xaml`)
+```
+┌─────────────────────────────────────────────┐
+│  Local Models                               │
+│  ┌─────────────────────────────────────────┐ │
+│  │ ✅ llama3.1:latest    4.7 GB   [Select] │ │
+│  │ ✅ phi4:latest        8.5 GB   [Select] │ │
+│  │ ✅ gemma2:latest      5.4 GB   [Select] │ │
+│  └─────────────────────────────────────────┘ │
+│                                             │
+│  Available Models                           │
+│  ┌─────────────────────────────────────────┐ │
+│  │ ⬇ mistral             4.1 GB  [Pull]   │ │
+│  │ ⬇ codellama           3.8 GB  [Pull]   │ │
+│  │ ⬇ deepseek-r1         4.7 GB  [Pull]   │ │
+│  └─────────────────────────────────────────┘ │
+│                                             │
+│  ┌──────────────────────┐                   │
+│  │ Custom: [________]  [Pull]              │ │
+│  └──────────────────────┘                   │
+│                                             │
+│  [Cancel]                                   │
+└─────────────────────────────────────────────┘
+```
+
+기능:
+- **Local Models 섹션**: 이미 다운로드된 모델 표시, Select 클릭 시 Provider에 적용
+- **Available Models 섹션**: 추천 모델 중 미설치 항목, Pull 클릭 시 다운로드 시작
+- **Custom 입력**: 사용자가 직접 모델명 입력 후 Pull
+- **다운로드 진행률**: ProgressBar + 상태 텍스트 (pulling, downloading 42%, verifying)
+- **삭제**: 로컬 모델에 컨텍스트 메뉴 또는 삭제 버튼
+
+#### MainWindow 변경
+```
+Provider ComboBox에서 Ollama 선택 시 →
+  Model TextBox 옆에 [Browse Models...] 버튼 표시 →
+  클릭 시 ModelSelectionDialog 열림 →
+  모델 선택 시 ModelBox에 모델명 자동 입력
+```
+
+### 7.5.4 구현 순서
+
+```
+1. LocalModel.cs (모델 메타데이터)
+2. IModelManager.cs (인터페이스)
+3. ModelDownloadProgress record
+4. OllamaModelManager.cs (Ollama API 연동)
+5. ModelSelectionDialog.xaml + .cs (SampleApp)
+6. MainWindow 수정 (Browse Models 버튼)
+7. 빌드 및 테스트
+```
+
+### 7.5.5 향후 확장 (ONNX Runtime GenAI)
+
+Phase 4.5에서는 Ollama만 지원하지만, `IModelManager` 인터페이스를 통해 향후 확장 가능:
+
+```
+OnnxModelManager : IModelManager
+  - HuggingFace에서 ONNX 모델 검색/다운로드
+  - Microsoft.ML.OnnxRuntimeGenAI로 로컬 추론
+  - OnnxProvider : IAiProvider 추가
+  - GPU/NPU 가속 지원 (DirectML, QNN)
+```
+
+이 확장은 `Microsoft.ML.OnnxRuntimeGenAI` 패키지 의존성이 필요하며,
+별도 NuGet 패키지 (`FluentView.AI.Onnx`)로 분리하는 것이 좋다.
+
+### 7.5.6 Phase 4.5 완료 기준
+- [ ] IModelManager 인터페이스 정의
+- [ ] OllamaModelManager로 로컬 모델 목록 조회
+- [ ] OllamaModelManager로 모델 다운로드 (진행률 표시)
+- [ ] OllamaModelManager로 모델 삭제
+- [ ] SampleApp에서 모델 선택 다이얼로그 동작
+- [ ] 다이얼로그에서 선택한 모델이 OllamaProvider에 적용
+- [ ] 솔루션 빌드 성공 (경고 0, 오류 0)
+
+---
+
 ## 8. Phase 5 상세 계획 (샘플앱 & 배포)
 
 ### SampleApp 완성
@@ -505,9 +705,11 @@ src/FluentView.AI/
 │   └── AiRequest.cs
 ├── Providers/
 │   ├── IAiProvider.cs
+│   ├── IModelManager.cs
 │   ├── ClaudeProvider.cs
 │   ├── OpenAiProvider.cs
 │   ├── OllamaProvider.cs
+│   ├── OllamaModelManager.cs
 │   └── SseReader.cs
 ├── Rendering/
 │   ├── WebViewChatRenderer.cs
@@ -518,7 +720,9 @@ src/FluentView.AI/
 src/FluentView.AI.SampleApp/
 ├── MainWindow.xaml
 ├── MainWindow.xaml.cs
-├── MockProvider.cs          (Phase 1 테스트용)
+├── MockProvider.cs
+├── ModelSelectionDialog.xaml      (Phase 4.5)
+├── ModelSelectionDialog.xaml.cs   (Phase 4.5)
 ├── App.xaml
 ├── App.xaml.cs
 └── FluentView.AI.SampleApp.csproj
