@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="FluentView.AI.Controls.ChatPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:local="using:FluentView.AI.Controls"
+    mc:Ignorable="d"
+    Loaded="OnLoaded">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <WebView2 x:Name="ChatWebView" Grid.Row="0" DefaultBackgroundColor="Transparent" />
+
+        <local:InputContainer x:Name="InputArea"
+                              Grid.Row="1"
+                              Placeholder="{x:Bind Placeholder, Mode=OneWay}" />
+    </Grid>
+</UserControl>

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+    :root {
+        --bg-primary: #f5f5f5;
+        --bg-user: #005fb8;
+        --bg-assistant: #ffffff;
+        --text-primary: #1a1a1a;
+        --text-user: #ffffff;
+        --text-assistant: #1a1a1a;
+        --border-color: #e0e0e0;
+        --shadow: 0 1px 3px rgba(0,0,0,0.08);
+        --timestamp-color: #888;
+    }
+
+    [data-theme="dark"] {
+        --bg-primary: #202020;
+        --bg-user: #0078d4;
+        --bg-assistant: #2d2d2d;
+        --text-primary: #e0e0e0;
+        --text-user: #ffffff;
+        --text-assistant: #e0e0e0;
+        --border-color: #404040;
+        --shadow: 0 1px 3px rgba(0,0,0,0.3);
+        --timestamp-color: #999;
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: 'Segoe UI Variable', 'Segoe UI', sans-serif;
+        font-size: 14px;
+        line-height: 1.5;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        overflow-x: hidden;
+        -webkit-user-select: text;
+        user-select: text;
+    }
+
+    #chat-container {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 16px;
+        min-height: 100vh;
+    }
+
+    .message {
+        display: flex;
+        flex-direction: column;
+        max-width: 80%;
+        animation: fadeIn 0.2s ease-out;
+    }
+
+    .message.user {
+        align-self: flex-end;
+    }
+
+    .message.assistant {
+        align-self: flex-start;
+    }
+
+    .message-bubble {
+        padding: 10px 14px;
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        white-space: pre-wrap;
+    }
+
+    .message.user .message-bubble {
+        background: var(--bg-user);
+        color: var(--text-user);
+        border-bottom-right-radius: 4px;
+    }
+
+    .message.assistant .message-bubble {
+        background: var(--bg-assistant);
+        color: var(--text-assistant);
+        border-bottom-left-radius: 4px;
+    }
+
+    .message-timestamp {
+        font-size: 11px;
+        color: var(--timestamp-color);
+        margin-top: 4px;
+        padding: 0 4px;
+    }
+
+    .message.user .message-timestamp {
+        text-align: right;
+    }
+
+    .cursor {
+        display: inline;
+        animation: blink 0.8s step-end infinite;
+        color: inherit;
+        font-weight: bold;
+    }
+
+    @keyframes blink {
+        50% { opacity: 0; }
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(4px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+</head>
+<body>
+<div id="chat-container"></div>
+<script>
+(function() {
+    'use strict';
+
+    const container = document.getElementById('chat-container');
+    let autoScroll = true;
+
+    window.addEventListener('scroll', function() {
+        const threshold = 50;
+        const atBottom = (window.innerHeight + window.scrollY) >= (document.body.scrollHeight - threshold);
+        autoScroll = atBottom;
+    });
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function formatTimestamp(isoString) {
+        try {
+            const d = new Date(isoString);
+            return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } catch {
+            return '';
+        }
+    }
+
+    window.fluentChat = {
+        appendUserMessage: function(id, text, timestamp) {
+            const msg = document.createElement('div');
+            msg.className = 'message user';
+            msg.id = 'msg-' + id;
+            msg.innerHTML =
+                '<div class="message-bubble">' + escapeHtml(text) + '</div>' +
+                '<div class="message-timestamp">' + formatTimestamp(timestamp) + '</div>';
+            container.appendChild(msg);
+            this.scrollToBottom();
+        },
+
+        beginAssistantMessage: function(id) {
+            const msg = document.createElement('div');
+            msg.className = 'message assistant';
+            msg.id = 'msg-' + id;
+            msg.innerHTML =
+                '<div class="message-bubble"><span class="content"></span><span class="cursor">&#9612;</span></div>' +
+                '<div class="message-timestamp"></div>';
+            container.appendChild(msg);
+            this.scrollToBottom();
+        },
+
+        appendToken: function(id, token) {
+            const msg = document.getElementById('msg-' + id);
+            if (!msg) return;
+            const content = msg.querySelector('.content');
+            if (content) {
+                content.textContent += token;
+            }
+            this.scrollToBottom();
+        },
+
+        finalizeMessage: function(id, fullText) {
+            const msg = document.getElementById('msg-' + id);
+            if (!msg) return;
+            const bubble = msg.querySelector('.message-bubble');
+            if (bubble) {
+                // Phase 1: plain text only. Phase 2 will add marked.js rendering.
+                bubble.innerHTML = '<span class="content">' + escapeHtml(fullText) + '</span>';
+            }
+            const ts = msg.querySelector('.message-timestamp');
+            if (ts) {
+                ts.textContent = formatTimestamp(new Date().toISOString());
+            }
+        },
+
+        scrollToBottom: function() {
+            if (autoScroll) {
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            }
+        },
+
+        setTheme: function(isDark) {
+            document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        }
+    };
+})();
+</script>
+</body>
+</html>
