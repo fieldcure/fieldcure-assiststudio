@@ -9,7 +9,7 @@ namespace FluentView.AI.SampleApp;
 
 public sealed partial class SettingsPanel : Page
 {
-    private ObservableCollection<ProviderPreset> _presets = [];
+    private ObservableCollection<ProviderPreset> _presets;
 
     public ObservableCollection<ProviderPreset> Presets
     {
@@ -23,15 +23,15 @@ public sealed partial class SettingsPanel : Page
 
     public SettingsPanel()
     {
+        // Load presets early so they're available before Loaded event
+        _presets = AppSettings.LoadPresets();
+
         InitializeComponent();
         Loaded += OnLoaded;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        // Load presets
-        Presets = AppSettings.LoadPresets();
-
         // Navigate to initial page
         NavigateTo("Models");
 

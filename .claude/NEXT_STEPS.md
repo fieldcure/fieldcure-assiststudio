@@ -41,8 +41,8 @@
 - WindowHelper 공용 클래스 (FileOpenPicker HWND 연동)
 
 ### 미구현 항목
-- UI/UX/사용성 개선 + 로컬 모델 자동 관리 — Phase 5
-- SampleApp 완성 + NuGet 배포 + CI/CD — Phase 6
+- Control 품질 향상 + 로컬라이제이션 보완 — Phase 6
+- SampleApp 완성 + NuGet 배포 + CI/CD — Phase 7
 
 ---
 
@@ -97,7 +97,10 @@ ClaudeProvider (SSE), OpenAiProvider, OllamaProvider, SseReader 공용 유틸
 Core: Provider 뱃지, 메시지 복사, 요약 버튼, 테마 시스템, 로컬라이즈, ChatMessage.ProviderName
 SampleApp: 멀티 Provider preset, Ollama 자동 설치/시작, 하드웨어 감지 + 모델 추천, First Run Experience
 
-### Phase 6: 샘플앱 완성 & 문서 & 배포
+### Phase 6: Control 품질 향상 & 로컬라이제이션 보완
+XML Summary 태그 정비, Control UI/UX 리터치 (멀티 프로바이더 대화 UX), Ctrl+V 확장 (파일/이미지 붙여넣기), 로컬라이제이션 누락 점검
+
+### Phase 7: 샘플앱 완성 & 문서 & 배포
 SampleApp 완성, README, NuGet 배포, CI/CD
 
 ---
@@ -1135,7 +1138,32 @@ OnnxModelManager : IModelManager
 
 ---
 
-## 9. Phase 6 상세 계획 (샘플앱 완성 & 배포)
+## 9. Phase 6 상세 계획 (Control 품질 향상 & 로컬라이제이션 보완)
+
+### 6.1 XML Summary 태그 정비
+- Core 라이브러리(FluentView.AI)의 모든 public 클래스/인터페이스/메서드에 `<summary>` 태그 추가
+- NuGet 배포 시 IntelliSense 지원을 위한 필수 작업
+- 대상: Models/, Providers/, Controls/, Helpers/, Rendering/ 하위 모든 public API
+
+### 6.2 Control UI/UX 리터치 — 멀티 프로바이더 대화 UX
+- 현재 구조: 하나의 대화에서 Provider를 자유롭게 변경 가능 (대화 히스토리 유지)
+- Provider 뱃지로 각 응답이 어떤 모델에서 온 건지 이미 표시됨
+- 구체적 UI 목업은 추후 확정 예정 (사용자 제공)
+
+### 6.3 Ctrl+V 기능 확대
+- 현재: 텍스트 붙여넣기만 지원
+- 확장: 클립보드 이미지 붙여넣기 (스크린샷 등)
+- 확장: 클립보드 파일 참조 붙여넣기 (탐색기에서 복사한 파일)
+- InputContainer에서 클립보드 DataPackageView 분석 → 이미지/파일 자동 첨부
+
+### 6.4 로컬라이제이션 누락 점검
+- Core 라이브러리(chat.html) 내 하드코딩 문자열 확인
+- SampleApp 전체 UI 문자열 중 x:Uid 미적용 항목 점검
+- en-US / ko-KR 리소스 파일 누락 키 확인
+
+---
+
+## 10. Phase 7 상세 계획 (샘플앱 완성 & 배포)
 
 ### SampleApp 완성
 - 전체 UI 마무리
@@ -1151,7 +1179,7 @@ OnnxModelManager : IModelManager
 
 ---
 
-## 10. 파일 전체 목록 (최종 구조)
+## 11. 파일 전체 목록 (최종 구조)
 
 ```
 src/FluentView.AI/
@@ -1161,22 +1189,32 @@ src/FluentView.AI/
 │   ├── InputContainer.xaml
 │   ├── InputContainer.xaml.cs
 │   ├── AttachmentPreviewBar.xaml
-│   └── AttachmentPreviewBar.xaml.cs
+│   ├── AttachmentPreviewBar.xaml.cs
+│   └── WindowHelper.cs
+├── Helpers/
+│   ├── ConversationManager.cs
+│   ├── HardwareInfo.cs
+│   ├── ModelCompatibility.cs
+│   ├── OllamaHelper.cs
+│   └── PasswordVaultHelper.cs
 ├── Models/
 │   ├── ChatMessage.cs
 │   ├── ChatAttachment.cs
 │   ├── AiRequest.cs
-│   ├── TokenUsage.cs              (Phase 4.5)
-│   ├── AiModel.cs                 (Phase 4.5)
-│   └── LocalModel.cs              (Phase 4.5)
+│   ├── TokenUsage.cs
+│   ├── AiModel.cs
+│   ├── LocalModel.cs
+│   └── ProviderPreset.cs
 ├── Providers/
 │   ├── IAiProvider.cs
-│   ├── IModelManager.cs           (Phase 4.5)
+│   ├── IModelManager.cs
 │   ├── ClaudeProvider.cs
 │   ├── OpenAiProvider.cs
 │   ├── OllamaProvider.cs
-│   ├── GeminiProvider.cs          (Phase 4.5)
-│   ├── OllamaModelManager.cs      (Phase 4.5)
+│   ├── GeminiProvider.cs
+│   ├── OllamaModelManager.cs
+│   ├── MockProvider.cs
+│   ├── ProviderFactory.cs
 │   └── SseReader.cs
 ├── Rendering/
 │   ├── WebViewChatRenderer.cs
@@ -1185,12 +1223,25 @@ src/FluentView.AI/
 └── FluentView.AI.csproj
 
 src/FluentView.AI.SampleApp/
-├── MainWindow.xaml
-├── MainWindow.xaml.cs
-├── MockProvider.cs
-├── ModelSelectionDialog.xaml       (Phase 4.5)
-├── ModelSelectionDialog.xaml.cs    (Phase 4.5)
 ├── App.xaml
 ├── App.xaml.cs
+├── MainWindow.xaml
+├── MainWindow.xaml.cs
+├── SettingsPanel.xaml
+├── SettingsPanel.xaml.cs
+├── Dialogs/
+│   ├── FirstRunDialog.xaml(.cs)
+│   └── ModelSelectionDialog.xaml(.cs)
+├── Helpers/
+│   └── AppSettings.cs
+├── Settings/
+│   ├── AboutPage.xaml(.cs)
+│   ├── AdvancedPage.xaml(.cs)
+│   ├── ModelsPage.xaml(.cs)
+│   ├── PersonalizationPage.xaml(.cs)
+│   └── PromptPage.xaml(.cs)
+├── Strings/
+│   ├── en-US/Resources.resw
+│   └── ko-KR/Resources.resw
 └── FluentView.AI.SampleApp.csproj
 ```
