@@ -1,4 +1,4 @@
-using FluentView.AI.Models;
+﻿using FluentView.AI.Models;
 using FluentView.AI.Providers;
 using FluentView.AI.SampleApp.Dialogs;
 using FluentView.AI.Helpers;
@@ -71,13 +71,13 @@ public sealed partial class ModelsPage : Page
         var geminiKey = PasswordVaultHelper.LoadApiKey("Gemini");
         var groqKey = PasswordVaultHelper.LoadApiKey("Groq");
 
-        SetKeyState("Claude", claudeKey, ClaudeApiKeyBox, ClaudeStatusText, ClaudeKeyButton, ClaudeRemoveKeyButton, ClaudeModelCombo);
-        SetKeyState("OpenAI", openAIKey, OpenAIApiKeyBox, OpenAIStatusText, OpenAIKeyButton, OpenAIRemoveKeyButton, OpenAIModelCombo);
-        SetKeyState("Gemini", geminiKey, GeminiApiKeyBox, GeminiStatusText, GeminiKeyButton, GeminiRemoveKeyButton, GeminiModelCombo);
-        SetKeyState("Groq", groqKey, GroqApiKeyBox, GroqStatusText, GroqKeyButton, GroqRemoveKeyButton, GroqModelCombo);
+        SetKeyState(claudeKey, ClaudeApiKeyBox, ClaudeStatusText, ClaudeKeyButton, ClaudeRemoveKeyButton, ClaudeModelCombo);
+        SetKeyState(openAIKey, OpenAIApiKeyBox, OpenAIStatusText, OpenAIKeyButton, OpenAIRemoveKeyButton, OpenAIModelCombo);
+        SetKeyState(geminiKey, GeminiApiKeyBox, GeminiStatusText, GeminiKeyButton, GeminiRemoveKeyButton, GeminiModelCombo);
+        SetKeyState(groqKey, GroqApiKeyBox, GroqStatusText, GroqKeyButton, GroqRemoveKeyButton, GroqModelCombo);
     }
 
-    private void SetKeyState(string provider, string key, PasswordBox keyBox, TextBlock statusText, Button keyButton, Button removeButton, ComboBox modelCombo)
+    private void SetKeyState(string key, PasswordBox keyBox, TextBlock statusText, Button keyButton, Button removeButton, ComboBox modelCombo)
     {
         if (!string.IsNullOrEmpty(key))
         {
@@ -181,7 +181,7 @@ public sealed partial class ModelsPage : Page
     {
         PasswordVaultHelper.DeleteApiKey(provider);
         _isLoading = true;
-        SetKeyState(provider, "", keyBox, statusText, keyButton, removeButton, modelCombo);
+        SetKeyState("", keyBox, statusText, keyButton, removeButton, modelCombo);
         _isLoading = false;
         SyncPresetsFromUI();
         RefreshDefaultProvider();
@@ -365,7 +365,6 @@ public sealed partial class ModelsPage : Page
 
     private void RefreshDefaultProvider()
     {
-        var prev = DefaultProviderCombo.SelectedItem as string;
         _isLoading = true;
         PopulateDefaultProvider();
         _isLoading = false;
