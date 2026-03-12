@@ -41,7 +41,6 @@
 - WindowHelper 공용 클래스 (FileOpenPicker HWND 연동)
 
 ### 미구현 항목
-- 토큰 사용량 추적 + 자동 요약 + 모델 목록 API + 로컬 모델 관리 — Phase 4.5
 - SampleApp 완성 + NuGet 배포 — Phase 5
 - CI/CD 워크플로우 — Phase 5
 
@@ -85,8 +84,8 @@ ClaudeProvider (SSE), OpenAiProvider, OllamaProvider, SseReader 공용 유틸
 ### Phase 4: 첨부 & UX ✅ 완료
 이미지 첨부, FilePicker 연동, AttachmentPreviewBar, Vision API 지원
 
-### Phase 4.5: 토큰 관리 + 모델 목록 + 로컬 모델 관리
-토큰 사용량 추적 (Usage), 자동 히스토리 요약 (컨텍스트 압축), 모델 목록 API 연동 (Claude/OpenAI/Ollama), IModelManager + OllamaModelManager (모델 다운로드/삭제) + SampleApp 모델 선택 UI
+### Phase 4.5 완료 (2026-03-12)
+토큰 사용량 추적 (Usage), 자동 히스토리 요약 (컨텍스트 압축), 모델 목록 API 연동 (Claude/OpenAI/Ollama/Gemini), IModelManager + OllamaModelManager (모델 다운로드/삭제), GeminiProvider (무료 티어), API 연결 검증, SampleApp 모델 선택 UI
 
 ### Phase 5: 샘플앱 & 문서 & 배포
 SampleApp 완성, README, NuGet 배포
@@ -1026,21 +1025,21 @@ OnnxModelManager : IModelManager
 별도 NuGet 패키지 (`FluentView.AI.Onnx`)로 분리하는 것이 좋다.
 
 ### 7.5.11 Phase 4.5 완료 기준
-- [ ] TokenUsage 모델 + IAiProvider.LastUsage 구현
-- [ ] 4개 Provider 모두 usage 파싱 동작 (Claude, OpenAI, Ollama, Gemini)
-- [ ] GeminiProvider 스트리밍 + Vision 동작
-- [ ] AutoSummarize 옵션 활성화 시 자동 요약 동작
-- [ ] AiModel 모델 + IAiProvider.ListModelsAsync() 구현
-- [ ] SampleApp에서 Model ComboBox로 모델 선택 가능
-- [ ] IModelManager 인터페이스 정의
-- [ ] OllamaModelManager로 로컬 모델 목록 조회
-- [ ] OllamaModelManager로 모델 다운로드 (진행률 표시)
-- [ ] OllamaModelManager로 모델 삭제
-- [ ] SampleApp ModelSelectionDialog 동작
-- [ ] 다이얼로그에서 선택한 모델이 OllamaProvider에 적용
-- [ ] ValidateConnectionAsync() 연결 검증 동작
-- [ ] SampleApp에서 연결 상태 + 조직 정보 표시
-- [ ] 솔루션 빌드 성공 (경고 0, 오류 0)
+- [x] TokenUsage 모델 + IAiProvider.LastUsage 구현
+- [x] 5개 Provider 모두 usage 파싱 동작 (Claude, OpenAI, Ollama, Gemini, Mock)
+- [x] GeminiProvider 스트리밍 + Vision 동작
+- [x] AutoSummarize 옵션 활성화 시 자동 요약 동작
+- [x] AiModel 모델 + IAiProvider.ListModelsAsync() 구현
+- [x] SampleApp에서 Model ComboBox로 모델 선택 가능
+- [x] IModelManager 인터페이스 정의
+- [x] OllamaModelManager로 로컬 모델 목록 조회
+- [x] OllamaModelManager로 모델 다운로드 (진행률 표시)
+- [x] OllamaModelManager로 모델 삭제
+- [x] SampleApp ModelSelectionDialog 동작
+- [x] 다이얼로그에서 선택한 모델이 OllamaProvider에 적용
+- [x] ValidateConnectionAsync() 연결 검증 동작
+- [x] SampleApp에서 연결 상태 + 조직 정보 표시
+- [x] 솔루션 빌드 성공 (경고 0, 오류 0)
 
 ---
 

@@ -8,6 +8,8 @@ public class MockProvider : IAiProvider
 {
     public string ProviderName => "Mock";
     public string ModelId => "mock-markdown-1.0";
+    public TokenUsage? LastUsage => null;
+    public bool IsTruncated => false;
 
     private const string MarkdownResponse = """
         Here's a **Markdown** demo response!
@@ -61,6 +63,17 @@ public class MockProvider : IAiProvider
     {
         await Task.Delay(100, ct);
         return MarkdownResponse;
+    }
+
+    public Task<IReadOnlyList<AiModel>> ListModelsAsync(CancellationToken ct = default)
+    {
+        IReadOnlyList<AiModel> models = [new AiModel("mock-markdown-1.0", "Mock Markdown", "mock")];
+        return Task.FromResult(models);
+    }
+
+    public Task<ConnectionInfo> ValidateConnectionAsync(CancellationToken ct = default)
+    {
+        return Task.FromResult(new ConnectionInfo(true, null, null, null));
     }
 
     public async IAsyncEnumerable<string> StreamAsync(AiRequest request, [EnumeratorCancellation] CancellationToken ct = default)

@@ -14,6 +14,7 @@ internal class WebViewChatRenderer
     private TaskCompletionSource? _navigationTcs;
 
     public event EventHandler<string>? CopyRequested;
+    public event EventHandler<string>? ContinueRequested;
 
     public async Task InitializeAsync(WebView2 webView)
     {
@@ -45,21 +46,71 @@ internal class WebViewChatRenderer
         var highlightJs = LoadEmbeddedResource("highlight.min.js");
         await _webView.ExecuteScriptAsync(highlightJs).AsTask();
 
-        // Configure marked with highlight.js integration
+        // Inject KaTeX
+        var katexJs = LoadEmbeddedResource("katex.min.js");
+        await _webView.ExecuteScriptAsync(katexJs).AsTask();
+
+        // Configure marked with highlight.js + KaTeX math extensions
         var configScript = """
-            marked.setOptions({
-                breaks: true,
-                gfm: true,
-                highlight: function(code, lang) {
-                    if (lang && hljs.getLanguage(lang)) {
-                        try { return hljs.highlight(code, { language: lang }).value; }
-                        catch(e) {}
+            (function() {
+                // Block-level math: $$...$$
+                var mathBlock = {
+                    name: 'mathBlock',
+                    level: 'block',
+                    start: function(src) {
+                        return src.indexOf('$$');
+                    },
+                    tokenizer: function(src) {
+                        var match = src.match(/^\$\$([\s\S]+?)\$\$/);
+                        if (match) {
+                            return { type: 'mathBlock', raw: match[0], text: match[1].trim() };
+                        }
+                    },
+                    renderer: function(token) {
+                        try {
+                            return katex.renderToString(token.text, { displayMode: true, throwOnError: false });
+                        } catch(e) { return token.raw; }
                     }
-                    try { return hljs.highlightAuto(code).value; }
-                    catch(e) {}
-                    return '';
-                }
-            });
+                };
+
+                // Inline math: $...$
+                var mathInline = {
+                    name: 'mathInline',
+                    level: 'inline',
+                    start: function(src) {
+                        return src.indexOf('$');
+                    },
+                    tokenizer: function(src) {
+                        var match = src.match(/^\$([^\$\n]+?)\$/);
+                        if (match) {
+                            return { type: 'mathInline', raw: match[0], text: match[1].trim() };
+                        }
+                    },
+                    renderer: function(token) {
+                        try {
+                            return katex.renderToString(token.text, { displayMode: false, throwOnError: false });
+                        } catch(e) { return token.raw; }
+                    }
+                };
+
+                marked.use({
+                    extensions: [mathBlock, mathInline]
+                });
+
+                marked.setOptions({
+                    breaks: true,
+                    gfm: true,
+                    highlight: function(code, lang) {
+                        if (lang && hljs.getLanguage(lang)) {
+                            try { return hljs.highlight(code, { language: lang }).value; }
+                            catch(e) {}
+                        }
+                        try { return hljs.highlightAuto(code).value; }
+                        catch(e) {}
+                        return '';
+                    }
+                });
+            })();
             """;
         await _webView.ExecuteScriptAsync(configScript).AsTask();
     }
@@ -79,6 +130,11 @@ internal class WebViewChatRenderer
                 var codeText = message["copy:".Length..];
                 CopyToClipboard(codeText);
                 CopyRequested?.Invoke(this, codeText);
+            }
+            else if (message?.StartsWith("continue:") == true)
+            {
+                var messageId = message["continue:".Length..];
+                ContinueRequested?.Invoke(this, messageId);
             }
         }
         catch
@@ -146,15 +202,21 @@ internal class WebViewChatRenderer
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 
+    public Task ResumeMessageAsync(string id, string existingText)
+    {
+        var script = $"window.fluentChat.resumeMessage({Js(id)}, {Js(existingText)})";
+        return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
     public Task AppendTokenAsync(string id, string token)
     {
         var script = $"window.fluentChat.appendToken({Js(id)}, {Js(token)})";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 
-    public Task FinalizeMessageAsync(string id, string fullMarkdown)
+    public Task FinalizeMessageAsync(string id, string fullMarkdown, bool truncated = false)
     {
-        var script = $"window.fluentChat.finalizeMessage({Js(id)}, {Js(fullMarkdown)})";
+        var script = $"window.fluentChat.finalizeMessage({Js(id)}, {Js(fullMarkdown)}, {(truncated ? "true" : "false")})";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 

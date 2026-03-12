@@ -14,6 +14,8 @@ public class OllamaProvider : IAiProvider, IDisposable
 
     public string ProviderName => "Ollama";
     public string ModelId { get; }
+    public TokenUsage? LastUsage { get; private set; }
+    public bool IsTruncated { get; private set; }
 
     public OllamaProvider(string model = "llama3.1", string baseUrl = "http://localhost:11434")
         : this(new HttpClient(), model, baseUrl, ownsHttpClient: true)
@@ -40,8 +42,18 @@ public class OllamaProvider : IAiProvider, IDisposable
 
         var json = await response.Content.ReadAsStringAsync(ct);
         using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
 
-        return doc.RootElement
+        if (root.TryGetProperty("prompt_eval_count", out var promptEl) &&
+            root.TryGetProperty("eval_count", out var evalEl))
+        {
+            LastUsage = new TokenUsage(promptEl.GetInt32(), evalEl.GetInt32());
+        }
+
+        IsTruncated = root.TryGetProperty("done_reason", out var drEl) &&
+                      drEl.GetString() == "length";
+
+        return root
             .GetProperty("message")
             .GetProperty("content")
             .GetString() ?? "";
@@ -54,6 +66,8 @@ public class OllamaProvider : IAiProvider, IDisposable
         using var stream = await response.Content.ReadAsStreamAsync(ct);
         using var reader = new StreamReader(stream);
 
+        IsTruncated = false;
+
         while (!reader.EndOfStream)
         {
             ct.ThrowIfCancellationRequested();
@@ -65,7 +79,16 @@ public class OllamaProvider : IAiProvider, IDisposable
             var root = doc.RootElement;
 
             if (root.TryGetProperty("done", out var doneEl) && doneEl.GetBoolean())
+            {
+                if (root.TryGetProperty("prompt_eval_count", out var promptEl) &&
+                    root.TryGetProperty("eval_count", out var evalEl))
+                {
+                    LastUsage = new TokenUsage(promptEl.GetInt32(), evalEl.GetInt32());
+                }
+                IsTruncated = root.TryGetProperty("done_reason", out var drEl) &&
+                              drEl.GetString() == "length";
                 yield break;
+            }
 
             if (root.TryGetProperty("message", out var messageEl) &&
                 messageEl.TryGetProperty("content", out var contentEl))
@@ -171,6 +194,43 @@ public class OllamaProvider : IAiProvider, IDisposable
         }
 
         return response;
+    }
+
+    public async Task<IReadOnlyList<AiModel>> ListModelsAsync(CancellationToken ct = default)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Get, $"{_baseUrl}/api/tags");
+        var response = await _httpClient.SendAsync(req, ct);
+        response.EnsureSuccessStatusCode();
+
+        var json = await response.Content.ReadAsStringAsync(ct);
+        using var doc = JsonDocument.Parse(json);
+
+        var models = new List<AiModel>();
+        foreach (var item in doc.RootElement.GetProperty("models").EnumerateArray())
+        {
+            var name = item.GetProperty("name").GetString()!;
+            models.Add(new AiModel(name, name, "ollama"));
+        }
+
+        return models;
+    }
+
+    public async Task<ConnectionInfo> ValidateConnectionAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get, $"{_baseUrl}/api/tags");
+            var response = await _httpClient.SendAsync(req, ct);
+
+            if (response.IsSuccessStatusCode)
+                return new ConnectionInfo(true, null, null, null);
+
+            return new ConnectionInfo(false, null, null, $"HTTP {(int)response.StatusCode}");
+        }
+        catch (Exception ex)
+        {
+            return new ConnectionInfo(false, null, null, ex.Message);
+        }
     }
 
     public void Dispose()

@@ -17,6 +17,8 @@ public class ClaudeProvider : IAiProvider, IDisposable
 
     public string ProviderName => "Claude";
     public string ModelId { get; }
+    public TokenUsage? LastUsage { get; private set; }
+    public bool IsTruncated { get; private set; }
 
     public ClaudeProvider(string apiKey, string model = "claude-sonnet-4-20250514")
         : this(new HttpClient(), apiKey, model, ownsHttpClient: true)
@@ -44,6 +46,16 @@ public class ClaudeProvider : IAiProvider, IDisposable
         var json = await response.Content.ReadAsStringAsync(ct);
         using var doc = JsonDocument.Parse(json);
 
+        if (doc.RootElement.TryGetProperty("usage", out var usage))
+        {
+            LastUsage = new TokenUsage(
+                usage.GetProperty("input_tokens").GetInt32(),
+                usage.GetProperty("output_tokens").GetInt32());
+        }
+
+        IsTruncated = doc.RootElement.TryGetProperty("stop_reason", out var sr) &&
+                      sr.GetString() == "max_tokens";
+
         return doc.RootElement
             .GetProperty("content")[0]
             .GetProperty("text")
@@ -55,6 +67,9 @@ public class ClaudeProvider : IAiProvider, IDisposable
         var body = BuildRequestBody(request, stream: true);
         using var response = await SendRequestAsync(body, ct, HttpCompletionOption.ResponseHeadersRead);
         using var stream = await response.Content.ReadAsStreamAsync(ct);
+
+        int inputTokens = 0, outputTokens = 0;
+        IsTruncated = false;
 
         await foreach (var sse in SseReader.ReadEventsAsync(stream, ct))
         {
@@ -69,11 +84,37 @@ public class ClaudeProvider : IAiProvider, IDisposable
                 if (!string.IsNullOrEmpty(text))
                     yield return text;
             }
+            else if (sse.EventType == "message_start")
+            {
+                using var doc = JsonDocument.Parse(sse.Data);
+                if (doc.RootElement.TryGetProperty("message", out var msg) &&
+                    msg.TryGetProperty("usage", out var usage))
+                {
+                    inputTokens = usage.GetProperty("input_tokens").GetInt32();
+                }
+            }
+            else if (sse.EventType == "message_delta")
+            {
+                using var doc = JsonDocument.Parse(sse.Data);
+                if (doc.RootElement.TryGetProperty("usage", out var usage) &&
+                    usage.TryGetProperty("output_tokens", out var outEl))
+                {
+                    outputTokens = outEl.GetInt32();
+                }
+                if (doc.RootElement.TryGetProperty("delta", out var delta) &&
+                    delta.TryGetProperty("stop_reason", out var stopEl))
+                {
+                    IsTruncated = stopEl.GetString() == "max_tokens";
+                }
+            }
             else if (sse.EventType == "message_stop")
             {
+                LastUsage = new TokenUsage(inputTokens, outputTokens);
                 yield break;
             }
         }
+
+        LastUsage = new TokenUsage(inputTokens, outputTokens);
     }
 
     private string BuildRequestBody(AiRequest request, bool stream)
@@ -198,6 +239,50 @@ public class ClaudeProvider : IAiProvider, IDisposable
         }
 
         return response;
+    }
+
+    public async Task<IReadOnlyList<AiModel>> ListModelsAsync(CancellationToken ct = default)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Get, "https://api.anthropic.com/v1/models");
+        req.Headers.Add("x-api-key", _apiKey);
+        req.Headers.Add("anthropic-version", AnthropicVersion);
+
+        var response = await _httpClient.SendAsync(req, ct);
+        response.EnsureSuccessStatusCode();
+
+        var json = await response.Content.ReadAsStringAsync(ct);
+        using var doc = JsonDocument.Parse(json);
+
+        var models = new List<AiModel>();
+        foreach (var item in doc.RootElement.GetProperty("data").EnumerateArray())
+        {
+            var id = item.GetProperty("id").GetString()!;
+            var displayName = item.TryGetProperty("display_name", out var dn) ? dn.GetString() : null;
+            models.Add(new AiModel(id, displayName, "anthropic"));
+        }
+
+        return models;
+    }
+
+    public async Task<ConnectionInfo> ValidateConnectionAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get, "https://api.anthropic.com/v1/models");
+            req.Headers.Add("x-api-key", _apiKey);
+            req.Headers.Add("anthropic-version", AnthropicVersion);
+
+            var response = await _httpClient.SendAsync(req, ct);
+            if (response.IsSuccessStatusCode)
+                return new ConnectionInfo(true, null, null, null);
+
+            var errorBody = await response.Content.ReadAsStringAsync(ct);
+            return new ConnectionInfo(false, null, null, $"HTTP {(int)response.StatusCode}: {errorBody}");
+        }
+        catch (Exception ex)
+        {
+            return new ConnectionInfo(false, null, null, ex.Message);
+        }
     }
 
     public void Dispose()

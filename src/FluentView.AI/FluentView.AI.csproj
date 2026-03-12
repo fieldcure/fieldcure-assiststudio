@@ -29,6 +29,7 @@
     <EmbeddedResource Include="Rendering\Resources\chat.html" />
     <EmbeddedResource Include="Rendering\Resources\vendor\marked.min.js" />
     <EmbeddedResource Include="Rendering\Resources\vendor\highlight.min.js" />
+    <EmbeddedResource Include="Rendering\Resources\vendor\katex.min.js" />
   </ItemGroup>
 
 </Project>

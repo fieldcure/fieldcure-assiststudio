@@ -34,6 +34,7 @@
                     <ComboBoxItem Content="Claude" />
                     <ComboBoxItem Content="OpenAI" />
                     <ComboBoxItem Content="Ollama" />
+                    <ComboBoxItem Content="Gemini" />
                 </ComboBox>
 
                 <PasswordBox x:Name="ApiKeyBox"
@@ -41,9 +42,21 @@
                              Width="280"
                              Visibility="Collapsed" />
 
-                <TextBox x:Name="ModelBox"
-                         PlaceholderText="Model (optional)"
-                         Width="200" />
+                <ComboBox x:Name="ModelCombo"
+                          IsEditable="True"
+                          PlaceholderText="Model"
+                          Width="220" />
+
+                <Button x:Name="RefreshModelsButton"
+                        Content="&#xE72C;"
+                        FontFamily="{StaticResource SymbolThemeFontFamily}"
+                        ToolTipService.ToolTip="Refresh Models"
+                        Click="OnRefreshModels" />
+
+                <Button x:Name="BrowseModelsButton"
+                        Content="Browse..."
+                        Visibility="Collapsed"
+                        Click="OnBrowseModels" />
 
                 <Button Content="Apply"
                         Style="{StaticResource AccentButtonStyle}"
@@ -51,6 +64,12 @@
 
                 <Button Content="Clear"
                         Click="OnClearChat" />
+
+                <TextBlock x:Name="StatusText"
+                           VerticalAlignment="Center"
+                           Margin="8,0,0,0"
+                           FontSize="12"
+                           Opacity="0.8" />
             </StackPanel>
         </Border>
 

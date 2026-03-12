@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <style>
     /* ===== Theme Variables ===== */
     :root {
@@ -342,6 +343,34 @@
         font-size: 14px;
     }
 
+    /* ===== KaTeX Math ===== */
+    .katex-display {
+        margin: 8px 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
+    .katex { font-size: 1.1em; }
+
+    /* ===== Continue Button ===== */
+    .continue-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 8px;
+        padding: 6px 14px;
+        border-radius: 6px;
+        border: 1px solid var(--border-color);
+        background: var(--copy-btn-bg);
+        color: var(--text-primary);
+        font-size: 13px;
+        font-family: 'Segoe UI Variable', 'Segoe UI', sans-serif;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+    .continue-btn:hover {
+        background: var(--copy-btn-hover);
+    }
+
     /* ===== Animations ===== */
     @keyframes blink { 50% { opacity: 0; } }
     @keyframes fadeIn {
@@ -489,7 +518,7 @@
             doScroll('instant');
         },
 
-        finalizeMessage: function(id, fullText) {
+        finalizeMessage: function(id, fullText, truncated) {
             var msg = document.getElementById('msg-' + id);
             if (!msg) return;
             var bubble = msg.querySelector('.message-bubble');
@@ -498,10 +527,33 @@
                 bubble.classList.add('rendered');
                 bubble.innerHTML = renderMarkdown(fullText);
                 addCopyButtons(bubble);
+
+                if (truncated) {
+                    var btn = document.createElement('button');
+                    btn.className = 'continue-btn';
+                    btn.textContent = '\u25B6 Continue';
+                    btn.addEventListener('click', function() {
+                        btn.remove();
+                        window.chrome.webview.postMessage('continue:' + id);
+                    });
+                    bubble.appendChild(btn);
+                }
             }
             var ts = msg.querySelector('.message-timestamp');
             if (ts) {
                 ts.textContent = formatTimestamp(new Date().toISOString());
+            }
+            doScroll('smooth');
+        },
+
+        resumeMessage: function(id, existingText) {
+            var msg = document.getElementById('msg-' + id);
+            if (!msg) return;
+            var bubble = msg.querySelector('.message-bubble');
+            if (bubble) {
+                bubble.classList.remove('rendered');
+                bubble.classList.add('streaming');
+                bubble.innerHTML = '<span class="content">' + escapeHtml(existingText) + '</span><span class="cursor">&#9612;</span>';
             }
             doScroll('smooth');
         },
