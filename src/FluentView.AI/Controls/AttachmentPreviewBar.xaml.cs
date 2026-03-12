@@ -106,7 +106,7 @@ public sealed partial class AttachmentPreviewBar : UserControl
             container.Children.Add(stack);
         }
 
-        // Remove button (X) in top-right corner
+        // Remove button (X) overlay — hidden until hover
         var removeButton = new Button
         {
             Content = new FontIcon { Glyph = "\uE711", FontSize = 10 }, // Cancel icon
@@ -116,11 +116,15 @@ public sealed partial class AttachmentPreviewBar : UserControl
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Top,
             Margin = new Thickness(0, 2, 2, 0),
-            Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
+            Opacity = 0,
             Tag = attachment
         };
         removeButton.Click += OnRemoveClick;
         container.Children.Add(removeButton);
+
+        // Show/hide remove button on hover
+        container.PointerEntered += (_, _) => removeButton.Opacity = 1;
+        container.PointerExited += (_, _) => removeButton.Opacity = 0;
 
         return container;
     }

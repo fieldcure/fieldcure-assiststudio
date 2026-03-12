@@ -474,9 +474,18 @@
         return html;
     }
 
+    function fixCjkEmphasis(html) {
+        // CommonMark spec: closing ** preceded by punctuation and followed by
+        // CJK characters is not recognized as right-flanking delimiter.
+        // Post-process any remaining **bold** and *italic* in the HTML output.
+        html = html.replace(/\*\*([^<]+?)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/(?<!\*)\*([^<*]+?)\*(?!\*)/g, '<em>$1</em>');
+        return html;
+    }
+
     function renderMarkdown(fullText) {
         if (typeof marked !== 'undefined' && typeof hljs !== 'undefined') {
-            return marked.parse(fullText);
+            return fixCjkEmphasis(marked.parse(fullText));
         }
         // Fallback: plain text
         return '<span class="content">' + escapeHtml(fullText) + '</span>';
