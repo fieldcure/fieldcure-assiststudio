@@ -6,7 +6,7 @@ public enum AttachmentType
     TextFile
 }
 
-public class ChatAttachment
+public partial class ChatAttachment
 {
     public ChatAttachment() { }
 

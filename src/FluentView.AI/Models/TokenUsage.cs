@@ -1,6 +1,6 @@
 namespace FluentView.AI.Models;
 
-public record TokenUsage(
+public partial record TokenUsage(
     int InputTokens,
     int OutputTokens
 )

@@ -14,7 +14,7 @@ public interface IModelManager
     Task DeleteModelAsync(string modelName, CancellationToken ct = default);
 }
 
-public record ModelDownloadProgress(
+public partial record ModelDownloadProgress(
     string Status,
     double Percent,
     long? TotalBytes,

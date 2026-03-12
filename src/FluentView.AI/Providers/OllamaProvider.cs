@@ -6,7 +6,7 @@ using FluentView.AI.Models;
 
 namespace FluentView.AI.Providers;
 
-public class OllamaProvider : IAiProvider, IDisposable
+public partial class OllamaProvider : IAiProvider, IDisposable
 {
     private readonly HttpClient _httpClient;
     private readonly string _baseUrl;

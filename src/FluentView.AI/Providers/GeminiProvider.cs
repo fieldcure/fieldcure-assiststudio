@@ -6,7 +6,7 @@ using FluentView.AI.Models;
 
 namespace FluentView.AI.Providers;
 
-public class GeminiProvider : IAiProvider, IDisposable
+public partial class GeminiProvider : IAiProvider, IDisposable
 {
     private readonly HttpClient _httpClient;
     private readonly string _apiKey;

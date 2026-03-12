@@ -1,6 +1,6 @@
 namespace FluentView.AI.Models;
 
-public record LocalModel(
+public partial record LocalModel(
     string Id,
     string? DisplayName,
     string? OwnedBy

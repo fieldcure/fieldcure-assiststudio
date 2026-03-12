@@ -1,6 +1,6 @@
 namespace FluentView.AI.Models;
 
-public class AiRequest
+public partial class AiRequest
 {
     public required IReadOnlyList<ChatMessage> Messages { get; init; }
     public string? SystemPrompt { get; init; }

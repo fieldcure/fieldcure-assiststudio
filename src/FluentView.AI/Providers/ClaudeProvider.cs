@@ -6,7 +6,7 @@ using FluentView.AI.Models;
 
 namespace FluentView.AI.Providers;
 
-public class ClaudeProvider : IAiProvider, IDisposable
+public partial class ClaudeProvider : IAiProvider, IDisposable
 {
     private readonly HttpClient _httpClient;
     private readonly string _apiKey;

@@ -10,7 +10,7 @@ public enum ChatRole
     System
 }
 
-public class ChatMessage : INotifyPropertyChanged
+public partial class ChatMessage : INotifyPropertyChanged
 {
     private string _content;
     private bool _isStreaming;

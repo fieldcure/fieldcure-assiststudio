@@ -2,7 +2,7 @@ using FluentView.AI.Models;
 
 namespace FluentView.AI.Controls;
 
-public class MessageSentEventArgs : EventArgs
+public partial class MessageSentEventArgs : EventArgs
 {
     public MessageSentEventArgs(string text, IReadOnlyList<ChatAttachment> attachments)
     {
