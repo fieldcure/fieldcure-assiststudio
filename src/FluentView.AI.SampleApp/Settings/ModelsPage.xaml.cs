@@ -1,4 +1,7 @@
 using FluentView.AI.Providers;
+using FluentView.AI.SampleApp.Dialogs;
+using FluentView.AI.SampleApp.Helpers;
+using FluentView.AI.SampleApp.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
@@ -82,17 +85,75 @@ public sealed partial class ModelsPage : Page
 
     private async void OnCheckOllama(object sender, RoutedEventArgs e)
     {
+        await CheckOllamaStatusAsync();
+    }
+
+    private async Task CheckOllamaStatusAsync()
+    {
+        OllamaSpinner.Visibility = Visibility.Visible;
+        OllamaSpinner.IsActive = true;
+        OllamaStatusText.Text = "Status: checking...";
+        StartOllamaButton.Visibility = Visibility.Collapsed;
+        InstallPanel.Visibility = Visibility.Collapsed;
+
         try
         {
-            using var client = new HttpClient();
-            var response = await client.GetAsync("http://localhost:11434/api/tags");
-            OllamaStatusText.Text = response.IsSuccessStatusCode
-                ? "Status: \u2705 Running"
-                : $"Status: \u274C Error ({response.StatusCode})";
+            var isRunning = await OllamaHelper.IsOllamaRunningAsync();
+            if (isRunning)
+            {
+                OllamaStatusText.Text = "Status: \u2705 Running";
+            }
+            else if (OllamaHelper.IsOllamaInstalled())
+            {
+                OllamaStatusText.Text = "Status: \u26A0\uFE0F Installed but not running";
+                StartOllamaButton.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                OllamaStatusText.Text = "Status: \u274C Not installed";
+                InstallPanel.Visibility = Visibility.Visible;
+            }
         }
         catch
         {
-            OllamaStatusText.Text = "Status: \u274C Not running";
+            OllamaStatusText.Text = "Status: \u274C Error";
+        }
+        finally
+        {
+            OllamaSpinner.IsActive = false;
+            OllamaSpinner.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private async void OnStartOllama(object sender, RoutedEventArgs e)
+    {
+        StartOllamaButton.IsEnabled = false;
+        OllamaSpinner.Visibility = Visibility.Visible;
+        OllamaSpinner.IsActive = true;
+        OllamaStatusText.Text = "Status: Starting Ollama...";
+
+        try
+        {
+            var started = await OllamaHelper.StartOllamaAsync();
+            if (started)
+            {
+                OllamaStatusText.Text = "Status: \u2705 Running";
+                StartOllamaButton.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                OllamaStatusText.Text = "Status: \u274C Failed to start";
+            }
+        }
+        catch
+        {
+            OllamaStatusText.Text = "Status: \u274C Error starting Ollama";
+        }
+        finally
+        {
+            StartOllamaButton.IsEnabled = true;
+            OllamaSpinner.IsActive = false;
+            OllamaSpinner.Visibility = Visibility.Collapsed;
         }
     }
 

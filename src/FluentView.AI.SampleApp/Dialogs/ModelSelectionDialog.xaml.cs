@@ -2,11 +2,14 @@ using FluentView.AI.Providers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
-namespace FluentView.AI.SampleApp;
+using FluentView.AI.SampleApp.Helpers;
+
+namespace FluentView.AI.SampleApp.Dialogs;
 
 public sealed partial class ModelSelectionDialog : ContentDialog
 {
     private readonly OllamaModelManager _manager;
+    private readonly HardwareSpec _hw;
 
     public string? SelectedModelId { get; private set; }
 
@@ -14,11 +17,18 @@ public sealed partial class ModelSelectionDialog : ContentDialog
     {
         InitializeComponent();
         _manager = manager;
+        _hw = HardwareInfo.Detect();
+
+        GpuInfoText.Text = $"GPU: {_hw.GpuName} ({_hw.VramDisplay} VRAM)";
+        RamInfoText.Text = $"RAM: {_hw.RamDisplay}";
+
         Loaded += async (_, _) => await RefreshAsync();
     }
 
     private async Task RefreshAsync()
     {
+        var localIds = new HashSet<string>();
+
         try
         {
             var localModels = await _manager.ListLocalModelsAsync();
@@ -29,16 +39,39 @@ public sealed partial class ModelSelectionDialog : ContentDialog
                 Size = FormatSize(m.SizeBytes)
             }).ToList();
 
+            localIds = localModels.Select(m => m.Id).ToHashSet();
+        }
+        catch
+        {
+            // Ollama may not be running — local list stays empty
+        }
+
+        // Always show available models (hardcoded list doesn't need Ollama)
+        try
+        {
             var available = await _manager.SearchAvailableModelsAsync();
-            var localIds = localModels.Select(m => m.Id).ToHashSet();
             AvailableModelsList.ItemsSource = available
                 .Where(m => !localIds.Contains(m.Id))
-                .Select(m => new { Name = m.Id, m.DisplayName })
+                .Select(m =>
+                {
+                    var estimated = ModelCompatibility.GetEstimatedSize(m.Id);
+                    var level = estimated > 0
+                        ? ModelCompatibility.Check(estimated, _hw)
+                        : CompatibilityLevel.Unknown;
+                    return new
+                    {
+                        Name = m.Id,
+                        m.DisplayName,
+                        CompatIcon = ModelCompatibility.GetCompatibilityIcon(level),
+                        CompatText = ModelCompatibility.GetCompatibilityText(level),
+                        EstimatedSize = estimated > 0 ? FormatSize(estimated) : "",
+                    };
+                })
                 .ToList();
         }
         catch
         {
-            // Ollama may not be running
+            // Should not happen since SearchAvailableModelsAsync is local
         }
     }
 

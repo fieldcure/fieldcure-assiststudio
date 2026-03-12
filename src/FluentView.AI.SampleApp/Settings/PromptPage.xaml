@@ -15,15 +15,15 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Grid Grid.Row="0" Padding="18,12,18,12"
+        <Grid Grid.Row="0" Padding="20,14,20,14"
               BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
               BorderThickness="0,0,0,1">
             <TextBlock x:Uid="Prompt_Title" Text="System Prompt"
-                       Style="{StaticResource SubtitleTextBlockStyle}" />
+                       Style="{StaticResource TitleTextBlockStyle}" />
         </Grid>
 
         <!-- Content -->
-        <ScrollViewer Grid.Row="1" Padding="18,12">
+        <ScrollViewer Grid.Row="1" Padding="20,16">
             <StackPanel Spacing="16">
 
                 <TextBlock x:Uid="Prompt_Description" Text="Configure the system prompt sent to AI models."

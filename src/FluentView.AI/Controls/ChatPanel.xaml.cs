@@ -107,6 +107,21 @@ public sealed partial class ChatPanel : UserControl
     public IReadOnlyList<ChatMessage> GetMessages() => _messages;
 
     /// <summary>
+    /// Adds a previously saved message to the conversation (for restoring saved conversations).
+    /// Messages added before the WebView is initialized will be rendered once initialization completes.
+    /// </summary>
+    public void AddRestoredMessage(ChatRole role, string content,
+        string? providerName = null, string? providerModelId = null)
+    {
+        var msg = new ChatMessage(role, content)
+        {
+            ProviderName = providerName,
+            ProviderModelId = providerModelId,
+        };
+        _messages.Add(msg);
+    }
+
+    /// <summary>
     /// Manually trigger conversation summarization.
     /// Compresses older messages into a system summary, keeping the most recent turns.
     /// </summary>
@@ -139,6 +154,22 @@ public sealed partial class ChatPanel : UserControl
             _isInitialized = true;
             await ApplyThemeAsync();
             await ApplyLocaleStringsAsync();
+
+            // Render any pre-existing messages (restored conversations)
+            foreach (var msg in _messages)
+            {
+                if (msg.Role == ChatRole.User)
+                {
+                    await _renderer.AppendUserMessageAsync(
+                        msg.Id, msg.Content, msg.Timestamp.ToString("O"), msg.Attachments);
+                }
+                else if (msg.Role == ChatRole.Assistant)
+                {
+                    await _renderer.BeginAssistantMessageAsync(
+                        msg.Id, msg.ProviderName, msg.ProviderModelId);
+                    await _renderer.FinalizeMessageAsync(msg.Id, msg.Content);
+                }
+            }
 
             // Listen for theme changes
             ActualThemeChanged += async (_, _) => await ApplyThemeAsync();

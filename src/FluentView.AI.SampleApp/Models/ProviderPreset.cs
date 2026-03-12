@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
-namespace FluentView.AI.SampleApp;
+namespace FluentView.AI.SampleApp.Models;
 
 public class ProviderPreset : INotifyPropertyChanged
 {

@@ -15,26 +15,37 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Grid Grid.Row="0" Padding="18,12,18,12"
+        <Grid Grid.Row="0" Padding="20,14,20,14"
               BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
               BorderThickness="0,0,0,1">
-            <TextBlock x:Uid="About_Title" Text="About"
-                       Style="{StaticResource SubtitleTextBlockStyle}" />
+            <TextBlock x:Uid="About_Title" Text="App Info"
+                       Style="{StaticResource TitleTextBlockStyle}" />
         </Grid>
 
         <!-- Content -->
-        <ScrollViewer Grid.Row="1" Padding="18,12">
+        <ScrollViewer Grid.Row="1" Padding="20,20">
             <StackPanel Spacing="16">
 
-                <!-- App Info -->
-                <StackPanel Spacing="4">
-                    <TextBlock Text="FluentView.AI"
-                               Style="{StaticResource TitleTextBlockStyle}" />
-                    <TextBlock x:Name="VersionText"
-                               Style="{StaticResource CaptionTextBlockStyle}"
-                               Opacity="0.7" />
+                <!-- App Icon + Name + Version -->
+                <StackPanel Orientation="Horizontal" Spacing="20">
+                    <Image Source="ms-appx:///Assets/Logo.png"
+                           Width="96" Height="96"
+                           VerticalAlignment="Center" />
+                    <StackPanel VerticalAlignment="Center" Spacing="4">
+                        <TextBlock Text="FluentView.AI"
+                                   Style="{StaticResource SubtitleTextBlockStyle}" />
+                        <TextBlock x:Name="VersionText"
+                                   Style="{StaticResource SubtitleTextBlockStyle}"
+                                   Opacity="0.7" />
+                    </StackPanel>
                 </StackPanel>
 
+                <!-- Copyright -->
+                <TextBlock Text="Copyright (c) 2026 Jong Hyun Kim"
+                           Style="{StaticResource BodyTextBlockStyle}"
+                           Opacity="0.8" />
+
+                <!-- Description -->
                 <TextBlock x:Uid="About_Description" Text="AI Chat UI Control for WinUI 3."
                            TextWrapping="Wrap" />
 
@@ -56,7 +67,39 @@
                            Style="{StaticResource BodyStrongTextBlockStyle}" />
 
                 <HyperlinkButton x:Uid="About_GitHubRepo" Content="GitHub Repository"
-                                 NavigateUri="https://github.com/diluculo/FluentView.AI" />
+                                 NavigateUri="https://github.com/diluculo/FluentView.AI"
+                                 Padding="0" />
+
+                <!-- System Specification -->
+                <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="0,4" />
+
+                <TextBlock x:Uid="About_SystemSpec" Text="System Specification"
+                           Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                <Grid ColumnSpacing="12" RowSpacing="6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="50" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="OS" FontWeight="Medium" />
+                    <TextBlock Grid.Row="0" Grid.Column="1" x:Name="OsText" TextWrapping="Wrap" />
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="GPU" FontWeight="Medium" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" x:Name="GpuText" TextWrapping="Wrap" />
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="VRAM" FontWeight="Medium" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" x:Name="VramText" />
+
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="RAM" FontWeight="Medium" />
+                    <TextBlock Grid.Row="3" Grid.Column="1" x:Name="RamText" />
+                </Grid>
             </StackPanel>
         </ScrollViewer>
     </Grid>

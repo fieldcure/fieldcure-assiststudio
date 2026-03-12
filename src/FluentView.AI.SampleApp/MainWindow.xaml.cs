@@ -1,10 +1,14 @@
 using FluentView.AI.Controls;
+using FluentView.AI.SampleApp.Dialogs;
+using FluentView.AI.SampleApp.Helpers;
+using FluentView.AI.SampleApp.Models;
 using Microsoft.UI;
 using Microsoft.UI.Input;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Media.Animation;
 using Windows.Foundation;
 using Windows.Graphics;
 using Windows.UI;
@@ -43,10 +47,20 @@ public sealed partial class MainWindow : Window
         Tabs.SizeChanged += (_, _) => SetRegionsForCustomTitleBar();
     }
 
-    private void OnFirstActivated(object sender, WindowActivatedEventArgs args)
+    private async void OnFirstActivated(object sender, WindowActivatedEventArgs args)
     {
         Activated -= OnFirstActivated;
         ApplyAppTheme(AppSettings.Theme);
+
+        if (AppSettings.IsFirstRun)
+        {
+            AppSettings.IsFirstRun = false;
+            var dialog = new FirstRunDialog
+            {
+                XamlRoot = Content.XamlRoot
+            };
+            await dialog.ShowAsync();
+        }
     }
 
     private void ApplyAppTheme(string theme)
@@ -133,12 +147,178 @@ public sealed partial class MainWindow : Window
 
     private void OnMainMenuClick(object sender, RoutedEventArgs e)
     {
+        var flyout = FlyoutBase.GetAttachedFlyout(MainMenuButton);
+        if (flyout is not null)
+        {
+            flyout.Closed += OnMenuFlyoutClosed;
+        }
+
+        PlayMenuRotation(-90);
         FlyoutBase.ShowAttachedFlyout(MainMenuButton);
+    }
+
+    private void OnMenuFlyoutClosed(object? sender, object e)
+    {
+        if (sender is FlyoutBase flyout)
+        {
+            flyout.Closed -= OnMenuFlyoutClosed;
+        }
+
+        PlayMenuRotation(0);
+    }
+
+    private void PlayMenuRotation(double toAngle)
+    {
+        var animation = new DoubleAnimation
+        {
+            To = toAngle,
+            Duration = new Duration(TimeSpan.FromMilliseconds(200)),
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut },
+        };
+
+        Storyboard.SetTarget(animation, MainMenuButtonRotation);
+        Storyboard.SetTargetProperty(animation, "Angle");
+
+        var storyboard = new Storyboard();
+        storyboard.Children.Add(animation);
+        storyboard.Begin();
     }
 
     private void OnMenuNewTab(object sender, RoutedEventArgs e)
     {
         CreateChatTab();
+    }
+
+    private async void OnMenuSaveConversation(object sender, RoutedEventArgs e)
+    {
+        if (Tabs.SelectedItem is not TabViewItem tab || tab.Content is not Grid grid)
+            return;
+
+        var chatPanel = FindChatPanel(grid);
+        if (chatPanel is null) return;
+
+        var messages = chatPanel.GetMessages();
+        if (messages.Count == 0) return;
+
+        var tabName = tab.Header as string ?? $"Chat {_tabCounter}";
+        var presetName = GetCurrentPresetName(grid);
+
+        try
+        {
+            await ConversationManager.SaveConversationAsync(tabName, presetName, messages);
+        }
+        catch
+        {
+            // Save failed silently
+        }
+    }
+
+    private async void OnMenuLoadConversation(object sender, RoutedEventArgs e)
+    {
+        var conversations = ConversationManager.ListSavedConversations();
+        if (conversations.Count == 0) return;
+
+        var listView = new ListView
+        {
+            SelectionMode = ListViewSelectionMode.Single,
+            MaxHeight = 300,
+            ItemsSource = conversations.Select(c => new
+            {
+                c.FileName,
+                c.FilePath,
+                Modified = c.ModifiedAt.ToLocalTime().ToString("g"),
+            }).ToList(),
+            ItemTemplate = (DataTemplate)Microsoft.UI.Xaml.Markup.XamlReader.Load(
+                """
+                <DataTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+                    <StackPanel Padding="4">
+                        <TextBlock Text="{Binding FileName}" />
+                        <TextBlock Text="{Binding Modified}" FontSize="11" Opacity="0.6" />
+                    </StackPanel>
+                </DataTemplate>
+                """),
+        };
+
+        var dialog = new ContentDialog
+        {
+            Title = "Load Conversation",
+            Content = listView,
+            PrimaryButtonText = "Load",
+            CloseButtonText = "Cancel",
+            IsPrimaryButtonEnabled = false,
+            XamlRoot = Content.XamlRoot,
+        };
+
+        listView.SelectionChanged += (_, _) => dialog.IsPrimaryButtonEnabled = listView.SelectedItem is not null;
+
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary && listView.SelectedItem is not null)
+        {
+            dynamic selected = listView.SelectedItem;
+            string filePath = selected.FilePath;
+
+            var data = await ConversationManager.LoadConversationAsync(filePath);
+            if (data is not null)
+            {
+                LoadConversationIntoNewTab(data);
+            }
+        }
+    }
+
+    private void LoadConversationIntoNewTab(ConversationData data)
+    {
+        // Find matching preset or use default
+        ProviderPreset? preset = null;
+        if (data.ProviderPresetName is not null)
+        {
+            preset = SettingsPane.Presets.FirstOrDefault(p => p.Name == data.ProviderPresetName);
+        }
+        preset ??= GetDefaultPreset();
+
+        _tabCounter++;
+        var provider = ProviderFactory.Create(preset);
+
+        var chatPanel = new ChatPanel
+        {
+            Provider = provider,
+            Placeholder = "Type a message...",
+            SystemPrompt = AppSettings.SystemPrompt,
+            Theme = GetCurrentTheme(),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch,
+        };
+
+        // Restore messages
+        foreach (var msg in data.Messages)
+        {
+            chatPanel.AddRestoredMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId);
+        }
+
+        var providerCombo = new ComboBox
+        {
+            Width = 180,
+            Margin = new Thickness(12, 8, 12, 4),
+            HorizontalAlignment = HorizontalAlignment.Left,
+        };
+        PopulateProviderCombo(providerCombo, preset.Name);
+        providerCombo.SelectionChanged += (s, _) => OnTabProviderChanged(s as ComboBox, chatPanel);
+
+        var grid = new Grid();
+        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        Grid.SetRow(providerCombo, 0);
+        Grid.SetRow(chatPanel, 1);
+        grid.Children.Add(providerCombo);
+        grid.Children.Add(chatPanel);
+
+        var tab = new TabViewItem
+        {
+            Header = data.TabName,
+            Content = grid,
+            IconSource = new SymbolIconSource { Symbol = Symbol.Message },
+        };
+
+        Tabs.TabItems.Add(tab);
+        Tabs.SelectedItem = tab;
     }
 
     private void OnMenuSettings(object sender, RoutedEventArgs e)
@@ -153,11 +333,46 @@ public sealed partial class MainWindow : Window
         CreateChatTab();
     }
 
-    private void OnCloseTab(TabView sender, TabViewTabCloseRequestedEventArgs args)
+    private async void OnCloseTab(TabView sender, TabViewTabCloseRequestedEventArgs args)
     {
         if (args.Tab.Content is Grid grid)
         {
             var chatPanel = FindChatPanel(grid);
+
+            // Ask to save if conversation has messages
+            if (chatPanel is not null && chatPanel.GetMessages().Count > 0)
+            {
+                var dialog = new ContentDialog
+                {
+                    Title = "Save conversation?",
+                    Content = "Do you want to save this conversation before closing?",
+                    PrimaryButtonText = "Save",
+                    SecondaryButtonText = "Don't Save",
+                    CloseButtonText = "Cancel",
+                    DefaultButton = ContentDialogButton.Primary,
+                    XamlRoot = Content.XamlRoot,
+                };
+
+                var result = await dialog.ShowAsync();
+                if (result == ContentDialogResult.None) // Cancel
+                    return;
+
+                if (result == ContentDialogResult.Primary) // Save
+                {
+                    var tabName = args.Tab.Header as string ?? $"Chat {_tabCounter}";
+                    var presetName = GetCurrentPresetName(grid);
+                    try
+                    {
+                        await ConversationManager.SaveConversationAsync(
+                            tabName, presetName, chatPanel.GetMessages());
+                    }
+                    catch
+                    {
+                        // Save failed silently
+                    }
+                }
+            }
+
             if (chatPanel?.Provider is IDisposable disposable)
             {
                 disposable.Dispose();
@@ -338,6 +553,16 @@ public sealed partial class MainWindow : Window
         {
             if (child is ChatPanel cp)
                 return cp;
+        }
+        return null;
+    }
+
+    private static string? GetCurrentPresetName(Grid grid)
+    {
+        foreach (var child in grid.Children)
+        {
+            if (child is ComboBox combo && combo.SelectedItem is ComboBoxItem item)
+                return item.Content as string;
         }
         return null;
     }

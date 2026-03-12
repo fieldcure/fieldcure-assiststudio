@@ -40,8 +40,8 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <!-- Main Menu -->
-  <data name="Menu_NewTab.Text" xml:space="preserve">
-    <value>&#xC0C8; &#xD0ED;</value>
+  <data name="Menu_NewConversation.Text" xml:space="preserve">
+    <value>&#xC0C8; &#xB300;&#xD654;</value>
   </data>
   <data name="Menu_Settings.Text" xml:space="preserve">
     <value>&#xC124;&#xC815;</value>
@@ -147,5 +147,25 @@
   </data>
   <data name="About_GitHubRepo.Content" xml:space="preserve">
     <value>GitHub &#xC800;&#xC7A5;&#xC18C;</value>
+  </data>
+  <data name="About_SystemSpec.Text" xml:space="preserve">
+    <value>&#xC2DC;&#xC2A4;&#xD15C; &#xC0AC;&#xC591;</value>
+  </data>
+  <!-- Menu - Save/Load -->
+  <data name="Menu_SaveConversation.Text" xml:space="preserve">
+    <value>&#xB300;&#xD654; &#xC800;&#xC7A5;</value>
+  </data>
+  <data name="Menu_OpenConversation.Text" xml:space="preserve">
+    <value>&#xB300;&#xD654; &#xC5F4;&#xAE30;</value>
+  </data>
+  <!-- Models Page - Ollama management -->
+  <data name="Models_StartOllama.Content" xml:space="preserve">
+    <value>Ollama &#xC2DC;&#xC791;</value>
+  </data>
+  <data name="Models_OllamaNotInstalled.Text" xml:space="preserve">
+    <value>Ollama&#xAC00; &#xC124;&#xCE58;&#xB418;&#xC5B4; &#xC788;&#xC9C0; &#xC54A;&#xC2B5;&#xB2C8;&#xB2E4;.</value>
+  </data>
+  <data name="Models_InstallOllama.Content" xml:space="preserve">
+    <value>Ollama &#xB2E4;&#xC6B4;&#xB85C;&#xB4DC;</value>
   </data>
 </root>

@@ -40,8 +40,8 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <!-- Main Menu -->
-  <data name="Menu_NewTab.Text" xml:space="preserve">
-    <value>New Tab</value>
+  <data name="Menu_NewConversation.Text" xml:space="preserve">
+    <value>New Conversation</value>
   </data>
   <data name="Menu_Settings.Text" xml:space="preserve">
     <value>Settings</value>
@@ -147,5 +147,25 @@
   </data>
   <data name="About_GitHubRepo.Content" xml:space="preserve">
     <value>GitHub Repository</value>
+  </data>
+  <data name="About_SystemSpec.Text" xml:space="preserve">
+    <value>System Specification</value>
+  </data>
+  <!-- Menu - Save/Load -->
+  <data name="Menu_SaveConversation.Text" xml:space="preserve">
+    <value>Save Conversation</value>
+  </data>
+  <data name="Menu_OpenConversation.Text" xml:space="preserve">
+    <value>Open Conversation</value>
+  </data>
+  <!-- Models Page - Ollama management -->
+  <data name="Models_StartOllama.Content" xml:space="preserve">
+    <value>Start Ollama</value>
+  </data>
+  <data name="Models_OllamaNotInstalled.Text" xml:space="preserve">
+    <value>Ollama is not installed.</value>
+  </data>
+  <data name="Models_InstallOllama.Content" xml:space="preserve">
+    <value>Download Ollama</value>
   </data>
 </root>

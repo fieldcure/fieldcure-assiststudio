@@ -1,6 +1,6 @@
 using Windows.Security.Credentials;
 
-namespace FluentView.AI.SampleApp;
+namespace FluentView.AI.SampleApp.Helpers;
 
 public static class PasswordVaultHelper
 {

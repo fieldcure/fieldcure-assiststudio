@@ -1,11 +1,12 @@
 using System.Collections.ObjectModel;
+using FluentView.AI.SampleApp.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Animation;
 
 namespace FluentView.AI.SampleApp;
 
-public sealed partial class SettingsPanel : UserControl
+public sealed partial class SettingsPanel : Page
 {
     private ObservableCollection<ProviderPreset> _presets = [];
 

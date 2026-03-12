@@ -2,11 +2,19 @@ using System.Collections.ObjectModel;
 using System.Text.Json;
 using Windows.Storage;
 
-namespace FluentView.AI.SampleApp;
+using FluentView.AI.SampleApp.Helpers;
+
+namespace FluentView.AI.SampleApp.Models;
 
 public static class AppSettings
 {
     private static ApplicationDataContainer Settings => ApplicationData.Current.LocalSettings;
+
+    public static bool IsFirstRun
+    {
+        get => Settings.Values["IsFirstRun"] is not false;
+        set => Settings.Values["IsFirstRun"] = value;
+    }
 
     public static string Theme
     {
