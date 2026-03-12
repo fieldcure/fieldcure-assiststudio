@@ -91,6 +91,9 @@
                                         <MenuFlyoutItem.Icon>
                                             <FontIcon Glyph="&#xE713;" />
                                         </MenuFlyoutItem.Icon>
+                                        <MenuFlyoutItem.KeyboardAccelerators>
+                                            <KeyboardAccelerator Key="F1" />
+                                        </MenuFlyoutItem.KeyboardAccelerators>
                                     </MenuFlyoutItem>
                                 </MenuFlyout>
                             </FlyoutBase.AttachedFlyout>
