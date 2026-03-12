@@ -23,97 +23,224 @@
         </Grid>
 
         <!-- Content -->
-        <ScrollViewer Grid.Row="1" Padding="20,16">
-            <StackPanel Spacing="16">
+        <ScrollViewer Grid.Row="1" Padding="20,20,20,0">
+            <StackPanel Spacing="24" Padding="0,0,0,80">
 
-                <!-- Provider Presets -->
-                <TextBlock x:Uid="Models_ProviderPresets" Text="Provider Presets"
-                           Style="{StaticResource BodyStrongTextBlockStyle}" />
+                <!-- ============================== -->
+                <!-- Cloud Inference (SaaS) Section -->
+                <!-- ============================== -->
+                <TextBlock x:Uid="Models_CloudSection" Text="Cloud Inference (SaaS)"
+                           Style="{StaticResource SubtitleTextBlockStyle}" />
 
-                <ListView x:Name="PresetListView"
-                          SelectionMode="None"
-                          IsItemClickEnabled="False">
-                    <ListView.ItemContainerStyle>
-                        <Style TargetType="ListViewItem">
-                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                            <Setter Property="Padding" Value="0,4" />
-                        </Style>
-                    </ListView.ItemContainerStyle>
-                    <ListView.ItemTemplate>
-                        <DataTemplate>
-                            <Grid ColumnSpacing="6">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0" Spacing="4">
-                                    <TextBox PlaceholderText="Name"
-                                             Text="{Binding Name, Mode=TwoWay}"
-                                             MinWidth="0" />
-                                    <ComboBox x:Name="ProviderTypeCombo"
-                                              PlaceholderText="Provider"
-                                              HorizontalAlignment="Stretch"
-                                              Tag="{Binding}"
-                                              Loaded="OnPresetProviderTypeLoaded"
-                                              SelectionChanged="OnPresetProviderTypeChanged" />
-                                    <PasswordBox PlaceholderText="API Key"
-                                                 Password="{Binding ApiKey, Mode=TwoWay}"
-                                                 Visibility="{Binding RequiresApiKey}" />
-                                    <TextBox PlaceholderText="Model ID"
-                                             Text="{Binding ModelId, Mode=TwoWay}" />
-                                </StackPanel>
-                                <Button Grid.Column="1"
-                                        VerticalAlignment="Top"
-                                        Content="&#xE74D;"
-                                        FontFamily="{StaticResource SymbolThemeFontFamily}"
-                                        ToolTipService.ToolTip="Delete"
-                                        Tag="{Binding}"
-                                        Click="OnDeletePreset" />
-                            </Grid>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
-
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button x:Uid="Models_AddPreset" Content="Add Preset"
-                            Click="OnAddPreset" />
-                    <Button x:Uid="Models_Save" Content="Save"
-                            Style="{StaticResource AccentButtonStyle}"
-                            Click="OnSavePresets" />
+                <!-- Anthropic Claude -->
+                <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock Text="Anthropic Claude"
+                                   Style="{StaticResource BodyStrongTextBlockStyle}"
+                                   VerticalAlignment="Center" />
+                        <TextBlock x:Name="ClaudeStatusText"
+                                   FontSize="12" Opacity="0.7"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <PasswordBox x:Name="ClaudeApiKeyBox"
+                                     x:Uid="Models_ApiKeyBox"
+                                     PlaceholderText="API Key"
+                                     PasswordChanged="OnClaudeKeyChanged" />
+                        <Button x:Name="ClaudeKeyButton" Grid.Column="1"
+                                Content="Update Key"
+                                Click="OnUpdateClaudeKey" />
+                    </Grid>
+                    <StackPanel Spacing="4">
+                        <TextBlock x:Uid="Models_DefaultModel" Text="Default Model" FontSize="12" Opacity="0.7" />
+                        <ComboBox x:Name="ClaudeModelCombo"
+                                  x:Uid="Models_ModelNotAvailable"
+                                  HorizontalAlignment="Stretch"
+                                  IsEnabled="False"
+                                  PlaceholderText="Not available" />
+                    </StackPanel>
                 </StackPanel>
 
-                <!-- Ollama Section -->
-                <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="0,8" />
+                <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
 
-                <TextBlock x:Uid="Models_Ollama" Text="Ollama"
-                           Style="{StaticResource BodyStrongTextBlockStyle}" />
-
-                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <ProgressRing x:Name="OllamaSpinner" IsActive="False"
-                                  Width="16" Height="16" Visibility="Collapsed" />
-                    <TextBlock x:Name="OllamaStatusText"
-                               Text="Status: checking..."
-                               FontSize="12" Opacity="0.8"
-                               VerticalAlignment="Center" />
+                <!-- OpenAI -->
+                <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock Text="OpenAI"
+                                   Style="{StaticResource BodyStrongTextBlockStyle}"
+                                   VerticalAlignment="Center" />
+                        <TextBlock x:Name="OpenAIStatusText"
+                                   FontSize="12" Opacity="0.7"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <PasswordBox x:Name="OpenAIApiKeyBox"
+                                     PlaceholderText="API Key"
+                                     PasswordChanged="OnOpenAIKeyChanged" />
+                        <Button x:Name="OpenAIKeyButton" Grid.Column="1"
+                                Content="Add Key"
+                                Click="OnUpdateOpenAIKey" />
+                    </Grid>
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Default Model" FontSize="12" Opacity="0.7" />
+                        <ComboBox x:Name="OpenAIModelCombo"
+                                  HorizontalAlignment="Stretch"
+                                  IsEnabled="False"
+                                  PlaceholderText="Not available" />
+                    </StackPanel>
                 </StackPanel>
 
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button x:Uid="Models_CheckStatus" Content="Check Status" Click="OnCheckOllama" />
-                    <Button x:Name="StartOllamaButton" x:Uid="Models_StartOllama"
+                <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+                <!-- Google Gemini -->
+                <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock Text="Google Gemini"
+                                   Style="{StaticResource BodyStrongTextBlockStyle}"
+                                   VerticalAlignment="Center" />
+                        <TextBlock x:Name="GeminiStatusText"
+                                   FontSize="12" Opacity="0.7"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <PasswordBox x:Name="GeminiApiKeyBox"
+                                     PlaceholderText="API Key"
+                                     PasswordChanged="OnGeminiKeyChanged" />
+                        <Button x:Name="GeminiKeyButton" Grid.Column="1"
+                                Content="Add Key"
+                                Click="OnUpdateGeminiKey" />
+                    </Grid>
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Default Model" FontSize="12" Opacity="0.7" />
+                        <ComboBox x:Name="GeminiModelCombo"
+                                  HorizontalAlignment="Stretch"
+                                  IsEnabled="False"
+                                  PlaceholderText="Not available" />
+                    </StackPanel>
+                </StackPanel>
+
+                <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+                <!-- Groq -->
+                <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock Text="Groq"
+                                   Style="{StaticResource BodyStrongTextBlockStyle}"
+                                   VerticalAlignment="Center" />
+                        <TextBlock x:Name="GroqStatusText"
+                                   FontSize="12" Opacity="0.7"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <PasswordBox x:Name="GroqApiKeyBox"
+                                     PlaceholderText="API Key"
+                                     PasswordChanged="OnGroqKeyChanged" />
+                        <Button x:Name="GroqKeyButton" Grid.Column="1"
+                                Content="Add Key"
+                                Click="OnUpdateGroqKey" />
+                    </Grid>
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Default Model" FontSize="12" Opacity="0.7" />
+                        <ComboBox x:Name="GroqModelCombo"
+                                  HorizontalAlignment="Stretch"
+                                  IsEnabled="False"
+                                  PlaceholderText="Not available" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- ============================== -->
+                <!-- Local Inference (On-Device)    -->
+                <!-- ============================== -->
+                <Rectangle Height="2" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="0,8" />
+
+                <TextBlock x:Uid="Models_LocalSection" Text="Local Inference (On-Device)"
+                           Style="{StaticResource SubtitleTextBlockStyle}" />
+
+                <!-- Ollama -->
+                <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock Text="Ollama"
+                                   Style="{StaticResource BodyStrongTextBlockStyle}"
+                                   VerticalAlignment="Center" />
+                        <TextBlock x:Name="OllamaStatusText"
+                                   FontSize="12" Opacity="0.7"
+                                   VerticalAlignment="Center" />
+                        <ProgressRing x:Name="OllamaSpinner" IsActive="False"
+                                      Width="16" Height="16" Visibility="Collapsed" />
+                        <Button x:Name="OllamaRefreshButton"
+                                Padding="4"
+                                x:Uid="Models_RefreshStatus"
+                                ToolTipService.ToolTip="Check status"
+                                Click="OnCheckOllama">
+                            <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
+                                      Glyph="&#xE72C;" FontSize="12" />
+                        </Button>
+                    </StackPanel>
+
+                    <!-- Install guidance -->
+                    <StackPanel x:Name="OllamaInstallPanel" Visibility="Collapsed" Spacing="2">
+                        <HyperlinkButton x:Uid="Models_DownloadOllama"
+                                         Content="Download Ollama"
+                                         NavigateUri="https://ollama.com/download"
+                                         Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                         Padding="0" />
+                    </StackPanel>
+
+                    <!-- Start button -->
+                    <Button x:Name="StartOllamaButton"
+                            x:Uid="Models_StartOllama"
                             Content="Start Ollama" Click="OnStartOllama"
                             Visibility="Collapsed" />
-                    <Button x:Uid="Models_BrowseModels" Content="Browse Models" Click="OnBrowseOllamaModels" />
+
+                    <!-- Browse models -->
+                    <Button x:Name="BrowseModelsButton"
+                            x:Uid="Models_BrowsePullModels"
+                            Content="Browse &amp; Pull Models" Click="OnBrowseOllamaModels"
+                            Visibility="Collapsed" />
+
+                    <!-- Download Progress -->
+                    <StackPanel x:Name="PullProgressPanel" Visibility="Collapsed" Spacing="4">
+                        <TextBlock x:Name="PullProgressStatus" FontSize="12" />
+                        <ProgressBar x:Name="PullProgressBar" Minimum="0" Maximum="100" />
+                    </StackPanel>
+
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Default Model" FontSize="12" Opacity="0.7" />
+                        <ComboBox x:Name="OllamaModelCombo"
+                                  HorizontalAlignment="Stretch"
+                                  IsEnabled="False"
+                                  PlaceholderText="Not available" />
+                    </StackPanel>
                 </StackPanel>
 
-                <!-- Install guidance -->
-                <StackPanel x:Name="InstallPanel" Visibility="Collapsed" Spacing="4">
-                    <TextBlock x:Uid="Models_OllamaNotInstalled"
-                               Text="Ollama is not installed."
-                               FontSize="12" Opacity="0.8" />
-                    <HyperlinkButton x:Uid="Models_InstallOllama"
-                                     Content="Download Ollama"
-                                     NavigateUri="https://ollama.com/download" />
-                </StackPanel>
+                <!-- ============================== -->
+                <!-- Default Provider               -->
+                <!-- ============================== -->
+                <Rectangle Height="2" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="0,8" />
+
+                <TextBlock x:Uid="Models_DefaultProvider" Text="Default Provider"
+                           Style="{StaticResource SubtitleTextBlockStyle}" />
+
+                <ComboBox x:Name="DefaultProviderCombo"
+                          HorizontalAlignment="Stretch"
+                          SelectionChanged="OnDefaultProviderChanged" />
+
             </StackPanel>
         </ScrollViewer>
     </Grid>

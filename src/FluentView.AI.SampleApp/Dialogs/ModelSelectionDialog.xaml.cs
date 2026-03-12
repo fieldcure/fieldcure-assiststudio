@@ -11,7 +11,10 @@ public sealed partial class ModelSelectionDialog : ContentDialog
     private readonly OllamaModelManager _manager;
     private readonly HardwareSpec _hw;
 
-    public string? SelectedModelId { get; private set; }
+    /// <summary>
+    /// Models requested to pull. Caller handles the actual download.
+    /// </summary>
+    public List<string> ModelsToPull { get; } = [];
 
     public ModelSelectionDialog(OllamaModelManager manager)
     {
@@ -32,21 +35,22 @@ public sealed partial class ModelSelectionDialog : ContentDialog
         try
         {
             var localModels = await _manager.ListLocalModelsAsync();
-            LocalModelsList.ItemsSource = localModels.Select(m => new
+            var items = localModels.Select(m => new
             {
                 m.Id,
                 Name = m.Id,
                 Size = FormatSize(m.SizeBytes)
             }).ToList();
 
+            LocalModelsList.ItemsSource = items;
+            NoLocalModelsText.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             localIds = localModels.Select(m => m.Id).ToHashSet();
         }
         catch
         {
-            // Ollama may not be running — local list stays empty
+            NoLocalModelsText.Visibility = Visibility.Visible;
         }
 
-        // Always show available models (hardcoded list doesn't need Ollama)
         try
         {
             var available = await _manager.SearchAvailableModelsAsync();
@@ -75,80 +79,44 @@ public sealed partial class ModelSelectionDialog : ContentDialog
         }
     }
 
-    private void OnModelSelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (LocalModelsList.SelectedItem is not null)
-        {
-            dynamic item = LocalModelsList.SelectedItem;
-            SelectedModelId = item.Id;
-            IsPrimaryButtonEnabled = true;
-        }
-        else
-        {
-            IsPrimaryButtonEnabled = false;
-        }
-    }
-
-    private async void OnDeleteModel(object sender, RoutedEventArgs e)
+    private void OnDeleteModel(object sender, RoutedEventArgs e)
     {
         if (sender is Button btn && btn.Tag is string modelName)
         {
-            try
-            {
-                await _manager.DeleteModelAsync(modelName);
-                await RefreshAsync();
-            }
-            catch
-            {
-                // Ignore delete errors
-            }
+            _ = DeleteModelAsync(modelName);
         }
     }
 
-    private async void OnPullModel(object sender, RoutedEventArgs e)
+    private async Task DeleteModelAsync(string modelName)
+    {
+        try
+        {
+            await _manager.DeleteModelAsync(modelName);
+            await RefreshAsync();
+        }
+        catch
+        {
+            // Ignore delete errors
+        }
+    }
+
+    private void OnPullModel(object sender, RoutedEventArgs e)
     {
         if (sender is Button btn && btn.Tag is string modelName)
         {
-            await PullModelAsync(modelName);
+            ModelsToPull.Add(modelName);
+            btn.IsEnabled = false;
+            btn.Content = "Queued";
         }
     }
 
-    private async void OnPullCustomModel(object sender, RoutedEventArgs e)
+    private void OnPullCustomModel(object sender, RoutedEventArgs e)
     {
         var name = CustomModelBox.Text?.Trim();
         if (!string.IsNullOrEmpty(name))
         {
-            await PullModelAsync(name);
-        }
-    }
-
-    private async Task PullModelAsync(string modelName)
-    {
-        ProgressPanel.Visibility = Visibility.Visible;
-        ProgressStatus.Text = $"Pulling {modelName}...";
-        ProgressBar.Value = 0;
-
-        var progress = new Progress<ModelDownloadProgress>(p =>
-        {
-            DispatcherQueue.TryEnqueue(() =>
-            {
-                ProgressStatus.Text = p.Status;
-                ProgressBar.Value = p.Percent * 100;
-            });
-        });
-
-        try
-        {
-            await _manager.DownloadModelAsync(modelName, progress);
-            await RefreshAsync();
-        }
-        catch (Exception ex)
-        {
-            ProgressStatus.Text = $"Error: {ex.Message}";
-        }
-        finally
-        {
-            ProgressPanel.Visibility = Visibility.Collapsed;
+            ModelsToPull.Add(name);
+            CustomModelBox.Text = "";
         }
     }
 

@@ -64,25 +64,34 @@
   </data>
   <!-- Models Page -->
   <data name="Models_Title.Text" xml:space="preserve">
-    <value>&#xBAA8;&#xB378;</value>
+    <value>모델</value>
   </data>
-  <data name="Models_ProviderPresets.Text" xml:space="preserve">
-    <value>&#xD504;&#xB85C;&#xBC14;&#xC774;&#xB354; &#xD504;&#xB9AC;&#xC14B;</value>
+  <data name="Models_CloudSection.Text" xml:space="preserve">
+    <value>클라우드 추론 (SaaS)</value>
   </data>
-  <data name="Models_AddPreset.Content" xml:space="preserve">
-    <value>&#xD504;&#xB9AC;&#xC14B; &#xCD94;&#xAC00;</value>
+  <data name="Models_LocalSection.Text" xml:space="preserve">
+    <value>로컬 추론 (On-Device)</value>
   </data>
-  <data name="Models_Save.Content" xml:space="preserve">
-    <value>&#xC800;&#xC7A5;</value>
+  <data name="Models_DefaultProvider.Text" xml:space="preserve">
+    <value>기본 프로바이더</value>
   </data>
-  <data name="Models_Ollama.Text" xml:space="preserve">
-    <value>Ollama</value>
+  <data name="Models_DefaultModel.Text" xml:space="preserve">
+    <value>기본 모델</value>
   </data>
-  <data name="Models_CheckStatus.Content" xml:space="preserve">
-    <value>&#xC0C1;&#xD0DC; &#xD655;&#xC778;</value>
+  <data name="Models_ApiKeyBox.PlaceholderText" xml:space="preserve">
+    <value>API 키</value>
   </data>
-  <data name="Models_BrowseModels.Content" xml:space="preserve">
-    <value>&#xBAA8;&#xB378; &#xCC3E;&#xAE30;</value>
+  <data name="Models_ModelNotAvailable.PlaceholderText" xml:space="preserve">
+    <value>사용 불가</value>
+  </data>
+  <data name="Models_RefreshStatus.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>상태 확인</value>
+  </data>
+  <data name="Models_DownloadOllama.Content" xml:space="preserve">
+    <value>Ollama 다운로드</value>
+  </data>
+  <data name="Models_BrowsePullModels.Content" xml:space="preserve">
+    <value>모델 탐색 및 다운로드</value>
   </data>
   <!-- Personalization Page -->
   <data name="Personalization_Title.Text" xml:space="preserve">
@@ -158,14 +167,72 @@
   <data name="Menu_OpenConversation.Text" xml:space="preserve">
     <value>&#xB300;&#xD654; &#xC5F4;&#xAE30;</value>
   </data>
-  <!-- Models Page - Ollama management -->
   <data name="Models_StartOllama.Content" xml:space="preserve">
-    <value>Ollama &#xC2DC;&#xC791;</value>
+    <value>Ollama 시작</value>
   </data>
-  <data name="Models_OllamaNotInstalled.Text" xml:space="preserve">
-    <value>Ollama&#xAC00; &#xC124;&#xCE58;&#xB418;&#xC5B4; &#xC788;&#xC9C0; &#xC54A;&#xC2B5;&#xB2C8;&#xB2E4;.</value>
+  <!-- Models Page - Code-behind strings -->
+  <data name="Models_NoKey" xml:space="preserve">
+    <value>키 없음</value>
   </data>
-  <data name="Models_InstallOllama.Content" xml:space="preserve">
-    <value>Ollama &#xB2E4;&#xC6B4;&#xB85C;&#xB4DC;</value>
+  <data name="Models_UpdateKey" xml:space="preserve">
+    <value>키 수정</value>
+  </data>
+  <data name="Models_AddKey" xml:space="preserve">
+    <value>키 추가</value>
+  </data>
+  <data name="Models_Checking" xml:space="preserve">
+    <value>확인 중...</value>
+  </data>
+  <data name="Models_Running" xml:space="preserve">
+    <value>실행 중</value>
+  </data>
+  <data name="Models_InstalledNotRunning" xml:space="preserve">
+    <value>설치됨 (미실행)</value>
+  </data>
+  <data name="Models_NotInstalled" xml:space="preserve">
+    <value>미설치</value>
+  </data>
+  <data name="Models_Error" xml:space="preserve">
+    <value>오류</value>
+  </data>
+  <data name="Models_Starting" xml:space="preserve">
+    <value>시작 중...</value>
+  </data>
+  <data name="Models_FailedToStart" xml:space="preserve">
+    <value>시작 실패</value>
+  </data>
+  <data name="Models_ErrorStarting" xml:space="preserve">
+    <value>시작 오류</value>
+  </data>
+  <data name="Models_PullingModel" xml:space="preserve">
+    <value>{0} 다운로드 중...</value>
+  </data>
+  <!-- Model Selection Dialog -->
+  <data name="ModelDialog.Title" xml:space="preserve">
+    <value>Ollama 모델</value>
+  </data>
+  <data name="ModelDialog.CloseButtonText" xml:space="preserve">
+    <value>닫기</value>
+  </data>
+  <data name="ModelDialog_LocalModels.Text" xml:space="preserve">
+    <value>로컬 모델</value>
+  </data>
+  <data name="ModelDialog_NoLocalModels.Text" xml:space="preserve">
+    <value>다운로드된 모델이 없습니다.</value>
+  </data>
+  <data name="ModelDialog_AvailableModels.Text" xml:space="preserve">
+    <value>사용 가능한 모델</value>
+  </data>
+  <data name="ModelDialog_Delete.Content" xml:space="preserve">
+    <value>삭제</value>
+  </data>
+  <data name="ModelDialog_Pull.Content" xml:space="preserve">
+    <value>다운로드</value>
+  </data>
+  <data name="ModelDialog_CustomModel.PlaceholderText" xml:space="preserve">
+    <value>사용자 지정 모델 이름</value>
+  </data>
+  <data name="ModelDialog_PullCustom.Content" xml:space="preserve">
+    <value>다운로드</value>
   </data>
 </root>

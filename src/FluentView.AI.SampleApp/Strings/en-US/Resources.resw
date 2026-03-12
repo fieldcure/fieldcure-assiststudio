@@ -66,23 +66,32 @@
   <data name="Models_Title.Text" xml:space="preserve">
     <value>Models</value>
   </data>
-  <data name="Models_ProviderPresets.Text" xml:space="preserve">
-    <value>Provider Presets</value>
+  <data name="Models_CloudSection.Text" xml:space="preserve">
+    <value>Cloud Inference (SaaS)</value>
   </data>
-  <data name="Models_AddPreset.Content" xml:space="preserve">
-    <value>Add Preset</value>
+  <data name="Models_LocalSection.Text" xml:space="preserve">
+    <value>Local Inference (On-Device)</value>
   </data>
-  <data name="Models_Save.Content" xml:space="preserve">
-    <value>Save</value>
+  <data name="Models_DefaultProvider.Text" xml:space="preserve">
+    <value>Default Provider</value>
   </data>
-  <data name="Models_Ollama.Text" xml:space="preserve">
-    <value>Ollama</value>
+  <data name="Models_DefaultModel.Text" xml:space="preserve">
+    <value>Default Model</value>
   </data>
-  <data name="Models_CheckStatus.Content" xml:space="preserve">
-    <value>Check Status</value>
+  <data name="Models_ApiKeyBox.PlaceholderText" xml:space="preserve">
+    <value>API Key</value>
   </data>
-  <data name="Models_BrowseModels.Content" xml:space="preserve">
-    <value>Browse Models</value>
+  <data name="Models_ModelNotAvailable.PlaceholderText" xml:space="preserve">
+    <value>Not available</value>
+  </data>
+  <data name="Models_RefreshStatus.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Check status</value>
+  </data>
+  <data name="Models_DownloadOllama.Content" xml:space="preserve">
+    <value>Download Ollama</value>
+  </data>
+  <data name="Models_BrowsePullModels.Content" xml:space="preserve">
+    <value>Browse &amp; Pull Models</value>
   </data>
   <!-- Personalization Page -->
   <data name="Personalization_Title.Text" xml:space="preserve">
@@ -158,14 +167,72 @@
   <data name="Menu_OpenConversation.Text" xml:space="preserve">
     <value>Open Conversation</value>
   </data>
-  <!-- Models Page - Ollama management -->
   <data name="Models_StartOllama.Content" xml:space="preserve">
     <value>Start Ollama</value>
   </data>
-  <data name="Models_OllamaNotInstalled.Text" xml:space="preserve">
-    <value>Ollama is not installed.</value>
+  <!-- Models Page - Code-behind strings -->
+  <data name="Models_NoKey" xml:space="preserve">
+    <value>No Key</value>
   </data>
-  <data name="Models_InstallOllama.Content" xml:space="preserve">
-    <value>Download Ollama</value>
+  <data name="Models_UpdateKey" xml:space="preserve">
+    <value>Update Key</value>
+  </data>
+  <data name="Models_AddKey" xml:space="preserve">
+    <value>Add Key</value>
+  </data>
+  <data name="Models_Checking" xml:space="preserve">
+    <value>Checking...</value>
+  </data>
+  <data name="Models_Running" xml:space="preserve">
+    <value>Running</value>
+  </data>
+  <data name="Models_InstalledNotRunning" xml:space="preserve">
+    <value>Installed (not running)</value>
+  </data>
+  <data name="Models_NotInstalled" xml:space="preserve">
+    <value>Not installed</value>
+  </data>
+  <data name="Models_Error" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="Models_Starting" xml:space="preserve">
+    <value>Starting...</value>
+  </data>
+  <data name="Models_FailedToStart" xml:space="preserve">
+    <value>Failed to start</value>
+  </data>
+  <data name="Models_ErrorStarting" xml:space="preserve">
+    <value>Error starting</value>
+  </data>
+  <data name="Models_PullingModel" xml:space="preserve">
+    <value>Pulling {0}...</value>
+  </data>
+  <!-- Model Selection Dialog -->
+  <data name="ModelDialog.Title" xml:space="preserve">
+    <value>Ollama Models</value>
+  </data>
+  <data name="ModelDialog.CloseButtonText" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="ModelDialog_LocalModels.Text" xml:space="preserve">
+    <value>Local Models</value>
+  </data>
+  <data name="ModelDialog_NoLocalModels.Text" xml:space="preserve">
+    <value>No models downloaded yet.</value>
+  </data>
+  <data name="ModelDialog_AvailableModels.Text" xml:space="preserve">
+    <value>Available Models</value>
+  </data>
+  <data name="ModelDialog_Delete.Content" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="ModelDialog_Pull.Content" xml:space="preserve">
+    <value>Pull</value>
+  </data>
+  <data name="ModelDialog_CustomModel.PlaceholderText" xml:space="preserve">
+    <value>Custom model name</value>
+  </data>
+  <data name="ModelDialog_PullCustom.Content" xml:space="preserve">
+    <value>Pull</value>
   </data>
 </root>

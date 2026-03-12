@@ -28,6 +28,22 @@ public static class AppSettings
         set => Settings.Values["SystemPrompt"] = value;
     }
 
+    public static string DefaultProvider
+    {
+        get => Settings.Values["DefaultProvider"] as string ?? "Mock";
+        set => Settings.Values["DefaultProvider"] = value;
+    }
+
+    public static string? GetDefaultModel(string provider)
+    {
+        return Settings.Values[$"DefaultModel_{provider}"] as string;
+    }
+
+    public static void SetDefaultModel(string provider, string modelId)
+    {
+        Settings.Values[$"DefaultModel_{provider}"] = modelId;
+    }
+
     public static void SavePresets(IList<ProviderPreset> presets)
     {
         // Save API keys to PasswordVault, serialize rest to JSON

@@ -1,10 +1,10 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
 namespace FluentView.AI.SampleApp.Models;
 
-public class ProviderPreset : INotifyPropertyChanged
+public partial class ProviderPreset : INotifyPropertyChanged
 {
     private string _name = "";
     private string _providerType = "Mock";
