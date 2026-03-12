@@ -10,30 +10,34 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
 {
     private readonly HttpClient _httpClient;
     private readonly string _apiKey;
+    private readonly string _baseUrl;
     private readonly bool _ownsHttpClient;
 
-    private const string ApiUrl = "https://api.openai.com/v1/chat/completions";
-
-    public string ProviderName => "OpenAI";
+    public string ProviderName { get; }
     public string ModelId { get; }
     public TokenUsage? LastUsage { get; private set; }
     public bool IsTruncated { get; private set; }
 
-    public OpenAiProvider(string apiKey, string model = "gpt-4o")
-        : this(new HttpClient(), apiKey, model, ownsHttpClient: true)
+    public OpenAiProvider(string apiKey, string model = "gpt-4o",
+        string baseUrl = "https://api.openai.com/v1", string providerName = "OpenAI")
+        : this(new HttpClient(), apiKey, model, baseUrl, providerName, ownsHttpClient: true)
     {
     }
 
-    public OpenAiProvider(HttpClient httpClient, string apiKey, string model = "gpt-4o")
-        : this(httpClient, apiKey, model, ownsHttpClient: false)
+    public OpenAiProvider(HttpClient httpClient, string apiKey, string model = "gpt-4o",
+        string baseUrl = "https://api.openai.com/v1", string providerName = "OpenAI")
+        : this(httpClient, apiKey, model, baseUrl, providerName, ownsHttpClient: false)
     {
     }
 
-    private OpenAiProvider(HttpClient httpClient, string apiKey, string model, bool ownsHttpClient)
+    private OpenAiProvider(HttpClient httpClient, string apiKey, string model,
+        string baseUrl, string providerName, bool ownsHttpClient)
     {
         _httpClient = httpClient;
         _apiKey = apiKey;
+        _baseUrl = baseUrl.TrimEnd('/');
         _ownsHttpClient = ownsHttpClient;
+        ProviderName = providerName;
         ModelId = model;
     }
 
@@ -221,7 +225,7 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
         string body, CancellationToken ct,
         HttpCompletionOption completionOption = HttpCompletionOption.ResponseContentRead)
     {
-        using var req = new HttpRequestMessage(HttpMethod.Post, ApiUrl)
+        using var req = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/chat/completions")
         {
             Content = new StringContent(body, Encoding.UTF8, "application/json")
         };
@@ -233,7 +237,7 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
         {
             var errorBody = await response.Content.ReadAsStringAsync(ct);
             throw new HttpRequestException(
-                $"OpenAI API error {(int)response.StatusCode}: {errorBody}",
+                $"{ProviderName} API error {(int)response.StatusCode}: {errorBody}",
                 null,
                 response.StatusCode);
         }
@@ -243,7 +247,7 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
 
     public async Task<IReadOnlyList<AiModel>> ListModelsAsync(CancellationToken ct = default)
     {
-        using var req = new HttpRequestMessage(HttpMethod.Get, "https://api.openai.com/v1/models");
+        using var req = new HttpRequestMessage(HttpMethod.Get, $"{_baseUrl}/models");
         req.Headers.Add("Authorization", $"Bearer {_apiKey}");
 
         var response = await _httpClient.SendAsync(req, ct);
@@ -267,7 +271,7 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
     {
         try
         {
-            using var req = new HttpRequestMessage(HttpMethod.Get, "https://api.openai.com/v1/models");
+            using var req = new HttpRequestMessage(HttpMethod.Get, $"{_baseUrl}/models");
             req.Headers.Add("Authorization", $"Bearer {_apiKey}");
 
             var response = await _httpClient.SendAsync(req, ct);

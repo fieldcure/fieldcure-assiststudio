@@ -17,9 +17,9 @@ public sealed partial class MainWindow : Window
     {
         if (ApiKeyBox is null) return; // Guard during initialization
 
-        // Show API key field for Claude, OpenAI, and Gemini; hide for Mock and Ollama
+        // Show API key field for Claude, OpenAI, Gemini, Groq; hide for Mock and Ollama
         var index = ProviderCombo.SelectedIndex;
-        ApiKeyBox.Visibility = (index == 1 || index == 2 || index == 4)
+        ApiKeyBox.Visibility = (index == 1 || index == 2 || index == 4 || index == 5)
             ? Visibility.Visible
             : Visibility.Collapsed;
 
@@ -56,6 +56,11 @@ public sealed partial class MainWindow : Window
             4 => string.IsNullOrEmpty(model)
                 ? new GeminiProvider(apiKey)
                 : new GeminiProvider(apiKey, model),
+            5 => string.IsNullOrEmpty(model)
+                ? new OpenAiProvider(apiKey, "llama-3.3-70b-versatile",
+                    "https://api.groq.com/openai/v1", "Groq")
+                : new OpenAiProvider(apiKey, model,
+                    "https://api.groq.com/openai/v1", "Groq"),
             _ => new MockProvider()
         };
 

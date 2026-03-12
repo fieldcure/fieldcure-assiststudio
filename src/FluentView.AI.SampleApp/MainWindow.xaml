@@ -35,6 +35,7 @@
                     <ComboBoxItem Content="OpenAI" />
                     <ComboBoxItem Content="Ollama" />
                     <ComboBoxItem Content="Gemini" />
+                    <ComboBoxItem Content="Groq" />
                 </ComboBox>
 
                 <PasswordBox x:Name="ApiKeyBox"
