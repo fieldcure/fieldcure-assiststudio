@@ -4,8 +4,22 @@ using FluentView.AI.Providers;
 using FluentView.AI.Rendering;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Windows.ApplicationModel.DataTransfer;
 
 namespace FluentView.AI.Controls;
+
+/// <summary>
+/// Theme mode for the ChatPanel.
+/// </summary>
+public enum ChatTheme
+{
+    /// <summary>Follow the system/app theme (default).</summary>
+    System,
+    /// <summary>Force light theme.</summary>
+    Light,
+    /// <summary>Force dark theme.</summary>
+    Dark
+}
 
 public sealed partial class ChatPanel : UserControl
 {
@@ -20,6 +34,18 @@ public sealed partial class ChatPanel : UserControl
     public static readonly DependencyProperty SystemPromptProperty =
         DependencyProperty.Register(nameof(SystemPrompt), typeof(string), typeof(ChatPanel),
             new PropertyMetadata(null));
+
+    public static readonly DependencyProperty ThemeProperty =
+        DependencyProperty.Register(nameof(Theme), typeof(ChatTheme), typeof(ChatPanel),
+            new PropertyMetadata(ChatTheme.System, OnThemePropertyChanged));
+
+    private static void OnThemePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && panel._isInitialized)
+        {
+            _ = panel.ApplyThemeAsync();
+        }
+    }
 
     private readonly WebViewChatRenderer _renderer = new();
     private readonly ObservableCollection<ChatMessage> _messages = [];
@@ -46,6 +72,7 @@ public sealed partial class ChatPanel : UserControl
         InitializeComponent();
         InputArea.MessageSent += OnMessageSent;
         _renderer.ContinueRequested += OnContinueRequested;
+        _renderer.MessageCopyRequested += OnMessageCopyRequested;
     }
 
     public IAiProvider? Provider
@@ -66,9 +93,28 @@ public sealed partial class ChatPanel : UserControl
         set => SetValue(SystemPromptProperty, value);
     }
 
+    /// <summary>
+    /// Gets or sets the theme mode for the chat panel (System, Light, or Dark).
+    /// </summary>
+    public ChatTheme Theme
+    {
+        get => (ChatTheme)GetValue(ThemeProperty);
+        set => SetValue(ThemeProperty, value);
+    }
+
     public event EventHandler<ChatMessage>? MessageAdded;
 
     public IReadOnlyList<ChatMessage> GetMessages() => _messages;
+
+    /// <summary>
+    /// Manually trigger conversation summarization.
+    /// Compresses older messages into a system summary, keeping the most recent turns.
+    /// </summary>
+    public async Task SummarizeConversationAsync()
+    {
+        if (Provider is null || _messages.Count <= RecentTurnsToKeep) return;
+        await SummarizeHistoryAsync(CancellationToken.None);
+    }
 
     public async void ClearConversation()
     {
@@ -92,6 +138,7 @@ public sealed partial class ChatPanel : UserControl
             await _renderer.InitializeAsync(ChatWebView);
             _isInitialized = true;
             await ApplyThemeAsync();
+            await ApplyLocaleStringsAsync();
 
             // Listen for theme changes
             ActualThemeChanged += async (_, _) => await ApplyThemeAsync();
@@ -118,9 +165,14 @@ public sealed partial class ChatPanel : UserControl
         // Stream assistant response
         if (Provider is null) return;
 
-        var assistantMessage = new ChatMessage(ChatRole.Assistant) { IsStreaming = true };
+        var assistantMessage = new ChatMessage(ChatRole.Assistant)
+        {
+            IsStreaming = true,
+            ProviderName = Provider.ProviderName,
+            ProviderModelId = Provider.ModelId
+        };
         _messages.Add(assistantMessage);
-        await _renderer.BeginAssistantMessageAsync(assistantMessage.Id);
+        await _renderer.BeginAssistantMessageAsync(assistantMessage.Id, Provider.ProviderName, Provider.ModelId);
         MessageAdded?.Invoke(this, assistantMessage);
 
         InputArea.IsInputEnabled = false;
@@ -165,6 +217,17 @@ public sealed partial class ChatPanel : UserControl
             assistantMessage.IsStreaming = false;
             InputArea.IsInputEnabled = true;
         }
+    }
+
+    private void OnMessageCopyRequested(object? sender, string messageId)
+    {
+        var message = _messages.FirstOrDefault(m => m.Id == messageId);
+        if (message is null || string.IsNullOrEmpty(message.Content)) return;
+
+        var dp = new DataPackage();
+        dp.SetText(message.Content);
+        Clipboard.SetContent(dp);
+        Clipboard.Flush();
     }
 
     private async void OnContinueRequested(object? sender, string messageId)
@@ -279,8 +342,45 @@ public sealed partial class ChatPanel : UserControl
         }
     }
 
-    private bool IsDarkTheme()
+    private async Task ApplyLocaleStringsAsync()
     {
-        return ActualTheme == ElementTheme.Dark;
+        if (!_isInitialized) return;
+
+        try
+        {
+            var loader = new Windows.ApplicationModel.Resources.ResourceLoader(
+                "FluentView.AI/Resources");
+
+            var strings = new Dictionary<string, string>
+            {
+                ["copy"] = loader.GetString("Chat_Copy"),
+                ["copied"] = loader.GetString("Chat_Copied"),
+                ["continue_label"] = loader.GetString("Chat_Continue"),
+                ["code"] = loader.GetString("Chat_Code"),
+                ["copyMessage"] = loader.GetString("Chat_CopyMessage")
+            };
+
+            // Filter out empty strings (key not found returns empty)
+            var validStrings = strings
+                .Where(kv => !string.IsNullOrEmpty(kv.Value))
+                .ToDictionary(kv => kv.Key, kv => kv.Value);
+
+            if (validStrings.Count > 0)
+            {
+                await _renderer.SetLocaleStringsAsync(validStrings);
+            }
+        }
+        catch
+        {
+            // Resource loading may fail if no .resw files are available (consumer app).
+            // Defaults in chat.html will be used.
+        }
     }
+
+    private bool IsDarkTheme() => Theme switch
+    {
+        ChatTheme.Light => false,
+        ChatTheme.Dark => true,
+        _ => ActualTheme == ElementTheme.Dark
+    };
 }

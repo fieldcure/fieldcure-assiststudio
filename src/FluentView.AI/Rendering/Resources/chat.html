@@ -370,6 +370,83 @@
         background: var(--copy-btn-hover);
     }
 
+    /* ===== Message Actions (Copy) ===== */
+    .message {
+        position: relative;
+    }
+
+    /* User message: absolute copy button on the left */
+    .message.user .message-actions {
+        position: absolute;
+        top: 0;
+        left: -36px;
+        opacity: 0;
+        transition: opacity 0.15s;
+        z-index: 10;
+    }
+    .message.user:hover .message-actions { opacity: 1; }
+
+    /* Assistant message: footer row below bubble */
+    .message-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 4px;
+        padding: 0 4px;
+        min-height: 20px;
+    }
+    .message-footer .message-actions {
+        opacity: 0;
+        transition: opacity 0.15s;
+    }
+    .message:hover .message-footer .message-actions { opacity: 1; }
+    .message-footer .message-timestamp {
+        margin-top: 0;
+    }
+
+    .msg-copy-btn {
+        width: 24px;
+        height: 24px;
+        border: none;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--timestamp-color);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Segoe Fluent Icons', 'Segoe MDL2 Assets';
+        font-size: 12px;
+        transition: background 0.15s, color 0.15s;
+        padding: 0;
+        line-height: 1;
+    }
+    .msg-copy-btn:hover {
+        background: var(--copy-btn-hover);
+        color: var(--text-primary);
+    }
+    .msg-copy-btn.copied {
+        color: #2ea043;
+    }
+
+    /* ===== Provider Badge ===== */
+    .provider-badge {
+        font-size: 11px;
+        color: var(--timestamp-color);
+        margin-bottom: 4px;
+        padding: 0 4px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .provider-badge-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--link-color);
+        flex-shrink: 0;
+    }
+
     /* ===== Animations ===== */
     @keyframes blink { 50% { opacity: 0; } }
     @keyframes fadeIn {
@@ -386,6 +463,15 @@
 
     const container = document.getElementById('chat-container');
     let autoScroll = true;
+
+    // Localization strings (overridable via setLocaleStrings)
+    window._L = {
+        copy: 'Copy',
+        copied: 'Copied!',
+        continue_label: '\u25B6 Continue',
+        code: 'code',
+        copyMessage: 'Copy'
+    };
 
     window.addEventListener('scroll', function() {
         const threshold = 50;
@@ -433,8 +519,8 @@
             var header = document.createElement('div');
             header.className = 'code-header';
             header.innerHTML =
-                '<span class="code-lang">' + escapeHtml(lang || 'code') + '</span>' +
-                '<button class="copy-btn">Copy</button>';
+                '<span class="code-lang">' + escapeHtml(lang || window._L.code) + '</span>' +
+                '<button class="copy-btn">' + escapeHtml(window._L.copy) + '</button>';
 
             pre.parentNode.insertBefore(wrapper, pre);
             wrapper.appendChild(header);
@@ -445,10 +531,10 @@
             btn.addEventListener('click', function() {
                 var text = code.textContent || '';
                 window.chrome.webview.postMessage('copy:' + text);
-                btn.textContent = 'Copied!';
+                btn.textContent = window._L.copied;
                 btn.classList.add('copied');
                 setTimeout(function() {
-                    btn.textContent = 'Copy';
+                    btn.textContent = window._L.copy;
                     btn.classList.remove('copied');
                 }, 1500);
             });
@@ -491,6 +577,26 @@
         return '<span class="content">' + escapeHtml(fullText) + '</span>';
     }
 
+    function createMessageActions(msgId) {
+        var actions = document.createElement('div');
+        actions.className = 'message-actions';
+        var btn = document.createElement('button');
+        btn.className = 'msg-copy-btn';
+        btn.title = 'Copy';
+        btn.textContent = '\uE8C8';  // Segoe Fluent Icons: Copy
+        btn.addEventListener('click', function() {
+            window.chrome.webview.postMessage('copyMsg:' + msgId);
+            btn.textContent = '\uE73E';  // Segoe Fluent Icons: Checkmark
+            btn.classList.add('copied');
+            setTimeout(function() {
+                btn.textContent = '\uE8C8';
+                btn.classList.remove('copied');
+            }, 1500);
+        });
+        actions.appendChild(btn);
+        return actions;
+    }
+
     window.fluentChat = {
         appendUserMessage: function(id, text, timestamp, attachments) {
             var msg = document.createElement('div');
@@ -501,17 +607,34 @@
             msg.innerHTML =
                 '<div class="message-bubble">' + attachmentHtml + textHtml + '</div>' +
                 '<div class="message-timestamp">' + formatTimestamp(timestamp) + '</div>';
+            msg.appendChild(createMessageActions(id));
             container.appendChild(msg);
             doScroll('smooth');
         },
 
-        beginAssistantMessage: function(id) {
+        beginAssistantMessage: function(id, providerName, modelId) {
             var msg = document.createElement('div');
             msg.className = 'message assistant';
             msg.id = 'msg-' + id;
-            msg.innerHTML =
-                '<div class="message-bubble streaming"><span class="content"></span><span class="cursor">&#9612;</span></div>' +
-                '<div class="message-timestamp"></div>';
+
+            var badgeHtml = '';
+            if (providerName) {
+                var label = modelId ? (providerName + ' \u00b7 ' + modelId) : providerName;
+                badgeHtml = '<div class="provider-badge"><span class="provider-badge-dot"></span>' + escapeHtml(label) + '</div>';
+            }
+
+            msg.innerHTML = badgeHtml +
+                '<div class="message-bubble streaming"><span class="content"></span><span class="cursor">&#9612;</span></div>';
+
+            // Footer: [actions ... timestamp]
+            var footer = document.createElement('div');
+            footer.className = 'message-footer';
+            footer.appendChild(createMessageActions(id));
+            var ts = document.createElement('div');
+            ts.className = 'message-timestamp';
+            footer.appendChild(ts);
+            msg.appendChild(footer);
+
             container.appendChild(msg);
             doScroll('smooth');
         },
@@ -539,7 +662,7 @@
                 if (truncated) {
                     var btn = document.createElement('button');
                     btn.className = 'continue-btn';
-                    btn.textContent = '\u25B6 Continue';
+                    btn.textContent = window._L.continue_label;
                     btn.addEventListener('click', function() {
                         btn.remove();
                         window.chrome.webview.postMessage('continue:' + id);

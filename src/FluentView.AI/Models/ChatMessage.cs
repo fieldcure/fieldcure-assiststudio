@@ -42,6 +42,16 @@ public partial class ChatMessage : INotifyPropertyChanged
     public DateTime Timestamp { get; }
     public IReadOnlyList<ChatAttachment> Attachments { get; init; }
 
+    /// <summary>
+    /// Provider name that generated this message (e.g., "Claude", "OpenAI").
+    /// </summary>
+    public string? ProviderName { get; init; }
+
+    /// <summary>
+    /// Model ID used to generate this message (e.g., "claude-sonnet-4-20250514").
+    /// </summary>
+    public string? ProviderModelId { get; init; }
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     private void SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)

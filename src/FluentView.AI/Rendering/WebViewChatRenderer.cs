@@ -16,6 +16,7 @@ internal class WebViewChatRenderer
 
     public event EventHandler<string>? CopyRequested;
     public event EventHandler<string>? ContinueRequested;
+    public event EventHandler<string>? MessageCopyRequested;
 
     public async Task InitializeAsync(WebView2 webView)
     {
@@ -127,7 +128,12 @@ internal class WebViewChatRenderer
         try
         {
             var message = args.TryGetWebMessageAsString();
-            if (message?.StartsWith("copy:") == true)
+            if (message?.StartsWith("copyMsg:") == true)
+            {
+                var messageId = message["copyMsg:".Length..];
+                MessageCopyRequested?.Invoke(this, messageId);
+            }
+            else if (message?.StartsWith("copy:") == true)
             {
                 var codeText = message["copy:".Length..];
                 CopyToClipboard(codeText);
@@ -233,9 +239,9 @@ internal class WebViewChatRenderer
         return array.ToJsonString();
     }
 
-    public Task BeginAssistantMessageAsync(string id)
+    public Task BeginAssistantMessageAsync(string id, string? providerName = null, string? modelId = null)
     {
-        var script = $"window.fluentChat.beginAssistantMessage({Js(id)})";
+        var script = $"window.fluentChat.beginAssistantMessage({Js(id)}, {Js(providerName ?? "")}, {Js(modelId ?? "")})";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 
@@ -260,6 +266,13 @@ internal class WebViewChatRenderer
     public Task ScrollToBottomAsync()
     {
         return _webView.ExecuteScriptAsync("window.fluentChat.scrollToBottom()").AsTask();
+    }
+
+    public Task SetLocaleStringsAsync(IDictionary<string, string> strings)
+    {
+        var json = JsonSerializer.Serialize(strings);
+        var script = $"Object.assign(window._L, {json})";
+        return _webView.ExecuteScriptAsync(script).AsTask();
     }
 
     public Task SetThemeAsync(bool isDark)
