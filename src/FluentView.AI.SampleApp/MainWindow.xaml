@@ -14,68 +14,85 @@
         <MicaBackdrop />
     </Window.SystemBackdrop>
 
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
+    <SplitView x:Name="RootSplitView"
+               IsPaneOpen="False"
+               OpenPaneLength="420"
+               DisplayMode="Overlay"
+               PanePlacement="Right">
 
-        <!-- Provider Settings Bar -->
-        <Border Grid.Row="0"
-                Padding="12,8"
-                BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
-                BorderThickness="0,0,0,1">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-                <ComboBox x:Name="ProviderCombo"
-                          SelectedIndex="0"
-                          Width="130"
-                          SelectionChanged="ProviderCombo_SelectionChanged">
-                    <ComboBoxItem Content="Mock" />
-                    <ComboBoxItem Content="Claude" />
-                    <ComboBoxItem Content="OpenAI" />
-                    <ComboBoxItem Content="Ollama" />
-                    <ComboBoxItem Content="Gemini" />
-                    <ComboBoxItem Content="Groq" />
-                </ComboBox>
+        <!-- Settings Pane -->
+        <SplitView.Pane>
+            <local:SettingsPanel x:Name="SettingsPane" />
+        </SplitView.Pane>
 
-                <PasswordBox x:Name="ApiKeyBox"
-                             PlaceholderText="API Key"
-                             Width="280"
-                             Visibility="Collapsed" />
+        <!-- Main Content: TabView -->
+        <SplitView.Content>
+            <TabView x:Name="Tabs"
+                     IsAddTabButtonVisible="True"
+                     AddTabButtonClick="OnAddTab"
+                     TabCloseRequested="OnCloseTab"
+                     SelectionChanged="OnTabSelectionChanged"
+                     VerticalAlignment="Stretch">
 
-                <ComboBox x:Name="ModelCombo"
-                          IsEditable="True"
-                          PlaceholderText="Model"
-                          Width="220" />
+                <!-- Hamburger Menu (left of tabs) -->
+                <TabView.TabStripHeader>
+                    <Grid x:Name="ShellTitlebarInset">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition x:Name="LeftPaddingColumn" Width="0" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
 
-                <Button x:Name="RefreshModelsButton"
-                        Content="&#xE72C;"
-                        FontFamily="{StaticResource SymbolThemeFontFamily}"
-                        ToolTipService.ToolTip="Refresh Models"
-                        Click="OnRefreshModels" />
+                        <Button x:Name="MainMenuButton"
+                                Grid.Column="1"
+                                IsTabStop="False"
+                                Width="42"
+                                Height="32"
+                                Margin="4,8,0,0"
+                                BorderThickness="0"
+                                Background="Transparent"
+                                Padding="0"
+                                Click="OnMainMenuClick">
+                            <FontIcon Glyph="&#xE700;"
+                                      FontSize="16" />
 
-                <Button x:Name="BrowseModelsButton"
-                        Content="Browse..."
-                        Visibility="Collapsed"
-                        Click="OnBrowseModels" />
+                            <FlyoutBase.AttachedFlyout>
+                                <MenuFlyout x:Name="MainMenuFlyout"
+                                            Placement="BottomEdgeAlignedLeft">
+                                    <MenuFlyoutItem x:Uid="Menu_NewTab" Text="New Tab"
+                                                    Click="OnMenuNewTab">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE710;" />
+                                        </MenuFlyoutItem.Icon>
+                                        <MenuFlyoutItem.KeyboardAccelerators>
+                                            <KeyboardAccelerator Modifiers="Control" Key="T" />
+                                        </MenuFlyoutItem.KeyboardAccelerators>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem x:Uid="Menu_Settings" Text="Settings"
+                                                    Click="OnMenuSettings">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE713;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                </MenuFlyout>
+                            </FlyoutBase.AttachedFlyout>
+                        </Button>
+                    </Grid>
+                </TabView.TabStripHeader>
 
-                <Button Content="Apply"
-                        Style="{StaticResource AccentButtonStyle}"
-                        Click="OnApplyProvider" />
-
-                <Button Content="Clear"
-                        Click="OnClearChat" />
-
-                <TextBlock x:Name="StatusText"
-                           VerticalAlignment="Center"
-                           Margin="8,0,0,0"
-                           FontSize="12"
-                           Opacity="0.8" />
-            </StackPanel>
-        </Border>
-
-        <fv:ChatPanel x:Name="ChatPanel"
-                      Grid.Row="1"
-                      Placeholder="Type a message..." />
-    </Grid>
+                <!-- Title Bar drag area (right of tabs) -->
+                <TabView.TabStripFooter>
+                    <Grid Background="Transparent">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition x:Name="DragColumn" Width="*" MinWidth="48" />
+                            <ColumnDefinition x:Name="RightPaddingColumn" Width="0" />
+                        </Grid.ColumnDefinitions>
+                        <Grid x:Name="TitleBarReservedArea"
+                              Grid.Column="0"
+                              Background="Transparent" />
+                    </Grid>
+                </TabView.TabStripFooter>
+            </TabView>
+        </SplitView.Content>
+    </SplitView>
 </Window>

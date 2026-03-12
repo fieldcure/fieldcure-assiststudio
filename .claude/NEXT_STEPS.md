@@ -41,8 +41,8 @@
 - WindowHelper 공용 클래스 (FileOpenPicker HWND 연동)
 
 ### 미구현 항목
-- SampleApp 완성 + NuGet 배포 — Phase 5
-- CI/CD 워크플로우 — Phase 5
+- UI/UX/사용성 개선 + 로컬 모델 자동 관리 — Phase 5
+- SampleApp 완성 + NuGet 배포 + CI/CD — Phase 6
 
 ---
 
@@ -87,8 +87,18 @@ ClaudeProvider (SSE), OpenAiProvider, OllamaProvider, SseReader 공용 유틸
 ### Phase 4.5 완료 (2026-03-12)
 토큰 사용량 추적 (Usage), 자동 히스토리 요약 (컨텍스트 압축), 모델 목록 API 연동 (Claude/OpenAI/Ollama/Gemini), IModelManager + OllamaModelManager (모델 다운로드/삭제), GeminiProvider (무료 티어), API 연결 검증, SampleApp 모델 선택 UI
 
-### Phase 5: 샘플앱 & 문서 & 배포
-SampleApp 완성, README, NuGet 배포
+### Phase 4.6: 문서 첨부 지원 (PDF/DOCX) — 진행 중
+- [x] PdfPig + DocumentFormat.OpenXml NuGet 패키지 추가
+- [x] `AttachmentType.Document` enum 추가 (향후 multimodal 문서 지원용)
+- [x] InputContainer에서 PDF/DOCX 텍스트 추출 → TextFile로 변환
+- [ ] 향후: `AttachmentType.Document`를 활용한 multimodal 문서 전송 (Claude/Gemini PDF Vision)
+
+### Phase 5: UI/UX/사용성 + 로컬 모델 자동 관리
+Core: Provider 뱃지, 메시지 복사, 요약 버튼, 테마 시스템, 로컬라이즈, ChatMessage.ProviderName
+SampleApp: 멀티 Provider preset, Ollama 자동 설치/시작, 하드웨어 감지 + 모델 추천, First Run Experience
+
+### Phase 6: 샘플앱 완성 & 문서 & 배포
+SampleApp 완성, README, NuGet 배포, CI/CD
 
 ---
 
@@ -1043,13 +1053,93 @@ OnnxModelManager : IModelManager
 
 ---
 
-## 8. Phase 5 상세 계획 (샘플앱 & 배포)
+## 8. Phase 5 상세 계획 (UI/UX/사용성 + 로컬 모델 자동 관리)
+
+### Core 라이브러리 (FluentView.AI) 변경
+
+#### 5.1 Provider 뱃지 표시
+- `ChatMessage`에 `ProviderName` 속성 추가
+- `chat.html`: Assistant 말풍선 위에 Provider/모델명 뱃지 렌더링
+- `WebViewChatRenderer`: 메시지 생성 시 provider 정보 전달
+
+#### 5.2 메시지 복사 버튼
+- `chat.html`: 메시지 호버 시 복사 아이콘 오버레이 표시
+  - User 메시지: 프롬프트 텍스트 복사
+  - Assistant 메시지: 답변 전체 텍스트 복사 (Markdown 원문)
+- `WebViewChatRenderer`: `copy:message:{id}` 웹 메시지 처리 → 클립보드
+
+#### 5.3 대화 요약 버튼
+- `ChatPanel`: 수동 요약 트리거 메서드 (기존 AutoSummarize 로직 재활용)
+- 요약 후 [System 요약 메시지 + 최근 N턴]으로 히스토리 압축
+- 요약 시점 이전 메시지는 렌더링에서 접기/숨기기 처리
+
+#### 5.4 테마 시스템
+- `ChatPanel`에 테마 속성 노출 (Light/Dark/System)
+- `chat.html` CSS 변수 기반 테마 전환 확장
+- WinUI 3 `ActualThemeChanged` 이벤트 연동
+
+#### 5.5 로컬라이즈 (i18n)
+- UI 문자열 리소스화 (x:Uid 패턴 또는 .resw)
+- `chat.html` 내 고정 문자열 (Copy, Continue 등) 외부 주입
+- 초기 지원 언어: en, ko
+
+### SampleApp 변경
+
+#### 5.6 SampleApp 구조 재설계 (TabView + NavigationView)
+- `TabView` 기반 멀티 탭 — 각 탭이 독립 `ChatPanel` + 독립 대화 세션
+- `NavigationView` (SplitView 스타일) 좌측 패널:
+  - Chat (탭 뷰)
+  - Settings 페이지
+- 새 탭 생성/닫기, 탭 간 독립 히스토리
+
+#### 5.7 Settings 페이지
+- Provider preset 관리 (3~4 slot 설정/저장)
+- API Key 입력 → `PasswordVault` 암호화 저장
+- 테마 선택 (Light/Dark/System)
+- 언어 선택 (en/ko)
+- Ollama 서버 상태 표시/관리
+
+#### 5.8 멀티 Provider 즉석 전환
+- 입력 영역에 Provider 선택 드롭다운 (preset에서 선택)
+- 모델 변경 시 대화 히스토리 유지 (clear 안 함)
+- 답변에 Provider 뱃지로 누가 답했는지 구분
+
+#### 5.9 API Key 보안 저장
+- `Windows.Security.Credentials.PasswordVault` 사용
+- Provider별 API Key 암호화 저장/로드
+- 앱 재시작 시 자동 복원
+
+#### 5.10 Ollama 자동 설치/시작
+- Ollama 설치 여부 감지 (`ollama` 프로세스 또는 경로 확인)
+- 미설치 시: 설치 안내 다이얼로그 + 공식 설치 페이지 연결
+- Ollama 서버 미실행 시: `Process.Start("ollama", "serve")` 자동 시작
+- 서버 준비 대기 (healthcheck: `GET http://localhost:11434`)
+
+#### 5.11 하드웨어 감지 + 모델 추천
+- DXGI API로 GPU VRAM 확인
+- 시스템 RAM 확인
+- 모델 크기 대비 VRAM/RAM 호환성 판단:
+  - Compatible: VRAM >= 모델 크기 + 2GB
+  - NotRecommended: VRAM >= 모델 크기 + 1GB
+  - NotCompatible: VRAM < 모델 크기 + 1GB (CPU fallback 경고)
+- ModelSelectionDialog에 호환성 상태 표시
+
+#### 5.12 First Run Experience
+- 첫 실행 시 Ollama 자동 감지 → 모델 없으면 추천 모델 다운로드 제안
+- 하드웨어 사양에 맞는 모델 자동 추천
+- 다운로드 진행률 표시 (기존 OllamaModelManager.DownloadModelAsync 활용)
+
+#### 5.13 기타 UX 개선
+- System Prompt 설정 UI (Settings에 포함)
+- 대화 저장/불러오기 (탭 단위)
+
+---
+
+## 9. Phase 6 상세 계획 (샘플앱 완성 & 배포)
 
 ### SampleApp 완성
-- Provider 선택 UI (ComboBox: Claude / OpenAI / Gemini / Ollama)
-- API Key 입력 필드
-- System Prompt 설정
-- 대화 클리어 버튼
+- 전체 UI 마무리
+- README 작성
 
 ### NuGet 배포
 - `FluentView.AI.csproj`에 `<GeneratePackageOnBuild>true</GeneratePackageOnBuild>`
@@ -1061,7 +1151,7 @@ OnnxModelManager : IModelManager
 
 ---
 
-## 9. 파일 전체 목록 (최종 구조)
+## 10. 파일 전체 목록 (최종 구조)
 
 ```
 src/FluentView.AI/

@@ -1,4 +1,7 @@
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Text;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
 using FluentView.AI.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -17,6 +20,8 @@ public sealed partial class InputContainer : UserControl
 
     private static readonly HashSet<string> TextExtensions =
         [".txt", ".csv", ".log", ".md", ".json", ".xml"];
+
+    private static readonly HashSet<string> DocumentExtensions = [".pdf", ".docx"];
 
     public static readonly DependencyProperty PlaceholderProperty =
         DependencyProperty.Register(nameof(Placeholder), typeof(string), typeof(InputContainer),
@@ -77,6 +82,7 @@ public sealed partial class InputContainer : UserControl
         var picker = new FileOpenPicker();
         foreach (var ext in ImageExtensions) picker.FileTypeFilter.Add(ext);
         foreach (var ext in TextExtensions) picker.FileTypeFilter.Add(ext);
+        foreach (var ext in DocumentExtensions) picker.FileTypeFilter.Add(ext);
 
         // WinUI 3: need to initialize picker with window handle
         var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(GetWindow());
@@ -126,11 +132,31 @@ public sealed partial class InputContainer : UserControl
         var ext = file.FileType.ToLowerInvariant();
         var isImage = ImageExtensions.Contains(ext);
         var isText = TextExtensions.Contains(ext);
+        var isDocument = DocumentExtensions.Contains(ext);
 
-        if (!isImage && !isText) return null;
+        if (!isImage && !isText && !isDocument) return null;
 
         var buffer = await FileIO.ReadBufferAsync(file);
         var data = buffer.ToArray();
+
+        if (isDocument)
+        {
+            // Extract text from PDF/DOCX and treat as TextFile
+            var extractedText = ext switch
+            {
+                ".pdf" => ExtractTextFromPdf(data),
+                ".docx" => ExtractTextFromDocx(data),
+                _ => ""
+            };
+
+            return new ChatAttachment
+            {
+                FileName = file.Name,
+                Type = AttachmentType.TextFile,
+                Data = Encoding.UTF8.GetBytes(extractedText),
+                MimeType = "text/plain"
+            };
+        }
 
         return new ChatAttachment
         {
@@ -139,6 +165,33 @@ public sealed partial class InputContainer : UserControl
             Data = data,
             MimeType = isImage ? GetImageMimeType(ext) : "text/plain"
         };
+    }
+
+    private static string ExtractTextFromPdf(byte[] data)
+    {
+        using var document = UglyToad.PdfPig.PdfDocument.Open(data);
+        var sb = new StringBuilder();
+        foreach (var page in document.GetPages())
+        {
+            if (sb.Length > 0) sb.AppendLine();
+            sb.Append(page.Text);
+        }
+        return sb.ToString();
+    }
+
+    private static string ExtractTextFromDocx(byte[] data)
+    {
+        using var stream = new MemoryStream(data);
+        using var doc = WordprocessingDocument.Open(stream, false);
+        var body = doc.MainDocumentPart?.Document?.Body;
+        if (body is null) return "";
+        var sb = new StringBuilder();
+        foreach (var paragraph in body.Elements<Paragraph>())
+        {
+            if (sb.Length > 0) sb.AppendLine();
+            sb.Append(paragraph.InnerText);
+        }
+        return sb.ToString();
     }
 
     private static string GetImageMimeType(string extension) => extension switch

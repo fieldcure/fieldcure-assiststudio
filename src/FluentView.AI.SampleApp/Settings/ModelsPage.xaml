@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="FluentView.AI.SampleApp.Settings.ModelsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    NavigationCacheMode="Enabled">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Grid.Row="0" Padding="18,12,18,12"
+              BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+              BorderThickness="0,0,0,1">
+            <TextBlock x:Uid="Models_Title" Text="Models"
+                       Style="{StaticResource SubtitleTextBlockStyle}" />
+        </Grid>
+
+        <!-- Content -->
+        <ScrollViewer Grid.Row="1" Padding="18,12">
+            <StackPanel Spacing="16">
+
+                <!-- Provider Presets -->
+                <TextBlock x:Uid="Models_ProviderPresets" Text="Provider Presets"
+                           Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                <ListView x:Name="PresetListView"
+                          SelectionMode="None"
+                          IsItemClickEnabled="False">
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="Padding" Value="0,4" />
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid ColumnSpacing="6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Spacing="4">
+                                    <TextBox PlaceholderText="Name"
+                                             Text="{Binding Name, Mode=TwoWay}"
+                                             MinWidth="0" />
+                                    <ComboBox x:Name="ProviderTypeCombo"
+                                              PlaceholderText="Provider"
+                                              HorizontalAlignment="Stretch"
+                                              Tag="{Binding}"
+                                              Loaded="OnPresetProviderTypeLoaded"
+                                              SelectionChanged="OnPresetProviderTypeChanged" />
+                                    <PasswordBox PlaceholderText="API Key"
+                                                 Password="{Binding ApiKey, Mode=TwoWay}"
+                                                 Visibility="{Binding RequiresApiKey}" />
+                                    <TextBox PlaceholderText="Model ID"
+                                             Text="{Binding ModelId, Mode=TwoWay}" />
+                                </StackPanel>
+                                <Button Grid.Column="1"
+                                        VerticalAlignment="Top"
+                                        Content="&#xE74D;"
+                                        FontFamily="{StaticResource SymbolThemeFontFamily}"
+                                        ToolTipService.ToolTip="Delete"
+                                        Tag="{Binding}"
+                                        Click="OnDeletePreset" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button x:Uid="Models_AddPreset" Content="Add Preset"
+                            Click="OnAddPreset" />
+                    <Button x:Uid="Models_Save" Content="Save"
+                            Style="{StaticResource AccentButtonStyle}"
+                            Click="OnSavePresets" />
+                </StackPanel>
+
+                <!-- Ollama Section -->
+                <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="0,8" />
+
+                <TextBlock x:Uid="Models_Ollama" Text="Ollama"
+                           Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                <TextBlock x:Name="OllamaStatusText"
+                           Text="Status: checking..."
+                           FontSize="12" Opacity="0.8" />
+
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button x:Uid="Models_CheckStatus" Content="Check Status" Click="OnCheckOllama" />
+                    <Button x:Uid="Models_BrowseModels" Content="Browse Models" Click="OnBrowseOllamaModels" />
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>

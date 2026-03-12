@@ -1,159 +1,361 @@
-using FluentView.AI.Models;
-using FluentView.AI.Providers;
+using FluentView.AI.Controls;
+using Microsoft.UI;
+using Microsoft.UI.Input;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
+using Windows.Foundation;
+using Windows.Graphics;
+using Windows.UI;
 
 namespace FluentView.AI.SampleApp;
 
 public sealed partial class MainWindow : Window
 {
+    private int _tabCounter;
+    private AppWindow? _appWindow;
+
     public MainWindow()
     {
         InitializeComponent();
-        ChatPanel.Provider = new MockProvider();
+
+        // Custom title bar: use SetTitleBar for drag region
+        ExtendsContentIntoTitleBar = true;
+        SetTitleBar(TitleBarReservedArea);
+        TitleBarReservedArea.MinWidth = 188;
+
+        _appWindow = this.AppWindow;
+
+        // Wire up settings events
+        SettingsPane.ThemeChanged += OnThemeChanged;
+        SettingsPane.SystemPromptChanged += OnSystemPromptChanged;
+        SettingsPane.PresetsChanged += OnPresetsChanged;
+
+        // Apply saved theme to app root
+        Activated += OnFirstActivated;
+
+        // Create initial tab
+        CreateChatTab();
+
+        // Set up interactive passthrough regions once content is loaded
+        Tabs.Loaded += (_, _) => SetRegionsForCustomTitleBar();
+        Tabs.SizeChanged += (_, _) => SetRegionsForCustomTitleBar();
     }
 
-    private void ProviderCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void OnFirstActivated(object sender, WindowActivatedEventArgs args)
     {
-        if (ApiKeyBox is null) return; // Guard during initialization
-
-        // Show API key field for Claude, OpenAI, Gemini, Groq; hide for Mock and Ollama
-        var index = ProviderCombo.SelectedIndex;
-        ApiKeyBox.Visibility = (index == 1 || index == 2 || index == 4 || index == 5)
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-
-        // Show Browse button only for Ollama
-        if (BrowseModelsButton is not null)
-            BrowseModelsButton.Visibility = index == 3 ? Visibility.Visible : Visibility.Collapsed;
+        Activated -= OnFirstActivated;
+        ApplyAppTheme(AppSettings.Theme);
     }
 
-    private void OnApplyProvider(object sender, RoutedEventArgs e)
+    private void ApplyAppTheme(string theme)
     {
-        // Dispose previous provider if needed
-        if (ChatPanel.Provider is IDisposable disposable)
+        if (Content is FrameworkElement root)
+        {
+            root.RequestedTheme = theme switch
+            {
+                "Light" => ElementTheme.Light,
+                "Dark" => ElementTheme.Dark,
+                _ => ElementTheme.Default,
+            };
+        }
+
+        // Update title bar caption button colors to match theme
+        if (_appWindow?.TitleBar is { } titleBar)
+        {
+            var transparent = Colors.Transparent;
+            titleBar.BackgroundColor = transparent;
+            titleBar.ButtonBackgroundColor = transparent;
+            titleBar.InactiveBackgroundColor = transparent;
+            titleBar.ButtonInactiveBackgroundColor = transparent;
+
+            // Determine effective theme (resolve "System" to actual)
+            var isDark = theme == "Dark" ||
+                (theme != "Light" && Application.Current.RequestedTheme == ApplicationTheme.Dark);
+
+            var foreground = isDark ? Colors.White : Colors.Black;
+            var hoverBg = isDark
+                ? Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF)
+                : Color.FromArgb(0x33, 0x00, 0x00, 0x00);
+            var pressedBg = isDark
+                ? Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF)
+                : Color.FromArgb(0x66, 0x00, 0x00, 0x00);
+            var inactiveFg = isDark
+                ? Color.FromArgb(0x99, 0xFF, 0xFF, 0xFF)
+                : Color.FromArgb(0x99, 0x00, 0x00, 0x00);
+
+            titleBar.ForegroundColor = foreground;
+            titleBar.ButtonForegroundColor = foreground;
+            titleBar.ButtonHoverForegroundColor = foreground;
+            titleBar.ButtonHoverBackgroundColor = hoverBg;
+            titleBar.ButtonPressedForegroundColor = foreground;
+            titleBar.ButtonPressedBackgroundColor = pressedBg;
+            titleBar.ButtonInactiveForegroundColor = inactiveFg;
+        }
+    }
+
+    // ===== Custom Title Bar =====
+
+    private void SetRegionsForCustomTitleBar()
+    {
+        if (_appWindow is null || !ExtendsContentIntoTitleBar || ShellTitlebarInset.XamlRoot is null)
+            return;
+
+        var scale = ShellTitlebarInset.XamlRoot.RasterizationScale;
+
+        // Left padding to account for system caption buttons inset
+        LeftPaddingColumn.Width = new GridLength(_appWindow.TitleBar.LeftInset / scale);
+        RightPaddingColumn.Width = new GridLength(_appWindow.TitleBar.RightInset / scale);
+
+        // The entire tab strip area (header + tabs + add button) needs to be
+        // passthrough so interactive elements (menu button, tabs, close buttons) work.
+        // TitleBarReservedArea is already set as the title bar drag region via SetTitleBar.
+        var transform = ShellTitlebarInset.TransformToVisual(null);
+        var bounds = transform.TransformBounds(new Rect(0, 0,
+            ShellTitlebarInset.ActualWidth, ShellTitlebarInset.ActualHeight));
+        var headerRect = GetRect(bounds, scale);
+
+        var nonClientInputSrc = InputNonClientPointerSource.GetForWindowId(_appWindow.Id);
+        nonClientInputSrc.SetRegionRects(NonClientRegionKind.Passthrough, [headerRect]);
+    }
+
+    private static RectInt32 GetRect(Rect bounds, double scale)
+    {
+        return new RectInt32(
+            (int)Math.Round(bounds.X * scale),
+            (int)Math.Round(bounds.Y * scale),
+            (int)Math.Round(bounds.Width * scale),
+            (int)Math.Round(bounds.Height * scale));
+    }
+
+    // ===== Main Menu =====
+
+    private void OnMainMenuClick(object sender, RoutedEventArgs e)
+    {
+        FlyoutBase.ShowAttachedFlyout(MainMenuButton);
+    }
+
+    private void OnMenuNewTab(object sender, RoutedEventArgs e)
+    {
+        CreateChatTab();
+    }
+
+    private void OnMenuSettings(object sender, RoutedEventArgs e)
+    {
+        RootSplitView.IsPaneOpen = !RootSplitView.IsPaneOpen;
+    }
+
+    // ===== Tab Management =====
+
+    private void OnAddTab(TabView sender, object args)
+    {
+        CreateChatTab();
+    }
+
+    private void OnCloseTab(TabView sender, TabViewTabCloseRequestedEventArgs args)
+    {
+        if (args.Tab.Content is Grid grid)
+        {
+            var chatPanel = FindChatPanel(grid);
+            if (chatPanel?.Provider is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
+        }
+
+        sender.TabItems.Remove(args.Tab);
+
+        // Close window when all tabs are removed
+        if (sender.TabItems.Count == 0)
+        {
+            Close();
+        }
+    }
+
+    private void OnTabSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        // Could be used for per-tab status updates in the future
+    }
+
+    private void CreateChatTab(ProviderPreset? preset = null)
+    {
+        _tabCounter++;
+
+        preset ??= GetDefaultPreset();
+        var provider = ProviderFactory.Create(preset);
+
+        var chatPanel = new ChatPanel
+        {
+            Provider = provider,
+            Placeholder = "Type a message...",
+            SystemPrompt = AppSettings.SystemPrompt,
+            Theme = GetCurrentTheme(),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch,
+        };
+
+        // Provider selector ComboBox above the chat
+        var providerCombo = new ComboBox
+        {
+            Width = 180,
+            Margin = new Thickness(12, 8, 12, 4),
+            HorizontalAlignment = HorizontalAlignment.Left,
+        };
+
+        PopulateProviderCombo(providerCombo, preset.Name);
+        providerCombo.SelectionChanged += (s, e) => OnTabProviderChanged(s as ComboBox, chatPanel);
+
+        var grid = new Grid();
+        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+
+        Grid.SetRow(providerCombo, 0);
+        Grid.SetRow(chatPanel, 1);
+
+        grid.Children.Add(providerCombo);
+        grid.Children.Add(chatPanel);
+
+        var tab = new TabViewItem
+        {
+            Header = preset.Name,
+            Content = grid,
+            IconSource = new SymbolIconSource { Symbol = Symbol.Message },
+        };
+
+        Tabs.TabItems.Add(tab);
+        Tabs.SelectedItem = tab;
+    }
+
+    // ===== Provider Switching =====
+
+    private void PopulateProviderCombo(ComboBox combo, string? selectedPresetName)
+    {
+        combo.Items.Clear();
+        foreach (var p in SettingsPane.Presets)
+        {
+            combo.Items.Add(new ComboBoxItem { Content = p.Name, Tag = p });
+        }
+
+        // Select matching preset
+        for (int i = 0; i < combo.Items.Count; i++)
+        {
+            if (combo.Items[i] is ComboBoxItem item && item.Content as string == selectedPresetName)
+            {
+                combo.SelectedIndex = i;
+                return;
+            }
+        }
+
+        if (combo.Items.Count > 0)
+            combo.SelectedIndex = 0;
+    }
+
+    private void OnTabProviderChanged(ComboBox? combo, ChatPanel chatPanel)
+    {
+        if (combo?.SelectedItem is not ComboBoxItem selected || selected.Tag is not ProviderPreset preset)
+            return;
+
+        // Dispose old provider
+        if (chatPanel.Provider is IDisposable disposable)
         {
             disposable.Dispose();
         }
 
-        var apiKey = ApiKeyBox.Password?.Trim() ?? "";
-        // If a ComboBoxItem is selected, use its Tag (model Id); otherwise use typed text
-        var model = ModelCombo.SelectedItem is ComboBoxItem selected && selected.Tag is string tagId
-            ? tagId
-            : ModelCombo.Text?.Trim() ?? "";
+        // Create new provider — conversation history is preserved
+        chatPanel.Provider = ProviderFactory.Create(preset);
 
-        IAiProvider provider = ProviderCombo.SelectedIndex switch
+        // Update tab header
+        if (combo.Parent is Grid grid && grid.Parent is TabViewItem tab)
         {
-            1 => string.IsNullOrEmpty(model)
-                ? new ClaudeProvider(apiKey)
-                : new ClaudeProvider(apiKey, model),
-            2 => string.IsNullOrEmpty(model)
-                ? new OpenAiProvider(apiKey)
-                : new OpenAiProvider(apiKey, model),
-            3 => string.IsNullOrEmpty(model)
-                ? new OllamaProvider()
-                : new OllamaProvider(model),
-            4 => string.IsNullOrEmpty(model)
-                ? new GeminiProvider(apiKey)
-                : new GeminiProvider(apiKey, model),
-            5 => string.IsNullOrEmpty(model)
-                ? new OpenAiProvider(apiKey, "llama-3.3-70b-versatile",
-                    "https://api.groq.com/openai/v1", "Groq")
-                : new OpenAiProvider(apiKey, model,
-                    "https://api.groq.com/openai/v1", "Groq"),
-            _ => new MockProvider()
+            tab.Header = preset.Name;
+        }
+    }
+
+    // ===== Settings =====
+
+    private void OnThemeChanged(object? sender, string theme)
+    {
+        var chatTheme = theme switch
+        {
+            "Light" => ChatTheme.Light,
+            "Dark" => ChatTheme.Dark,
+            _ => ChatTheme.System,
         };
 
-        ChatPanel.Provider = provider;
-        ChatPanel.ClearConversation();
+        // Apply app-wide theme + title bar colors
+        ApplyAppTheme(theme);
 
-        _ = ValidateAndLoadAsync(provider);
-    }
-
-    private async Task ValidateAndLoadAsync(IAiProvider provider)
-    {
-        StatusText.Text = "Connecting...";
-        try
+        // Apply to all chat panels
+        foreach (var item in Tabs.TabItems)
         {
-            var info = await provider.ValidateConnectionAsync();
-            if (info.IsValid)
+            if (item is TabViewItem tab && tab.Content is Grid grid)
             {
-                var status = $"\u2705 Connected: {provider.ProviderName}";
-                if (!string.IsNullOrEmpty(info.OrganizationId))
-                    status += $" (org: {info.OrganizationId})";
-                StatusText.Text = status;
-
-                await LoadModelsAsync(provider);
-            }
-            else
-            {
-                StatusText.Text = $"\u274C {info.ErrorMessage ?? "Connection failed"}";
+                var chatPanel = FindChatPanel(grid);
+                if (chatPanel is not null)
+                    chatPanel.Theme = chatTheme;
             }
         }
-        catch (Exception ex)
-        {
-            StatusText.Text = $"\u274C {ex.Message}";
-        }
     }
 
-    private async void OnRefreshModels(object sender, RoutedEventArgs e)
+    private void OnSystemPromptChanged(object? sender, string prompt)
     {
-        if (ChatPanel.Provider is not null)
+        foreach (var item in Tabs.TabItems)
         {
-            await LoadModelsAsync(ChatPanel.Provider);
-        }
-    }
-
-    private async Task LoadModelsAsync(IAiProvider provider)
-    {
-        try
-        {
-            var models = await provider.ListModelsAsync();
-            ModelCombo.Items.Clear();
-
-            foreach (var m in models)
+            if (item is TabViewItem tab && tab.Content is Grid grid)
             {
-                ModelCombo.Items.Add(new ComboBoxItem
+                var chatPanel = FindChatPanel(grid);
+                if (chatPanel is not null)
+                    chatPanel.SystemPrompt = prompt;
+            }
+        }
+    }
+
+    private void OnPresetsChanged(object? sender, EventArgs e)
+    {
+        foreach (var item in Tabs.TabItems)
+        {
+            if (item is TabViewItem tab && tab.Content is Grid grid)
+            {
+                foreach (var child in grid.Children)
                 {
-                    Content = m.DisplayName ?? m.Id,
-                    Tag = m.Id
-                });
-            }
-
-            // Select current model if it exists in the list
-            for (int i = 0; i < ModelCombo.Items.Count; i++)
-            {
-                if (ModelCombo.Items[i] is ComboBoxItem item &&
-                    item.Tag is string id && id == provider.ModelId)
-                {
-                    ModelCombo.SelectedIndex = i;
-                    break;
+                    if (child is ComboBox combo)
+                    {
+                        var currentPreset = (combo.SelectedItem as ComboBoxItem)?.Content as string;
+                        PopulateProviderCombo(combo, currentPreset);
+                        break;
+                    }
                 }
             }
         }
-        catch
-        {
-            // Model list unavailable — user can still type manually
-        }
     }
 
-    private async void OnBrowseModels(object sender, RoutedEventArgs e)
+    // ===== Helpers =====
+
+    private static ChatPanel? FindChatPanel(Grid grid)
     {
-        using var manager = new OllamaModelManager();
-        var dialog = new ModelSelectionDialog(manager)
+        foreach (var child in grid.Children)
         {
-            XamlRoot = Content.XamlRoot
+            if (child is ChatPanel cp)
+                return cp;
+        }
+        return null;
+    }
+
+    private ProviderPreset GetDefaultPreset()
+    {
+        return SettingsPane.Presets.Count > 0
+            ? SettingsPane.Presets[0]
+            : new ProviderPreset { Name = "Mock", ProviderType = "Mock" };
+    }
+
+    private ChatTheme GetCurrentTheme()
+    {
+        return AppSettings.Theme switch
+        {
+            "Light" => ChatTheme.Light,
+            "Dark" => ChatTheme.Dark,
+            _ => ChatTheme.System,
         };
-
-        var result = await dialog.ShowAsync();
-        if (result == ContentDialogResult.Primary && dialog.SelectedModelId is not null)
-        {
-            ModelCombo.Text = dialog.SelectedModelId;
-        }
-    }
-
-    private void OnClearChat(object sender, RoutedEventArgs e)
-    {
-        ChatPanel.ClearConversation();
     }
 }

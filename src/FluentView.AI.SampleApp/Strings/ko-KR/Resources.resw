@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <!-- Main Menu -->
+  <data name="Menu_NewTab.Text" xml:space="preserve">
+    <value>&#xC0C8; &#xD0ED;</value>
+  </data>
+  <data name="Menu_Settings.Text" xml:space="preserve">
+    <value>&#xC124;&#xC815;</value>
+  </data>
+  <!-- Navigation Items -->
+  <data name="Nav_Models.Content" xml:space="preserve">
+    <value>&#xBAA8;&#xB378;</value>
+  </data>
+  <data name="Nav_Personalization.Content" xml:space="preserve">
+    <value>&#xAC1C;&#xC778; &#xC124;&#xC815;</value>
+  </data>
+  <data name="Nav_Prompt.Content" xml:space="preserve">
+    <value>&#xD504;&#xB86C;&#xD504;&#xD2B8;</value>
+  </data>
+  <data name="Nav_Advanced.Content" xml:space="preserve">
+    <value>&#xACE0;&#xAE09; &#xC124;&#xC815;</value>
+  </data>
+  <data name="Nav_About.Content" xml:space="preserve">
+    <value>&#xC815;&#xBCF4;</value>
+  </data>
+  <!-- Models Page -->
+  <data name="Models_Title.Text" xml:space="preserve">
+    <value>&#xBAA8;&#xB378;</value>
+  </data>
+  <data name="Models_ProviderPresets.Text" xml:space="preserve">
+    <value>&#xD504;&#xB85C;&#xBC14;&#xC774;&#xB354; &#xD504;&#xB9AC;&#xC14B;</value>
+  </data>
+  <data name="Models_AddPreset.Content" xml:space="preserve">
+    <value>&#xD504;&#xB9AC;&#xC14B; &#xCD94;&#xAC00;</value>
+  </data>
+  <data name="Models_Save.Content" xml:space="preserve">
+    <value>&#xC800;&#xC7A5;</value>
+  </data>
+  <data name="Models_Ollama.Text" xml:space="preserve">
+    <value>Ollama</value>
+  </data>
+  <data name="Models_CheckStatus.Content" xml:space="preserve">
+    <value>&#xC0C1;&#xD0DC; &#xD655;&#xC778;</value>
+  </data>
+  <data name="Models_BrowseModels.Content" xml:space="preserve">
+    <value>&#xBAA8;&#xB378; &#xCC3E;&#xAE30;</value>
+  </data>
+  <!-- Personalization Page -->
+  <data name="Personalization_Title.Text" xml:space="preserve">
+    <value>&#xAC1C;&#xC778; &#xC124;&#xC815;</value>
+  </data>
+  <data name="Personalization_Theme.Text" xml:space="preserve">
+    <value>&#xD14C;&#xB9C8;</value>
+  </data>
+  <data name="Personalization_System.Content" xml:space="preserve">
+    <value>&#xC2DC;&#xC2A4;&#xD15C;</value>
+  </data>
+  <data name="Personalization_Light.Content" xml:space="preserve">
+    <value>&#xBC1D;&#xAC8C;</value>
+  </data>
+  <data name="Personalization_Dark.Content" xml:space="preserve">
+    <value>&#xC5B4;&#xB461;&#xAC8C;</value>
+  </data>
+  <!-- Prompt Page -->
+  <data name="Prompt_Title.Text" xml:space="preserve">
+    <value>&#xC2DC;&#xC2A4;&#xD15C; &#xD504;&#xB86C;&#xD504;&#xD2B8;</value>
+  </data>
+  <data name="Prompt_Description.Text" xml:space="preserve">
+    <value>AI &#xBAA8;&#xB378;&#xC5D0; &#xBCF4;&#xB0B4;&#xB294; &#xC2DC;&#xC2A4;&#xD15C; &#xD504;&#xB86C;&#xD504;&#xD2B8;&#xB97C; &#xC124;&#xC815;&#xD569;&#xB2C8;&#xB2E4;.</value>
+  </data>
+  <data name="Prompt_Placeholder.PlaceholderText" xml:space="preserve">
+    <value>&#xC2DC;&#xC2A4;&#xD15C; &#xD504;&#xB86C;&#xD504;&#xD2B8;&#xB97C; &#xC785;&#xB825;&#xD558;&#xC138;&#xC694;...</value>
+  </data>
+  <!-- Advanced Page -->
+  <data name="Advanced_Title.Text" xml:space="preserve">
+    <value>&#xACE0;&#xAE09; &#xC124;&#xC815;</value>
+  </data>
+  <data name="Advanced_Language.Text" xml:space="preserve">
+    <value>&#xC5B8;&#xC5B4;</value>
+  </data>
+  <data name="Advanced_LanguageDescription.Text" xml:space="preserve">
+    <value>&#xC2DC;&#xC2A4;&#xD15C; &#xAE30;&#xBCF8; &#xC5B8;&#xC5B4;&#xB97C; &#xBB34;&#xC2DC;&#xD558;&#xACE0; &#xC0AC;&#xC6A9;&#xC790; &#xC9C0;&#xC815; &#xC5B8;&#xC5B4;&#xB97C; &#xC120;&#xD0DD;&#xD569;&#xB2C8;&#xB2E4;. &#xBCC0;&#xACBD; &#xC0AC;&#xD56D;&#xC744; &#xC801;&#xC6A9;&#xD558;&#xB824;&#xBA74; &#xC571;&#xC744; &#xB2E4;&#xC2DC; &#xC2DC;&#xC791;&#xD574;&#xC57C; &#xD569;&#xB2C8;&#xB2E4;.</value>
+  </data>
+  <data name="Advanced_RestartTitle" xml:space="preserve">
+    <value>&#xC7AC;&#xC2DC;&#xC791; &#xD544;&#xC694;</value>
+  </data>
+  <data name="Advanced_RestartMessage" xml:space="preserve">
+    <value>&#xC5B8;&#xC5B4; &#xBCC0;&#xACBD;&#xC744; &#xC801;&#xC6A9;&#xD558;&#xB824;&#xBA74; &#xC571;&#xC744; &#xB2E4;&#xC2DC; &#xC2DC;&#xC791;&#xD574; &#xC8FC;&#xC138;&#xC694;.</value>
+  </data>
+  <!-- About Page -->
+  <data name="About_Title.Text" xml:space="preserve">
+    <value>&#xC815;&#xBCF4;</value>
+  </data>
+  <data name="About_Description.Text" xml:space="preserve">
+    <value>WinUI 3&#xC6A9; AI &#xCC44;&#xD305; UI &#xCEE8;&#xD2B8;&#xB864;.</value>
+  </data>
+  <data name="About_Providers.Text" xml:space="preserve">
+    <value>Claude, OpenAI, Ollama, Gemini, Groq &#xB4F1;&#xC744; &#xC9C0;&#xC6D0;&#xD569;&#xB2C8;&#xB2E4;.</value>
+  </data>
+  <data name="About_License.Text" xml:space="preserve">
+    <value>&#xB77C;&#xC774;&#xC120;&#xC2A4;</value>
+  </data>
+  <data name="About_MITLicense.Text" xml:space="preserve">
+    <value>MIT &#xB77C;&#xC774;&#xC120;&#xC2A4;</value>
+  </data>
+  <data name="About_Links.Text" xml:space="preserve">
+    <value>&#xB9C1;&#xD06C;</value>
+  </data>
+  <data name="About_GitHubRepo.Content" xml:space="preserve">
+    <value>GitHub &#xC800;&#xC7A5;&#xC18C;</value>
+  </data>
+</root>

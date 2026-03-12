@@ -3,7 +3,8 @@ namespace FluentView.AI.Models;
 public enum AttachmentType
 {
     Image,
-    TextFile
+    TextFile,
+    Document // 향후 multimodal 문서 지원용 (PDF Vision 등)
 }
 
 public partial class ChatAttachment
