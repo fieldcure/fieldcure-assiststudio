@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using FluentView.AI.Models;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Web.WebView2.Core;
@@ -46,9 +47,10 @@ internal class WebViewChatRenderer
         var highlightJs = LoadEmbeddedResource("highlight.min.js");
         await _webView.ExecuteScriptAsync(highlightJs).AsTask();
 
-        // Inject KaTeX
+        // Inject KaTeX JS + CSS with embedded fonts
         var katexJs = LoadEmbeddedResource("katex.min.js");
         await _webView.ExecuteScriptAsync(katexJs).AsTask();
+        await InjectKatexCssAsync();
 
         // Configure marked with highlight.js + KaTeX math extensions
         var configScript = """
@@ -149,6 +151,41 @@ internal class WebViewChatRenderer
         dp.SetText(text);
         Clipboard.SetContent(dp);
         Clipboard.Flush();
+    }
+
+    private async Task InjectKatexCssAsync()
+    {
+        var css = LoadEmbeddedResource("katex.min.css");
+
+        // Replace font url(fonts/KaTeX_XXX.woff2) with base64 data URIs
+        css = Regex.Replace(css, @"url\(fonts/(KaTeX_[^)]+\.woff2)\)", match =>
+        {
+            var fileName = match.Groups[1].Value;
+            var fontBytes = LoadEmbeddedBinaryResource(fileName);
+            var base64 = Convert.ToBase64String(fontBytes);
+            return $"url(data:font/woff2;base64,{base64})";
+        });
+
+        // Strip .woff and .ttf src alternatives (woff2 is sufficient for WebView2)
+        css = Regex.Replace(css, @",url\(fonts/[^)]+\.woff\)\s*format\(""woff""\)", "");
+        css = Regex.Replace(css, @",url\(fonts/[^)]+\.ttf\)\s*format\(""truetype""\)", "");
+
+        var escapedCss = JsonSerializer.Serialize(css);
+        var script = "(function() { var s = document.createElement('style'); s.textContent = " +
+                     escapedCss + "; document.head.appendChild(s); })();";
+        await _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
+    private static byte[] LoadEmbeddedBinaryResource(string endsWith)
+    {
+        var assembly = Assembly.GetExecutingAssembly();
+        var resourceName = assembly.GetManifestResourceNames()
+            .First(n => n.EndsWith(endsWith, StringComparison.OrdinalIgnoreCase));
+
+        using var stream = assembly.GetManifestResourceStream(resourceName)!;
+        using var ms = new MemoryStream();
+        stream.CopyTo(ms);
+        return ms.ToArray();
     }
 
     private static string LoadEmbeddedResource(string endsWith)
