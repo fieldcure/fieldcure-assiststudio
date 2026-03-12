@@ -1,3 +1,4 @@
+using FluentView.AI.Models;
 using FluentView.AI.Providers;
 using FluentView.AI.SampleApp.Dialogs;
 using FluentView.AI.SampleApp.Helpers;
@@ -27,14 +28,14 @@ public sealed partial class ModelsPage : Page
     private SettingsPanel? _settings;
     private bool _isLoading = true;
 
-    // Known models per provider
-    private static readonly string[] ClaudeModels =
+    // Fallback models when cache is empty and API is unreachable
+    private static readonly string[] FallbackClaudeModels =
         ["claude-sonnet-4-20250514", "claude-opus-4-20250514", "claude-haiku-4-20250514"];
-    private static readonly string[] OpenAIModels =
+    private static readonly string[] FallbackOpenAIModels =
         ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "o1", "o1-mini", "o3-mini"];
-    private static readonly string[] GeminiModels =
+    private static readonly string[] FallbackGeminiModels =
         ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-pro-preview-05-06"];
-    private static readonly string[] GroqModels =
+    private static readonly string[] FallbackGroqModels =
         ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"];
 
     public ModelsPage()
@@ -194,6 +195,9 @@ public sealed partial class ModelsPage : Page
             statusText.Text = "";
             keyButton.Content = L("Models_UpdateKey");
             modelCombo.IsEnabled = true;
+
+            // Fetch model list immediately after saving a valid key
+            _ = FetchAndCacheModelsAsync(provider, key, modelCombo);
         }
         else
         {
@@ -212,28 +216,129 @@ public sealed partial class ModelsPage : Page
 
     private void PopulateModelCombos()
     {
-        var savedDefault = AppSettings.DefaultProvider;
+        // Load from cache first, fall back to hardcoded defaults
+        PopulateComboFromCacheOrFallback("Claude", ClaudeModelCombo, FallbackClaudeModels);
+        PopulateComboFromCacheOrFallback("OpenAI", OpenAIModelCombo, FallbackOpenAIModels);
+        PopulateComboFromCacheOrFallback("Gemini", GeminiModelCombo, FallbackGeminiModels);
+        PopulateComboFromCacheOrFallback("Groq", GroqModelCombo, FallbackGroqModels);
 
-        PopulateCombo(ClaudeModelCombo, ClaudeModels, AppSettings.GetDefaultModel("Claude"));
-        PopulateCombo(OpenAIModelCombo, OpenAIModels, AppSettings.GetDefaultModel("OpenAI"));
-        PopulateCombo(GeminiModelCombo, GeminiModels, AppSettings.GetDefaultModel("Gemini"));
-        PopulateCombo(GroqModelCombo, GroqModels, AppSettings.GetDefaultModel("Groq"));
+        // Background refresh for providers that have API keys
+        _ = RefreshAllModelCachesAsync();
     }
 
-    private static void PopulateCombo(ComboBox combo, string[] models, string? savedModel)
+    private static void PopulateComboFromCacheOrFallback(string provider, ComboBox combo, string[] fallback)
+    {
+        var cached = AppSettings.GetCachedModels(provider);
+        var models = cached ?? fallback.ToList();
+        var savedModel = AppSettings.GetDefaultModel(provider);
+
+        PopulateCombo(combo, models, savedModel);
+    }
+
+    private static void PopulateCombo(ComboBox combo, IList<string> models, string? savedModel)
     {
         combo.Items.Clear();
         foreach (var m in models) combo.Items.Add(m);
 
         if (!string.IsNullOrEmpty(savedModel))
         {
-            var idx = Array.IndexOf(models, savedModel);
-            combo.SelectedIndex = idx >= 0 ? idx : 0;
+            for (var i = 0; i < models.Count; i++)
+            {
+                if (models[i] == savedModel)
+                {
+                    combo.SelectedIndex = i;
+                    return;
+                }
+            }
         }
-        else if (models.Length > 0)
-        {
+
+        if (models.Count > 0)
             combo.SelectedIndex = 0;
+    }
+
+    private async Task RefreshAllModelCachesAsync()
+    {
+        // Fire-and-forget refresh for each provider with a valid key
+        var tasks = new List<Task>();
+
+        var claudeKey = PasswordVaultHelper.LoadApiKey("Claude");
+        if (!string.IsNullOrEmpty(claudeKey))
+            tasks.Add(FetchAndCacheModelsAsync("Claude", claudeKey, ClaudeModelCombo));
+
+        var openAIKey = PasswordVaultHelper.LoadApiKey("OpenAI");
+        if (!string.IsNullOrEmpty(openAIKey))
+            tasks.Add(FetchAndCacheModelsAsync("OpenAI", openAIKey, OpenAIModelCombo));
+
+        var geminiKey = PasswordVaultHelper.LoadApiKey("Gemini");
+        if (!string.IsNullOrEmpty(geminiKey))
+            tasks.Add(FetchAndCacheModelsAsync("Gemini", geminiKey, GeminiModelCombo));
+
+        var groqKey = PasswordVaultHelper.LoadApiKey("Groq");
+        if (!string.IsNullOrEmpty(groqKey))
+            tasks.Add(FetchAndCacheModelsAsync("Groq", groqKey, GroqModelCombo));
+
+        await Task.WhenAll(tasks);
+    }
+
+    private async Task FetchAndCacheModelsAsync(string provider, string apiKey, ComboBox combo)
+    {
+        try
+        {
+            var provider_ = CreateProviderForListing(provider, apiKey);
+            try
+            {
+                var models = await provider_.ListModelsAsync();
+                var filtered = FilterChatModels(provider, models);
+
+                if (filtered.Count == 0) return;
+
+                AppSettings.SetCachedModels(provider, filtered);
+
+                // Update ComboBox on UI thread, preserving current selection
+                DispatcherQueue.TryEnqueue(() =>
+                {
+                    var current = combo.SelectedItem as string;
+                    PopulateCombo(combo, filtered, current ?? AppSettings.GetDefaultModel(provider));
+                });
+            }
+            finally
+            {
+                (provider_ as IDisposable)?.Dispose();
+            }
         }
+        catch
+        {
+            // API unreachable — keep current list (cache or fallback)
+        }
+    }
+
+    private static IAiProvider CreateProviderForListing(string provider, string apiKey) => provider switch
+    {
+        "Claude" => new ClaudeProvider(apiKey, "dummy"),
+        "OpenAI" => new OpenAiProvider(apiKey, "dummy"),
+        "Gemini" => new GeminiProvider(apiKey, "dummy"),
+        "Groq" => new OpenAiProvider(apiKey, "dummy",
+            baseUrl: "https://api.groq.com/openai/v1", providerName: "Groq"),
+        _ => throw new ArgumentException($"Unknown provider: {provider}")
+    };
+
+    private static List<string> FilterChatModels(string provider, IReadOnlyList<AiModel> models)
+    {
+        return provider switch
+        {
+            "Claude" => models
+                .Where(m => m.Id.StartsWith("claude-"))
+                .Select(m => m.Id).ToList(),
+            "OpenAI" => models
+                .Where(m => m.Id.StartsWith("gpt-") || m.Id.StartsWith("o1") || m.Id.StartsWith("o3") || m.Id.StartsWith("o4"))
+                .Select(m => m.Id).ToList(),
+            "Gemini" => models
+                .Where(m => m.Id.StartsWith("gemini-"))
+                .Select(m => m.Id).ToList(),
+            "Groq" => models
+                .Select(m => m.Id).ToList(),
+            _ => models.Select(m => m.Id).ToList()
+        };
     }
 
     // ===== Default Provider =====
