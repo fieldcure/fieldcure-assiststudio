@@ -10,7 +10,6 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Media.Animation;
 using Windows.Foundation;
 using Windows.Graphics;
 using Windows.UI;
@@ -149,41 +148,7 @@ public sealed partial class MainWindow : Window
 
     private void OnMainMenuClick(object sender, RoutedEventArgs e)
     {
-        var flyout = FlyoutBase.GetAttachedFlyout(MainMenuButton);
-        if (flyout is not null)
-        {
-            flyout.Closed += OnMenuFlyoutClosed;
-        }
-
-        PlayMenuRotation(-90);
         FlyoutBase.ShowAttachedFlyout(MainMenuButton);
-    }
-
-    private void OnMenuFlyoutClosed(object? sender, object e)
-    {
-        if (sender is FlyoutBase flyout)
-        {
-            flyout.Closed -= OnMenuFlyoutClosed;
-        }
-
-        PlayMenuRotation(0);
-    }
-
-    private void PlayMenuRotation(double toAngle)
-    {
-        var animation = new DoubleAnimation
-        {
-            To = toAngle,
-            Duration = new Duration(TimeSpan.FromMilliseconds(200)),
-            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut },
-        };
-
-        Storyboard.SetTarget(animation, MainMenuButtonRotation);
-        Storyboard.SetTargetProperty(animation, "Angle");
-
-        var storyboard = new Storyboard();
-        storyboard.Children.Add(animation);
-        storyboard.Begin();
     }
 
     private void OnMenuNewTab(object sender, RoutedEventArgs e)

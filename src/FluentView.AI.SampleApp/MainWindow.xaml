@@ -53,14 +53,7 @@
                                 Background="Transparent"
                                 Padding="0"
                                 Click="OnMainMenuClick">
-                            <FontIcon x:Name="MainMenuButtonIcon"
-                                      Glyph="&#xE700;"
-                                      FontSize="16"
-                                      RenderTransformOrigin="0.5,0.5">
-                                <FontIcon.RenderTransform>
-                                    <RotateTransform x:Name="MainMenuButtonRotation" Angle="0" />
-                                </FontIcon.RenderTransform>
-                            </FontIcon>
+                            <FontIcon Glyph="&#xE700;" FontSize="16" />
 
                             <FlyoutBase.AttachedFlyout>
                                 <MenuFlyout x:Name="MainMenuFlyout"
