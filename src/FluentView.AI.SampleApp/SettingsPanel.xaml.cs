@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using FluentView.AI.Models;
 using FluentView.AI.SampleApp.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;

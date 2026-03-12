@@ -1,14 +1,12 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using FluentView.AI.Models;
-using Windows.Storage;
 
-namespace FluentView.AI.SampleApp.Helpers;
+namespace FluentView.AI.Helpers;
 
 public static class ConversationManager
 {
-    private static readonly string ConversationsFolder = Path.Combine(
-        ApplicationData.Current.LocalFolder.Path, "Conversations");
+    private static string _conversationsFolder = "";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -16,9 +14,14 @@ public static class ConversationManager
         Converters = { new JsonStringEnumConverter() },
     };
 
-    static ConversationManager()
+    /// <summary>
+    /// Initialize the conversation manager with a base folder path.
+    /// Must be called before any save/load operations.
+    /// </summary>
+    public static void Initialize(string baseFolderPath)
     {
-        Directory.CreateDirectory(ConversationsFolder);
+        _conversationsFolder = Path.Combine(baseFolderPath, "Conversations");
+        Directory.CreateDirectory(_conversationsFolder);
     }
 
     public static async Task SaveConversationAsync(
@@ -26,6 +29,7 @@ public static class ConversationManager
         string? providerPresetName,
         IReadOnlyList<ChatMessage> messages)
     {
+        EnsureInitialized();
         if (messages.Count == 0) return;
 
         var data = new ConversationData
@@ -44,7 +48,7 @@ public static class ConversationManager
         };
 
         var fileName = SanitizeFileName(tabName) + ".json";
-        var filePath = Path.Combine(ConversationsFolder, fileName);
+        var filePath = Path.Combine(_conversationsFolder, fileName);
         var json = JsonSerializer.Serialize(data, JsonOptions);
         await File.WriteAllTextAsync(filePath, json);
     }
@@ -59,10 +63,11 @@ public static class ConversationManager
 
     public static IReadOnlyList<ConversationFileInfo> ListSavedConversations()
     {
-        if (!Directory.Exists(ConversationsFolder))
+        EnsureInitialized();
+        if (!Directory.Exists(_conversationsFolder))
             return [];
 
-        return Directory.GetFiles(ConversationsFolder, "*.json")
+        return Directory.GetFiles(_conversationsFolder, "*.json")
             .Select(f => new ConversationFileInfo
             {
                 FilePath = f,
@@ -77,6 +82,13 @@ public static class ConversationManager
     {
         var invalid = Path.GetInvalidFileNameChars();
         return string.Concat(name.Select(c => invalid.Contains(c) ? '_' : c));
+    }
+
+    private static void EnsureInitialized()
+    {
+        if (string.IsNullOrEmpty(_conversationsFolder))
+            throw new InvalidOperationException(
+                "ConversationManager.Initialize() must be called before use.");
     }
 }
 

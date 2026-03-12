@@ -2,7 +2,8 @@ using System.Collections.ObjectModel;
 using System.Text.Json;
 using Windows.Storage;
 
-using FluentView.AI.SampleApp.Helpers;
+using FluentView.AI.Helpers;
+using FluentView.AI.Models;
 
 namespace FluentView.AI.SampleApp.Models;
 

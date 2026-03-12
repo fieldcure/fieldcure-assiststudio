@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace FluentView.AI.SampleApp.Helpers;
+namespace FluentView.AI.Helpers;
 
 public static class OllamaHelper
 {
@@ -70,7 +70,7 @@ public static class OllamaHelper
             Process.Start(psi);
 
             // Wait for healthcheck (poll up to 15 seconds)
-            for (int i = 0; i < 30; i++)
+            for (var i = 0; i < 30; i++)
             {
                 ct.ThrowIfCancellationRequested();
                 await Task.Delay(500, ct);

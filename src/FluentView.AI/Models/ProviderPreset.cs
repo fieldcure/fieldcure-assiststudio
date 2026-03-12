@@ -1,8 +1,8 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
-namespace FluentView.AI.SampleApp.Models;
+namespace FluentView.AI.Models;
 
 public partial class ProviderPreset : INotifyPropertyChanged
 {

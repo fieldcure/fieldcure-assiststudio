@@ -1,4 +1,4 @@
-namespace FluentView.AI.SampleApp.Helpers;
+namespace FluentView.AI.Helpers;
 
 public enum CompatibilityLevel
 {

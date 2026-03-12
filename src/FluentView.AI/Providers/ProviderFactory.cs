@@ -1,7 +1,6 @@
-using FluentView.AI.Providers;
-using FluentView.AI.SampleApp.Models;
+using FluentView.AI.Models;
 
-namespace FluentView.AI.SampleApp.Helpers;
+namespace FluentView.AI.Providers;
 
 public static class ProviderFactory
 {

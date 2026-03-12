@@ -1,8 +1,7 @@
 using System.Runtime.CompilerServices;
 using FluentView.AI.Models;
-using FluentView.AI.Providers;
 
-namespace FluentView.AI.SampleApp.Helpers;
+namespace FluentView.AI.Providers;
 
 public class MockProvider : IAiProvider
 {

@@ -2,7 +2,7 @@ using System.Management;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
 
-namespace FluentView.AI.SampleApp.Helpers;
+namespace FluentView.AI.Helpers;
 
 public record HardwareSpec(
     string GpuName,

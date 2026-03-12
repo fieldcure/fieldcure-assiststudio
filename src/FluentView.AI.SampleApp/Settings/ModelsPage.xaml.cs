@@ -1,7 +1,7 @@
 using FluentView.AI.Models;
 using FluentView.AI.Providers;
 using FluentView.AI.SampleApp.Dialogs;
-using FluentView.AI.SampleApp.Helpers;
+using FluentView.AI.Helpers;
 using FluentView.AI.SampleApp.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;

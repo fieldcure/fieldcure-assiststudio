@@ -1,10 +1,10 @@
 using Windows.Security.Credentials;
 
-namespace FluentView.AI.SampleApp.Helpers;
+namespace FluentView.AI.Helpers;
 
 public static class PasswordVaultHelper
 {
-    private const string ResourceName = "FluentView.AI.SampleApp";
+    private const string ResourceName = "FluentView.AI";
 
     public static void SaveApiKey(string presetName, string apiKey)
     {
