@@ -1156,7 +1156,35 @@ OnnxModelManager : IModelManager
 - 확장: 클립보드 파일 참조 붙여넣기 (탐색기에서 복사한 파일)
 - InputContainer에서 클립보드 DataPackageView 분석 → 이미지/파일 자동 첨부
 
-### 6.4 로컬라이제이션 누락 점검
+### 6.4 API Key 마스킹 표시 & 버튼 토글
+- 저장된 키가 있으면 TextBox에 마스킹된 값만 표시 (예: `sk-...xxx` — 앞/뒤 일부만 노출)
+- 버튼은 상태에 따라 1개만 표시:
+  - 키 없음 → +(추가) 아이콘 버튼 (키 입력/저장)
+  - 키 있음 → 휴지통(삭제) 아이콘 버튼 (키 제거)
+- 키를 교체하려면 휴지통으로 삭제 → + 버튼으로 새 키 입력/저장
+- + 버튼 클릭 시 API 호출(모델 목록 조회 등)로 키 유효성 검증
+  - 유효 → 저장
+  - 무효 → 저장하지 않고 TextBox 아래에 warning 메시지 표시 (예: "유효하지 않은 API Key입니다")
+- 대상: ModelsPage의 Provider별 API Key 입력 영역
+
+### 6.5 New Conversation 시 default provider 반영
+- 새 탭(대화) 생성 시 model selector가 설정된 default provider/model을 선택하도록 수정
+- 현재 버그: default provider 설정이 있어도 새 대화에서 무시됨
+
+### 6.6 Running 상태 텍스트 색상 변경
+- 현재: 녹색 — Dark 테마에서 가독성 낮음
+- 변경: Accent color 또는 파란색 계열로 교체하여 Light/Dark 모두 가독성 확보
+
+### 6.7 시스템 프롬프트 기본값 설정
+- 시스템 프롬프트가 비어 있을 때 기본값 적용: "You are a helpful assistant."
+- 새 대화 생성 시 자동 적용
+
+### 6.8 Recent Conversations 목록
+- 최근 대화 목록 관리 (대화 히스토리 저장/불러오기)
+- NavigationView 메뉴에 Recent Conversations 항목 추가
+- 목록에서 선택 시 해당 대화 복원
+
+### 6.9 로컬라이제이션 누락 점검
 - Core 라이브러리(chat.html) 내 하드코딩 문자열 확인
 - SampleApp 전체 UI 문자열 중 x:Uid 미적용 항목 점검
 - en-US / ko-KR 리소스 파일 누락 키 확인

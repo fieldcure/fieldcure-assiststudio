@@ -536,9 +536,12 @@ public sealed partial class MainWindow : Window
 
     private ProviderPreset GetDefaultPreset()
     {
-        return SettingsPane.Presets.Count > 0
-            ? SettingsPane.Presets[0]
-            : new ProviderPreset { Name = "Mock", ProviderType = "Mock" };
+        if (SettingsPane.Presets.Count == 0)
+            return new ProviderPreset { Name = "Mock", ProviderType = "Mock" };
+
+        var defaultName = AppSettings.DefaultProvider;
+        return SettingsPane.Presets.FirstOrDefault(p => p.Name == defaultName)
+               ?? SettingsPane.Presets[0];
     }
 
     private ChatTheme GetCurrentTheme()
