@@ -46,6 +46,7 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <PasswordBox x:Name="ClaudeApiKeyBox"
                                      x:Uid="Models_ApiKeyBox"
@@ -54,6 +55,14 @@
                         <Button x:Name="ClaudeKeyButton" Grid.Column="1"
                                 Content="Update Key"
                                 Click="OnUpdateClaudeKey" />
+                        <Button x:Name="ClaudeRemoveKeyButton" Grid.Column="2"
+                                Visibility="Collapsed"
+                                x:Uid="Models_RemoveKey"
+                                ToolTipService.ToolTip="Remove Key"
+                                Click="OnRemoveClaudeKey" Padding="6,4">
+                            <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
+                                      Glyph="&#xE74D;" FontSize="14" />
+                        </Button>
                     </Grid>
                     <StackPanel Spacing="4">
                         <TextBlock x:Uid="Models_DefaultModel" Text="Default Model" FontSize="12" Opacity="0.7" />
@@ -81,6 +90,7 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <PasswordBox x:Name="OpenAIApiKeyBox"
                                      PlaceholderText="API Key"
@@ -88,6 +98,14 @@
                         <Button x:Name="OpenAIKeyButton" Grid.Column="1"
                                 Content="Add Key"
                                 Click="OnUpdateOpenAIKey" />
+                        <Button x:Name="OpenAIRemoveKeyButton" Grid.Column="2"
+                                Visibility="Collapsed"
+                                x:Uid="Models_RemoveKey"
+                                ToolTipService.ToolTip="Remove Key"
+                                Click="OnRemoveOpenAIKey" Padding="6,4">
+                            <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
+                                      Glyph="&#xE74D;" FontSize="14" />
+                        </Button>
                     </Grid>
                     <StackPanel Spacing="4">
                         <TextBlock Text="Default Model" FontSize="12" Opacity="0.7" />
@@ -114,6 +132,7 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <PasswordBox x:Name="GeminiApiKeyBox"
                                      PlaceholderText="API Key"
@@ -121,6 +140,14 @@
                         <Button x:Name="GeminiKeyButton" Grid.Column="1"
                                 Content="Add Key"
                                 Click="OnUpdateGeminiKey" />
+                        <Button x:Name="GeminiRemoveKeyButton" Grid.Column="2"
+                                Visibility="Collapsed"
+                                x:Uid="Models_RemoveKey"
+                                ToolTipService.ToolTip="Remove Key"
+                                Click="OnRemoveGeminiKey" Padding="6,4">
+                            <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
+                                      Glyph="&#xE74D;" FontSize="14" />
+                        </Button>
                     </Grid>
                     <StackPanel Spacing="4">
                         <TextBlock Text="Default Model" FontSize="12" Opacity="0.7" />
@@ -147,6 +174,7 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <PasswordBox x:Name="GroqApiKeyBox"
                                      PlaceholderText="API Key"
@@ -154,6 +182,14 @@
                         <Button x:Name="GroqKeyButton" Grid.Column="1"
                                 Content="Add Key"
                                 Click="OnUpdateGroqKey" />
+                        <Button x:Name="GroqRemoveKeyButton" Grid.Column="2"
+                                Visibility="Collapsed"
+                                x:Uid="Models_RemoveKey"
+                                ToolTipService.ToolTip="Remove Key"
+                                Click="OnRemoveGroqKey" Padding="6,4">
+                            <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
+                                      Glyph="&#xE74D;" FontSize="14" />
+                        </Button>
                     </Grid>
                     <StackPanel Spacing="4">
                         <TextBlock Text="Default Model" FontSize="12" Opacity="0.7" />

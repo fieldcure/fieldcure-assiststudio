@@ -71,68 +71,31 @@ public sealed partial class ModelsPage : Page
         var geminiKey = PasswordVaultHelper.LoadApiKey("Gemini");
         var groqKey = PasswordVaultHelper.LoadApiKey("Groq");
 
-        // Claude
-        if (!string.IsNullOrEmpty(claudeKey))
-        {
-            ClaudeApiKeyBox.Password = MaskKey(claudeKey);
-            ClaudeStatusText.Text = "";
-            ClaudeKeyButton.Content = L("Models_UpdateKey");
-            ClaudeModelCombo.IsEnabled = true;
-        }
-        else
-        {
-            ClaudeStatusText.Text = L("Models_NoKey");
-            ClaudeStatusText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
-                Microsoft.UI.Colors.OrangeRed);
-            ClaudeKeyButton.Content = L("Models_AddKey");
-        }
+        SetKeyState("Claude", claudeKey, ClaudeApiKeyBox, ClaudeStatusText, ClaudeKeyButton, ClaudeRemoveKeyButton, ClaudeModelCombo);
+        SetKeyState("OpenAI", openAIKey, OpenAIApiKeyBox, OpenAIStatusText, OpenAIKeyButton, OpenAIRemoveKeyButton, OpenAIModelCombo);
+        SetKeyState("Gemini", geminiKey, GeminiApiKeyBox, GeminiStatusText, GeminiKeyButton, GeminiRemoveKeyButton, GeminiModelCombo);
+        SetKeyState("Groq", groqKey, GroqApiKeyBox, GroqStatusText, GroqKeyButton, GroqRemoveKeyButton, GroqModelCombo);
+    }
 
-        // OpenAI
-        if (!string.IsNullOrEmpty(openAIKey))
+    private void SetKeyState(string provider, string key, PasswordBox keyBox, TextBlock statusText, Button keyButton, Button removeButton, ComboBox modelCombo)
+    {
+        if (!string.IsNullOrEmpty(key))
         {
-            OpenAIApiKeyBox.Password = MaskKey(openAIKey);
-            OpenAIStatusText.Text = "";
-            OpenAIKeyButton.Content = L("Models_UpdateKey");
-            OpenAIModelCombo.IsEnabled = true;
+            keyBox.Password = MaskKey(key);
+            statusText.Text = "";
+            keyButton.Content = L("Models_UpdateKey");
+            removeButton.Visibility = Visibility.Visible;
+            modelCombo.IsEnabled = true;
         }
         else
         {
-            OpenAIStatusText.Text = L("Models_NoKey");
-            OpenAIStatusText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
+            keyBox.Password = "";
+            statusText.Text = L("Models_NoKey");
+            statusText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
                 Microsoft.UI.Colors.OrangeRed);
-            OpenAIKeyButton.Content = L("Models_AddKey");
-        }
-
-        // Gemini
-        if (!string.IsNullOrEmpty(geminiKey))
-        {
-            GeminiApiKeyBox.Password = MaskKey(geminiKey);
-            GeminiStatusText.Text = "";
-            GeminiKeyButton.Content = L("Models_UpdateKey");
-            GeminiModelCombo.IsEnabled = true;
-        }
-        else
-        {
-            GeminiStatusText.Text = L("Models_NoKey");
-            GeminiStatusText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
-                Microsoft.UI.Colors.OrangeRed);
-            GeminiKeyButton.Content = L("Models_AddKey");
-        }
-
-        // Groq
-        if (!string.IsNullOrEmpty(groqKey))
-        {
-            GroqApiKeyBox.Password = MaskKey(groqKey);
-            GroqStatusText.Text = "";
-            GroqKeyButton.Content = L("Models_UpdateKey");
-            GroqModelCombo.IsEnabled = true;
-        }
-        else
-        {
-            GroqStatusText.Text = L("Models_NoKey");
-            GroqStatusText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
-                Microsoft.UI.Colors.OrangeRed);
-            GroqKeyButton.Content = L("Models_AddKey");
+            keyButton.Content = L("Models_AddKey");
+            removeButton.Visibility = Visibility.Collapsed;
+            modelCombo.IsEnabled = false;
         }
     }
 
@@ -154,7 +117,7 @@ public sealed partial class ModelsPage : Page
     {
         if (_claudeKeyDirty)
         {
-            SaveProviderKey("Claude", ClaudeApiKeyBox.Password, ClaudeStatusText, ClaudeKeyButton, ClaudeModelCombo);
+            SaveProviderKey("Claude", ClaudeApiKeyBox.Password, ClaudeStatusText, ClaudeKeyButton, ClaudeRemoveKeyButton, ClaudeModelCombo);
             _claudeKeyDirty = false;
         }
     }
@@ -163,7 +126,7 @@ public sealed partial class ModelsPage : Page
     {
         if (_openAIKeyDirty)
         {
-            SaveProviderKey("OpenAI", OpenAIApiKeyBox.Password, OpenAIStatusText, OpenAIKeyButton, OpenAIModelCombo);
+            SaveProviderKey("OpenAI", OpenAIApiKeyBox.Password, OpenAIStatusText, OpenAIKeyButton, OpenAIRemoveKeyButton, OpenAIModelCombo);
             _openAIKeyDirty = false;
         }
     }
@@ -172,7 +135,7 @@ public sealed partial class ModelsPage : Page
     {
         if (_geminiKeyDirty)
         {
-            SaveProviderKey("Gemini", GeminiApiKeyBox.Password, GeminiStatusText, GeminiKeyButton, GeminiModelCombo);
+            SaveProviderKey("Gemini", GeminiApiKeyBox.Password, GeminiStatusText, GeminiKeyButton, GeminiRemoveKeyButton, GeminiModelCombo);
             _geminiKeyDirty = false;
         }
     }
@@ -181,12 +144,12 @@ public sealed partial class ModelsPage : Page
     {
         if (_groqKeyDirty)
         {
-            SaveProviderKey("Groq", GroqApiKeyBox.Password, GroqStatusText, GroqKeyButton, GroqModelCombo);
+            SaveProviderKey("Groq", GroqApiKeyBox.Password, GroqStatusText, GroqKeyButton, GroqRemoveKeyButton, GroqModelCombo);
             _groqKeyDirty = false;
         }
     }
 
-    private void SaveProviderKey(string provider, string key, TextBlock statusText, Button keyButton, ComboBox modelCombo)
+    private void SaveProviderKey(string provider, string key, TextBlock statusText, Button keyButton, Button removeButton, ComboBox modelCombo)
     {
         PasswordVaultHelper.SaveApiKey(provider, key);
 
@@ -194,6 +157,7 @@ public sealed partial class ModelsPage : Page
         {
             statusText.Text = "";
             keyButton.Content = L("Models_UpdateKey");
+            removeButton.Visibility = Visibility.Visible;
             modelCombo.IsEnabled = true;
 
             // Fetch model list immediately after saving a valid key
@@ -205,12 +169,35 @@ public sealed partial class ModelsPage : Page
             statusText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
                 Microsoft.UI.Colors.OrangeRed);
             keyButton.Content = L("Models_AddKey");
+            removeButton.Visibility = Visibility.Collapsed;
             modelCombo.IsEnabled = false;
         }
 
         SyncPresetsFromUI();
         RefreshDefaultProvider();
     }
+
+    private void RemoveProviderKey(string provider, PasswordBox keyBox, TextBlock statusText, Button keyButton, Button removeButton, ComboBox modelCombo)
+    {
+        PasswordVaultHelper.DeleteApiKey(provider);
+        _isLoading = true;
+        SetKeyState(provider, "", keyBox, statusText, keyButton, removeButton, modelCombo);
+        _isLoading = false;
+        SyncPresetsFromUI();
+        RefreshDefaultProvider();
+    }
+
+    private void OnRemoveClaudeKey(object sender, RoutedEventArgs e) =>
+        RemoveProviderKey("Claude", ClaudeApiKeyBox, ClaudeStatusText, ClaudeKeyButton, ClaudeRemoveKeyButton, ClaudeModelCombo);
+
+    private void OnRemoveOpenAIKey(object sender, RoutedEventArgs e) =>
+        RemoveProviderKey("OpenAI", OpenAIApiKeyBox, OpenAIStatusText, OpenAIKeyButton, OpenAIRemoveKeyButton, OpenAIModelCombo);
+
+    private void OnRemoveGeminiKey(object sender, RoutedEventArgs e) =>
+        RemoveProviderKey("Gemini", GeminiApiKeyBox, GeminiStatusText, GeminiKeyButton, GeminiRemoveKeyButton, GeminiModelCombo);
+
+    private void OnRemoveGroqKey(object sender, RoutedEventArgs e) =>
+        RemoveProviderKey("Groq", GroqApiKeyBox, GroqStatusText, GroqKeyButton, GroqRemoveKeyButton, GroqModelCombo);
 
     // ===== Model ComboBoxes =====
 
@@ -229,30 +216,28 @@ public sealed partial class ModelsPage : Page
     private static void PopulateComboFromCacheOrFallback(string provider, ComboBox combo, string[] fallback)
     {
         var cached = AppSettings.GetCachedModels(provider);
-        var models = cached ?? fallback.ToList();
+        var models = cached?.ToArray() ?? fallback;
         var savedModel = AppSettings.GetDefaultModel(provider);
 
         PopulateCombo(combo, models, savedModel);
     }
 
-    private static void PopulateCombo(ComboBox combo, IList<string> models, string? savedModel)
+    private static void PopulateCombo(ComboBox combo, string[] models, string? savedModel)
     {
         combo.Items.Clear();
         foreach (var m in models) combo.Items.Add(m);
 
         if (!string.IsNullOrEmpty(savedModel))
         {
-            for (var i = 0; i < models.Count; i++)
+            var idx = Array.IndexOf(models, savedModel);
+            if (idx >= 0)
             {
-                if (models[i] == savedModel)
-                {
-                    combo.SelectedIndex = i;
-                    return;
-                }
+                combo.SelectedIndex = idx;
+                return;
             }
         }
 
-        if (models.Count > 0)
+        if (models.Length > 0)
             combo.SelectedIndex = 0;
     }
 
@@ -298,7 +283,7 @@ public sealed partial class ModelsPage : Page
                 DispatcherQueue.TryEnqueue(() =>
                 {
                     var current = combo.SelectedItem as string;
-                    PopulateCombo(combo, filtered, current ?? AppSettings.GetDefaultModel(provider));
+                    PopulateCombo(combo, filtered.ToArray(), current ?? AppSettings.GetDefaultModel(provider));
                 });
             }
             finally

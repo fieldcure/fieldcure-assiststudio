@@ -207,6 +207,9 @@
   <data name="Models_PullingModel" xml:space="preserve">
     <value>{0} 다운로드 중...</value>
   </data>
+  <data name="Models_RemoveKey.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>키 삭제</value>
+  </data>
   <!-- Model Selection Dialog -->
   <data name="ModelDialog.Title" xml:space="preserve">
     <value>Ollama 모델</value>

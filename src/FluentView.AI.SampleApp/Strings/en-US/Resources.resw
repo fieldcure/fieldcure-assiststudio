@@ -207,6 +207,9 @@
   <data name="Models_PullingModel" xml:space="preserve">
     <value>Pulling {0}...</value>
   </data>
+  <data name="Models_RemoveKey.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Remove Key</value>
+  </data>
   <!-- Model Selection Dialog -->
   <data name="ModelDialog.Title" xml:space="preserve">
     <value>Ollama Models</value>
