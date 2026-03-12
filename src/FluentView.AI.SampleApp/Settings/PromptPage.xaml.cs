@@ -1,4 +1,4 @@
-using FluentView.AI.SampleApp.Models;
+using FluentView.AI.SampleApp.Helpers;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 

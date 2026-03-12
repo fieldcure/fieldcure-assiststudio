@@ -5,7 +5,7 @@ using Windows.Storage;
 using FluentView.AI.Helpers;
 using FluentView.AI.Models;
 
-namespace FluentView.AI.SampleApp.Models;
+namespace FluentView.AI.SampleApp.Helpers;
 
 public static class AppSettings
 {
