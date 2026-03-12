@@ -59,6 +59,8 @@ public sealed partial class AttachmentPreviewBar : UserControl
             BorderBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(
                 Microsoft.UI.Colors.Gray),
             BorderThickness = new Thickness(1),
+            Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(
+                Microsoft.UI.Colors.Transparent),
         };
 
         if (attachment.Type == AttachmentType.Image)
