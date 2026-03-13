@@ -1,0 +1,152 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="AssistStudio.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:AssistStudio"
+    xmlns:fv="using:FluentView.AI.Controls"
+    xmlns:vm="using:AssistStudio.ViewModels"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="FluentView.AI Sample">
+
+    <Window.SystemBackdrop>
+        <MicaBackdrop />
+    </Window.SystemBackdrop>
+
+    <SplitView x:Name="RootSplitView"
+               IsPaneOpen="False"
+               OpenPaneLength="420"
+               DisplayMode="Overlay"
+               PaneBackground="{ThemeResource SolidBackgroundFillColorBaseBrush}"
+               PanePlacement="Right">
+
+        <!-- Settings Pane -->
+        <SplitView.Pane>
+            <local:SettingsPanel x:Name="SettingsPane" />
+        </SplitView.Pane>
+
+        <!-- Main Content: TabView -->
+        <SplitView.Content>
+            <TabView x:Name="Tabs"
+                     TabItemsSource="{x:Bind ViewModel.Tabs}"
+                     SelectedItem="{x:Bind ViewModel.SelectedTab, Mode=TwoWay}"
+                     IsAddTabButtonVisible="True"
+                     AddTabButtonClick="OnAddTab"
+                     TabCloseRequested="OnCloseTab"
+                     VerticalAlignment="Stretch">
+
+                <TabView.TabItemTemplate>
+                    <DataTemplate x:DataType="vm:ChatTabViewModel">
+                        <TabViewItem Header="{x:Bind TabHeader, Mode=OneWay}"
+                                     Content="{x:Bind ChatPanel}"
+                                     IconSource="{x:Bind TabIconSource, Mode=OneWay}" />
+                    </DataTemplate>
+                </TabView.TabItemTemplate>
+
+                <!-- Hamburger Menu (left of tabs) -->
+                <TabView.TabStripHeader>
+                    <Grid x:Name="ShellTitlebarInset">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition x:Name="LeftPaddingColumn" Width="0" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Button x:Name="MainMenuButton"
+                                Grid.Column="1"
+                                IsTabStop="False"
+                                Width="42"
+                                Height="32"
+                                Margin="4,8,0,0"
+                                BorderThickness="0"
+                                Background="Transparent"
+                                Padding="0"
+                                Click="OnMainMenuClick">
+                            <FontIcon Glyph="&#xE700;" FontSize="16" />
+
+                            <FlyoutBase.AttachedFlyout>
+                                <MenuFlyout x:Name="MainMenuFlyout"
+                                            Placement="BottomEdgeAlignedLeft">
+                                    <MenuFlyoutItem x:Uid="Menu_New" Text="New"
+                                                    Click="OnMenuNewTab">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE8F4;" />
+                                        </MenuFlyoutItem.Icon>
+                                        <MenuFlyoutItem.KeyboardAccelerators>
+                                            <KeyboardAccelerator Modifiers="Control" Key="N" />
+                                        </MenuFlyoutItem.KeyboardAccelerators>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem x:Uid="Menu_Open" Text="Open..."
+                                                    Click="OnMenuLoadConversation">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE8E5;" />
+                                        </MenuFlyoutItem.Icon>
+                                        <MenuFlyoutItem.KeyboardAccelerators>
+                                            <KeyboardAccelerator Modifiers="Control" Key="O" />
+                                        </MenuFlyoutItem.KeyboardAccelerators>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutSubItem x:Name="RecentConversationsSubMenu"
+                                                       x:Uid="Menu_RecentConversations"
+                                                       Text="Recent Conversations">
+                                        <MenuFlyoutSubItem.Icon>
+                                            <FontIcon Glyph="&#xE81C;" />
+                                        </MenuFlyoutSubItem.Icon>
+                                    </MenuFlyoutSubItem>
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem x:Uid="Menu_Save" Text="Save"
+                                                    Click="OnMenuSaveConversation">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE74E;" />
+                                        </MenuFlyoutItem.Icon>
+                                        <MenuFlyoutItem.KeyboardAccelerators>
+                                            <KeyboardAccelerator Modifiers="Control" Key="S" />
+                                        </MenuFlyoutItem.KeyboardAccelerators>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem x:Uid="Menu_SaveAs" Text="Save As..."
+                                                    Click="OnMenuSaveAsConversation">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE792;" />
+                                        </MenuFlyoutItem.Icon>
+                                        <MenuFlyoutItem.KeyboardAccelerators>
+                                            <KeyboardAccelerator Modifiers="Control,Shift" Key="S" />
+                                        </MenuFlyoutItem.KeyboardAccelerators>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem x:Uid="Menu_SaveAll" Text="Save All"
+                                                    Click="OnMenuSaveAllConversations">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xEA35;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem x:Uid="Menu_Settings" Text="Settings"
+                                                    Click="OnMenuSettings">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE713;" />
+                                        </MenuFlyoutItem.Icon>
+                                        <MenuFlyoutItem.KeyboardAccelerators>
+                                            <KeyboardAccelerator Key="F1" />
+                                        </MenuFlyoutItem.KeyboardAccelerators>
+                                    </MenuFlyoutItem>
+                                </MenuFlyout>
+                            </FlyoutBase.AttachedFlyout>
+                        </Button>
+                    </Grid>
+                </TabView.TabStripHeader>
+
+                <!-- Title Bar drag area (right of tabs) -->
+                <TabView.TabStripFooter>
+                    <Grid Background="Transparent">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition x:Name="DragColumn" Width="*" MinWidth="48" />
+                            <ColumnDefinition x:Name="RightPaddingColumn" Width="0" />
+                        </Grid.ColumnDefinitions>
+                        <Grid x:Name="TitleBarReservedArea"
+                              Grid.Column="0"
+                              Background="Transparent" />
+                    </Grid>
+                </TabView.TabStripFooter>
+            </TabView>
+        </SplitView.Content>
+    </SplitView>
+</Window>
