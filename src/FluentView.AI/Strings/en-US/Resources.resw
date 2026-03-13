@@ -75,6 +75,9 @@
   <data name="InputContainer_AskProvider" xml:space="preserve">
     <value>Ask {0}...</value>
   </data>
+  <data name="Chat_RegenerateTitle" xml:space="preserve">
+    <value>Regenerate title with {0}</value>
+  </data>
   <data name="InputContainer_Attach.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Attach file</value>
   </data>

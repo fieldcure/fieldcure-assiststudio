@@ -40,11 +40,17 @@
                                VerticalAlignment="Center" />
                     <Button x:Name="TitleEditButton"
                             Click="OnTitleEditClick"
+                            Style="{StaticResource SubtleButtonStyle}"
                             Padding="4"
-                            Background="Transparent"
-                            BorderThickness="0"
                             VerticalAlignment="Center">
                         <FontIcon Glyph="&#xE70F;" FontSize="12" />
+                    </Button>
+                    <Button x:Name="TitleRefreshButton"
+                            Click="OnTitleRefreshClick"
+                            Style="{StaticResource SubtleButtonStyle}"
+                            Padding="4"
+                            VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE777;" FontSize="12" />
                     </Button>
                 </StackPanel>
                 <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />

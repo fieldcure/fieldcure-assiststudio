@@ -12,6 +12,7 @@ namespace AssistView.Studio.ViewModels;
 public partial class ChatTabViewModel : ObservableObject, IDisposable
 {
     [ObservableProperty] private string _title = string.Empty;
+    [ObservableProperty] private string _tabHeader = string.Empty;
     [ObservableProperty] private bool _isDirty;
     [ObservableProperty] private string? _filePath;
 
@@ -35,6 +36,12 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     {
         ChatPanel.Title = value;
     }
+
+    partial void OnFilePathChanged(string? value)
+    {
+        if (value is not null)
+            TabHeader = Path.GetFileNameWithoutExtension(value);
+    }
     public bool HasBeenSaved { get; set; }
     public ProviderPreset? CurrentPreset { get; private set; }
 
@@ -54,11 +61,15 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         CurrentPreset = preset;
         _title = preset.Name;
 
+        var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
+        _tabHeader = loader.GetString("Tab_NewConversation");
+
         var provider = ProviderFactory.Create(preset);
 
         ChatPanel = new ChatPanel
         {
             Provider = provider,
+            UtilityProvider = ResolveUtilityProvider(availablePresets),
             SystemPrompt = systemPrompt,
             Theme = theme,
             AvailablePresets = availablePresets,
@@ -68,6 +79,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             HorizontalAlignment = Microsoft.UI.Xaml.HorizontalAlignment.Stretch,
             VerticalAlignment = Microsoft.UI.Xaml.VerticalAlignment.Stretch,
             AutoTitle = AppSettings.UtilityAutoTitle,
+            AutoSummarize = AppSettings.UtilityAutoSummary,
 #if DEBUG
             IsDebugMode = true,
 #endif
@@ -166,6 +178,21 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         IsDirty = true;
     }
 
+    private static IAiProvider? ResolveUtilityProvider(IList availablePresets)
+    {
+        if (AppSettings.UtilityAISource != "Specific") return null;
+
+        var presetName = AppSettings.UtilityAIPreset;
+        if (string.IsNullOrEmpty(presetName)) return null;
+
+        foreach (ProviderPreset p in availablePresets)
+        {
+            if (p.Name == presetName)
+                return ProviderFactory.Create(p);
+        }
+        return null;
+    }
+
     public void Dispose()
     {
         ChatPanel.PresetChanged -= OnPresetChanged;
@@ -173,6 +200,10 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         ChatPanel.MessageAdded -= OnMessageAdded;
         ChatPanel.TitleEditRequested -= OnTitleEditRequested;
 
+        if (ChatPanel.UtilityProvider is IDisposable utilDisposable)
+        {
+            utilDisposable.Dispose();
+        }
         if (ChatPanel.Provider is IDisposable disposable)
         {
             disposable.Dispose();

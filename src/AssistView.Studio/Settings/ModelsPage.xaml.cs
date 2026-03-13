@@ -430,6 +430,15 @@ public sealed partial class ModelsPage : Page
         _settings.RaisePresetsChanged();
     }
 
+    private void OnOllamaModelChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (OllamaModelCombo.SelectedItem is string model && !string.IsNullOrEmpty(model))
+        {
+            AppSettings.SetDefaultModel("Ollama", model);
+            SyncPresetsFromUI();
+        }
+    }
+
     // ===== Ollama =====
 
     private async void OnCheckOllama(object sender, RoutedEventArgs e)

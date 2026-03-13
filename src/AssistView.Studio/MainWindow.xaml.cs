@@ -212,7 +212,6 @@ public sealed partial class MainWindow : Window
             var presetName = tab.CurrentPreset?.Name;
             await ConversationManager.SaveToFileAsync(file.Path, tab.Title, presetName, messages);
             tab.FilePath = file.Path;
-            tab.Title = Path.GetFileNameWithoutExtension(file.Path);
             tab.IsDirty = false;
             tab.HasBeenSaved = true;
             AppSettings.AddRecentFile(file.Path);

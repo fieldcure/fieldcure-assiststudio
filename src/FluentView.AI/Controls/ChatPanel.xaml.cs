@@ -90,6 +90,9 @@ public sealed partial class ChatPanel : UserControl
             panel.TitleBar.Visibility = hasTitle
                 ? Microsoft.UI.Xaml.Visibility.Visible
                 : Microsoft.UI.Xaml.Visibility.Collapsed;
+
+            if (hasTitle)
+                panel.UpdateRefreshTooltip();
         }
     }
 
@@ -720,6 +723,34 @@ public sealed partial class ChatPanel : UserControl
         TitleEditRequested?.Invoke(this, Title ?? "");
     }
 
+    private async void OnTitleRefreshClick(object sender, RoutedEventArgs e)
+    {
+        await RegenerateTitleAsync();
+    }
+
+    private void UpdateRefreshTooltip()
+    {
+        var provider = UtilityProvider ?? Provider;
+        var providerName = provider?.ProviderName ?? "";
+
+        try
+        {
+            var loader = new Windows.ApplicationModel.Resources.ResourceLoader("FluentView.AI/Resources");
+            var format = loader.GetString("Chat_RegenerateTitle");
+            if (!string.IsNullOrEmpty(format) && !string.IsNullOrEmpty(providerName))
+            {
+                ToolTipService.SetToolTip(TitleRefreshButton, string.Format(format, providerName));
+                return;
+            }
+        }
+        catch { /* fallback */ }
+
+        ToolTipService.SetToolTip(TitleRefreshButton,
+            string.IsNullOrEmpty(providerName)
+                ? "Regenerate title"
+                : $"Regenerate title with {providerName}");
+    }
+
     private void OnDragOver(object sender, DragEventArgs e)
     {
         if (e.DataView.Contains(StandardDataFormats.StorageItems))
@@ -744,18 +775,36 @@ public sealed partial class ChatPanel : UserControl
     {
         if (_titleGenerated || !AutoTitle) return;
         _titleGenerated = true;
+        await GenerateTitleCoreAsync();
+    }
 
+    /// <summary>
+    /// Regenerates the conversation title from the full message history.
+    /// </summary>
+    public async Task RegenerateTitleAsync()
+    {
+        await GenerateTitleCoreAsync();
+    }
+
+    private async Task GenerateTitleCoreAsync()
+    {
         var provider = UtilityProvider ?? Provider;
         if (provider is null or MockProvider) return;
 
-        // Build context from the first user+assistant exchange
+        // Build context from conversation history
         var userMsg = _messages.FirstOrDefault(m => m.Role == ChatRole.User);
         var assistantMsg = _messages.FirstOrDefault(m => m.Role == ChatRole.Assistant);
         if (userMsg is null || assistantMsg is null) return;
 
-        var snippet = assistantMsg.Content.Length > 200
-            ? assistantMsg.Content[..200]
-            : assistantMsg.Content;
+        // Use more context for regeneration — include recent messages
+        var contextParts = new List<string>();
+        foreach (var msg in _messages.Take(6))
+        {
+            var role = msg.Role == ChatRole.User ? "User" : "Assistant";
+            var content = msg.Content.Length > 150 ? msg.Content[..150] : msg.Content;
+            contextParts.Add($"{role}: {content}");
+        }
+        var context = string.Join("\n", contextParts);
 
         try
         {
@@ -764,7 +813,7 @@ public sealed partial class ChatPanel : UserControl
                 Messages =
                 [
                     new ChatMessage(ChatRole.User,
-                        $"User: {userMsg.Content}\nAssistant: {snippet}\n\nGenerate a short title (max 6 words) for this conversation. Reply with ONLY the title, no quotes or punctuation.")
+                        $"{context}\n\nGenerate a short title (max 6 words) for this conversation. Reply with ONLY the title, no quotes or punctuation.")
                 ],
                 SystemPrompt = "You generate concise conversation titles.",
                 Temperature = 0.5,
@@ -775,7 +824,6 @@ public sealed partial class ChatPanel : UserControl
             title = title.Trim().Trim('"', '\'', '.').Trim();
             if (string.IsNullOrEmpty(title))
             {
-                // Fallback: use first ~40 chars of user message
                 title = userMsg.Content.Length > 40
                     ? userMsg.Content[..40].TrimEnd() + "…"
                     : userMsg.Content;
@@ -785,7 +833,6 @@ public sealed partial class ChatPanel : UserControl
         }
         catch
         {
-            // Title generation is non-critical — fallback to user message
             var fallback = userMsg.Content.Length > 40
                 ? userMsg.Content[..40].TrimEnd() + "…"
                 : userMsg.Content;

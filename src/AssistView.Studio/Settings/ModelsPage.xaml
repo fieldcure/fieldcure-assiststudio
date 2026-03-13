@@ -291,7 +291,8 @@
                         <ComboBox x:Name="OllamaModelCombo"
                                   HorizontalAlignment="Stretch"
                                   IsEnabled="False"
-                                  PlaceholderText="Not available" />
+                                  PlaceholderText="Not available"
+                                  SelectionChanged="OnOllamaModelChanged" />
                     </StackPanel>
                 </StackPanel>
 

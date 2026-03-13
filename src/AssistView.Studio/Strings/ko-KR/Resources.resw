@@ -339,4 +339,7 @@
   <data name="ModelDialog_PullCustom.Content" xml:space="preserve">
     <value>다운로드</value>
   </data>
+  <data name="Tab_NewConversation" xml:space="preserve">
+    <value>새 대화</value>
+  </data>
 </root>

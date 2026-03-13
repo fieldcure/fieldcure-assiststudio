@@ -256,7 +256,7 @@ public static class AppSettings
         {
             Name = "Ollama",
             ProviderType = "Ollama",
-            ModelId = ollamaModel ?? "",
+            ModelId = ollamaModel ?? "llama3.2",
         });
 
         // Mock
