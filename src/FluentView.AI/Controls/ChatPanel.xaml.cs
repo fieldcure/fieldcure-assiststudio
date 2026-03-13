@@ -692,7 +692,11 @@ public sealed partial class ChatPanel : UserControl
                 ["copied"] = loader.GetString("Chat_Copied"),
                 ["continue_label"] = loader.GetString("Chat_Continue"),
                 ["code"] = loader.GetString("Chat_Code"),
-                ["copyMessage"] = loader.GetString("Chat_CopyMessage")
+                ["copyMessage"] = loader.GetString("Chat_CopyMessage"),
+                ["edit"] = loader.GetString("Chat_Edit"),
+                ["retry"] = loader.GetString("Chat_Retry"),
+                ["summarize"] = loader.GetString("Chat_Summarize"),
+                ["tokens"] = loader.GetString("Chat_Tokens")
             };
 
             // Filter out empty strings (key not found returns empty)

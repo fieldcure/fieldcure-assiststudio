@@ -506,7 +506,11 @@
         copied: 'Copied!',
         continue_label: '\u25B6 Continue',
         code: 'code',
-        copyMessage: 'Copy'
+        copyMessage: 'Copy',
+        edit: 'Edit',
+        retry: 'Retry',
+        summarize: 'Summarize',
+        tokens: 'tokens'
     };
 
     window.addEventListener('scroll', function() {
@@ -637,13 +641,13 @@
         actions.className = 'message-actions';
 
         // Copy
-        actions.appendChild(createActionBtn('\uE8C8', 'Copy', function() {
+        actions.appendChild(createActionBtn('\uE8C8', _L.copyMessage, function() {
             window.chrome.webview.postMessage('copyMsg:' + msgId);
             flashCopied(this);
         }));
 
         // Edit
-        actions.appendChild(createActionBtn('\uE70F', 'Edit', function() {
+        actions.appendChild(createActionBtn('\uE70F', _L.edit, function() {
             var msgEl = document.getElementById('msg-' + msgId);
             if (!msgEl) return;
             var bubble = msgEl.querySelector('.message-bubble');
@@ -687,7 +691,7 @@
         }));
 
         // Retry
-        actions.appendChild(createActionBtn('\uE72C', 'Retry', function() {
+        actions.appendChild(createActionBtn('\uE72C', _L.retry, function() {
             window.chrome.webview.postMessage('retry:' + msgId);
         }));
 
@@ -699,13 +703,13 @@
         actions.className = 'message-actions';
 
         // Copy
-        actions.appendChild(createActionBtn('\uE8C8', 'Copy', function() {
+        actions.appendChild(createActionBtn('\uE8C8', _L.copyMessage, function() {
             window.chrome.webview.postMessage('copyMsg:' + msgId);
             flashCopied(this);
         }));
 
         // Summarize
-        actions.appendChild(createActionBtn('\uE8AB', 'Summarize', function() {
+        actions.appendChild(createActionBtn('\uEB78', _L.summarize, function() {
             window.chrome.webview.postMessage('summarize:' + msgId);
         }));
 
@@ -792,7 +796,7 @@
                     var formatted = tokenCount >= 1000
                         ? '~' + (tokenCount / 1000).toFixed(1) + 'k'
                         : tokenCount.toString();
-                    ts.textContent = formatted + ' tokens \u00b7 ' + timeStr;
+                    ts.textContent = formatted + ' ' + _L.tokens + ' \u00b7 ' + timeStr;
                 } else {
                     ts.textContent = timeStr;
                 }

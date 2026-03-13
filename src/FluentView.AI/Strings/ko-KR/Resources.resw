@@ -54,6 +54,18 @@
   <data name="Chat_CopyMessage" xml:space="preserve">
     <value>&#xBCF5;&#xC0AC;</value>
   </data>
+  <data name="Chat_Edit" xml:space="preserve">
+    <value>편집</value>
+  </data>
+  <data name="Chat_Retry" xml:space="preserve">
+    <value>다시 시도</value>
+  </data>
+  <data name="Chat_Summarize" xml:space="preserve">
+    <value>요약</value>
+  </data>
+  <data name="Chat_Tokens" xml:space="preserve">
+    <value>토큰</value>
+  </data>
   <data name="InputContainer_Placeholder" xml:space="preserve">
     <value>메시지를 입력하세요...</value>
   </data>
