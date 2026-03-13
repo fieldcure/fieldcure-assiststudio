@@ -81,6 +81,7 @@ public partial class MainViewModel : ObservableObject
         }
 
         vm.Title = data.TabName;
+        vm.HasBeenSaved = true;
 
         Tabs.Add(vm);
         SelectedTab = vm;

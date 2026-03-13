@@ -39,7 +39,9 @@
 
                 <TabView.TabItemTemplate>
                     <DataTemplate x:DataType="vm:ChatTabViewModel">
-                        <TextBlock Text="{x:Bind Title, Mode=OneWay}" />
+                        <TabViewItem Header="{x:Bind Title, Mode=OneWay}"
+                                     Content="{x:Bind ChatPanel}"
+                                     IconSource="{x:Bind TabIconSource, Mode=OneWay}" />
                     </DataTemplate>
                 </TabView.TabItemTemplate>
 

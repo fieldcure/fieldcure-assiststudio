@@ -1,6 +1,3 @@
-using System.Collections.Specialized;
-using System.ComponentModel;
-using FluentView.AI.Controls;
 using FluentView.AI.SampleApp.Dialogs;
 using FluentView.AI.Helpers;
 using FluentView.AI.Models;
@@ -50,9 +47,6 @@ public sealed partial class MainWindow : Window
         SettingsPane.PresetsChanged += (_, _) => ViewModel.RefreshPresetsOnAll();
         SettingsPane.PromptPresetsChanged += (_, _) => ViewModel.RefreshPromptPresetsOnAll();
 
-        // Track tab collection changes to set Content on TabViewItem containers
-        ViewModel.Tabs.CollectionChanged += OnTabsCollectionChanged;
-
         // Apply saved theme on first activation
         Activated += OnFirstActivated;
 
@@ -64,68 +58,6 @@ public sealed partial class MainWindow : Window
         Tabs.SizeChanged += (_, _) => SetRegionsForCustomTitleBar();
     }
 
-    // ===== Tab Container Management =====
-
-    private void OnTabsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-    {
-        if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems is not null)
-        {
-            foreach (ChatTabViewModel vm in e.NewItems)
-            {
-                // Subscribe to property changes for dirty indicator
-                vm.PropertyChanged += OnTabViewModelPropertyChanged;
-
-                // Defer container setup to allow TabView to create the container
-                DispatcherQueue.TryEnqueue(() => SetupTabContainer(vm));
-            }
-        }
-
-        if (e.Action == NotifyCollectionChangedAction.Remove && e.OldItems is not null)
-        {
-            foreach (ChatTabViewModel vm in e.OldItems)
-            {
-                vm.PropertyChanged -= OnTabViewModelPropertyChanged;
-            }
-        }
-    }
-
-    private void SetupTabContainer(ChatTabViewModel vm)
-    {
-        if (Tabs.ContainerFromItem(vm) is TabViewItem tab)
-        {
-            tab.Content = vm.ChatPanel;
-            UpdateTabIcon(tab, vm.IsDirty);
-        }
-    }
-
-    private void OnTabViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (sender is not ChatTabViewModel vm) return;
-
-        if (e.PropertyName == nameof(ChatTabViewModel.IsDirty))
-        {
-            if (Tabs.ContainerFromItem(vm) is TabViewItem tab)
-            {
-                UpdateTabIcon(tab, vm.IsDirty);
-            }
-        }
-    }
-
-    private static void UpdateTabIcon(TabViewItem tab, bool isDirty)
-    {
-        if (!isDirty)
-        {
-            tab.IconSource = null;
-            return;
-        }
-
-        tab.IconSource = new FontIconSource
-        {
-            Glyph = "\uE915",
-            FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Segoe Fluent Icons"),
-            Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"],
-        };
-    }
 
     // ===== First Activation & Theme =====
 
@@ -231,14 +163,29 @@ public sealed partial class MainWindow : Window
 
     private async void OnMenuSaveConversation(object sender, RoutedEventArgs e)
     {
-        await ViewModel.SaveTabAsync(ViewModel.SelectedTab);
+        var tab = ViewModel.SelectedTab;
+        if (tab is null) return;
+
+        if (!tab.HasBeenSaved)
+        {
+            // First save → show name dialog (same as Save As)
+            await SaveAsAsync(tab);
+        }
+        else
+        {
+            await ViewModel.SaveTabAsync(tab);
+        }
     }
 
     private async void OnMenuSaveAsConversation(object sender, RoutedEventArgs e)
     {
         var tab = ViewModel.SelectedTab;
         if (tab is null) return;
+        await SaveAsAsync(tab);
+    }
 
+    private async Task SaveAsAsync(ChatTabViewModel tab)
+    {
         var messages = tab.GetMessages();
         if (messages.Count == 0) return;
 
@@ -268,6 +215,7 @@ public sealed partial class MainWindow : Window
             {
                 await ConversationManager.SaveConversationAsync(newName, presetName, messages);
                 tab.IsDirty = false;
+                tab.HasBeenSaved = true;
             }
             catch { /* Save failed silently */ }
         }
@@ -422,7 +370,10 @@ public sealed partial class MainWindow : Window
 
             if (result == ContentDialogResult.Primary) // Save
             {
-                await ViewModel.SaveTabAsync(vm);
+                if (!vm.HasBeenSaved)
+                    await SaveAsAsync(vm);
+                else
+                    await ViewModel.SaveTabAsync(vm);
             }
         }
 

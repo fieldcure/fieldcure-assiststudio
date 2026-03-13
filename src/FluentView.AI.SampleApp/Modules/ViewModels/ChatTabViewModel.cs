@@ -4,6 +4,8 @@ using FluentView.AI.Controls;
 using FluentView.AI.Models;
 using FluentView.AI.Providers;
 using FluentView.AI.SampleApp.Helpers;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 
 namespace FluentView.AI.SampleApp.ViewModels;
 
@@ -13,6 +15,21 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool _isDirty;
 
     public ChatPanel ChatPanel { get; }
+
+    public IconSource? TabIconSource => IsDirty
+        ? new FontIconSource
+        {
+            Glyph = "\uE915",
+            FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Segoe Fluent Icons"),
+            Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"],
+        }
+        : null;
+
+    partial void OnIsDirtyChanged(bool value)
+    {
+        OnPropertyChanged(nameof(TabIconSource));
+    }
+    public bool HasBeenSaved { get; set; }
     public ProviderPreset? CurrentPreset { get; private set; }
 
     /// <summary>
