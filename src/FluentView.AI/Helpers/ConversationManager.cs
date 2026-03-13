@@ -61,7 +61,7 @@ public static class ConversationManager
         return JsonSerializer.Deserialize<ConversationData>(json, JsonOptions);
     }
 
-    public static IReadOnlyList<ConversationFileInfo> ListSavedConversations()
+    public static IReadOnlyList<ConversationFileInfo> ListSavedConversations(int top = int.MaxValue)
     {
         EnsureInitialized();
         if (!Directory.Exists(_conversationsFolder))
@@ -75,7 +75,20 @@ public static class ConversationManager
                 ModifiedAt = File.GetLastWriteTimeUtc(f),
             })
             .OrderByDescending(f => f.ModifiedAt)
+            .Take(top)
             .ToList();
+    }
+
+    public static void ClearAll()
+    {
+        EnsureInitialized();
+        if (!Directory.Exists(_conversationsFolder)) return;
+
+        foreach (var file in Directory.GetFiles(_conversationsFolder, "*.json"))
+        {
+            try { File.Delete(file); }
+            catch { /* ignore individual file deletion errors */ }
+        }
     }
 
     private static string SanitizeFileName(string name)

@@ -58,16 +58,16 @@
                             <FlyoutBase.AttachedFlyout>
                                 <MenuFlyout x:Name="MainMenuFlyout"
                                             Placement="BottomEdgeAlignedLeft">
-                                    <MenuFlyoutItem x:Uid="Menu_NewConversation" Text="New Conversation"
+                                    <MenuFlyoutItem x:Uid="Menu_New" Text="New"
                                                     Click="OnMenuNewTab">
                                         <MenuFlyoutItem.Icon>
-                                            <FontIcon Glyph="&#xE710;" />
+                                            <FontIcon Glyph="&#xE8F4;" />
                                         </MenuFlyoutItem.Icon>
                                         <MenuFlyoutItem.KeyboardAccelerators>
                                             <KeyboardAccelerator Modifiers="Control" Key="N" />
                                         </MenuFlyoutItem.KeyboardAccelerators>
                                     </MenuFlyoutItem>
-                                    <MenuFlyoutItem x:Uid="Menu_OpenConversation" Text="Open Conversation"
+                                    <MenuFlyoutItem x:Uid="Menu_Open" Text="Open..."
                                                     Click="OnMenuLoadConversation">
                                         <MenuFlyoutItem.Icon>
                                             <FontIcon Glyph="&#xE8E5;" />
@@ -76,7 +76,15 @@
                                             <KeyboardAccelerator Modifiers="Control" Key="O" />
                                         </MenuFlyoutItem.KeyboardAccelerators>
                                     </MenuFlyoutItem>
-                                    <MenuFlyoutItem x:Uid="Menu_SaveConversation" Text="Save Conversation"
+                                    <MenuFlyoutSubItem x:Name="RecentConversationsSubMenu"
+                                                       x:Uid="Menu_RecentConversations"
+                                                       Text="Recent Conversations">
+                                        <MenuFlyoutSubItem.Icon>
+                                            <FontIcon Glyph="&#xE81C;" />
+                                        </MenuFlyoutSubItem.Icon>
+                                    </MenuFlyoutSubItem>
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem x:Uid="Menu_Save" Text="Save"
                                                     Click="OnMenuSaveConversation">
                                         <MenuFlyoutItem.Icon>
                                             <FontIcon Glyph="&#xE74E;" />
@@ -84,6 +92,21 @@
                                         <MenuFlyoutItem.KeyboardAccelerators>
                                             <KeyboardAccelerator Modifiers="Control" Key="S" />
                                         </MenuFlyoutItem.KeyboardAccelerators>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem x:Uid="Menu_SaveAs" Text="Save As..."
+                                                    Click="OnMenuSaveAsConversation">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE792;" />
+                                        </MenuFlyoutItem.Icon>
+                                        <MenuFlyoutItem.KeyboardAccelerators>
+                                            <KeyboardAccelerator Modifiers="Control,Shift" Key="S" />
+                                        </MenuFlyoutItem.KeyboardAccelerators>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem x:Uid="Menu_SaveAll" Text="Save All"
+                                                    Click="OnMenuSaveAllConversations">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xEA35;" />
+                                        </MenuFlyoutItem.Icon>
                                     </MenuFlyoutItem>
                                     <MenuFlyoutSeparator />
                                     <MenuFlyoutItem x:Uid="Menu_Settings" Text="Settings"

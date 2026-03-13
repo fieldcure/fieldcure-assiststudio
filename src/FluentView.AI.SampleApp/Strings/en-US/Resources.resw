@@ -40,11 +40,32 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <!-- Main Menu -->
-  <data name="Menu_NewConversation.Text" xml:space="preserve">
-    <value>New Conversation</value>
+  <data name="Menu_New.Text" xml:space="preserve">
+    <value>New</value>
+  </data>
+  <data name="Menu_Open.Text" xml:space="preserve">
+    <value>Open...</value>
+  </data>
+  <data name="Menu_RecentConversations.Text" xml:space="preserve">
+    <value>Recent Conversations</value>
+  </data>
+  <data name="Menu_Save.Text" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Menu_SaveAs.Text" xml:space="preserve">
+    <value>Save As...</value>
+  </data>
+  <data name="Menu_SaveAll.Text" xml:space="preserve">
+    <value>Save All</value>
   </data>
   <data name="Menu_Settings.Text" xml:space="preserve">
     <value>Settings</value>
+  </data>
+  <data name="Menu_ClearRecentHistory" xml:space="preserve">
+    <value>Clear Recent History</value>
+  </data>
+  <data name="Menu_NoRecentConversations" xml:space="preserve">
+    <value>No recent conversations</value>
   </data>
   <!-- Navigation Items -->
   <data name="Nav_Models.Content" xml:space="preserve">
@@ -194,13 +215,7 @@
   <data name="About_SystemSpec.Text" xml:space="preserve">
     <value>System Specification</value>
   </data>
-  <!-- Menu - Save/Load -->
-  <data name="Menu_SaveConversation.Text" xml:space="preserve">
-    <value>Save Conversation</value>
-  </data>
-  <data name="Menu_OpenConversation.Text" xml:space="preserve">
-    <value>Open Conversation</value>
-  </data>
+  <!-- Menu - Save/Load (legacy keys removed, see Main Menu section) -->
   <data name="Models_StartOllama.Content" xml:space="preserve">
     <value>Start Ollama</value>
   </data>

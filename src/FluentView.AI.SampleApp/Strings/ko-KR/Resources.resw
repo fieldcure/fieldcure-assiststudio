@@ -40,11 +40,32 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <!-- Main Menu -->
-  <data name="Menu_NewConversation.Text" xml:space="preserve">
-    <value>&#xC0C8; &#xB300;&#xD654;</value>
+  <data name="Menu_New.Text" xml:space="preserve">
+    <value>새로 만들기</value>
+  </data>
+  <data name="Menu_Open.Text" xml:space="preserve">
+    <value>불러오기...</value>
+  </data>
+  <data name="Menu_RecentConversations.Text" xml:space="preserve">
+    <value>최근 대화</value>
+  </data>
+  <data name="Menu_Save.Text" xml:space="preserve">
+    <value>저장</value>
+  </data>
+  <data name="Menu_SaveAs.Text" xml:space="preserve">
+    <value>다른 이름으로 저장...</value>
+  </data>
+  <data name="Menu_SaveAll.Text" xml:space="preserve">
+    <value>모두 저장</value>
   </data>
   <data name="Menu_Settings.Text" xml:space="preserve">
-    <value>&#xC124;&#xC815;</value>
+    <value>설정</value>
+  </data>
+  <data name="Menu_ClearRecentHistory" xml:space="preserve">
+    <value>최근 기록 지우기</value>
+  </data>
+  <data name="Menu_NoRecentConversations" xml:space="preserve">
+    <value>최근 대화 없음</value>
   </data>
   <!-- Navigation Items -->
   <data name="Nav_Models.Content" xml:space="preserve">
@@ -194,13 +215,7 @@
   <data name="About_SystemSpec.Text" xml:space="preserve">
     <value>&#xC2DC;&#xC2A4;&#xD15C; &#xC0AC;&#xC591;</value>
   </data>
-  <!-- Menu - Save/Load -->
-  <data name="Menu_SaveConversation.Text" xml:space="preserve">
-    <value>&#xB300;&#xD654; &#xC800;&#xC7A5;</value>
-  </data>
-  <data name="Menu_OpenConversation.Text" xml:space="preserve">
-    <value>&#xB300;&#xD654; &#xC5F4;&#xAE30;</value>
-  </data>
+  <!-- Menu - Save/Load (legacy keys removed, see Main Menu section) -->
   <data name="Models_StartOllama.Content" xml:space="preserve">
     <value>Ollama 시작</value>
   </data>

@@ -148,6 +148,7 @@ public sealed partial class MainWindow : Window
 
     private void OnMainMenuClick(object sender, RoutedEventArgs e)
     {
+        BuildRecentConversationsMenu();
         FlyoutBase.ShowAttachedFlyout(MainMenuButton);
     }
 
@@ -158,8 +159,60 @@ public sealed partial class MainWindow : Window
 
     private async void OnMenuSaveConversation(object sender, RoutedEventArgs e)
     {
-        if (Tabs.SelectedItem is not TabViewItem tab)
-            return;
+        await SaveTabAsync(Tabs.SelectedItem as TabViewItem);
+    }
+
+    private async void OnMenuSaveAsConversation(object sender, RoutedEventArgs e)
+    {
+        if (Tabs.SelectedItem is not TabViewItem tab) return;
+
+        var chatPanel = GetChatPanelFromTab(tab);
+        if (chatPanel is null) return;
+
+        var messages = chatPanel.GetMessages();
+        if (messages.Count == 0) return;
+
+        var nameBox = new TextBox
+        {
+            Text = tab.Header as string ?? "",
+            PlaceholderText = "Conversation name",
+        };
+
+        var dialog = new ContentDialog
+        {
+            Title = "Save As",
+            Content = nameBox,
+            PrimaryButtonText = "Save",
+            CloseButtonText = "Cancel",
+            XamlRoot = Content.XamlRoot,
+        };
+
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+        {
+            var newName = nameBox.Text?.Trim();
+            if (string.IsNullOrEmpty(newName)) return;
+
+            tab.Header = newName;
+            var presetName = chatPanel.SelectedPreset?.Name;
+            try
+            {
+                await ConversationManager.SaveConversationAsync(newName, presetName, messages);
+            }
+            catch { /* Save failed silently */ }
+        }
+    }
+
+    private async void OnMenuSaveAllConversations(object sender, RoutedEventArgs e)
+    {
+        foreach (TabViewItem tab in Tabs.TabItems)
+        {
+            await SaveTabAsync(tab);
+        }
+    }
+
+    private async Task SaveTabAsync(TabViewItem? tab)
+    {
+        if (tab is null) return;
 
         var chatPanel = GetChatPanelFromTab(tab);
         if (chatPanel is null) return;
@@ -174,10 +227,7 @@ public sealed partial class MainWindow : Window
         {
             await ConversationManager.SaveConversationAsync(tabName, presetName, messages);
         }
-        catch
-        {
-            // Save failed silently
-        }
+        catch { /* Save failed silently */ }
     }
 
     private async void OnMenuLoadConversation(object sender, RoutedEventArgs e)
@@ -229,6 +279,64 @@ public sealed partial class MainWindow : Window
                 LoadConversationIntoNewTab(data);
             }
         }
+    }
+
+    private void BuildRecentConversationsMenu()
+    {
+        RecentConversationsSubMenu.Items.Clear();
+
+        var conversations = ConversationManager.ListSavedConversations(top: 10);
+
+        if (conversations.Count == 0)
+        {
+            var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
+            var emptyItem = new MenuFlyoutItem
+            {
+                Text = loader.GetString("Menu_NoRecentConversations"),
+                IsEnabled = false,
+            };
+            RecentConversationsSubMenu.Items.Add(emptyItem);
+            return;
+        }
+
+        var idx = 1;
+        foreach (var conv in conversations)
+        {
+            var filePath = conv.FilePath;
+            var modified = conv.ModifiedAt.ToLocalTime().ToString("g");
+            var item = new MenuFlyoutItem
+            {
+                Text = $"{idx}  {conv.FileName}",
+            };
+            ToolTipService.SetToolTip(item, $"{conv.FileName}\n{modified}");
+
+            item.Click += async (_, _) =>
+            {
+                var data = await ConversationManager.LoadConversationAsync(filePath);
+                if (data is not null)
+                {
+                    LoadConversationIntoNewTab(data);
+                }
+            };
+
+            RecentConversationsSubMenu.Items.Add(item);
+            idx++;
+        }
+
+        // Separator + Clear
+        RecentConversationsSubMenu.Items.Add(new MenuFlyoutSeparator());
+
+        var loader2 = new Windows.ApplicationModel.Resources.ResourceLoader();
+        var clearItem = new MenuFlyoutItem
+        {
+            Text = loader2.GetString("Menu_ClearRecentHistory"),
+            Icon = new FontIcon { Glyph = "\xE74D" },
+        };
+        clearItem.Click += (_, _) =>
+        {
+            ConversationManager.ClearAll();
+        };
+        RecentConversationsSubMenu.Items.Add(clearItem);
     }
 
     private void LoadConversationIntoNewTab(ConversationData data)
