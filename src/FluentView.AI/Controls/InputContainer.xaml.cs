@@ -223,6 +223,14 @@ public sealed partial class InputContainer : UserControl
         if (!e.DataView.Contains(StandardDataFormats.StorageItems)) return;
 
         var items = await e.DataView.GetStorageItemsAsync();
+        await AddFilesAsync(items);
+    }
+
+    /// <summary>
+    /// Add storage items as attachments. Called from drag-drop and external sources.
+    /// </summary>
+    public async Task AddFilesAsync(IReadOnlyList<IStorageItem> items)
+    {
         foreach (var item in items)
         {
             if (item is StorageFile file)

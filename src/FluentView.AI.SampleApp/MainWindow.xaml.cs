@@ -197,6 +197,7 @@ public sealed partial class MainWindow : Window
             try
             {
                 await ConversationManager.SaveConversationAsync(newName, presetName, messages);
+                SetModifiedIndicator(tab, false);
             }
             catch { /* Save failed silently */ }
         }
@@ -226,6 +227,7 @@ public sealed partial class MainWindow : Window
         try
         {
             await ConversationManager.SaveConversationAsync(tabName, presetName, messages);
+            SetModifiedIndicator(tab, false);
         }
         catch { /* Save failed silently */ }
     }
@@ -368,6 +370,7 @@ public sealed partial class MainWindow : Window
 #endif
         };
         chatPanel.PresetChanged += OnChatPanelPresetChanged;
+        chatPanel.MessageAdded += OnMessageAdded;
 
         // Restore messages
         foreach (var msg in data.Messages)
@@ -379,7 +382,6 @@ public sealed partial class MainWindow : Window
         {
             Header = data.TabName,
             Content = chatPanel,
-            IconSource = new SymbolIconSource { Symbol = Symbol.Message },
         };
 
         Tabs.TabItems.Add(tab);
@@ -479,12 +481,12 @@ public sealed partial class MainWindow : Window
         chatPanel.PresetChanged += OnChatPanelPresetChanged;
         chatPanel.AutoTitle = AppSettings.UtilityAutoTitle;
         chatPanel.TitleGenerated += OnTitleGenerated;
+        chatPanel.MessageAdded += OnMessageAdded;
 
         var tab = new TabViewItem
         {
             Header = preset.Name,
             Content = chatPanel,
-            IconSource = new SymbolIconSource { Symbol = Symbol.Message },
         };
 
         Tabs.TabItems.Add(tab);
@@ -529,6 +531,36 @@ public sealed partial class MainWindow : Window
                 break;
             }
         }
+    }
+
+    private void OnMessageAdded(object? sender, ChatMessage message)
+    {
+        if (sender is not ChatPanel chatPanel) return;
+
+        foreach (var item in Tabs.TabItems)
+        {
+            if (item is TabViewItem tab && ReferenceEquals(tab.Content, chatPanel))
+            {
+                SetModifiedIndicator(tab, true);
+                break;
+            }
+        }
+    }
+
+    private static void SetModifiedIndicator(TabViewItem tabViewItem, bool isModified)
+    {
+        if (!isModified)
+        {
+            tabViewItem.IconSource = null;
+            return;
+        }
+
+        tabViewItem.IconSource = new FontIconSource
+        {
+            Glyph = "\uE915",
+            FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Segoe Fluent Icons"),
+            Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"],
+        };
     }
 
     // ===== Settings =====
