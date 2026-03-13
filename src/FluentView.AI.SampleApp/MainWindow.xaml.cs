@@ -1,9 +1,11 @@
+using System.Collections.Specialized;
+using System.ComponentModel;
 using FluentView.AI.Controls;
 using FluentView.AI.SampleApp.Dialogs;
 using FluentView.AI.Helpers;
 using FluentView.AI.Models;
-using FluentView.AI.Providers;
 using FluentView.AI.SampleApp.Helpers;
+using FluentView.AI.SampleApp.ViewModels;
 using Microsoft.UI;
 using Microsoft.UI.Input;
 using Microsoft.UI.Windowing;
@@ -18,40 +20,114 @@ namespace FluentView.AI.SampleApp;
 
 public sealed partial class MainWindow : Window
 {
-    private int _tabCounter;
     private AppWindow? _appWindow;
-    private List<PromptPreset> _promptPresets;
+
+    public MainViewModel ViewModel { get; }
 
     public MainWindow()
     {
         InitializeComponent();
 
-        // Custom title bar: use SetTitleBar for drag region
+        // Custom title bar
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(TitleBarReservedArea);
         TitleBarReservedArea.MinWidth = 188;
-
         _appWindow = this.AppWindow;
 
-        // Load prompt presets
-        _promptPresets = AppSettings.LoadPromptPresets();
+        // Create ViewModel
+        ViewModel = new MainViewModel
+        {
+            GetPresets = () => SettingsPane.Presets,
+        };
 
-        // Wire up settings events
-        SettingsPane.ThemeChanged += OnThemeChanged;
-        SettingsPane.SystemPromptChanged += OnSystemPromptChanged;
-        SettingsPane.PresetsChanged += OnPresetsChanged;
-        SettingsPane.PromptPresetsChanged += OnPromptPresetsChanged;
+        // Wire settings events → ViewModel
+        SettingsPane.ThemeChanged += (_, theme) =>
+        {
+            ApplyAppTheme(theme);
+            ViewModel.ApplyThemeToAll(theme);
+        };
+        SettingsPane.SystemPromptChanged += (_, prompt) => ViewModel.ApplySystemPromptToAll(prompt);
+        SettingsPane.PresetsChanged += (_, _) => ViewModel.RefreshPresetsOnAll();
+        SettingsPane.PromptPresetsChanged += (_, _) => ViewModel.RefreshPromptPresetsOnAll();
 
-        // Apply saved theme to app root
+        // Track tab collection changes to set Content on TabViewItem containers
+        ViewModel.Tabs.CollectionChanged += OnTabsCollectionChanged;
+
+        // Apply saved theme on first activation
         Activated += OnFirstActivated;
 
         // Create initial tab
-        CreateChatTab();
+        ViewModel.AddTab();
 
-        // Set up interactive passthrough regions once content is loaded
+        // Title bar layout
         Tabs.Loaded += (_, _) => SetRegionsForCustomTitleBar();
         Tabs.SizeChanged += (_, _) => SetRegionsForCustomTitleBar();
     }
+
+    // ===== Tab Container Management =====
+
+    private void OnTabsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems is not null)
+        {
+            foreach (ChatTabViewModel vm in e.NewItems)
+            {
+                // Subscribe to property changes for dirty indicator
+                vm.PropertyChanged += OnTabViewModelPropertyChanged;
+
+                // Defer container setup to allow TabView to create the container
+                DispatcherQueue.TryEnqueue(() => SetupTabContainer(vm));
+            }
+        }
+
+        if (e.Action == NotifyCollectionChangedAction.Remove && e.OldItems is not null)
+        {
+            foreach (ChatTabViewModel vm in e.OldItems)
+            {
+                vm.PropertyChanged -= OnTabViewModelPropertyChanged;
+            }
+        }
+    }
+
+    private void SetupTabContainer(ChatTabViewModel vm)
+    {
+        if (Tabs.ContainerFromItem(vm) is TabViewItem tab)
+        {
+            tab.Content = vm.ChatPanel;
+            UpdateTabIcon(tab, vm.IsDirty);
+        }
+    }
+
+    private void OnTabViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (sender is not ChatTabViewModel vm) return;
+
+        if (e.PropertyName == nameof(ChatTabViewModel.IsDirty))
+        {
+            if (Tabs.ContainerFromItem(vm) is TabViewItem tab)
+            {
+                UpdateTabIcon(tab, vm.IsDirty);
+            }
+        }
+    }
+
+    private static void UpdateTabIcon(TabViewItem tab, bool isDirty)
+    {
+        if (!isDirty)
+        {
+            tab.IconSource = null;
+            return;
+        }
+
+        tab.IconSource = new FontIconSource
+        {
+            Glyph = "\uE915",
+            FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Segoe Fluent Icons"),
+            Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"],
+        };
+    }
+
+    // ===== First Activation & Theme =====
 
     private async void OnFirstActivated(object sender, WindowActivatedEventArgs args)
     {
@@ -61,10 +137,7 @@ public sealed partial class MainWindow : Window
         if (AppSettings.IsFirstRun)
         {
             AppSettings.IsFirstRun = false;
-            var dialog = new FirstRunDialog
-            {
-                XamlRoot = Content.XamlRoot
-            };
+            var dialog = new FirstRunDialog { XamlRoot = Content.XamlRoot };
             await dialog.ShowAsync();
         }
     }
@@ -81,7 +154,6 @@ public sealed partial class MainWindow : Window
             };
         }
 
-        // Update title bar caption button colors to match theme
         if (_appWindow?.TitleBar is { } titleBar)
         {
             var transparent = Colors.Transparent;
@@ -154,27 +226,25 @@ public sealed partial class MainWindow : Window
 
     private void OnMenuNewTab(object sender, RoutedEventArgs e)
     {
-        CreateChatTab();
+        ViewModel.AddTab();
     }
 
     private async void OnMenuSaveConversation(object sender, RoutedEventArgs e)
     {
-        await SaveTabAsync(Tabs.SelectedItem as TabViewItem);
+        await ViewModel.SaveTabAsync(ViewModel.SelectedTab);
     }
 
     private async void OnMenuSaveAsConversation(object sender, RoutedEventArgs e)
     {
-        if (Tabs.SelectedItem is not TabViewItem tab) return;
+        var tab = ViewModel.SelectedTab;
+        if (tab is null) return;
 
-        var chatPanel = GetChatPanelFromTab(tab);
-        if (chatPanel is null) return;
-
-        var messages = chatPanel.GetMessages();
+        var messages = tab.GetMessages();
         if (messages.Count == 0) return;
 
         var nameBox = new TextBox
         {
-            Text = tab.Header as string ?? "",
+            Text = tab.Title,
             PlaceholderText = "Conversation name",
         };
 
@@ -192,12 +262,12 @@ public sealed partial class MainWindow : Window
             var newName = nameBox.Text?.Trim();
             if (string.IsNullOrEmpty(newName)) return;
 
-            tab.Header = newName;
-            var presetName = chatPanel.SelectedPreset?.Name;
+            tab.Title = newName;
+            var presetName = tab.CurrentPreset?.Name;
             try
             {
                 await ConversationManager.SaveConversationAsync(newName, presetName, messages);
-                SetModifiedIndicator(tab, false);
+                tab.IsDirty = false;
             }
             catch { /* Save failed silently */ }
         }
@@ -205,31 +275,7 @@ public sealed partial class MainWindow : Window
 
     private async void OnMenuSaveAllConversations(object sender, RoutedEventArgs e)
     {
-        foreach (TabViewItem tab in Tabs.TabItems)
-        {
-            await SaveTabAsync(tab);
-        }
-    }
-
-    private async Task SaveTabAsync(TabViewItem? tab)
-    {
-        if (tab is null) return;
-
-        var chatPanel = GetChatPanelFromTab(tab);
-        if (chatPanel is null) return;
-
-        var messages = chatPanel.GetMessages();
-        if (messages.Count == 0) return;
-
-        var tabName = tab.Header as string ?? $"Chat {_tabCounter}";
-        var presetName = chatPanel.SelectedPreset?.Name;
-
-        try
-        {
-            await ConversationManager.SaveConversationAsync(tabName, presetName, messages);
-            SetModifiedIndicator(tab, false);
-        }
-        catch { /* Save failed silently */ }
+        await ViewModel.SaveAllAsync();
     }
 
     private async void OnMenuLoadConversation(object sender, RoutedEventArgs e)
@@ -278,7 +324,7 @@ public sealed partial class MainWindow : Window
             var data = await ConversationManager.LoadConversationAsync(filePath);
             if (data is not null)
             {
-                LoadConversationIntoNewTab(data);
+                ViewModel.LoadConversation(data);
             }
         }
     }
@@ -317,7 +363,7 @@ public sealed partial class MainWindow : Window
                 var data = await ConversationManager.LoadConversationAsync(filePath);
                 if (data is not null)
                 {
-                    LoadConversationIntoNewTab(data);
+                    ViewModel.LoadConversation(data);
                 }
             };
 
@@ -341,53 +387,6 @@ public sealed partial class MainWindow : Window
         RecentConversationsSubMenu.Items.Add(clearItem);
     }
 
-    private void LoadConversationIntoNewTab(ConversationData data)
-    {
-        // Find matching preset or use default
-        ProviderPreset? preset = null;
-        if (data.ProviderPresetName is not null)
-        {
-            preset = SettingsPane.Presets.FirstOrDefault(p => p.Name == data.ProviderPresetName);
-        }
-        preset ??= GetDefaultPreset();
-
-        _tabCounter++;
-        var provider = ProviderFactory.Create(preset);
-
-        var chatPanel = new ChatPanel
-        {
-            Provider = provider,
-            SystemPrompt = GetActivePromptText(),
-            Theme = GetCurrentTheme(),
-            AvailablePresets = SettingsPane.Presets,
-            SelectedPreset = preset,
-            AvailablePromptPresets = _promptPresets,
-            SelectedPromptPreset = GetActivePromptPreset(),
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            VerticalAlignment = VerticalAlignment.Stretch,
-#if DEBUG
-            IsDebugMode = true,
-#endif
-        };
-        chatPanel.PresetChanged += OnChatPanelPresetChanged;
-        chatPanel.MessageAdded += OnMessageAdded;
-
-        // Restore messages
-        foreach (var msg in data.Messages)
-        {
-            chatPanel.AddRestoredMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId);
-        }
-
-        var tab = new TabViewItem
-        {
-            Header = data.TabName,
-            Content = chatPanel,
-        };
-
-        Tabs.TabItems.Add(tab);
-        Tabs.SelectedItem = tab;
-    }
-
     private void OnMenuSettings(object sender, RoutedEventArgs e)
     {
         RootSplitView.IsPaneOpen = !RootSplitView.IsPaneOpen;
@@ -397,15 +396,15 @@ public sealed partial class MainWindow : Window
 
     private void OnAddTab(TabView sender, object args)
     {
-        CreateChatTab();
+        ViewModel.AddTab();
     }
 
     private async void OnCloseTab(TabView sender, TabViewTabCloseRequestedEventArgs args)
     {
-        var chatPanel = GetChatPanelFromTab(args.Tab);
+        if (args.Item is not ChatTabViewModel vm) return;
 
         // Ask to save if conversation has messages
-        if (chatPanel is not null && chatPanel.GetMessages().Count > 0)
+        if (vm.GetMessages().Count > 0)
         {
             var dialog = new ContentDialog
             {
@@ -419,273 +418,19 @@ public sealed partial class MainWindow : Window
             };
 
             var result = await dialog.ShowAsync();
-            if (result == ContentDialogResult.None) // Cancel
-                return;
+            if (result == ContentDialogResult.None) return; // Cancel
 
             if (result == ContentDialogResult.Primary) // Save
             {
-                var tabName = args.Tab.Header as string ?? $"Chat {_tabCounter}";
-                var presetName = chatPanel.SelectedPreset?.Name;
-                try
-                {
-                    await ConversationManager.SaveConversationAsync(
-                        tabName, presetName, chatPanel.GetMessages());
-                }
-                catch
-                {
-                    // Save failed silently
-                }
+                await ViewModel.SaveTabAsync(vm);
             }
         }
 
-        if (chatPanel?.Provider is IDisposable disposable)
-        {
-            disposable.Dispose();
-        }
+        ViewModel.CloseTab(vm);
 
-        sender.TabItems.Remove(args.Tab);
-
-        if (sender.TabItems.Count == 0)
+        if (ViewModel.Tabs.Count == 0)
         {
             Close();
         }
-    }
-
-    private void OnTabSelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        // Could be used for per-tab status updates in the future
-    }
-
-    private void CreateChatTab(ProviderPreset? preset = null)
-    {
-        _tabCounter++;
-
-        preset ??= GetDefaultPreset();
-        var provider = ProviderFactory.Create(preset);
-
-        var chatPanel = new ChatPanel
-        {
-            Provider = provider,
-            SystemPrompt = GetActivePromptText(),
-            Theme = GetCurrentTheme(),
-            AvailablePresets = SettingsPane.Presets,
-            SelectedPreset = preset,
-            AvailablePromptPresets = _promptPresets,
-            SelectedPromptPreset = GetActivePromptPreset(),
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            VerticalAlignment = VerticalAlignment.Stretch,
-#if DEBUG
-            IsDebugMode = true,
-#endif
-        };
-        chatPanel.PresetChanged += OnChatPanelPresetChanged;
-        chatPanel.AutoTitle = AppSettings.UtilityAutoTitle;
-        chatPanel.TitleGenerated += OnTitleGenerated;
-        chatPanel.MessageAdded += OnMessageAdded;
-
-        var tab = new TabViewItem
-        {
-            Header = preset.Name,
-            Content = chatPanel,
-        };
-
-        Tabs.TabItems.Add(tab);
-        Tabs.SelectedItem = tab;
-    }
-
-    // ===== Provider Switching (via InputContainer ComboBox) =====
-
-    private void OnChatPanelPresetChanged(object? sender, ProviderPreset preset)
-    {
-        if (sender is not ChatPanel chatPanel) return;
-
-        // Dispose old provider
-        if (chatPanel.Provider is IDisposable disposable)
-        {
-            disposable.Dispose();
-        }
-
-        // Create new provider — conversation history is preserved
-        chatPanel.Provider = ProviderFactory.Create(preset);
-
-        // Update tab header
-        foreach (var item in Tabs.TabItems)
-        {
-            if (item is TabViewItem tab && ReferenceEquals(tab.Content, chatPanel))
-            {
-                tab.Header = preset.Name;
-                break;
-            }
-        }
-    }
-
-    private void OnTitleGenerated(object? sender, string title)
-    {
-        if (sender is not ChatPanel chatPanel) return;
-
-        foreach (var item in Tabs.TabItems)
-        {
-            if (item is TabViewItem tab && ReferenceEquals(tab.Content, chatPanel))
-            {
-                tab.Header = title;
-                break;
-            }
-        }
-    }
-
-    private void OnMessageAdded(object? sender, ChatMessage message)
-    {
-        if (sender is not ChatPanel chatPanel) return;
-
-        foreach (var item in Tabs.TabItems)
-        {
-            if (item is TabViewItem tab && ReferenceEquals(tab.Content, chatPanel))
-            {
-                SetModifiedIndicator(tab, true);
-                break;
-            }
-        }
-    }
-
-    private static void SetModifiedIndicator(TabViewItem tabViewItem, bool isModified)
-    {
-        if (!isModified)
-        {
-            tabViewItem.IconSource = null;
-            return;
-        }
-
-        tabViewItem.IconSource = new FontIconSource
-        {
-            Glyph = "\uE915",
-            FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Segoe Fluent Icons"),
-            Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"],
-        };
-    }
-
-    // ===== Settings =====
-
-    private void OnThemeChanged(object? sender, string theme)
-    {
-        var chatTheme = theme switch
-        {
-            "Light" => ChatTheme.Light,
-            "Dark" => ChatTheme.Dark,
-            _ => ChatTheme.System,
-        };
-
-        ApplyAppTheme(theme);
-
-        foreach (var item in Tabs.TabItems)
-        {
-            if (item is TabViewItem tab)
-            {
-                var chatPanel = GetChatPanelFromTab(tab);
-                if (chatPanel is not null)
-                    chatPanel.Theme = chatTheme;
-            }
-        }
-    }
-
-    private void OnSystemPromptChanged(object? sender, string prompt)
-    {
-        // Reload prompt presets (text may have changed)
-        _promptPresets = AppSettings.LoadPromptPresets();
-
-        foreach (var item in Tabs.TabItems)
-        {
-            if (item is TabViewItem tab)
-            {
-                var chatPanel = GetChatPanelFromTab(tab);
-                if (chatPanel is not null)
-                {
-                    chatPanel.SystemPrompt = prompt;
-                    chatPanel.AvailablePromptPresets = _promptPresets;
-                    chatPanel.SelectedPromptPreset = GetActivePromptPreset();
-                }
-            }
-        }
-    }
-
-    private void OnPromptPresetsChanged(object? sender, EventArgs e)
-    {
-        _promptPresets = AppSettings.LoadPromptPresets();
-        var active = GetActivePromptPreset();
-
-        foreach (var item in Tabs.TabItems)
-        {
-            if (item is TabViewItem tab)
-            {
-                var chatPanel = GetChatPanelFromTab(tab);
-                if (chatPanel is not null)
-                {
-                    chatPanel.AvailablePromptPresets = _promptPresets;
-                    chatPanel.SelectedPromptPreset = active;
-                }
-            }
-        }
-    }
-
-    private void OnPresetsChanged(object? sender, EventArgs e)
-    {
-        foreach (var item in Tabs.TabItems)
-        {
-            if (item is TabViewItem tab)
-            {
-                var chatPanel = GetChatPanelFromTab(tab);
-                if (chatPanel is not null)
-                {
-                    var currentName = chatPanel.SelectedPreset?.Name;
-                    chatPanel.AvailablePresets = SettingsPane.Presets;
-                    // Re-select the same preset if it still exists
-                    if (currentName is not null)
-                    {
-                        var match = SettingsPane.Presets.FirstOrDefault(p => p.Name == currentName);
-                        if (match is not null)
-                        {
-                            chatPanel.SelectedPreset = match;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // ===== Helpers =====
-
-    private static ChatPanel? GetChatPanelFromTab(TabViewItem tab)
-    {
-        return tab.Content as ChatPanel;
-    }
-
-    private ProviderPreset GetDefaultPreset()
-    {
-        if (SettingsPane.Presets.Count == 0)
-            return new ProviderPreset { Name = "Mock", ProviderType = "Mock" };
-
-        var defaultName = AppSettings.DefaultProvider;
-        return SettingsPane.Presets.FirstOrDefault(p => p.Name == defaultName)
-               ?? SettingsPane.Presets[0];
-    }
-
-    private ChatTheme GetCurrentTheme()
-    {
-        return AppSettings.Theme switch
-        {
-            "Light" => ChatTheme.Light,
-            "Dark" => ChatTheme.Dark,
-            _ => ChatTheme.System,
-        };
-    }
-
-    private PromptPreset? GetActivePromptPreset()
-    {
-        var name = AppSettings.ActivePromptPreset;
-        return _promptPresets.Find(p => p.Name == name) ?? _promptPresets.FirstOrDefault();
-    }
-
-    private string GetActivePromptText()
-    {
-        return GetActivePromptPreset()?.Text ?? AppSettings.SystemPrompt;
     }
 }

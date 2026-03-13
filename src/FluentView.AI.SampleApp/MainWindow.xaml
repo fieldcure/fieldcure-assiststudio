@@ -5,6 +5,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:FluentView.AI.SampleApp"
     xmlns:fv="using:FluentView.AI.Controls"
+    xmlns:vm="using:FluentView.AI.SampleApp.ViewModels"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
@@ -29,11 +30,18 @@
         <!-- Main Content: TabView -->
         <SplitView.Content>
             <TabView x:Name="Tabs"
+                     TabItemsSource="{x:Bind ViewModel.Tabs}"
+                     SelectedItem="{x:Bind ViewModel.SelectedTab, Mode=TwoWay}"
                      IsAddTabButtonVisible="True"
                      AddTabButtonClick="OnAddTab"
                      TabCloseRequested="OnCloseTab"
-                     SelectionChanged="OnTabSelectionChanged"
                      VerticalAlignment="Stretch">
+
+                <TabView.TabItemTemplate>
+                    <DataTemplate x:DataType="vm:ChatTabViewModel">
+                        <TextBlock Text="{x:Bind Title, Mode=OneWay}" />
+                    </DataTemplate>
+                </TabView.TabItemTemplate>
 
                 <!-- Hamburger Menu (left of tabs) -->
                 <TabView.TabStripHeader>
