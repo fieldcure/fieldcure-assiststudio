@@ -9,9 +9,11 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Input;
 using Windows.Foundation;
 using Windows.Graphics;
 using Windows.Storage.Pickers;
+using Windows.System;
 using Windows.UI;
 using WinRT.Interop;
 
@@ -61,6 +63,19 @@ public sealed partial class MainWindow : Window
         // Title bar layout
         Tabs.Loaded += (_, _) => SetRegionsForCustomTitleBar();
         Tabs.SizeChanged += (_, _) => SetRegionsForCustomTitleBar();
+
+        // Global keyboard accelerators (MenuFlyout accelerators only work while open)
+        RegisterAccelerator(VirtualKeyModifiers.Control, VirtualKey.N, OnMenuNewTab);
+        RegisterAccelerator(VirtualKeyModifiers.Control, VirtualKey.O, OnMenuLoadConversation);
+        RegisterAccelerator(VirtualKeyModifiers.Control, VirtualKey.S, OnMenuSaveConversation);
+        RegisterAccelerator(VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, VirtualKey.S, OnMenuSaveAsConversation);
+    }
+
+    private void RegisterAccelerator(VirtualKeyModifiers modifiers, VirtualKey key, RoutedEventHandler handler)
+    {
+        var accel = new KeyboardAccelerator { Modifiers = modifiers, Key = key };
+        accel.Invoked += (_, args) => { handler(this, new RoutedEventArgs()); args.Handled = true; };
+        RootSplitView.KeyboardAccelerators.Add(accel);
     }
 
 
@@ -201,7 +216,7 @@ public sealed partial class MainWindow : Window
         InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
         picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
         picker.SuggestedFileName = tab.Title;
-        picker.FileTypeChoices.Add("AssistView Conversation", [ConversationManager.FileExtension]);
+        picker.FileTypeChoices.Add("AssistStudio Conversation", [ConversationManager.FileExtension]);
         picker.FileTypeChoices.Add("JSON", [".json"]);
 
         var file = await picker.PickSaveFileAsync();

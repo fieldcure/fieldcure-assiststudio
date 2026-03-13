@@ -340,6 +340,6 @@
     <value>Pull</value>
   </data>
   <data name="Tab_NewConversation" xml:space="preserve">
-    <value>New Conversation</value>
+    <value>Untitled</value>
   </data>
 </root>

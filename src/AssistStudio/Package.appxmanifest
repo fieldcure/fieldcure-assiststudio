@@ -48,7 +48,7 @@
             <uap:SupportedFileTypes>
               <uap:FileType ContentType="application/json">.avc</uap:FileType>
             </uap:SupportedFileTypes>
-            <uap:DisplayName>AssistView Conversation</uap:DisplayName>
+            <uap:DisplayName>AssistStudio Conversation</uap:DisplayName>
             <uap:Logo>Assets\Square44x44Logo.png</uap:Logo>
           </uap:FileTypeAssociation>
         </uap:Extension>

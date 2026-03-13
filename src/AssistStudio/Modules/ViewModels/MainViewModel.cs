@@ -39,7 +39,8 @@ public partial class MainViewModel : ObservableObject
             GetCurrentTheme(),
             GetPresets(),
             _promptPresets,
-            GetActivePromptPreset());
+            GetActivePromptPreset(),
+            _tabCounter);
 
         Tabs.Add(vm);
         SelectedTab = vm;

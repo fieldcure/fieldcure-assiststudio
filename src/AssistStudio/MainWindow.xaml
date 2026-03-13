@@ -35,6 +35,7 @@
                      IsAddTabButtonVisible="True"
                      AddTabButtonClick="OnAddTab"
                      TabCloseRequested="OnCloseTab"
+                     TabWidthMode="SizeToContent"
                      VerticalAlignment="Stretch">
 
                 <TabView.TabItemTemplate>

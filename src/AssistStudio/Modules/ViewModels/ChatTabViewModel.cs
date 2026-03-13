@@ -56,13 +56,15 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         ChatTheme theme,
         IList availablePresets,
         List<PromptPreset> promptPresets,
-        PromptPreset? selectedPromptPreset)
+        PromptPreset? selectedPromptPreset,
+        int tabNumber = 0)
     {
         CurrentPreset = preset;
         _title = preset.Name;
 
         var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
-        _tabHeader = loader.GetString("Tab_NewConversation");
+        var prefix = loader.GetString("Tab_NewConversation");
+        _tabHeader = tabNumber > 0 ? $"{prefix} {tabNumber}" : prefix;
 
         var provider = ProviderFactory.Create(preset);
 
