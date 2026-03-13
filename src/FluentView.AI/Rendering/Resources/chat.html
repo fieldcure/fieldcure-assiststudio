@@ -4,8 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
+    @font-face {
+        font-family: 'Segoe Fluent Icons';
+        src: local('Segoe Fluent Icons');
+    }
+
     /* ===== Theme Variables ===== */
     :root {
+        color-scheme: light;
         --bg-primary: #f5f5f5;
         --bg-user: #E8E8E8;
         --bg-assistant: transparent;
@@ -31,6 +37,7 @@
     }
 
     [data-theme="dark"] {
+        color-scheme: dark;
         --bg-primary: #202020;
         --bg-user: #3A3A3A;
         --bg-assistant: transparent;
@@ -506,10 +513,11 @@
         copied: 'Copied!',
         continue_label: '\u25B6 Continue',
         code: 'code',
-        copyMessage: 'Copy',
+        copyMessage: 'Copy response',
         edit: 'Edit',
         retry: 'Retry',
-        summarize: 'Summarize',
+        summarize: 'Summarize response',
+        copyHtml: 'Copy HTML',
         tokens: 'tokens'
     };
 
@@ -698,7 +706,7 @@
         }));
 
         // Debug: Copy HTML
-        var debugBtn = createActionBtn('\uE943', 'Copy HTML', function() {
+        var debugBtn = createActionBtn('\uE943', _L.copyHtml, function() {
             var msgEl = document.getElementById('msg-' + msgId);
             var bubble = msgEl ? msgEl.querySelector('.message-bubble') : null;
             if (bubble) {
@@ -729,7 +737,7 @@
         }));
 
         // Debug: Copy HTML
-        var debugBtn = createActionBtn('\uE943', 'Copy HTML', function() {
+        var debugBtn = createActionBtn('\uE943', _L.copyHtml, function() {
             var msgEl = document.getElementById('msg-' + msgId);
             var bubble = msgEl ? msgEl.querySelector('.message-bubble') : null;
             if (bubble) {

@@ -52,7 +52,7 @@
     <value>&#xCF54;&#xB4DC;</value>
   </data>
   <data name="Chat_CopyMessage" xml:space="preserve">
-    <value>&#xBCF5;&#xC0AC;</value>
+    <value>답변 복사</value>
   </data>
   <data name="Chat_Edit" xml:space="preserve">
     <value>편집</value>
@@ -61,7 +61,10 @@
     <value>다시 시도</value>
   </data>
   <data name="Chat_Summarize" xml:space="preserve">
-    <value>요약</value>
+    <value>답변 요약</value>
+  </data>
+  <data name="Chat_CopyHtml" xml:space="preserve">
+    <value>HTML 복사</value>
   </data>
   <data name="Chat_Tokens" xml:space="preserve">
     <value>토큰</value>

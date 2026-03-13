@@ -46,7 +46,7 @@ public partial class MainViewModel : ObservableObject
         return vm;
     }
 
-    public ChatTabViewModel LoadConversation(ConversationData data)
+    public ChatTabViewModel LoadConversation(ConversationData data, string? filePath = null)
     {
         _tabCounter++;
 
@@ -82,6 +82,7 @@ public partial class MainViewModel : ObservableObject
 
         vm.Title = data.TabName;
         vm.HasBeenSaved = true;
+        vm.FilePath = filePath;
 
         Tabs.Add(vm);
         SelectedTab = vm;
@@ -100,7 +101,10 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            await ConversationManager.SaveConversationAsync(tabName, presetName, messages);
+            if (tab.FilePath is not null)
+                await ConversationManager.SaveToFileAsync(tab.FilePath, tabName, presetName, messages);
+            else
+                await ConversationManager.SaveConversationAsync(tabName, presetName, messages);
             tab.IsDirty = false;
         }
         catch { /* Save failed silently */ }

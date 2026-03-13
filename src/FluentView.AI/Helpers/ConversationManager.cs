@@ -6,6 +6,8 @@ namespace FluentView.AI.Helpers;
 
 public static class ConversationManager
 {
+    public const string FileExtension = ".avc";
+
     private static string _conversationsFolder = "";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -24,12 +26,31 @@ public static class ConversationManager
         Directory.CreateDirectory(_conversationsFolder);
     }
 
+    /// <summary>
+    /// Save conversation to the internal Conversations folder.
+    /// </summary>
     public static async Task SaveConversationAsync(
         string tabName,
         string? providerPresetName,
         IReadOnlyList<ChatMessage> messages)
     {
         EnsureInitialized();
+        if (messages.Count == 0) return;
+
+        var fileName = SanitizeFileName(tabName) + FileExtension;
+        var filePath = Path.Combine(_conversationsFolder, fileName);
+        await SaveToFileAsync(filePath, tabName, providerPresetName, messages);
+    }
+
+    /// <summary>
+    /// Save conversation to an arbitrary file path.
+    /// </summary>
+    public static async Task SaveToFileAsync(
+        string filePath,
+        string tabName,
+        string? providerPresetName,
+        IReadOnlyList<ChatMessage> messages)
+    {
         if (messages.Count == 0) return;
 
         var data = new ConversationData
@@ -47,8 +68,6 @@ public static class ConversationManager
             }).ToList(),
         };
 
-        var fileName = SanitizeFileName(tabName) + ".json";
-        var filePath = Path.Combine(_conversationsFolder, fileName);
         var json = JsonSerializer.Serialize(data, JsonOptions);
         await File.WriteAllTextAsync(filePath, json);
     }
@@ -67,7 +86,11 @@ public static class ConversationManager
         if (!Directory.Exists(_conversationsFolder))
             return [];
 
-        return Directory.GetFiles(_conversationsFolder, "*.json")
+        var avcFiles = Directory.GetFiles(_conversationsFolder, "*" + FileExtension);
+        var jsonFiles = Directory.GetFiles(_conversationsFolder, "*.json");
+
+        return avcFiles.Concat(jsonFiles)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .Select(f => new ConversationFileInfo
             {
                 FilePath = f,
@@ -84,7 +107,10 @@ public static class ConversationManager
         EnsureInitialized();
         if (!Directory.Exists(_conversationsFolder)) return;
 
-        foreach (var file in Directory.GetFiles(_conversationsFolder, "*.json"))
+        var files = Directory.GetFiles(_conversationsFolder, "*" + FileExtension)
+            .Concat(Directory.GetFiles(_conversationsFolder, "*.json"));
+
+        foreach (var file in files)
         {
             try { File.Delete(file); }
             catch { /* ignore individual file deletion errors */ }

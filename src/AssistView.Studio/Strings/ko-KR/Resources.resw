@@ -67,6 +67,40 @@
   <data name="Menu_NoRecentConversations" xml:space="preserve">
     <value>최근 대화 없음</value>
   </data>
+  <!-- Dialogs -->
+  <data name="Dialog_SaveConversation" xml:space="preserve">
+    <value>대화를 저장하시겠습니까?</value>
+  </data>
+  <data name="Dialog_SaveConversationContent" xml:space="preserve">
+    <value>닫기 전에 이 대화를 저장하시겠습니까?</value>
+  </data>
+  <data name="Dialog_Save" xml:space="preserve">
+    <value>저장</value>
+  </data>
+  <data name="Dialog_DontSave" xml:space="preserve">
+    <value>저장 안 함</value>
+  </data>
+  <data name="Dialog_Cancel" xml:space="preserve">
+    <value>취소</value>
+  </data>
+  <data name="Dialog_OK" xml:space="preserve">
+    <value>확인</value>
+  </data>
+  <data name="Dialog_RenameConversation" xml:space="preserve">
+    <value>대화 이름 변경</value>
+  </data>
+  <data name="Dialog_UnsavedChanges" xml:space="preserve">
+    <value>저장되지 않은 변경 사항</value>
+  </data>
+  <data name="Dialog_UnsavedChangesContent" xml:space="preserve">
+    <value>저장되지 않은 대화가 {0}개 있습니다. 종료 전에 저장하시겠습니까?</value>
+  </data>
+  <data name="Dialog_SaveAllExit" xml:space="preserve">
+    <value>모두 저장 후 종료</value>
+  </data>
+  <data name="Dialog_DiscardExit" xml:space="preserve">
+    <value>저장하지 않고 종료</value>
+  </data>
   <!-- Navigation Items -->
   <data name="Nav_Models.Content" xml:space="preserve">
     <value>&#xBAA8;&#xB378;</value>
@@ -209,7 +243,7 @@
   <data name="About_Title.Text" xml:space="preserve">
     <value>&#xC815;&#xBCF4;</value>
   </data>
-  <data name="About_Description.Text" xml:space="preserve">
+<data name="About_Description.Text" xml:space="preserve">
     <value>WinUI 3&#xC6A9; AI &#xCC44;&#xD305; UI &#xCEE8;&#xD2B8;&#xB864;.</value>
   </data>
   <data name="About_Providers.Text" xml:space="preserve">

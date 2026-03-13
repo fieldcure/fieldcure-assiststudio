@@ -60,6 +60,10 @@ public sealed partial class ChatPanel : UserControl
         DependencyProperty.Register(nameof(IsDebugMode), typeof(bool), typeof(ChatPanel),
             new PropertyMetadata(false, OnIsDebugModeChanged));
 
+    public static readonly DependencyProperty TitleProperty =
+        DependencyProperty.Register(nameof(Title), typeof(string), typeof(ChatPanel),
+            new PropertyMetadata(null, OnTitlePropertyChanged));
+
     private static void OnThemePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is ChatPanel panel && panel._isInitialized)
@@ -73,6 +77,19 @@ public sealed partial class ChatPanel : UserControl
         if (d is ChatPanel panel && panel._isInitialized)
         {
             _ = panel._renderer.SetDebugModeAsync((bool)e.NewValue);
+        }
+    }
+
+    private static void OnTitlePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel)
+        {
+            var title = e.NewValue as string;
+            var hasTitle = !string.IsNullOrEmpty(title);
+            panel.TitleText.Text = title ?? "";
+            panel.TitleBar.Visibility = hasTitle
+                ? Microsoft.UI.Xaml.Visibility.Visible
+                : Microsoft.UI.Xaml.Visibility.Collapsed;
         }
     }
 
@@ -184,9 +201,16 @@ public sealed partial class ChatPanel : UserControl
         set => SetValue(IsDebugModeProperty, value);
     }
 
+    public new string? Title
+    {
+        get => (string?)GetValue(TitleProperty);
+        set => SetValue(TitleProperty, value);
+    }
+
     public event EventHandler<ProviderPreset>? PresetChanged;
     public event EventHandler<ChatMessage>? MessageAdded;
     public event EventHandler<string>? TitleGenerated;
+    public event EventHandler<string>? TitleEditRequested;
 
     public IReadOnlyList<ChatMessage> GetMessages() => _messages;
 
@@ -286,10 +310,10 @@ public sealed partial class ChatPanel : UserControl
         EmptyStatePanel.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
         ChatLayout.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
 
-        // Move InputArea from EmptyStatePanel into ChatLayout as Row 1
+        // Move InputArea from EmptyStatePanel into ChatLayout as Row 2
         EmptyStateContent.Children.Remove(InputArea);
         InputArea.HorizontalAlignment = Microsoft.UI.Xaml.HorizontalAlignment.Stretch;
-        Grid.SetRow(InputArea, 1);
+        Grid.SetRow(InputArea, 2);
         ChatLayout.Children.Add(InputArea);
     }
 
@@ -691,6 +715,11 @@ public sealed partial class ChatPanel : UserControl
         SystemPrompt = preset.Text;
     }
 
+    private void OnTitleEditClick(object sender, RoutedEventArgs e)
+    {
+        TitleEditRequested?.Invoke(this, Title ?? "");
+    }
+
     private void OnDragOver(object sender, DragEventArgs e)
     {
         if (e.DataView.Contains(StandardDataFormats.StorageItems))
@@ -738,20 +767,29 @@ public sealed partial class ChatPanel : UserControl
                         $"User: {userMsg.Content}\nAssistant: {snippet}\n\nGenerate a short title (max 6 words) for this conversation. Reply with ONLY the title, no quotes or punctuation.")
                 ],
                 SystemPrompt = "You generate concise conversation titles.",
-                Temperature = 0.3,
-                MaxTokens = 30
+                Temperature = 0.5,
+                MaxTokens = 200
             };
 
             var title = await provider.CompleteAsync(titleRequest);
             title = title.Trim().Trim('"', '\'', '.').Trim();
-            if (!string.IsNullOrEmpty(title))
+            if (string.IsNullOrEmpty(title))
             {
-                DispatcherQueue.TryEnqueue(() => TitleGenerated?.Invoke(this, title));
+                // Fallback: use first ~40 chars of user message
+                title = userMsg.Content.Length > 40
+                    ? userMsg.Content[..40].TrimEnd() + "…"
+                    : userMsg.Content;
             }
+
+            DispatcherQueue.TryEnqueue(() => TitleGenerated?.Invoke(this, title));
         }
         catch
         {
-            // Title generation is non-critical
+            // Title generation is non-critical — fallback to user message
+            var fallback = userMsg.Content.Length > 40
+                ? userMsg.Content[..40].TrimEnd() + "…"
+                : userMsg.Content;
+            DispatcherQueue.TryEnqueue(() => TitleGenerated?.Invoke(this, fallback));
         }
     }
 
@@ -783,6 +821,7 @@ public sealed partial class ChatPanel : UserControl
                 ["edit"] = loader.GetString("Chat_Edit"),
                 ["retry"] = loader.GetString("Chat_Retry"),
                 ["summarize"] = loader.GetString("Chat_Summarize"),
+                ["copyHtml"] = loader.GetString("Chat_CopyHtml"),
                 ["tokens"] = loader.GetString("Chat_Tokens")
             };
 

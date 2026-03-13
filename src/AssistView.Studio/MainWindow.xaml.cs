@@ -11,7 +11,9 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Windows.Foundation;
 using Windows.Graphics;
+using Windows.Storage.Pickers;
 using Windows.UI;
+using WinRT.Interop;
 
 namespace AssistView.Studio;
 
@@ -46,6 +48,9 @@ public sealed partial class MainWindow : Window
         SettingsPane.SystemPromptChanged += (_, prompt) => ViewModel.ApplySystemPromptToAll(prompt);
         SettingsPane.PresetsChanged += (_, _) => ViewModel.RefreshPresetsOnAll();
         SettingsPane.PromptPresetsChanged += (_, _) => ViewModel.RefreshPromptPresetsOnAll();
+
+        // Handle app close with unsaved changes check
+        _appWindow!.Closing += OnAppWindowClosing;
 
         // Apply saved theme on first activation
         Activated += OnFirstActivated;
@@ -166,14 +171,17 @@ public sealed partial class MainWindow : Window
         var tab = ViewModel.SelectedTab;
         if (tab is null) return;
 
-        if (!tab.HasBeenSaved)
+        if (tab.FilePath is not null)
         {
-            // First save → show name dialog (same as Save As)
-            await SaveAsAsync(tab);
+            // Re-save to existing path
+            var messages = tab.GetMessages();
+            if (messages.Count == 0) return;
+            await ConversationManager.SaveToFileAsync(tab.FilePath, tab.Title, tab.CurrentPreset?.Name, messages);
+            tab.IsDirty = false;
         }
         else
         {
-            await ViewModel.SaveTabAsync(tab);
+            await SaveAsAsync(tab);
         }
     }
 
@@ -184,96 +192,70 @@ public sealed partial class MainWindow : Window
         await SaveAsAsync(tab);
     }
 
-    private async Task SaveAsAsync(ChatTabViewModel tab)
+    private async Task<bool> SaveAsAsync(ChatTabViewModel tab)
     {
         var messages = tab.GetMessages();
-        if (messages.Count == 0) return;
+        if (messages.Count == 0) return false;
 
-        var nameBox = new TextBox
+        var picker = new FileSavePicker();
+        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
+        picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+        picker.SuggestedFileName = tab.Title;
+        picker.FileTypeChoices.Add("AssistView Conversation", [ConversationManager.FileExtension]);
+        picker.FileTypeChoices.Add("JSON", [".json"]);
+
+        var file = await picker.PickSaveFileAsync();
+        if (file is null) return false;
+
+        try
         {
-            Text = tab.Title,
-            PlaceholderText = "Conversation name",
-        };
-
-        var dialog = new ContentDialog
-        {
-            Title = "Save As",
-            Content = nameBox,
-            PrimaryButtonText = "Save",
-            CloseButtonText = "Cancel",
-            XamlRoot = Content.XamlRoot,
-        };
-
-        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
-        {
-            var newName = nameBox.Text?.Trim();
-            if (string.IsNullOrEmpty(newName)) return;
-
-            tab.Title = newName;
             var presetName = tab.CurrentPreset?.Name;
-            try
-            {
-                await ConversationManager.SaveConversationAsync(newName, presetName, messages);
-                tab.IsDirty = false;
-                tab.HasBeenSaved = true;
-            }
-            catch { /* Save failed silently */ }
+            await ConversationManager.SaveToFileAsync(file.Path, tab.Title, presetName, messages);
+            tab.FilePath = file.Path;
+            tab.Title = Path.GetFileNameWithoutExtension(file.Path);
+            tab.IsDirty = false;
+            tab.HasBeenSaved = true;
+            AppSettings.AddRecentFile(file.Path);
+            return true;
         }
+        catch { return false; }
     }
 
     private async void OnMenuSaveAllConversations(object sender, RoutedEventArgs e)
     {
-        await ViewModel.SaveAllAsync();
+        foreach (var tab in ViewModel.Tabs)
+        {
+            var messages = tab.GetMessages();
+            if (messages.Count == 0) continue;
+
+            if (tab.FilePath is not null)
+            {
+                await ConversationManager.SaveToFileAsync(tab.FilePath, tab.Title, tab.CurrentPreset?.Name, messages);
+                tab.IsDirty = false;
+            }
+            else
+            {
+                await SaveAsAsync(tab);
+            }
+        }
     }
 
     private async void OnMenuLoadConversation(object sender, RoutedEventArgs e)
     {
-        var conversations = ConversationManager.ListSavedConversations();
-        if (conversations.Count == 0) return;
+        var picker = new FileOpenPicker();
+        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
+        picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+        picker.FileTypeFilter.Add(ConversationManager.FileExtension);
+        picker.FileTypeFilter.Add(".json");
 
-        var listView = new ListView
+        var file = await picker.PickSingleFileAsync();
+        if (file is null) return;
+
+        var data = await ConversationManager.LoadConversationAsync(file.Path);
+        if (data is not null)
         {
-            SelectionMode = ListViewSelectionMode.Single,
-            MaxHeight = 300,
-            ItemsSource = conversations.Select(c => new
-            {
-                c.FileName,
-                c.FilePath,
-                Modified = c.ModifiedAt.ToLocalTime().ToString("g"),
-            }).ToList(),
-            ItemTemplate = (DataTemplate)Microsoft.UI.Xaml.Markup.XamlReader.Load(
-                """
-                <DataTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
-                    <StackPanel Padding="4">
-                        <TextBlock Text="{Binding FileName}" />
-                        <TextBlock Text="{Binding Modified}" FontSize="11" Opacity="0.6" />
-                    </StackPanel>
-                </DataTemplate>
-                """),
-        };
-
-        var dialog = new ContentDialog
-        {
-            Title = "Load Conversation",
-            Content = listView,
-            PrimaryButtonText = "Load",
-            CloseButtonText = "Cancel",
-            IsPrimaryButtonEnabled = false,
-            XamlRoot = Content.XamlRoot,
-        };
-
-        listView.SelectionChanged += (_, _) => dialog.IsPrimaryButtonEnabled = listView.SelectedItem is not null;
-
-        if (await dialog.ShowAsync() == ContentDialogResult.Primary && listView.SelectedItem is not null)
-        {
-            dynamic selected = listView.SelectedItem;
-            string filePath = selected.FilePath;
-
-            var data = await ConversationManager.LoadConversationAsync(filePath);
-            if (data is not null)
-            {
-                ViewModel.LoadConversation(data);
-            }
+            var tab = ViewModel.LoadConversation(data, file.Path);
+            AppSettings.AddRecentFile(file.Path);
         }
     }
 
@@ -281,9 +263,11 @@ public sealed partial class MainWindow : Window
     {
         RecentConversationsSubMenu.Items.Clear();
 
-        var conversations = ConversationManager.ListSavedConversations(top: 10);
+        var recentPaths = AppSettings.RecentFilePaths
+            .Where(File.Exists)
+            .ToList();
 
-        if (conversations.Count == 0)
+        if (recentPaths.Count == 0)
         {
             var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
             var emptyItem = new MenuFlyoutItem
@@ -296,22 +280,23 @@ public sealed partial class MainWindow : Window
         }
 
         var idx = 1;
-        foreach (var conv in conversations)
+        foreach (var filePath in recentPaths)
         {
-            var filePath = conv.FilePath;
-            var modified = conv.ModifiedAt.ToLocalTime().ToString("g");
+            var name = Path.GetFileNameWithoutExtension(filePath);
+            var modified = File.GetLastWriteTime(filePath).ToString("g");
             var item = new MenuFlyoutItem
             {
-                Text = $"{idx}  {conv.FileName}",
+                Text = $"{idx}  {name}",
             };
-            ToolTipService.SetToolTip(item, $"{conv.FileName}\n{modified}");
+            ToolTipService.SetToolTip(item, $"{filePath}\n{modified}");
 
+            var path = filePath; // capture for lambda
             item.Click += async (_, _) =>
             {
-                var data = await ConversationManager.LoadConversationAsync(filePath);
+                var data = await ConversationManager.LoadConversationAsync(path);
                 if (data is not null)
                 {
-                    ViewModel.LoadConversation(data);
+                    ViewModel.LoadConversation(data, path);
                 }
             };
 
@@ -330,7 +315,7 @@ public sealed partial class MainWindow : Window
         };
         clearItem.Click += (_, _) =>
         {
-            ConversationManager.ClearAll();
+            AppSettings.RecentFilePaths = [];
         };
         RecentConversationsSubMenu.Items.Add(clearItem);
     }
@@ -351,16 +336,17 @@ public sealed partial class MainWindow : Window
     {
         if (args.Item is not ChatTabViewModel vm) return;
 
-        // Ask to save if conversation has messages
-        if (vm.GetMessages().Count > 0)
+        // Ask to save if conversation has unsaved changes
+        if (vm.IsDirty && vm.GetMessages().Count > 0)
         {
+            var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
             var dialog = new ContentDialog
             {
-                Title = "Save conversation?",
-                Content = "Do you want to save this conversation before closing?",
-                PrimaryButtonText = "Save",
-                SecondaryButtonText = "Don't Save",
-                CloseButtonText = "Cancel",
+                Title = loader.GetString("Dialog_SaveConversation"),
+                Content = loader.GetString("Dialog_SaveConversationContent"),
+                PrimaryButtonText = loader.GetString("Dialog_Save"),
+                SecondaryButtonText = loader.GetString("Dialog_DontSave"),
+                CloseButtonText = loader.GetString("Dialog_Cancel"),
                 DefaultButton = ContentDialogButton.Primary,
                 XamlRoot = Content.XamlRoot,
             };
@@ -370,10 +356,16 @@ public sealed partial class MainWindow : Window
 
             if (result == ContentDialogResult.Primary) // Save
             {
-                if (!vm.HasBeenSaved)
-                    await SaveAsAsync(vm);
+                if (vm.FilePath is not null)
+                {
+                    await ConversationManager.SaveToFileAsync(
+                        vm.FilePath, vm.Title, vm.CurrentPreset?.Name, vm.GetMessages());
+                    vm.IsDirty = false;
+                }
                 else
-                    await ViewModel.SaveTabAsync(vm);
+                {
+                    if (!await SaveAsAsync(vm)) return; // User cancelled SaveAs
+                }
             }
         }
 
@@ -382,6 +374,66 @@ public sealed partial class MainWindow : Window
         if (ViewModel.Tabs.Count == 0)
         {
             Close();
+        }
+    }
+
+    // ===== App Close — Unsaved Changes =====
+
+    private bool _isClosing;
+
+    private async void OnAppWindowClosing(AppWindow sender, AppWindowClosingEventArgs args)
+    {
+        if (_isClosing) return;
+
+        var dirtyTabs = ViewModel.Tabs.Where(t => t.IsDirty && t.GetMessages().Count > 0).ToList();
+        if (dirtyTabs.Count == 0) return;
+
+        args.Cancel = true;
+
+        var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
+        var dialog = new ContentDialog
+        {
+            Title = loader.GetString("Dialog_UnsavedChanges"),
+            Content = string.Format(loader.GetString("Dialog_UnsavedChangesContent"), dirtyTabs.Count),
+            PrimaryButtonText = loader.GetString("Dialog_SaveAllExit"),
+            SecondaryButtonText = loader.GetString("Dialog_DiscardExit"),
+            CloseButtonText = loader.GetString("Dialog_Cancel"),
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = Content.XamlRoot,
+        };
+
+        var result = await dialog.ShowAsync();
+        if (result == ContentDialogResult.None) return; // Cancel
+
+        if (result == ContentDialogResult.Primary) // Save All
+        {
+            foreach (var tab in dirtyTabs)
+            {
+                if (tab.FilePath is not null)
+                {
+                    await ConversationManager.SaveToFileAsync(
+                        tab.FilePath, tab.Title, tab.CurrentPreset?.Name, tab.GetMessages());
+                }
+                else
+                {
+                    if (!await SaveAsAsync(tab)) return; // User cancelled one SaveAs → abort close
+                }
+            }
+        }
+
+        _isClosing = true;
+        Close();
+    }
+
+    // ===== File Activation =====
+
+    public async void OpenFileFromActivation(string filePath)
+    {
+        var data = await ConversationManager.LoadConversationAsync(filePath);
+        if (data is not null)
+        {
+            ViewModel.LoadConversation(data, filePath);
+            AppSettings.AddRecentFile(filePath);
         }
     }
 }

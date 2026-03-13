@@ -99,8 +99,48 @@ internal class WebViewChatRenderer
                     }
                 };
 
+                // Block-level math: \[...\]
+                var mathBlockBracket = {
+                    name: 'mathBlockBracket',
+                    level: 'block',
+                    start: function(src) {
+                        return src.indexOf('\\[');
+                    },
+                    tokenizer: function(src) {
+                        var match = src.match(/^\\\[([\s\S]+?)\\\]/);
+                        if (match) {
+                            return { type: 'mathBlockBracket', raw: match[0], text: match[1].trim() };
+                        }
+                    },
+                    renderer: function(token) {
+                        try {
+                            return katex.renderToString(token.text, { displayMode: true, throwOnError: false });
+                        } catch(e) { return token.raw; }
+                    }
+                };
+
+                // Inline math: \(...\)
+                var mathInlineParen = {
+                    name: 'mathInlineParen',
+                    level: 'inline',
+                    start: function(src) {
+                        return src.indexOf('\\(');
+                    },
+                    tokenizer: function(src) {
+                        var match = src.match(/^\\\(([^\)]+?)\\\)/);
+                        if (match) {
+                            return { type: 'mathInlineParen', raw: match[0], text: match[1].trim() };
+                        }
+                    },
+                    renderer: function(token) {
+                        try {
+                            return katex.renderToString(token.text, { displayMode: false, throwOnError: false });
+                        } catch(e) { return token.raw; }
+                    }
+                };
+
                 marked.use({
-                    extensions: [mathBlock, mathInline]
+                    extensions: [mathBlock, mathBlockBracket, mathInline, mathInlineParen]
                 });
 
                 marked.setOptions({

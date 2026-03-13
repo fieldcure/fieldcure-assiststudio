@@ -19,7 +19,7 @@
                IsPaneOpen="False"
                OpenPaneLength="420"
                DisplayMode="Overlay"
-               PaneBackground="Transparent"
+               PaneBackground="{ThemeResource SolidBackgroundFillColorBaseBrush}"
                PanePlacement="Right">
 
         <!-- Settings Pane -->

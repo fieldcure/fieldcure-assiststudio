@@ -42,6 +42,17 @@
         <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png"  Square71x71Logo="Assets\SmallTile.png" Square310x310Logo="Assets\LargeTile.png"/>
         <uap:SplashScreen Image="Assets\SplashScreen.png" />
       </uap:VisualElements>
+      <Extensions>
+        <uap:Extension Category="windows.fileTypeAssociation">
+          <uap:FileTypeAssociation Name="avc">
+            <uap:SupportedFileTypes>
+              <uap:FileType ContentType="application/json">.avc</uap:FileType>
+            </uap:SupportedFileTypes>
+            <uap:DisplayName>AssistView Conversation</uap:DisplayName>
+            <uap:Logo>Assets\Square44x44Logo.png</uap:Logo>
+          </uap:FileTypeAssociation>
+        </uap:Extension>
+      </Extensions>
     </Application>
   </Applications>
 

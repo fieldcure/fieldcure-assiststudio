@@ -1,7 +1,7 @@
 ﻿using FluentView.AI.Helpers;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
-using System.Reflection;
+
 
 namespace AssistView.Studio.Settings;
 
@@ -16,10 +16,10 @@ public sealed partial class AboutPage : Page
     {
         base.OnNavigatedTo(e);
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version;
-        VersionText.Text = version is not null
-            ? $"v{version.Major}.{version.Minor}.{version.Build}"
-            : "v0.0.0";
+        var package = Windows.ApplicationModel.Package.Current;
+        AppNameText.Text = package.DisplayName;
+        var pv = package.Id.Version;
+        VersionText.Text = $"v{pv.Major}.{pv.Minor}.{pv.Build}";
 
         await Task.Run(() => HardwareInfo.Detect()).ContinueWith(t =>
         {

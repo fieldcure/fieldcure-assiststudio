@@ -13,6 +13,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 {
     [ObservableProperty] private string _title = string.Empty;
     [ObservableProperty] private bool _isDirty;
+    [ObservableProperty] private string? _filePath;
 
     public ChatPanel ChatPanel { get; }
 
@@ -28,6 +29,11 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     partial void OnIsDirtyChanged(bool value)
     {
         OnPropertyChanged(nameof(TabIconSource));
+    }
+
+    partial void OnTitleChanged(string value)
+    {
+        ChatPanel.Title = value;
     }
     public bool HasBeenSaved { get; set; }
     public ProviderPreset? CurrentPreset { get; private set; }
@@ -70,6 +76,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         ChatPanel.PresetChanged += OnPresetChanged;
         ChatPanel.TitleGenerated += OnTitleGenerated;
         ChatPanel.MessageAdded += OnMessageAdded;
+        ChatPanel.TitleEditRequested += OnTitleEditRequested;
     }
 
     public void AddRestoredMessage(ChatRole role, string content, string? providerName, string? providerModelId)
@@ -133,6 +140,27 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         Title = title;
     }
 
+    private async void OnTitleEditRequested(object? sender, string currentTitle)
+    {
+        var input = new TextBox { Text = currentTitle, SelectionStart = currentTitle.Length };
+        var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
+        var dialog = new ContentDialog
+        {
+            Title = loader.GetString("Dialog_RenameConversation"),
+            Content = input,
+            PrimaryButtonText = loader.GetString("Dialog_OK"),
+            CloseButtonText = loader.GetString("Dialog_Cancel"),
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = ChatPanel.XamlRoot,
+        };
+
+        var result = await dialog.ShowAsync();
+        if (result == ContentDialogResult.Primary && !string.IsNullOrWhiteSpace(input.Text))
+        {
+            Title = input.Text.Trim();
+        }
+    }
+
     private void OnMessageAdded(object? sender, ChatMessage message)
     {
         IsDirty = true;
@@ -143,6 +171,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         ChatPanel.PresetChanged -= OnPresetChanged;
         ChatPanel.TitleGenerated -= OnTitleGenerated;
         ChatPanel.MessageAdded -= OnMessageAdded;
+        ChatPanel.TitleEditRequested -= OnTitleEditRequested;
 
         if (ChatPanel.Provider is IDisposable disposable)
         {

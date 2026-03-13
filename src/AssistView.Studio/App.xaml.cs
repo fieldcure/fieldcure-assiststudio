@@ -1,39 +1,54 @@
-﻿using FluentView.AI.Helpers;
+using FluentView.AI.Helpers;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
+using Microsoft.Windows.AppLifecycle;
+using Windows.ApplicationModel.Activation;
 using Windows.Storage;
 
-// To learn more about WinUI, the WinUI project structure,
-// and more about our project templates, see: http://aka.ms/winui-project-info.
+namespace AssistView.Studio;
 
-namespace AssistView.Studio
+public partial class App : Application
 {
-    /// <summary>
-    /// Provides application-specific behavior to supplement the default Application class.
-    /// </summary>
-    public partial class App : Application
-    {
-        private Window? _window;
+    private MainWindow? _window;
 
-        /// <summary>
-        /// Initializes the singleton application object.  This is the first line of authored code
-        /// executed, and as such is the logical equivalent of main() or WinMain().
-        /// </summary>
-        public App()
+    public App()
+    {
+        InitializeComponent();
+    }
+
+    protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
+    {
+        ConversationManager.Initialize(ApplicationData.Current.LocalFolder.Path);
+
+        _window = new MainWindow();
+        FluentView.AI.Controls.WindowHelper.TrackWindow(_window);
+        _window.Activate();
+
+        // Handle file activation on cold start
+        var activatedArgs = AppInstance.GetCurrent().GetActivatedEventArgs();
+        if (activatedArgs.Kind == ExtendedActivationKind.File &&
+            activatedArgs.Data is IFileActivatedEventArgs fileArgs &&
+            fileArgs.Files.Count > 0)
         {
-            InitializeComponent();
+            _window.OpenFileFromActivation(fileArgs.Files[0].Path);
         }
 
-        /// <summary>
-        /// Invoked when the application is launched.
-        /// </summary>
-        /// <param name="args">Details about the launch request and process.</param>
-        protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
-        {
-            ConversationManager.Initialize(ApplicationData.Current.LocalFolder.Path);
+        // Listen for redirected activations (app already running)
+        AppInstance.GetCurrent().Activated += OnActivated;
+    }
 
-            _window = new MainWindow();
-            FluentView.AI.Controls.WindowHelper.TrackWindow(_window);
-            _window.Activate();
+    private void OnActivated(object? sender, AppActivationArguments args)
+    {
+        if (args.Kind == ExtendedActivationKind.File &&
+            args.Data is IFileActivatedEventArgs fileArgs &&
+            fileArgs.Files.Count > 0)
+        {
+            var filePath = fileArgs.Files[0].Path;
+            _window?.DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Normal, () =>
+            {
+                _window?.OpenFileFromActivation(filePath);
+                _window?.Activate(); // Bring to front
+            });
         }
     }
 }

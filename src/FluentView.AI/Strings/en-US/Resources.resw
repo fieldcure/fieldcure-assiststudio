@@ -52,7 +52,7 @@
     <value>code</value>
   </data>
   <data name="Chat_CopyMessage" xml:space="preserve">
-    <value>Copy</value>
+    <value>Copy response</value>
   </data>
   <data name="Chat_Edit" xml:space="preserve">
     <value>Edit</value>
@@ -61,7 +61,10 @@
     <value>Retry</value>
   </data>
   <data name="Chat_Summarize" xml:space="preserve">
-    <value>Summarize</value>
+    <value>Summarize response</value>
+  </data>
+  <data name="Chat_CopyHtml" xml:space="preserve">
+    <value>Copy HTML</value>
   </data>
   <data name="Chat_Tokens" xml:space="preserve">
     <value>tokens</value>

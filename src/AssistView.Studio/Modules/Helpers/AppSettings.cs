@@ -115,6 +115,38 @@ public static class AppSettings
         Settings.Values["CustomPromptPresets"] = json;
     }
 
+    // ===== MRU (Most Recently Used) File Paths =====
+
+    private const int MaxRecentFiles = 10;
+
+    public static List<string> RecentFilePaths
+    {
+        get
+        {
+            var json = Settings.Values["RecentFilePaths"] as string;
+            if (string.IsNullOrEmpty(json)) return [];
+            try { return JsonSerializer.Deserialize<List<string>>(json) ?? []; }
+            catch { return []; }
+        }
+        set
+        {
+            var json = JsonSerializer.Serialize(value);
+            Settings.Values["RecentFilePaths"] = json;
+        }
+    }
+
+    public static void AddRecentFile(string filePath)
+    {
+        var list = RecentFilePaths;
+        list.Remove(filePath);
+        list.Insert(0, filePath);
+        if (list.Count > MaxRecentFiles)
+            list.RemoveRange(MaxRecentFiles, list.Count - MaxRecentFiles);
+        RecentFilePaths = list;
+    }
+
+    // ===== Model Cache =====
+
     private static readonly TimeSpan ModelCacheExpiry = TimeSpan.FromHours(24);
 
     public static void SetCachedModels(string provider, List<string> modelIds)
