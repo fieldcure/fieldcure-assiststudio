@@ -69,7 +69,7 @@ public static class ConversationManager
         };
 
         var json = JsonSerializer.Serialize(data, JsonOptions);
-        await File.WriteAllTextAsync(filePath, json);
+        await AtomicWriteAsync(filePath, json);
     }
 
     public static async Task<ConversationData?> LoadConversationAsync(string filePath)
@@ -114,6 +114,28 @@ public static class ConversationManager
         {
             try { File.Delete(file); }
             catch { /* ignore individual file deletion errors */ }
+        }
+    }
+
+    /// <summary>
+    /// Write to a temp file first, then atomically replace the target.
+    /// Prevents data loss if the process crashes or the write is interrupted
+    /// (e.g. enterprise document-centralization agents locking files).
+    /// </summary>
+    private static async Task AtomicWriteAsync(string filePath, string content)
+    {
+        var dir = Path.GetDirectoryName(filePath) ?? ".";
+        var tempPath = Path.Combine(dir, Path.GetRandomFileName());
+        try
+        {
+            await File.WriteAllTextAsync(tempPath, content);
+            File.Move(tempPath, filePath, overwrite: true);
+        }
+        catch
+        {
+            // Clean up temp file on failure
+            try { File.Delete(tempPath); } catch { }
+            throw;
         }
     }
 
