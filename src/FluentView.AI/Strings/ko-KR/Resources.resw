@@ -63,8 +63,11 @@
   <data name="Chat_Summarize" xml:space="preserve">
     <value>답변 요약</value>
   </data>
-  <data name="Chat_CopyHtml" xml:space="preserve">
-    <value>HTML 복사</value>
+  <data name="Chat_CopyRequest" xml:space="preserve">
+    <value>요청 복사</value>
+  </data>
+  <data name="Chat_CopyResponse" xml:space="preserve">
+    <value>응답 복사</value>
   </data>
   <data name="Chat_Tokens" xml:space="preserve">
     <value>토큰</value>

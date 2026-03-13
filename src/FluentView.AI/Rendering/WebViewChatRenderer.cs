@@ -362,5 +362,11 @@ internal class WebViewChatRenderer
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 
+    public Task SetDebugDataAsync(string userMsgId, string? requestBody, string assistantMsgId, string? rawResponse)
+    {
+        var script = $"window.fluentChat.setDebugData({Js(userMsgId)}, {Js(requestBody ?? "")}, {Js(assistantMsgId)}, {Js(rawResponse ?? "")})";
+        return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
     private static string Js(string value) => JsonSerializer.Serialize(value);
 }

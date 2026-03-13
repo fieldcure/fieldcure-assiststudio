@@ -18,6 +18,8 @@ public partial class GeminiProvider : IAiProvider, IDisposable
     public string ModelId { get; }
     public TokenUsage? LastUsage { get; private set; }
     public bool IsTruncated { get; private set; }
+    public string? LastRequestBody { get; private set; }
+    public string? LastRawResponse { get; private set; }
 
     public GeminiProvider(string apiKey, string model = "gemini-2.0-flash")
         : this(new HttpClient(), apiKey, model, ownsHttpClient: true)
@@ -40,10 +42,12 @@ public partial class GeminiProvider : IAiProvider, IDisposable
     public async Task<string> CompleteAsync(AiRequest request, CancellationToken ct = default)
     {
         var body = BuildRequestBody(request);
+        LastRequestBody = body;
         var url = $"{BaseUrl}/v1beta/models/{ModelId}:generateContent?key={_apiKey}";
         using var response = await SendRequestAsync(url, body, ct);
 
         var json = await response.Content.ReadAsStringAsync(ct);
+        LastRawResponse = json;
         using var doc = JsonDocument.Parse(json);
 
         if (doc.RootElement.TryGetProperty("usageMetadata", out var usage))
@@ -67,15 +71,19 @@ public partial class GeminiProvider : IAiProvider, IDisposable
     public async IAsyncEnumerable<string> StreamAsync(AiRequest request, [EnumeratorCancellation] CancellationToken ct = default)
     {
         var body = BuildRequestBody(request);
+        LastRequestBody = body;
         var url = $"{BaseUrl}/v1beta/models/{ModelId}:streamGenerateContent?key={_apiKey}&alt=sse";
         using var response = await SendRequestAsync(url, body, ct, HttpCompletionOption.ResponseHeadersRead);
         using var stream = await response.Content.ReadAsStreamAsync(ct);
 
         IsTruncated = false;
+        var responseSb = new StringBuilder();
 
         await foreach (var sse in SseReader.ReadEventsAsync(stream, ct))
         {
             if (string.IsNullOrEmpty(sse.Data)) continue;
+
+            responseSb.AppendLine(sse.Data);
 
             using var doc = JsonDocument.Parse(sse.Data);
             var root = doc.RootElement;
@@ -113,6 +121,8 @@ public partial class GeminiProvider : IAiProvider, IDisposable
                 }
             }
         }
+
+        LastRawResponse = responseSb.ToString();
     }
 
     private string BuildRequestBody(AiRequest request)

@@ -17,6 +17,8 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
     public string ModelId { get; }
     public TokenUsage? LastUsage { get; private set; }
     public bool IsTruncated { get; private set; }
+    public string? LastRequestBody { get; private set; }
+    public string? LastRawResponse { get; private set; }
 
     public OpenAiProvider(string apiKey, string model = "gpt-4o",
         string baseUrl = "https://api.openai.com/v1", string providerName = "OpenAI")
@@ -44,9 +46,11 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
     public async Task<string> CompleteAsync(AiRequest request, CancellationToken ct = default)
     {
         var body = BuildRequestBody(request, stream: false);
+        LastRequestBody = body;
         using var response = await SendRequestAsync(body, ct);
 
         var json = await response.Content.ReadAsStringAsync(ct);
+        LastRawResponse = json;
         using var doc = JsonDocument.Parse(json);
 
         if (doc.RootElement.TryGetProperty("usage", out var usage))
@@ -69,15 +73,22 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
     public async IAsyncEnumerable<string> StreamAsync(AiRequest request, [EnumeratorCancellation] CancellationToken ct = default)
     {
         var body = BuildRequestBody(request, stream: true);
+        LastRequestBody = body;
         using var response = await SendRequestAsync(body, ct, HttpCompletionOption.ResponseHeadersRead);
         using var stream = await response.Content.ReadAsStreamAsync(ct);
 
         IsTruncated = false;
+        var responseSb = new StringBuilder();
 
         await foreach (var sse in SseReader.ReadEventsAsync(stream, ct))
         {
             if (sse.Data == "[DONE]")
+            {
+                LastRawResponse = responseSb.ToString();
                 yield break;
+            }
+
+            responseSb.AppendLine(sse.Data);
 
             using var doc = JsonDocument.Parse(sse.Data);
             var root = doc.RootElement;
@@ -112,6 +123,8 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
                     yield return text;
             }
         }
+
+        LastRawResponse = responseSb.ToString();
     }
 
     private string BuildRequestBody(AiRequest request, bool stream)

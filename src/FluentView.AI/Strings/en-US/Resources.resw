@@ -63,8 +63,11 @@
   <data name="Chat_Summarize" xml:space="preserve">
     <value>Summarize response</value>
   </data>
-  <data name="Chat_CopyHtml" xml:space="preserve">
-    <value>Copy HTML</value>
+  <data name="Chat_CopyRequest" xml:space="preserve">
+    <value>Copy Request</value>
+  </data>
+  <data name="Chat_CopyResponse" xml:space="preserve">
+    <value>Copy Response</value>
   </data>
   <data name="Chat_Tokens" xml:space="preserve">
     <value>tokens</value>

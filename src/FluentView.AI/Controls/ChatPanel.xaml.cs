@@ -195,8 +195,8 @@ public sealed partial class ChatPanel : UserControl
     }
 
     /// <summary>
-    /// Enables debug mode: adds a "Copy HTML" button to each message's action bar,
-    /// allowing inspection of the rendered HTML content inside the WebView2.
+    /// Enables debug mode: adds "Copy Request" / "Copy Response" buttons to the last
+    /// message pair, allowing inspection of the actual API request body and raw response.
     /// </summary>
     public bool IsDebugMode
     {
@@ -365,6 +365,9 @@ public sealed partial class ChatPanel : UserControl
 
             await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content, Provider.IsTruncated, Provider.LastUsage?.TotalTokens ?? 0);
 
+            if (IsDebugMode)
+                await _renderer.SetDebugDataAsync(userMessage.Id, Provider.LastRequestBody, assistantMessage.Id, Provider.LastRawResponse);
+
             TryGenerateTitleAsync();
 
             // Auto-summarize if enabled and token threshold exceeded
@@ -441,6 +444,15 @@ public sealed partial class ChatPanel : UserControl
             _messages.Remove(continueMessage);
 
             await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content, Provider.IsTruncated, Provider.LastUsage?.TotalTokens ?? 0);
+
+            if (IsDebugMode)
+            {
+                // Find the original user message for this assistant response
+                var idx2 = _messages.IndexOf(assistantMessage);
+                var origUserMsg = idx2 > 0 ? _messages[idx2 - 1] : null;
+                if (origUserMsg is not null)
+                    await _renderer.SetDebugDataAsync(origUserMsg.Id, Provider.LastRequestBody, assistantMessage.Id, Provider.LastRawResponse);
+            }
         }
         catch (OperationCanceledException)
         {
@@ -633,6 +645,9 @@ public sealed partial class ChatPanel : UserControl
             }
 
             await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content, Provider.IsTruncated, Provider.LastUsage?.TotalTokens ?? 0);
+
+            if (IsDebugMode)
+                await _renderer.SetDebugDataAsync(userMessage.Id, Provider.LastRequestBody, assistantMessage.Id, Provider.LastRawResponse);
 
             if (AutoSummarize && MaxInputTokens > 0 && Provider.LastUsage is { } usage &&
                 usage.InputTokens > MaxInputTokens)
@@ -868,7 +883,8 @@ public sealed partial class ChatPanel : UserControl
                 ["edit"] = loader.GetString("Chat_Edit"),
                 ["retry"] = loader.GetString("Chat_Retry"),
                 ["summarize"] = loader.GetString("Chat_Summarize"),
-                ["copyHtml"] = loader.GetString("Chat_CopyHtml"),
+                ["copyRequest"] = loader.GetString("Chat_CopyRequest"),
+                ["copyResponse"] = loader.GetString("Chat_CopyResponse"),
                 ["tokens"] = loader.GetString("Chat_Tokens")
             };
 

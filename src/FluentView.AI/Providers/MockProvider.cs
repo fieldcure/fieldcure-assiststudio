@@ -9,6 +9,8 @@ public class MockProvider : IAiProvider
     public string ModelId => "mock-markdown-1.0";
     public TokenUsage? LastUsage => null;
     public bool IsTruncated => false;
+    public string? LastRequestBody => null;
+    public string? LastRawResponse => null;
 
     private const string MarkdownResponse = """
         Here's a **Markdown** demo response!

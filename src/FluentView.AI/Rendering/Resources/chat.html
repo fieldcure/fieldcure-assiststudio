@@ -517,11 +517,18 @@
         edit: 'Edit',
         retry: 'Retry',
         summarize: 'Summarize response',
-        copyHtml: 'Copy HTML',
+        copyRequest: 'Copy Request',
+        copyResponse: 'Copy Response',
         tokens: 'tokens'
     };
 
     var _debugMode = false;
+
+    // Debug data: only the last message pair has debug buttons visible
+    var _lastDebugUserMsgId = null;
+    var _lastDebugRequestBody = null;
+    var _lastDebugAssistantMsgId = null;
+    var _lastDebugRawResponse = null;
 
     window.addEventListener('scroll', function() {
         const threshold = 50;
@@ -705,17 +712,16 @@
             window.chrome.webview.postMessage('retry:' + msgId);
         }));
 
-        // Debug: Copy HTML
-        var debugBtn = createActionBtn('\uE943', _L.copyHtml, function() {
-            var msgEl = document.getElementById('msg-' + msgId);
-            var bubble = msgEl ? msgEl.querySelector('.message-bubble') : null;
-            if (bubble) {
-                window.chrome.webview.postMessage('debugCopy:' + bubble.innerHTML);
+        // Debug: Copy Request
+        var debugBtn = createActionBtn('\uE943', _L.copyRequest, function() {
+            if (_lastDebugRequestBody) {
+                window.chrome.webview.postMessage('copy:' + _lastDebugRequestBody);
                 flashCopied(this);
             }
         });
         debugBtn.className += ' debug-action-btn';
-        debugBtn.style.display = _debugMode ? '' : 'none';
+        debugBtn.dataset.msgId = msgId;
+        debugBtn.style.display = 'none';
         actions.appendChild(debugBtn);
 
         return actions;
@@ -736,17 +742,16 @@
             window.chrome.webview.postMessage('summarize:' + msgId);
         }));
 
-        // Debug: Copy HTML
-        var debugBtn = createActionBtn('\uE943', _L.copyHtml, function() {
-            var msgEl = document.getElementById('msg-' + msgId);
-            var bubble = msgEl ? msgEl.querySelector('.message-bubble') : null;
-            if (bubble) {
-                window.chrome.webview.postMessage('debugCopy:' + bubble.innerHTML);
+        // Debug: Copy Response
+        var debugBtn = createActionBtn('\uE943', _L.copyResponse, function() {
+            if (_lastDebugRawResponse) {
+                window.chrome.webview.postMessage('copy:' + _lastDebugRawResponse);
                 flashCopied(this);
             }
         });
         debugBtn.className += ' debug-action-btn';
-        debugBtn.style.display = _debugMode ? '' : 'none';
+        debugBtn.dataset.msgId = msgId;
+        debugBtn.style.display = 'none';
         actions.appendChild(debugBtn);
 
         return actions;
@@ -870,9 +875,50 @@
 
         setDebugMode: function(enabled) {
             _debugMode = enabled;
-            document.querySelectorAll('.debug-action-btn').forEach(function(btn) {
-                btn.style.display = enabled ? '' : 'none';
-            });
+            if (!enabled) {
+                // Hide all debug buttons
+                document.querySelectorAll('.debug-action-btn').forEach(function(btn) {
+                    btn.style.display = 'none';
+                });
+            }
+        },
+
+        setDebugData: function(userMsgId, requestBody, assistantMsgId, rawResponse) {
+            // Hide previous debug buttons
+            if (_lastDebugUserMsgId) {
+                var prevUserMsg = document.getElementById('msg-' + _lastDebugUserMsgId);
+                if (prevUserMsg) {
+                    var prevUserDebug = prevUserMsg.querySelector('.debug-action-btn');
+                    if (prevUserDebug) prevUserDebug.style.display = 'none';
+                }
+            }
+            if (_lastDebugAssistantMsgId) {
+                var prevAsstMsg = document.getElementById('msg-' + _lastDebugAssistantMsgId);
+                if (prevAsstMsg) {
+                    var prevAsstDebug = prevAsstMsg.querySelector('.debug-action-btn');
+                    if (prevAsstDebug) prevAsstDebug.style.display = 'none';
+                }
+            }
+
+            // Store new debug data
+            _lastDebugUserMsgId = userMsgId;
+            _lastDebugRequestBody = requestBody;
+            _lastDebugAssistantMsgId = assistantMsgId;
+            _lastDebugRawResponse = rawResponse;
+
+            // Show debug buttons on the new last message pair
+            if (_debugMode) {
+                var userMsg = document.getElementById('msg-' + userMsgId);
+                if (userMsg) {
+                    var userDebug = userMsg.querySelector('.debug-action-btn');
+                    if (userDebug) userDebug.style.display = '';
+                }
+                var asstMsg = document.getElementById('msg-' + assistantMsgId);
+                if (asstMsg) {
+                    var asstDebug = asstMsg.querySelector('.debug-action-btn');
+                    if (asstDebug) asstDebug.style.display = '';
+                }
+            }
         }
     };
 })();

@@ -10,6 +10,8 @@ public interface IAiProvider
     IAsyncEnumerable<string> StreamAsync(AiRequest request, CancellationToken ct = default);
     TokenUsage? LastUsage { get; }
     bool IsTruncated { get; }
+    string? LastRequestBody { get; }
+    string? LastRawResponse { get; }
     Task<IReadOnlyList<AiModel>> ListModelsAsync(CancellationToken ct = default);
     Task<ConnectionInfo> ValidateConnectionAsync(CancellationToken ct = default);
 }

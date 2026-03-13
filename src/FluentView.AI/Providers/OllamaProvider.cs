@@ -16,6 +16,8 @@ public partial class OllamaProvider : IAiProvider, IDisposable
     public string ModelId { get; }
     public TokenUsage? LastUsage { get; private set; }
     public bool IsTruncated { get; private set; }
+    public string? LastRequestBody { get; private set; }
+    public string? LastRawResponse { get; private set; }
 
     public OllamaProvider(string model = "llama3.1", string baseUrl = "http://localhost:11434")
         : this(new HttpClient(), model, baseUrl, ownsHttpClient: true)
@@ -38,9 +40,11 @@ public partial class OllamaProvider : IAiProvider, IDisposable
     public async Task<string> CompleteAsync(AiRequest request, CancellationToken ct = default)
     {
         var body = BuildRequestBody(request, stream: false);
+        LastRequestBody = body;
         using var response = await SendRequestAsync(body, ct);
 
         var json = await response.Content.ReadAsStringAsync(ct);
+        LastRawResponse = json;
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
 
@@ -62,11 +66,13 @@ public partial class OllamaProvider : IAiProvider, IDisposable
     public async IAsyncEnumerable<string> StreamAsync(AiRequest request, [EnumeratorCancellation] CancellationToken ct = default)
     {
         var body = BuildRequestBody(request, stream: true);
+        LastRequestBody = body;
         using var response = await SendRequestAsync(body, ct, HttpCompletionOption.ResponseHeadersRead);
         using var stream = await response.Content.ReadAsStreamAsync(ct);
         using var reader = new StreamReader(stream);
 
         IsTruncated = false;
+        var responseSb = new StringBuilder();
 
         while (!reader.EndOfStream)
         {
@@ -74,6 +80,8 @@ public partial class OllamaProvider : IAiProvider, IDisposable
 
             var line = await reader.ReadLineAsync(ct);
             if (string.IsNullOrEmpty(line)) continue;
+
+            responseSb.AppendLine(line);
 
             using var doc = JsonDocument.Parse(line);
             var root = doc.RootElement;
@@ -87,6 +95,7 @@ public partial class OllamaProvider : IAiProvider, IDisposable
                 }
                 IsTruncated = root.TryGetProperty("done_reason", out var drEl) &&
                               drEl.GetString() == "length";
+                LastRawResponse = responseSb.ToString();
                 yield break;
             }
 
@@ -98,6 +107,8 @@ public partial class OllamaProvider : IAiProvider, IDisposable
                     yield return text;
             }
         }
+
+        LastRawResponse = responseSb.ToString();
     }
 
     private string BuildRequestBody(AiRequest request, bool stream)

@@ -19,6 +19,8 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
     public string ModelId { get; }
     public TokenUsage? LastUsage { get; private set; }
     public bool IsTruncated { get; private set; }
+    public string? LastRequestBody { get; private set; }
+    public string? LastRawResponse { get; private set; }
 
     public ClaudeProvider(string apiKey, string model = "claude-sonnet-4-20250514")
         : this(new HttpClient(), apiKey, model, ownsHttpClient: true)
@@ -41,9 +43,11 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
     public async Task<string> CompleteAsync(AiRequest request, CancellationToken ct = default)
     {
         var body = BuildRequestBody(request, stream: false);
+        LastRequestBody = body;
         using var response = await SendRequestAsync(body, ct);
 
         var json = await response.Content.ReadAsStringAsync(ct);
+        LastRawResponse = json;
         using var doc = JsonDocument.Parse(json);
 
         if (doc.RootElement.TryGetProperty("usage", out var usage))
@@ -65,14 +69,19 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
     public async IAsyncEnumerable<string> StreamAsync(AiRequest request, [EnumeratorCancellation] CancellationToken ct = default)
     {
         var body = BuildRequestBody(request, stream: true);
+        LastRequestBody = body;
         using var response = await SendRequestAsync(body, ct, HttpCompletionOption.ResponseHeadersRead);
         using var stream = await response.Content.ReadAsStreamAsync(ct);
 
         int inputTokens = 0, outputTokens = 0;
         IsTruncated = false;
+        var responseSb = new StringBuilder();
 
         await foreach (var sse in SseReader.ReadEventsAsync(stream, ct))
         {
+            responseSb.AppendLine($"event: {sse.EventType}");
+            responseSb.AppendLine($"data: {sse.Data}");
+            responseSb.AppendLine();
             if (sse.EventType == "content_block_delta")
             {
                 using var doc = JsonDocument.Parse(sse.Data);
@@ -110,11 +119,13 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
             else if (sse.EventType == "message_stop")
             {
                 LastUsage = new TokenUsage(inputTokens, outputTokens);
+                LastRawResponse = responseSb.ToString();
                 yield break;
             }
         }
 
         LastUsage = new TokenUsage(inputTokens, outputTokens);
+        LastRawResponse = responseSb.ToString();
     }
 
     private string BuildRequestBody(AiRequest request, bool stream)
