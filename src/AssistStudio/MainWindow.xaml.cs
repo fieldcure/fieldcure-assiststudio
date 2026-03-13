@@ -260,7 +260,6 @@ public sealed partial class MainWindow : Window
         InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
         picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
         picker.FileTypeFilter.Add(ConversationManager.FileExtension);
-        picker.FileTypeFilter.Add(".avc");  // backward compat
         picker.FileTypeFilter.Add(".json");
 
         var file = await picker.PickSingleFileAsync();

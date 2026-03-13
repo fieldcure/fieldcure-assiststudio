@@ -87,10 +87,9 @@ public static class ConversationManager
             return [];
 
         var astxFiles = Directory.GetFiles(_conversationsFolder, "*" + FileExtension);
-        var avcFiles = Directory.GetFiles(_conversationsFolder, "*.avc");
         var jsonFiles = Directory.GetFiles(_conversationsFolder, "*.json");
 
-        return astxFiles.Concat(avcFiles).Concat(jsonFiles)
+        return astxFiles.Concat(jsonFiles)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Select(f => new ConversationFileInfo
             {
@@ -109,7 +108,6 @@ public static class ConversationManager
         if (!Directory.Exists(_conversationsFolder)) return;
 
         var files = Directory.GetFiles(_conversationsFolder, "*" + FileExtension)
-            .Concat(Directory.GetFiles(_conversationsFolder, "*.avc"))
             .Concat(Directory.GetFiles(_conversationsFolder, "*.json"));
 
         foreach (var file in files)
