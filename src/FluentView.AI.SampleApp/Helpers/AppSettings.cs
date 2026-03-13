@@ -45,6 +45,76 @@ public static class AppSettings
         Settings.Values[$"DefaultModel_{provider}"] = modelId;
     }
 
+    // Utility AI settings
+    public static string UtilityAISource
+    {
+        get => Settings.Values["UtilityAISource"] as string ?? "Current";
+        set => Settings.Values["UtilityAISource"] = value;
+    }
+
+    public static string UtilityAIPreset
+    {
+        get => Settings.Values["UtilityAIPreset"] as string ?? "";
+        set => Settings.Values["UtilityAIPreset"] = value;
+    }
+
+    public static bool UtilityAutoTitle
+    {
+        get => Settings.Values["UtilityAutoTitle"] is not false;
+        set => Settings.Values["UtilityAutoTitle"] = value;
+    }
+
+    public static bool UtilityAutoSummary
+    {
+        get => Settings.Values["UtilityAutoSummary"] is not false;
+        set => Settings.Values["UtilityAutoSummary"] = value;
+    }
+
+    // Active prompt preset name (empty = custom/manual)
+    public static string ActivePromptPreset
+    {
+        get => Settings.Values["ActivePromptPreset"] as string ?? "Professional";
+        set => Settings.Values["ActivePromptPreset"] = value;
+    }
+
+    private static readonly List<PromptPreset> BuiltInPromptPresets =
+    [
+        new() { Name = "Professional", IsBuiltIn = true,
+            Text = "You are a helpful assistant. Provide clear, well-structured responses. " +
+                   "Explain step by step when needed. If you're unsure about something, say so honestly." },
+        new() { Name = "Analytical", IsBuiltIn = true,
+            Text = "You are a concise and direct assistant. Prioritize code readability and performance. " +
+                   "Use Markdown formatting. Keep explanations brief and to the point." },
+        new() { Name = "Creative", IsBuiltIn = true,
+            Text = "You are a creative assistant who explores multiple perspectives. " +
+                   "Suggest innovative ideas and ask follow-up questions to better understand the user's needs." }
+    ];
+
+    public static List<PromptPreset> LoadPromptPresets()
+    {
+        var result = new List<PromptPreset>(BuiltInPromptPresets);
+
+        var json = Settings.Values["CustomPromptPresets"] as string;
+        if (!string.IsNullOrEmpty(json))
+        {
+            try
+            {
+                var custom = JsonSerializer.Deserialize<List<PromptPreset>>(json) ?? [];
+                result.AddRange(custom);
+            }
+            catch { /* ignore corrupt data */ }
+        }
+
+        return result;
+    }
+
+    public static void SaveCustomPromptPresets(IEnumerable<PromptPreset> allPresets)
+    {
+        var custom = allPresets.Where(p => !p.IsBuiltIn).ToList();
+        var json = JsonSerializer.Serialize(custom);
+        Settings.Values["CustomPromptPresets"] = json;
+    }
+
     private static readonly TimeSpan ModelCacheExpiry = TimeSpan.FromHours(24);
 
     public static void SetCachedModels(string provider, List<string> modelIds)

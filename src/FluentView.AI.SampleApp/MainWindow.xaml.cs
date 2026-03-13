@@ -20,6 +20,7 @@ public sealed partial class MainWindow : Window
 {
     private int _tabCounter;
     private AppWindow? _appWindow;
+    private List<PromptPreset> _promptPresets;
 
     public MainWindow()
     {
@@ -32,10 +33,14 @@ public sealed partial class MainWindow : Window
 
         _appWindow = this.AppWindow;
 
+        // Load prompt presets
+        _promptPresets = AppSettings.LoadPromptPresets();
+
         // Wire up settings events
         SettingsPane.ThemeChanged += OnThemeChanged;
         SettingsPane.SystemPromptChanged += OnSystemPromptChanged;
         SettingsPane.PresetsChanged += OnPresetsChanged;
+        SettingsPane.PromptPresetsChanged += OnPromptPresetsChanged;
 
         // Apply saved theme to app root
         Activated += OnFirstActivated;
@@ -242,11 +247,12 @@ public sealed partial class MainWindow : Window
         var chatPanel = new ChatPanel
         {
             Provider = provider,
-            Placeholder = "Reply...",
-            SystemPrompt = AppSettings.SystemPrompt,
+            SystemPrompt = GetActivePromptText(),
             Theme = GetCurrentTheme(),
             AvailablePresets = SettingsPane.Presets,
             SelectedPreset = preset,
+            AvailablePromptPresets = _promptPresets,
+            SelectedPromptPreset = GetActivePromptPreset(),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
         };
@@ -347,11 +353,12 @@ public sealed partial class MainWindow : Window
         var chatPanel = new ChatPanel
         {
             Provider = provider,
-            Placeholder = "Reply...",
-            SystemPrompt = AppSettings.SystemPrompt,
+            SystemPrompt = GetActivePromptText(),
             Theme = GetCurrentTheme(),
             AvailablePresets = SettingsPane.Presets,
             SelectedPreset = preset,
+            AvailablePromptPresets = _promptPresets,
+            SelectedPromptPreset = GetActivePromptPreset(),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
         };
@@ -420,13 +427,39 @@ public sealed partial class MainWindow : Window
 
     private void OnSystemPromptChanged(object? sender, string prompt)
     {
+        // Reload prompt presets (text may have changed)
+        _promptPresets = AppSettings.LoadPromptPresets();
+
         foreach (var item in Tabs.TabItems)
         {
             if (item is TabViewItem tab)
             {
                 var chatPanel = GetChatPanelFromTab(tab);
                 if (chatPanel is not null)
+                {
                     chatPanel.SystemPrompt = prompt;
+                    chatPanel.AvailablePromptPresets = _promptPresets;
+                    chatPanel.SelectedPromptPreset = GetActivePromptPreset();
+                }
+            }
+        }
+    }
+
+    private void OnPromptPresetsChanged(object? sender, EventArgs e)
+    {
+        _promptPresets = AppSettings.LoadPromptPresets();
+        var active = GetActivePromptPreset();
+
+        foreach (var item in Tabs.TabItems)
+        {
+            if (item is TabViewItem tab)
+            {
+                var chatPanel = GetChatPanelFromTab(tab);
+                if (chatPanel is not null)
+                {
+                    chatPanel.AvailablePromptPresets = _promptPresets;
+                    chatPanel.SelectedPromptPreset = active;
+                }
             }
         }
     }
@@ -481,5 +514,16 @@ public sealed partial class MainWindow : Window
             "Dark" => ChatTheme.Dark,
             _ => ChatTheme.System,
         };
+    }
+
+    private PromptPreset? GetActivePromptPreset()
+    {
+        var name = AppSettings.ActivePromptPreset;
+        return _promptPresets.Find(p => p.Name == name) ?? _promptPresets.FirstOrDefault();
+    }
+
+    private string GetActivePromptText()
+    {
+        return GetActivePromptPreset()?.Text ?? AppSettings.SystemPrompt;
     }
 }

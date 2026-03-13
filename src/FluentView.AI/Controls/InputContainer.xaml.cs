@@ -41,6 +41,14 @@ public sealed partial class InputContainer : UserControl
         DependencyProperty.Register(nameof(SelectedPreset), typeof(ProviderPreset), typeof(InputContainer),
             new PropertyMetadata(null, OnSelectedPresetChanged));
 
+    public static readonly DependencyProperty AvailablePromptPresetsProperty =
+        DependencyProperty.Register(nameof(AvailablePromptPresets), typeof(IList<PromptPreset>), typeof(InputContainer),
+            new PropertyMetadata(null, OnAvailablePromptPresetsChanged));
+
+    public static readonly DependencyProperty SelectedPromptPresetProperty =
+        DependencyProperty.Register(nameof(SelectedPromptPreset), typeof(PromptPreset), typeof(InputContainer),
+            new PropertyMetadata(null));
+
     private bool _suppressPresetChanged;
 
     public InputContainer()
@@ -72,8 +80,21 @@ public sealed partial class InputContainer : UserControl
         set => SetValue(SelectedPresetProperty, value);
     }
 
+    public IList<PromptPreset>? AvailablePromptPresets
+    {
+        get => (IList<PromptPreset>?)GetValue(AvailablePromptPresetsProperty);
+        set => SetValue(AvailablePromptPresetsProperty, value);
+    }
+
+    public PromptPreset? SelectedPromptPreset
+    {
+        get => (PromptPreset?)GetValue(SelectedPromptPresetProperty);
+        set => SetValue(SelectedPromptPresetProperty, value);
+    }
+
     public event EventHandler<MessageSentEventArgs>? MessageSent;
     public event EventHandler<ProviderPreset>? PresetChanged;
+    public event EventHandler<PromptPreset>? PromptPresetChanged;
     public event EventHandler? SummarizeRequested;
 
     public void FocusInput()
@@ -344,7 +365,6 @@ public sealed partial class InputContainer : UserControl
         if (d is InputContainer self && e.NewValue is ProviderPreset preset)
         {
             self.SelectPresetInCombo(preset);
-            self.MessageTextBox.PlaceholderText = $"{preset.Name}에게 물어보기...";
         }
     }
 
@@ -380,6 +400,65 @@ public sealed partial class InputContainer : UserControl
             }
         }
         _suppressPresetChanged = false;
+    }
+
+    private static void OnAvailablePromptPresetsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is InputContainer self)
+        {
+            self.PopulatePromptPresetCombo();
+        }
+    }
+
+    private void PopulatePromptPresetCombo()
+    {
+        _suppressPresetChanged = true;
+        PromptPresetComboBox.Items.Clear();
+        var presets = AvailablePromptPresets;
+        if (presets is null || presets.Count == 0)
+        {
+            _suppressPresetChanged = false;
+            return;
+        }
+
+        foreach (var preset in presets)
+        {
+            var item = new ComboBoxItem { Content = preset.Name, Tag = preset };
+            PromptPresetComboBox.Items.Add(item);
+        }
+
+        if (SelectedPromptPreset is not null)
+        {
+            SelectPromptPresetInCombo(SelectedPromptPreset);
+        }
+        _suppressPresetChanged = false;
+    }
+
+    /// <summary>
+    /// Selects the matching prompt preset in the ComboBox.
+    /// </summary>
+    public void SelectPromptPresetInCombo(PromptPreset preset)
+    {
+        _suppressPresetChanged = true;
+        foreach (ComboBoxItem item in PromptPresetComboBox.Items)
+        {
+            if (item.Tag is PromptPreset p && p.Name == preset.Name)
+            {
+                PromptPresetComboBox.SelectedItem = item;
+                break;
+            }
+        }
+        _suppressPresetChanged = false;
+    }
+
+    private void PromptPresetComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressPresetChanged) return;
+        if (PromptPresetComboBox.SelectedItem is ComboBoxItem item && item.Tag is PromptPreset preset)
+        {
+            SelectedPromptPreset = preset;
+            PromptPresetChanged?.Invoke(this, preset);
+        }
     }
 }
 

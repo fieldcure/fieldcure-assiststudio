@@ -61,24 +61,31 @@
                 <!-- Left: Action buttons -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="2">
                     <Button x:Name="AttachButton"
+                            x:Uid="InputContainer_Attach"
                             Style="{StaticResource SubtleButtonStyle}"
-                            ToolTipService.ToolTip="Attach file"
                             Click="AttachButton_Click"
                             Padding="6">
                         <FontIcon Glyph="&#xE710;" FontSize="14" />
                     </Button>
                     <Button x:Name="SummarizeButton"
+                            x:Uid="InputContainer_Summarize"
                             Style="{StaticResource SubtleButtonStyle}"
-                            ToolTipService.ToolTip="Request summary"
                             Click="SummarizeButton_Click"
                             Padding="6">
-                        <FontIcon Glyph="&#xE8AB;" FontSize="14" />
+                        <FontIcon Glyph="&#xEB78;" FontSize="14" />
                     </Button>
                 </StackPanel>
 
-                <!-- Right: Provider selector -->
+                <!-- Right: Prompt preset + Provider selector -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4"
                             VerticalAlignment="Center">
+                    <ComboBox x:Name="PromptPresetComboBox"
+                              MinWidth="100"
+                              SelectionChanged="PromptPresetComboBox_SelectionChanged"
+                              VerticalAlignment="Center"
+                              BorderThickness="0"
+                              Background="Transparent"
+                              Padding="8,4" />
                     <ComboBox x:Name="PresetComboBox"
                               MinWidth="120"
                               SelectionChanged="PresetComboBox_SelectionChanged"

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="FluentView.AI.SampleApp.Settings.UtilityAIPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    NavigationCacheMode="Enabled">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Grid.Row="0" Padding="20,14,20,14"
+              BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+              BorderThickness="0,0,0,1">
+            <TextBlock x:Uid="UtilityAI_Title" Text="Utility AI"
+                       Style="{StaticResource TitleTextBlockStyle}" />
+        </Grid>
+
+        <!-- Content -->
+        <ScrollViewer Grid.Row="1" Padding="20,16">
+            <StackPanel Spacing="24" MaxWidth="480" HorizontalAlignment="Left">
+
+                <TextBlock x:Uid="UtilityAI_Description"
+                           Text="Configure the AI model used for automatic tasks like title generation and conversation summary."
+                           Style="{StaticResource CaptionTextBlockStyle}"
+                           TextWrapping="Wrap"
+                           Opacity="0.7" />
+
+                <!-- Model Source Selection -->
+                <StackPanel Spacing="12">
+                    <TextBlock x:Uid="UtilityAI_ModelSource" Text="Model Source"
+                               Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                    <RadioButtons x:Name="ModelSourceRadio"
+                                  SelectionChanged="OnModelSourceChanged">
+                        <RadioButton x:Uid="UtilityAI_UseCurrent" Content="Use current chat model" Tag="Current" />
+                        <RadioButton x:Uid="UtilityAI_UseSpecific" Content="Use specific preset" Tag="Specific" />
+                    </RadioButtons>
+
+                    <ComboBox x:Name="PresetCombo"
+                              x:Uid="UtilityAI_Preset"
+                              Header="Preset"
+                              HorizontalAlignment="Stretch"
+                              Visibility="Collapsed"
+                              SelectionChanged="OnPresetSelectionChanged" />
+                </StackPanel>
+
+                <!-- Tasks Toggle -->
+                <StackPanel Spacing="12">
+                    <TextBlock x:Uid="UtilityAI_AutoTasks" Text="Automatic Tasks"
+                               Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                    <ToggleSwitch x:Name="AutoTitleToggle"
+                                  x:Uid="UtilityAI_AutoTitle"
+                                  Header="Auto-generate conversation title"
+                                  OnContent="On" OffContent="Off"
+                                  Toggled="OnAutoTitleToggled" />
+
+                    <ToggleSwitch x:Name="AutoSummaryToggle"
+                                  x:Uid="UtilityAI_AutoSummary"
+                                  Header="Auto-summarize long conversations"
+                                  OnContent="On" OffContent="Off"
+                                  Toggled="OnAutoSummaryToggled" />
+                </StackPanel>
+
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>

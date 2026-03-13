@@ -119,6 +119,40 @@
   <data name="Prompt_Placeholder.PlaceholderText" xml:space="preserve">
     <value>Enter system prompt...</value>
   </data>
+  <data name="Prompt_Presets.Text" xml:space="preserve">
+    <value>Presets</value>
+  </data>
+  <!-- Utility AI Page -->
+  <data name="Nav_UtilityAI.Content" xml:space="preserve">
+    <value>Utility AI</value>
+  </data>
+  <data name="UtilityAI_Title.Text" xml:space="preserve">
+    <value>Utility AI</value>
+  </data>
+  <data name="UtilityAI_Description.Text" xml:space="preserve">
+    <value>Configure the AI model used for automatic tasks like title generation and conversation summary.</value>
+  </data>
+  <data name="UtilityAI_ModelSource.Text" xml:space="preserve">
+    <value>Model Source</value>
+  </data>
+  <data name="UtilityAI_UseCurrent.Content" xml:space="preserve">
+    <value>Use current chat model</value>
+  </data>
+  <data name="UtilityAI_UseSpecific.Content" xml:space="preserve">
+    <value>Use specific preset</value>
+  </data>
+  <data name="UtilityAI_Preset.Header" xml:space="preserve">
+    <value>Preset</value>
+  </data>
+  <data name="UtilityAI_AutoTasks.Text" xml:space="preserve">
+    <value>Automatic Tasks</value>
+  </data>
+  <data name="UtilityAI_AutoTitle.Header" xml:space="preserve">
+    <value>Auto-generate conversation title</value>
+  </data>
+  <data name="UtilityAI_AutoSummary.Header" xml:space="preserve">
+    <value>Auto-summarize long conversations</value>
+  </data>
   <!-- Advanced Page -->
   <data name="Advanced_Title.Text" xml:space="preserve">
     <value>Advanced</value>

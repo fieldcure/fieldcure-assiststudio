@@ -55,6 +55,15 @@
     <value>&#xBCF5;&#xC0AC;</value>
   </data>
   <data name="InputContainer_Placeholder" xml:space="preserve">
-    <value>&#xBA54;&#xC2DC;&#xC9C0;&#xB97C; &#xC785;&#xB825;&#xD558;&#xC138;&#xC694;...</value>
+    <value>메시지를 입력하세요...</value>
+  </data>
+  <data name="InputContainer_AskProvider" xml:space="preserve">
+    <value>{0}에게 물어보기...</value>
+  </data>
+  <data name="InputContainer_Attach.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>파일 첨부</value>
+  </data>
+  <data name="InputContainer_Summarize.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>대화 요약</value>
   </data>
 </root>

@@ -48,6 +48,14 @@ public sealed partial class ChatPanel : UserControl
         DependencyProperty.Register(nameof(SelectedPreset), typeof(ProviderPreset), typeof(ChatPanel),
             new PropertyMetadata(null, OnSelectedPresetChanged));
 
+    public static readonly DependencyProperty AvailablePromptPresetsProperty =
+        DependencyProperty.Register(nameof(AvailablePromptPresets), typeof(IList<PromptPreset>), typeof(ChatPanel),
+            new PropertyMetadata(null, OnAvailablePromptPresetsChanged));
+
+    public static readonly DependencyProperty SelectedPromptPresetProperty =
+        DependencyProperty.Register(nameof(SelectedPromptPreset), typeof(PromptPreset), typeof(ChatPanel),
+            new PropertyMetadata(null, OnSelectedPromptPresetChanged));
+
     private static void OnThemePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is ChatPanel panel && panel._isInitialized)
@@ -83,6 +91,7 @@ public sealed partial class ChatPanel : UserControl
         RootGrid.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(LightBg);
         InputArea.MessageSent += OnMessageSent;
         InputArea.PresetChanged += OnInputPresetChanged;
+        InputArea.PromptPresetChanged += OnInputPromptPresetChanged;
         _renderer.ContinueRequested += OnContinueRequested;
         _renderer.MessageCopyRequested += OnMessageCopyRequested;
         _renderer.RetryRequested += OnRetryRequested;
@@ -127,6 +136,18 @@ public sealed partial class ChatPanel : UserControl
     {
         get => (ProviderPreset?)GetValue(SelectedPresetProperty);
         set => SetValue(SelectedPresetProperty, value);
+    }
+
+    public IList<PromptPreset>? AvailablePromptPresets
+    {
+        get => (IList<PromptPreset>?)GetValue(AvailablePromptPresetsProperty);
+        set => SetValue(AvailablePromptPresetsProperty, value);
+    }
+
+    public PromptPreset? SelectedPromptPreset
+    {
+        get => (PromptPreset?)GetValue(SelectedPromptPresetProperty);
+        set => SetValue(SelectedPromptPresetProperty, value);
     }
 
     public event EventHandler<ProviderPreset>? PresetChanged;
@@ -597,7 +618,50 @@ public sealed partial class ChatPanel : UserControl
         if (d is ChatPanel panel && e.NewValue is ProviderPreset preset)
         {
             panel.InputArea.SelectedPreset = preset;
+            panel.UpdatePlaceholderWithProvider(preset.Name);
         }
+    }
+
+    private void UpdatePlaceholderWithProvider(string providerName)
+    {
+        try
+        {
+            var loader = new Windows.ApplicationModel.Resources.ResourceLoader("FluentView.AI/Resources");
+            var format = loader.GetString("InputContainer_AskProvider");
+            if (!string.IsNullOrEmpty(format))
+            {
+                Placeholder = string.Format(format, providerName);
+                return;
+            }
+        }
+        catch { /* fallback */ }
+
+        Placeholder = $"Ask {providerName}...";
+    }
+
+    private static void OnAvailablePromptPresetsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && e.NewValue is IList<PromptPreset> presets)
+        {
+            panel.InputArea.AvailablePromptPresets = presets;
+        }
+    }
+
+    private static void OnSelectedPromptPresetChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && e.NewValue is PromptPreset preset)
+        {
+            panel.InputArea.SelectedPromptPreset = preset;
+            panel.InputArea.SelectPromptPresetInCombo(preset);
+            // Update the actual system prompt used in requests
+            panel.SystemPrompt = preset.Text;
+        }
+    }
+
+    private void OnInputPromptPresetChanged(object? sender, PromptPreset preset)
+    {
+        SelectedPromptPreset = preset;
+        SystemPrompt = preset.Text;
     }
 
     // Background colors matching chat.html --bg-primary (opaque, no alpha issues)

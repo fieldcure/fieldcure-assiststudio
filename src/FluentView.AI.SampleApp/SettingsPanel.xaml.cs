@@ -20,6 +20,7 @@ public sealed partial class SettingsPanel : Page
     public event EventHandler<string>? ThemeChanged;
     public event EventHandler<string>? SystemPromptChanged;
     public event EventHandler? PresetsChanged;
+    public event EventHandler? PromptPresetsChanged;
 
     public SettingsPanel()
     {
@@ -57,6 +58,7 @@ public sealed partial class SettingsPanel : Page
             "Models" => typeof(Settings.ModelsPage),
             "Personalization" => typeof(Settings.PersonalizationPage),
             "Prompt" => typeof(Settings.PromptPage),
+            "UtilityAI" => typeof(Settings.UtilityAIPage),
             "Advanced" => typeof(Settings.AdvancedPage),
             "About" => typeof(Settings.AboutPage),
             _ => typeof(Settings.ModelsPage),
@@ -83,5 +85,10 @@ public sealed partial class SettingsPanel : Page
     {
         AppSettings.SavePresets(_presets);
         PresetsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    internal void RaisePromptPresetsChanged()
+    {
+        PromptPresetsChanged?.Invoke(this, EventArgs.Empty);
     }
 }

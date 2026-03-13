@@ -5,8 +5,13 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:local="using:FluentView.AI.SampleApp.Settings"
     mc:Ignorable="d"
     NavigationCacheMode="Enabled">
+
+    <Page.Resources>
+        <local:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility" />
+    </Page.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
@@ -24,19 +29,71 @@
 
         <!-- Content -->
         <ScrollViewer Grid.Row="1" Padding="20,16">
-            <StackPanel Spacing="16">
+            <StackPanel Spacing="16" MaxWidth="600" HorizontalAlignment="Left">
 
                 <TextBlock x:Uid="Prompt_Description" Text="Configure the system prompt sent to AI models."
                            Style="{StaticResource CaptionTextBlockStyle}"
                            TextWrapping="Wrap"
                            Opacity="0.7" />
 
-                <TextBox x:Uid="Prompt_Placeholder" x:Name="SystemPromptBox"
-                         PlaceholderText="Enter system prompt..."
-                         AcceptsReturn="True"
-                         TextWrapping="Wrap"
-                         MinHeight="200"
-                         TextChanged="OnSystemPromptChanged" />
+                <!-- Preset list -->
+                <StackPanel Spacing="8">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Uid="Prompt_Presets" Text="Presets"
+                                   Style="{StaticResource BodyStrongTextBlockStyle}"
+                                   VerticalAlignment="Center" />
+                        <Button x:Name="AddPresetButton" Grid.Column="1"
+                                Click="OnAddPresetClicked"
+                                ToolTipService.ToolTip="Add preset"
+                                Padding="6">
+                            <FontIcon Glyph="&#xE710;" FontSize="14" />
+                        </Button>
+                    </Grid>
+
+                    <ListView x:Name="PresetListView"
+                              SelectionMode="Single"
+                              SelectionChanged="OnPresetSelectionChanged"
+                              MaxHeight="200">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Padding="4,2" ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                                    <Button Grid.Column="1" Padding="4"
+                                            Visibility="{Binding IsBuiltIn, Converter={StaticResource InverseBoolToVisibility}}"
+                                            Click="OnDeletePresetClicked"
+                                            ToolTipService.ToolTip="Delete"
+                                            Style="{StaticResource SubtleButtonStyle}">
+                                        <FontIcon Glyph="&#xE74D;" FontSize="12" />
+                                    </Button>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </StackPanel>
+
+                <!-- Editor -->
+                <StackPanel Spacing="8">
+                    <TextBox x:Name="PresetNameBox"
+                             Header="Name"
+                             PlaceholderText="Preset name"
+                             TextChanged="OnEditorChanged" />
+                    <TextBox x:Name="SystemPromptBox"
+                             x:Uid="Prompt_Placeholder"
+                             Header="System Prompt"
+                             PlaceholderText="Enter system prompt..."
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             MinHeight="200"
+                             TextChanged="OnEditorChanged" />
+                </StackPanel>
             </StackPanel>
         </ScrollViewer>
     </Grid>
