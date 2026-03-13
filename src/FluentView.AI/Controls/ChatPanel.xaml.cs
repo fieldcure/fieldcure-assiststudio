@@ -56,11 +56,23 @@ public sealed partial class ChatPanel : UserControl
         DependencyProperty.Register(nameof(SelectedPromptPreset), typeof(PromptPreset), typeof(ChatPanel),
             new PropertyMetadata(null, OnSelectedPromptPresetChanged));
 
+    public static readonly DependencyProperty IsDebugModeProperty =
+        DependencyProperty.Register(nameof(IsDebugMode), typeof(bool), typeof(ChatPanel),
+            new PropertyMetadata(false, OnIsDebugModeChanged));
+
     private static void OnThemePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is ChatPanel panel && panel._isInitialized)
         {
             _ = panel.ApplyThemeAsync();
+        }
+    }
+
+    private static void OnIsDebugModeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && panel._isInitialized)
+        {
+            _ = panel._renderer.SetDebugModeAsync((bool)e.NewValue);
         }
     }
 
@@ -150,6 +162,16 @@ public sealed partial class ChatPanel : UserControl
         set => SetValue(SelectedPromptPresetProperty, value);
     }
 
+    /// <summary>
+    /// Enables debug mode: adds a "Copy HTML" button to each message's action bar,
+    /// allowing inspection of the rendered HTML content inside the WebView2.
+    /// </summary>
+    public bool IsDebugMode
+    {
+        get => (bool)GetValue(IsDebugModeProperty);
+        set => SetValue(IsDebugModeProperty, value);
+    }
+
     public event EventHandler<ProviderPreset>? PresetChanged;
     public event EventHandler<ChatMessage>? MessageAdded;
 
@@ -212,6 +234,8 @@ public sealed partial class ChatPanel : UserControl
             _isInitialized = true;
             await ApplyThemeAsync();
             await ApplyLocaleStringsAsync();
+            if (IsDebugMode)
+                await _renderer.SetDebugModeAsync(true);
 
             // Render any pre-existing messages (restored conversations)
             if (_messages.Count > 0)

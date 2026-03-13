@@ -363,6 +363,9 @@ public sealed partial class MainWindow : Window
             SelectedPromptPreset = GetActivePromptPreset(),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
+#if DEBUG
+            IsDebugMode = true,
+#endif
         };
         chatPanel.PresetChanged += OnChatPanelPresetChanged;
 
@@ -469,6 +472,9 @@ public sealed partial class MainWindow : Window
             SelectedPromptPreset = GetActivePromptPreset(),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
+#if DEBUG
+            IsDebugMode = true,
+#endif
         };
         chatPanel.PresetChanged += OnChatPanelPresetChanged;
 

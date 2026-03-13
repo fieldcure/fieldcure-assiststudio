@@ -513,6 +513,8 @@
         tokens: 'tokens'
     };
 
+    var _debugMode = false;
+
     window.addEventListener('scroll', function() {
         const threshold = 50;
         const atBottom = (window.innerHeight + window.scrollY) >= (document.body.scrollHeight - threshold);
@@ -695,6 +697,19 @@
             window.chrome.webview.postMessage('retry:' + msgId);
         }));
 
+        // Debug: Copy HTML
+        var debugBtn = createActionBtn('\uE943', 'Copy HTML', function() {
+            var msgEl = document.getElementById('msg-' + msgId);
+            var bubble = msgEl ? msgEl.querySelector('.message-bubble') : null;
+            if (bubble) {
+                window.chrome.webview.postMessage('debugCopy:' + bubble.innerHTML);
+                flashCopied(this);
+            }
+        });
+        debugBtn.className += ' debug-action-btn';
+        debugBtn.style.display = _debugMode ? '' : 'none';
+        actions.appendChild(debugBtn);
+
         return actions;
     }
 
@@ -712,6 +727,19 @@
         actions.appendChild(createActionBtn('\uEB78', _L.summarize, function() {
             window.chrome.webview.postMessage('summarize:' + msgId);
         }));
+
+        // Debug: Copy HTML
+        var debugBtn = createActionBtn('\uE943', 'Copy HTML', function() {
+            var msgEl = document.getElementById('msg-' + msgId);
+            var bubble = msgEl ? msgEl.querySelector('.message-bubble') : null;
+            if (bubble) {
+                window.chrome.webview.postMessage('debugCopy:' + bubble.innerHTML);
+                flashCopied(this);
+            }
+        });
+        debugBtn.className += ' debug-action-btn';
+        debugBtn.style.display = _debugMode ? '' : 'none';
+        actions.appendChild(debugBtn);
 
         return actions;
     }
@@ -830,6 +858,13 @@
 
         setTheme: function(isDark) {
             document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        },
+
+        setDebugMode: function(enabled) {
+            _debugMode = enabled;
+            document.querySelectorAll('.debug-action-btn').forEach(function(btn) {
+                btn.style.display = enabled ? '' : 'none';
+            });
         }
     };
 })();

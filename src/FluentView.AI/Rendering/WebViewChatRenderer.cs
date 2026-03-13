@@ -168,6 +168,11 @@ internal class WebViewChatRenderer
                 var messageId = message["summarize:".Length..];
                 SummarizeRequested?.Invoke(this, messageId);
             }
+            else if (message?.StartsWith("debugCopy:") == true)
+            {
+                var html = message["debugCopy:".Length..];
+                CopyToClipboard(html);
+            }
         }
         catch
         {
@@ -308,6 +313,12 @@ internal class WebViewChatRenderer
     public Task SetThemeAsync(bool isDark)
     {
         var script = $"window.fluentChat.setTheme({(isDark ? "true" : "false")})";
+        return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
+    public Task SetDebugModeAsync(bool enabled)
+    {
+        var script = $"window.fluentChat.setDebugMode({(enabled ? "true" : "false")})";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 
