@@ -6,7 +6,7 @@ namespace FluentView.AI.Helpers;
 
 public static class ConversationManager
 {
-    public const string FileExtension = ".avc";
+    public const string FileExtension = ".astx";
 
     private static string _conversationsFolder = "";
 
@@ -86,10 +86,11 @@ public static class ConversationManager
         if (!Directory.Exists(_conversationsFolder))
             return [];
 
-        var avcFiles = Directory.GetFiles(_conversationsFolder, "*" + FileExtension);
+        var astxFiles = Directory.GetFiles(_conversationsFolder, "*" + FileExtension);
+        var avcFiles = Directory.GetFiles(_conversationsFolder, "*.avc");
         var jsonFiles = Directory.GetFiles(_conversationsFolder, "*.json");
 
-        return avcFiles.Concat(jsonFiles)
+        return astxFiles.Concat(avcFiles).Concat(jsonFiles)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Select(f => new ConversationFileInfo
             {
@@ -108,6 +109,7 @@ public static class ConversationManager
         if (!Directory.Exists(_conversationsFolder)) return;
 
         var files = Directory.GetFiles(_conversationsFolder, "*" + FileExtension)
+            .Concat(Directory.GetFiles(_conversationsFolder, "*.avc"))
             .Concat(Directory.GetFiles(_conversationsFolder, "*.json"));
 
         foreach (var file in files)
@@ -155,6 +157,15 @@ public static class ConversationManager
 
 public class ConversationData
 {
+    [JsonPropertyName("$schema")]
+    public string Schema { get; set; } = "https://assiststudio.dev/schema/conversation/v1";
+
+    [JsonPropertyName("$type")]
+    public string Type { get; set; } = "AssistStudio.Conversation";
+
+    [JsonPropertyName("version")]
+    public string Version { get; set; } = "1.0";
+
     public string TabName { get; set; } = "";
     public string? ProviderPresetName { get; set; }
     public DateTime SavedAt { get; set; }

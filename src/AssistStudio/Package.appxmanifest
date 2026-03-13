@@ -44,9 +44,9 @@
       </uap:VisualElements>
       <Extensions>
         <uap:Extension Category="windows.fileTypeAssociation">
-          <uap:FileTypeAssociation Name="avc">
+          <uap:FileTypeAssociation Name="astx">
             <uap:SupportedFileTypes>
-              <uap:FileType ContentType="application/json">.avc</uap:FileType>
+              <uap:FileType ContentType="application/json">.astx</uap:FileType>
             </uap:SupportedFileTypes>
             <uap:DisplayName>AssistStudio Conversation</uap:DisplayName>
             <uap:Logo>Assets\Square44x44Logo.png</uap:Logo>
