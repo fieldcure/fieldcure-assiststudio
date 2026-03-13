@@ -42,21 +42,30 @@
                                    FontSize="12" Opacity="0.7"
                                    VerticalAlignment="Center" />
                     </StackPanel>
-                    <Grid ColumnSpacing="8">
+                    <!-- Input state (no key) -->
+                    <Grid x:Name="ClaudeKeyInputPanel" ColumnSpacing="8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <PasswordBox x:Name="ClaudeApiKeyBox"
                                      x:Uid="Models_ApiKeyBox"
-                                     PlaceholderText="API Key"
-                                     PasswordChanged="OnClaudeKeyChanged" />
-                        <Button x:Name="ClaudeKeyButton" Grid.Column="1"
-                                Content="Update Key"
-                                Click="OnUpdateClaudeKey" />
-                        <Button x:Name="ClaudeRemoveKeyButton" Grid.Column="2"
-                                Visibility="Collapsed"
+                                     PlaceholderText="API Key" />
+                        <Button Grid.Column="1"
+                                x:Uid="Models_AddKeyButton"
+                                Content="Add"
+                                Click="OnAddClaudeKey" />
+                    </Grid>
+                    <!-- Display state (key exists) -->
+                    <Grid x:Name="ClaudeKeyDisplayPanel" Visibility="Collapsed" ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="ClaudeMaskedKeyText"
+                                   VerticalAlignment="Center" Opacity="0.7"
+                                   IsTextSelectionEnabled="True" />
+                        <Button Grid.Column="1"
                                 x:Uid="Models_RemoveKey"
                                 ToolTipService.ToolTip="Remove Key"
                                 Click="OnRemoveClaudeKey" Padding="6,4">
@@ -86,20 +95,27 @@
                                    FontSize="12" Opacity="0.7"
                                    VerticalAlignment="Center" />
                     </StackPanel>
-                    <Grid ColumnSpacing="8">
+                    <Grid x:Name="OpenAIKeyInputPanel" ColumnSpacing="8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <PasswordBox x:Name="OpenAIApiKeyBox"
-                                     PlaceholderText="API Key"
-                                     PasswordChanged="OnOpenAIKeyChanged" />
-                        <Button x:Name="OpenAIKeyButton" Grid.Column="1"
-                                Content="Add Key"
-                                Click="OnUpdateOpenAIKey" />
-                        <Button x:Name="OpenAIRemoveKeyButton" Grid.Column="2"
-                                Visibility="Collapsed"
+                                     PlaceholderText="API Key" />
+                        <Button Grid.Column="1"
+                                x:Uid="Models_AddKeyButton"
+                                Content="Add"
+                                Click="OnAddOpenAIKey" />
+                    </Grid>
+                    <Grid x:Name="OpenAIKeyDisplayPanel" Visibility="Collapsed" ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="OpenAIMaskedKeyText"
+                                   VerticalAlignment="Center" Opacity="0.7"
+                                   IsTextSelectionEnabled="True" />
+                        <Button Grid.Column="1"
                                 x:Uid="Models_RemoveKey"
                                 ToolTipService.ToolTip="Remove Key"
                                 Click="OnRemoveOpenAIKey" Padding="6,4">
@@ -128,20 +144,27 @@
                                    FontSize="12" Opacity="0.7"
                                    VerticalAlignment="Center" />
                     </StackPanel>
-                    <Grid ColumnSpacing="8">
+                    <Grid x:Name="GeminiKeyInputPanel" ColumnSpacing="8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <PasswordBox x:Name="GeminiApiKeyBox"
-                                     PlaceholderText="API Key"
-                                     PasswordChanged="OnGeminiKeyChanged" />
-                        <Button x:Name="GeminiKeyButton" Grid.Column="1"
-                                Content="Add Key"
-                                Click="OnUpdateGeminiKey" />
-                        <Button x:Name="GeminiRemoveKeyButton" Grid.Column="2"
-                                Visibility="Collapsed"
+                                     PlaceholderText="API Key" />
+                        <Button Grid.Column="1"
+                                x:Uid="Models_AddKeyButton"
+                                Content="Add"
+                                Click="OnAddGeminiKey" />
+                    </Grid>
+                    <Grid x:Name="GeminiKeyDisplayPanel" Visibility="Collapsed" ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="GeminiMaskedKeyText"
+                                   VerticalAlignment="Center" Opacity="0.7"
+                                   IsTextSelectionEnabled="True" />
+                        <Button Grid.Column="1"
                                 x:Uid="Models_RemoveKey"
                                 ToolTipService.ToolTip="Remove Key"
                                 Click="OnRemoveGeminiKey" Padding="6,4">
@@ -170,20 +193,27 @@
                                    FontSize="12" Opacity="0.7"
                                    VerticalAlignment="Center" />
                     </StackPanel>
-                    <Grid ColumnSpacing="8">
+                    <Grid x:Name="GroqKeyInputPanel" ColumnSpacing="8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <PasswordBox x:Name="GroqApiKeyBox"
-                                     PlaceholderText="API Key"
-                                     PasswordChanged="OnGroqKeyChanged" />
-                        <Button x:Name="GroqKeyButton" Grid.Column="1"
-                                Content="Add Key"
-                                Click="OnUpdateGroqKey" />
-                        <Button x:Name="GroqRemoveKeyButton" Grid.Column="2"
-                                Visibility="Collapsed"
+                                     PlaceholderText="API Key" />
+                        <Button Grid.Column="1"
+                                x:Uid="Models_AddKeyButton"
+                                Content="Add"
+                                Click="OnAddGroqKey" />
+                    </Grid>
+                    <Grid x:Name="GroqKeyDisplayPanel" Visibility="Collapsed" ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="GroqMaskedKeyText"
+                                   VerticalAlignment="Center" Opacity="0.7"
+                                   IsTextSelectionEnabled="True" />
+                        <Button Grid.Column="1"
                                 x:Uid="Models_RemoveKey"
                                 ToolTipService.ToolTip="Remove Key"
                                 Click="OnRemoveGroqKey" Padding="6,4">

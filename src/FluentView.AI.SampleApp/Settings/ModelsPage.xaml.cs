@@ -71,30 +71,29 @@ public sealed partial class ModelsPage : Page
         var geminiKey = PasswordVaultHelper.LoadApiKey("Gemini");
         var groqKey = PasswordVaultHelper.LoadApiKey("Groq");
 
-        SetKeyState(claudeKey, ClaudeApiKeyBox, ClaudeStatusText, ClaudeKeyButton, ClaudeRemoveKeyButton, ClaudeModelCombo);
-        SetKeyState(openAIKey, OpenAIApiKeyBox, OpenAIStatusText, OpenAIKeyButton, OpenAIRemoveKeyButton, OpenAIModelCombo);
-        SetKeyState(geminiKey, GeminiApiKeyBox, GeminiStatusText, GeminiKeyButton, GeminiRemoveKeyButton, GeminiModelCombo);
-        SetKeyState(groqKey, GroqApiKeyBox, GroqStatusText, GroqKeyButton, GroqRemoveKeyButton, GroqModelCombo);
+        SetKeyState(claudeKey, ClaudeKeyInputPanel, ClaudeKeyDisplayPanel, ClaudeMaskedKeyText, ClaudeStatusText, ClaudeModelCombo);
+        SetKeyState(openAIKey, OpenAIKeyInputPanel, OpenAIKeyDisplayPanel, OpenAIMaskedKeyText, OpenAIStatusText, OpenAIModelCombo);
+        SetKeyState(geminiKey, GeminiKeyInputPanel, GeminiKeyDisplayPanel, GeminiMaskedKeyText, GeminiStatusText, GeminiModelCombo);
+        SetKeyState(groqKey, GroqKeyInputPanel, GroqKeyDisplayPanel, GroqMaskedKeyText, GroqStatusText, GroqModelCombo);
     }
 
-    private void SetKeyState(string key, PasswordBox keyBox, TextBlock statusText, Button keyButton, Button removeButton, ComboBox modelCombo)
+    private void SetKeyState(string key, Grid inputPanel, Grid displayPanel, TextBlock maskedText, TextBlock statusText, ComboBox modelCombo)
     {
         if (!string.IsNullOrEmpty(key))
         {
-            keyBox.Password = MaskKey(key);
+            inputPanel.Visibility = Visibility.Collapsed;
+            displayPanel.Visibility = Visibility.Visible;
+            maskedText.Text = MaskKey(key);
             statusText.Text = "";
-            keyButton.Content = L("Models_UpdateKey");
-            removeButton.Visibility = Visibility.Visible;
             modelCombo.IsEnabled = true;
         }
         else
         {
-            keyBox.Password = "";
+            inputPanel.Visibility = Visibility.Visible;
+            displayPanel.Visibility = Visibility.Collapsed;
             statusText.Text = L("Models_NoKey");
             statusText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
                 Microsoft.UI.Colors.OrangeRed);
-            keyButton.Content = L("Models_AddKey");
-            removeButton.Visibility = Visibility.Collapsed;
             modelCombo.IsEnabled = false;
         }
     }
@@ -105,99 +104,63 @@ public sealed partial class ModelsPage : Page
         return key[..3] + "•••" + key[^3..];
     }
 
-    // Track whether user has edited the password field
-    private bool _claudeKeyDirty, _openAIKeyDirty, _geminiKeyDirty, _groqKeyDirty;
-
-    private void OnClaudeKeyChanged(object s, RoutedEventArgs e) { if (!_isLoading) _claudeKeyDirty = true; }
-    private void OnOpenAIKeyChanged(object s, RoutedEventArgs e) { if (!_isLoading) _openAIKeyDirty = true; }
-    private void OnGeminiKeyChanged(object s, RoutedEventArgs e) { if (!_isLoading) _geminiKeyDirty = true; }
-    private void OnGroqKeyChanged(object s, RoutedEventArgs e) { if (!_isLoading) _groqKeyDirty = true; }
-
-    private void OnUpdateClaudeKey(object sender, RoutedEventArgs e)
+    private void AddProviderKey(string provider, PasswordBox keyBox, Grid inputPanel, Grid displayPanel, TextBlock maskedText, TextBlock statusText, ComboBox modelCombo)
     {
-        if (_claudeKeyDirty)
-        {
-            SaveProviderKey("Claude", ClaudeApiKeyBox.Password, ClaudeStatusText, ClaudeKeyButton, ClaudeRemoveKeyButton, ClaudeModelCombo);
-            _claudeKeyDirty = false;
-        }
-    }
+        var key = keyBox.Password?.Trim();
+        if (string.IsNullOrEmpty(key)) return;
 
-    private void OnUpdateOpenAIKey(object sender, RoutedEventArgs e)
-    {
-        if (_openAIKeyDirty)
-        {
-            SaveProviderKey("OpenAI", OpenAIApiKeyBox.Password, OpenAIStatusText, OpenAIKeyButton, OpenAIRemoveKeyButton, OpenAIModelCombo);
-            _openAIKeyDirty = false;
-        }
-    }
-
-    private void OnUpdateGeminiKey(object sender, RoutedEventArgs e)
-    {
-        if (_geminiKeyDirty)
-        {
-            SaveProviderKey("Gemini", GeminiApiKeyBox.Password, GeminiStatusText, GeminiKeyButton, GeminiRemoveKeyButton, GeminiModelCombo);
-            _geminiKeyDirty = false;
-        }
-    }
-
-    private void OnUpdateGroqKey(object sender, RoutedEventArgs e)
-    {
-        if (_groqKeyDirty)
-        {
-            SaveProviderKey("Groq", GroqApiKeyBox.Password, GroqStatusText, GroqKeyButton, GroqRemoveKeyButton, GroqModelCombo);
-            _groqKeyDirty = false;
-        }
-    }
-
-    private void SaveProviderKey(string provider, string key, TextBlock statusText, Button keyButton, Button removeButton, ComboBox modelCombo)
-    {
         PasswordVaultHelper.SaveApiKey(provider, key);
+        keyBox.Password = "";
 
-        if (!string.IsNullOrEmpty(key))
-        {
-            statusText.Text = "";
-            keyButton.Content = L("Models_UpdateKey");
-            removeButton.Visibility = Visibility.Visible;
-            modelCombo.IsEnabled = true;
+        inputPanel.Visibility = Visibility.Collapsed;
+        displayPanel.Visibility = Visibility.Visible;
+        maskedText.Text = MaskKey(key);
+        statusText.Text = "";
+        modelCombo.IsEnabled = true;
 
-            // Fetch model list immediately after saving a valid key
-            _ = FetchAndCacheModelsAsync(provider, key, modelCombo);
-        }
-        else
-        {
-            statusText.Text = L("Models_NoKey");
-            statusText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
-                Microsoft.UI.Colors.OrangeRed);
-            keyButton.Content = L("Models_AddKey");
-            removeButton.Visibility = Visibility.Collapsed;
-            modelCombo.IsEnabled = false;
-        }
-
+        _ = FetchAndCacheModelsAsync(provider, key, modelCombo);
         SyncPresetsFromUI();
         RefreshDefaultProvider();
     }
 
-    private void RemoveProviderKey(string provider, PasswordBox keyBox, TextBlock statusText, Button keyButton, Button removeButton, ComboBox modelCombo)
+    private void RemoveProviderKey(string provider, Grid inputPanel, Grid displayPanel, TextBlock statusText, ComboBox modelCombo)
     {
         PasswordVaultHelper.DeleteApiKey(provider);
-        _isLoading = true;
-        SetKeyState("", keyBox, statusText, keyButton, removeButton, modelCombo);
-        _isLoading = false;
+
+        inputPanel.Visibility = Visibility.Visible;
+        displayPanel.Visibility = Visibility.Collapsed;
+        statusText.Text = L("Models_NoKey");
+        statusText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
+            Microsoft.UI.Colors.OrangeRed);
+        modelCombo.IsEnabled = false;
+
         SyncPresetsFromUI();
         RefreshDefaultProvider();
     }
 
+    private void OnAddClaudeKey(object sender, RoutedEventArgs e) =>
+        AddProviderKey("Claude", ClaudeApiKeyBox, ClaudeKeyInputPanel, ClaudeKeyDisplayPanel, ClaudeMaskedKeyText, ClaudeStatusText, ClaudeModelCombo);
+
+    private void OnAddOpenAIKey(object sender, RoutedEventArgs e) =>
+        AddProviderKey("OpenAI", OpenAIApiKeyBox, OpenAIKeyInputPanel, OpenAIKeyDisplayPanel, OpenAIMaskedKeyText, OpenAIStatusText, OpenAIModelCombo);
+
+    private void OnAddGeminiKey(object sender, RoutedEventArgs e) =>
+        AddProviderKey("Gemini", GeminiApiKeyBox, GeminiKeyInputPanel, GeminiKeyDisplayPanel, GeminiMaskedKeyText, GeminiStatusText, GeminiModelCombo);
+
+    private void OnAddGroqKey(object sender, RoutedEventArgs e) =>
+        AddProviderKey("Groq", GroqApiKeyBox, GroqKeyInputPanel, GroqKeyDisplayPanel, GroqMaskedKeyText, GroqStatusText, GroqModelCombo);
+
     private void OnRemoveClaudeKey(object sender, RoutedEventArgs e) =>
-        RemoveProviderKey("Claude", ClaudeApiKeyBox, ClaudeStatusText, ClaudeKeyButton, ClaudeRemoveKeyButton, ClaudeModelCombo);
+        RemoveProviderKey("Claude", ClaudeKeyInputPanel, ClaudeKeyDisplayPanel, ClaudeStatusText, ClaudeModelCombo);
 
     private void OnRemoveOpenAIKey(object sender, RoutedEventArgs e) =>
-        RemoveProviderKey("OpenAI", OpenAIApiKeyBox, OpenAIStatusText, OpenAIKeyButton, OpenAIRemoveKeyButton, OpenAIModelCombo);
+        RemoveProviderKey("OpenAI", OpenAIKeyInputPanel, OpenAIKeyDisplayPanel, OpenAIStatusText, OpenAIModelCombo);
 
     private void OnRemoveGeminiKey(object sender, RoutedEventArgs e) =>
-        RemoveProviderKey("Gemini", GeminiApiKeyBox, GeminiStatusText, GeminiKeyButton, GeminiRemoveKeyButton, GeminiModelCombo);
+        RemoveProviderKey("Gemini", GeminiKeyInputPanel, GeminiKeyDisplayPanel, GeminiStatusText, GeminiModelCombo);
 
     private void OnRemoveGroqKey(object sender, RoutedEventArgs e) =>
-        RemoveProviderKey("Groq", GroqApiKeyBox, GroqStatusText, GroqKeyButton, GroqRemoveKeyButton, GroqModelCombo);
+        RemoveProviderKey("Groq", GroqKeyInputPanel, GroqKeyDisplayPanel, GroqStatusText, GroqModelCombo);
 
     // ===== Model ComboBoxes =====
 
