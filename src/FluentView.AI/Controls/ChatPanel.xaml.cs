@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.ObjectModel;
 using FluentView.AI.Models;
 using FluentView.AI.Providers;
@@ -39,6 +40,14 @@ public sealed partial class ChatPanel : UserControl
         DependencyProperty.Register(nameof(Theme), typeof(ChatTheme), typeof(ChatPanel),
             new PropertyMetadata(ChatTheme.System, OnThemePropertyChanged));
 
+    public static readonly DependencyProperty AvailablePresetsProperty =
+        DependencyProperty.Register(nameof(AvailablePresets), typeof(IList), typeof(ChatPanel),
+            new PropertyMetadata(null, OnAvailablePresetsChanged));
+
+    public static readonly DependencyProperty SelectedPresetProperty =
+        DependencyProperty.Register(nameof(SelectedPreset), typeof(ProviderPreset), typeof(ChatPanel),
+            new PropertyMetadata(null, OnSelectedPresetChanged));
+
     private static void OnThemePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is ChatPanel panel && panel._isInitialized)
@@ -71,8 +80,12 @@ public sealed partial class ChatPanel : UserControl
     {
         InitializeComponent();
         InputArea.MessageSent += OnMessageSent;
+        InputArea.PresetChanged += OnInputPresetChanged;
         _renderer.ContinueRequested += OnContinueRequested;
         _renderer.MessageCopyRequested += OnMessageCopyRequested;
+        _renderer.RetryRequested += OnRetryRequested;
+        _renderer.EditRequested += OnEditRequested;
+        _renderer.SummarizeRequested += OnSummarizeRequested;
     }
 
     public IAiProvider? Provider
@@ -102,6 +115,19 @@ public sealed partial class ChatPanel : UserControl
         set => SetValue(ThemeProperty, value);
     }
 
+    public IList? AvailablePresets
+    {
+        get => (IList?)GetValue(AvailablePresetsProperty);
+        set => SetValue(AvailablePresetsProperty, value);
+    }
+
+    public ProviderPreset? SelectedPreset
+    {
+        get => (ProviderPreset?)GetValue(SelectedPresetProperty);
+        set => SetValue(SelectedPresetProperty, value);
+    }
+
+    public event EventHandler<ProviderPreset>? PresetChanged;
     public event EventHandler<ChatMessage>? MessageAdded;
 
     public IReadOnlyList<ChatMessage> GetMessages() => _messages;
@@ -138,9 +164,18 @@ public sealed partial class ChatPanel : UserControl
         if (_isInitialized)
         {
             await _renderer.SetThemeAsync(IsDarkTheme());
-            // Re-initialize to clear the WebView content
             await _renderer.InitializeAsync(ChatWebView);
             await ApplyThemeAsync();
+        }
+
+        // Switch back to empty state
+        if (ChatLayout.Visibility == Microsoft.UI.Xaml.Visibility.Visible)
+        {
+            ChatLayout.Children.Remove(InputArea);
+            InputArea.HorizontalAlignment = Microsoft.UI.Xaml.HorizontalAlignment.Stretch;
+            EmptyStatePanel.Children.Add(InputArea);
+            ChatLayout.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+            EmptyStatePanel.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
         }
     }
 
@@ -156,6 +191,10 @@ public sealed partial class ChatPanel : UserControl
             await ApplyLocaleStringsAsync();
 
             // Render any pre-existing messages (restored conversations)
+            if (_messages.Count > 0)
+            {
+                SwitchToChatLayout();
+            }
             foreach (var msg in _messages)
             {
                 if (msg.Role == ChatRole.User)
@@ -180,10 +219,26 @@ public sealed partial class ChatPanel : UserControl
         }
     }
 
+    private void SwitchToChatLayout()
+    {
+        if (ChatLayout.Visibility == Microsoft.UI.Xaml.Visibility.Visible) return;
+
+        EmptyStatePanel.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+        ChatLayout.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+
+        // Move InputArea from EmptyStatePanel into ChatLayout as Row 1
+        EmptyStatePanel.Children.Remove(InputArea);
+        InputArea.HorizontalAlignment = Microsoft.UI.Xaml.HorizontalAlignment.Stretch;
+        Grid.SetRow(InputArea, 1);
+        ChatLayout.Children.Add(InputArea);
+    }
+
     private async void OnMessageSent(object? sender, MessageSentEventArgs e)
     {
         if (!_isInitialized) return;
         if (string.IsNullOrWhiteSpace(e.Text) && e.Attachments.Count == 0) return;
+
+        SwitchToChatLayout();
 
         // Add user message with attachments
         var userMessage = new ChatMessage(ChatRole.User, e.Text) { Attachments = e.Attachments };
@@ -225,7 +280,7 @@ public sealed partial class ChatPanel : UserControl
                 await _renderer.AppendTokenAsync(assistantMessage.Id, token);
             }
 
-            await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content, Provider.IsTruncated);
+            await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content, Provider.IsTruncated, Provider.LastUsage?.TotalTokens ?? 0);
 
             // Auto-summarize if enabled and token threshold exceeded
             if (AutoSummarize && MaxInputTokens > 0 && Provider.LastUsage is { } usage &&
@@ -304,7 +359,7 @@ public sealed partial class ChatPanel : UserControl
             // Remove the continue user message from history — replace with combined assistant content
             _messages.Remove(continueMessage);
 
-            await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content, Provider.IsTruncated);
+            await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content, Provider.IsTruncated, Provider.LastUsage?.TotalTokens ?? 0);
         }
         catch (OperationCanceledException)
         {
@@ -362,6 +417,184 @@ public sealed partial class ChatPanel : UserControl
         catch
         {
             // Summarization failed — keep messages as-is
+        }
+    }
+
+    private async void OnRetryRequested(object? sender, string messageId)
+    {
+        if (!_isInitialized || Provider is null) return;
+
+        var userMessage = _messages.FirstOrDefault(m => m.Role == ChatRole.User && m.Id == messageId);
+        if (userMessage is null) return;
+
+        // Find the index of this user message and remove everything after it
+        var idx = _messages.IndexOf(userMessage);
+        if (idx < 0) return;
+        while (_messages.Count > idx + 1)
+        {
+            _messages.RemoveAt(_messages.Count - 1);
+        }
+        await _renderer.RemoveMessagesAfterAsync(messageId);
+
+        // Re-send with the same text
+        await StreamAssistantResponseAsync(userMessage);
+    }
+
+    private async void OnEditRequested(object? sender, (string MessageId, string NewText) e)
+    {
+        if (!_isInitialized || Provider is null) return;
+
+        var userMessage = _messages.FirstOrDefault(m => m.Role == ChatRole.User && m.Id == e.MessageId);
+        if (userMessage is null) return;
+
+        // Update message content
+        userMessage.Content = e.NewText;
+
+        // Remove everything after this user message
+        var idx = _messages.IndexOf(userMessage);
+        if (idx < 0) return;
+        while (_messages.Count > idx + 1)
+        {
+            _messages.RemoveAt(_messages.Count - 1);
+        }
+        await _renderer.RemoveMessagesAfterAsync(e.MessageId);
+
+        // Update the user bubble text in the UI
+        var escaped = System.Text.Json.JsonSerializer.Serialize(e.NewText);
+        await ChatWebView.ExecuteScriptAsync(
+            $"document.querySelector('#msg-{e.MessageId} .message-bubble').textContent = {escaped}");
+
+        // Re-send
+        await StreamAssistantResponseAsync(userMessage);
+    }
+
+    private async void OnSummarizeRequested(object? sender, string messageId)
+    {
+        if (!_isInitialized || Provider is null) return;
+
+        var message = _messages.FirstOrDefault(m => m.Id == messageId);
+        if (message is null || string.IsNullOrEmpty(message.Content)) return;
+
+        // Create a summarization request for this single message
+        var summaryRequest = new AiRequest
+        {
+            Messages =
+            [
+                new ChatMessage(ChatRole.User,
+                    "Summarize the following text concisely:\n\n" + message.Content)
+            ],
+            SystemPrompt = "You are a helpful assistant. Provide a concise summary."
+        };
+
+        var summaryMessage = new ChatMessage(ChatRole.Assistant)
+        {
+            IsStreaming = true,
+            ProviderName = Provider.ProviderName,
+            ProviderModelId = Provider.ModelId
+        };
+        _messages.Add(summaryMessage);
+        await _renderer.BeginAssistantMessageAsync(summaryMessage.Id, Provider.ProviderName, Provider.ModelId);
+
+        InputArea.IsInputEnabled = false;
+        _streamingCts?.Cancel();
+        _streamingCts = new CancellationTokenSource();
+        var ct = _streamingCts.Token;
+
+        try
+        {
+            await foreach (var token in Provider.StreamAsync(summaryRequest, ct))
+            {
+                summaryMessage.Content += token;
+                await _renderer.AppendTokenAsync(summaryMessage.Id, token);
+            }
+            await _renderer.FinalizeMessageAsync(summaryMessage.Id, summaryMessage.Content, Provider.IsTruncated);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            summaryMessage.Content += $"\n\n[Error: {ex.Message}]";
+            await _renderer.FinalizeMessageAsync(summaryMessage.Id, summaryMessage.Content);
+        }
+        finally
+        {
+            summaryMessage.IsStreaming = false;
+            InputArea.IsInputEnabled = true;
+        }
+    }
+
+    private async Task StreamAssistantResponseAsync(ChatMessage userMessage)
+    {
+        if (Provider is null) return;
+
+        var assistantMessage = new ChatMessage(ChatRole.Assistant)
+        {
+            IsStreaming = true,
+            ProviderName = Provider.ProviderName,
+            ProviderModelId = Provider.ModelId
+        };
+        _messages.Add(assistantMessage);
+        await _renderer.BeginAssistantMessageAsync(assistantMessage.Id, Provider.ProviderName, Provider.ModelId);
+        MessageAdded?.Invoke(this, assistantMessage);
+
+        InputArea.IsInputEnabled = false;
+        _streamingCts?.Cancel();
+        _streamingCts = new CancellationTokenSource();
+        var ct = _streamingCts.Token;
+
+        try
+        {
+            var request = new AiRequest
+            {
+                Messages = _messages.ToList(),
+                SystemPrompt = SystemPrompt
+            };
+
+            await foreach (var token in Provider.StreamAsync(request, ct))
+            {
+                assistantMessage.Content += token;
+                await _renderer.AppendTokenAsync(assistantMessage.Id, token);
+            }
+
+            await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content, Provider.IsTruncated, Provider.LastUsage?.TotalTokens ?? 0);
+
+            if (AutoSummarize && MaxInputTokens > 0 && Provider.LastUsage is { } usage &&
+                usage.InputTokens > MaxInputTokens)
+            {
+                await SummarizeHistoryAsync(ct);
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            assistantMessage.Content += $"\n\n[Error: {ex.Message}]";
+            await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content);
+        }
+        finally
+        {
+            assistantMessage.IsStreaming = false;
+            InputArea.IsInputEnabled = true;
+        }
+    }
+
+    private void OnInputPresetChanged(object? sender, ProviderPreset preset)
+    {
+        SelectedPreset = preset;
+        PresetChanged?.Invoke(this, preset);
+    }
+
+    private static void OnAvailablePresetsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel)
+        {
+            panel.InputArea.AvailablePresets = e.NewValue as IList;
+        }
+    }
+
+    private static void OnSelectedPresetChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && e.NewValue is ProviderPreset preset)
+        {
+            panel.InputArea.SelectedPreset = preset;
         }
     }
 

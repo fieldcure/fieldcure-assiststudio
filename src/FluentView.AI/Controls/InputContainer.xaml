@@ -11,46 +11,83 @@
     DragOver="OnDragOver"
     Drop="OnDrop">
 
-    <Grid Padding="12" RowSpacing="4">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+    <UserControl.Resources>
+        <ThemeShadow x:Name="InputShadow" />
+    </UserControl.Resources>
 
-        <local:AttachmentPreviewBar x:Name="PreviewBar" Grid.Row="0" />
+    <Border x:Name="ContainerBorder"
+            MaxWidth="800"
+            HorizontalAlignment="Stretch"
+            Margin="12,0,12,12"
+            Padding="12"
+            CornerRadius="8"
+            BorderThickness="1"
+            BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            Shadow="{StaticResource InputShadow}"
+            Translation="0,0,16">
 
-        <Grid Grid.Row="1" ColumnSpacing="8">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
+        <Grid RowSpacing="4">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
-            <Button x:Name="AttachButton"
-                    Grid.Column="0"
-                    VerticalAlignment="Bottom"
-                    Style="{StaticResource SubtleButtonStyle}"
-                    ToolTipService.ToolTip="Attach file"
-                    Click="AttachButton_Click">
-                <FontIcon Glyph="&#xE723;" FontSize="16" />
-            </Button>
+            <!-- Row 0: Attachment previews -->
+            <local:AttachmentPreviewBar x:Name="PreviewBar" Grid.Row="0" />
 
+            <!-- Row 1: TextBox (borderless, auto-resize) -->
             <TextBox x:Name="MessageTextBox"
-                     Grid.Column="1"
+                     Grid.Row="1"
                      AcceptsReturn="True"
                      TextWrapping="Wrap"
                      MaxHeight="120"
+                     MinHeight="32"
+                     BorderThickness="0"
+                     Background="Transparent"
                      PlaceholderText="{x:Bind Placeholder, Mode=OneWay}"
-                     KeyDown="MessageTextBox_KeyDown" />
+                     PreviewKeyDown="MessageTextBox_PreviewKeyDown"
+                     Paste="MessageTextBox_Paste" />
 
-            <Button x:Name="SendButton"
-                    Grid.Column="2"
-                    VerticalAlignment="Bottom"
-                    Style="{StaticResource AccentButtonStyle}"
-                    Click="SendButton_Click"
-                    ToolTipService.ToolTip="Send (Enter)">
-                <FontIcon Glyph="&#xE724;" FontSize="16" />
-            </Button>
+            <!-- Row 2: Toolbar -->
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Left: Action buttons -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="2">
+                    <Button x:Name="AttachButton"
+                            Style="{StaticResource SubtleButtonStyle}"
+                            ToolTipService.ToolTip="Attach file"
+                            Click="AttachButton_Click"
+                            Padding="6">
+                        <FontIcon Glyph="&#xE710;" FontSize="14" />
+                    </Button>
+                    <Button x:Name="SummarizeButton"
+                            Style="{StaticResource SubtleButtonStyle}"
+                            ToolTipService.ToolTip="Request summary"
+                            Click="SummarizeButton_Click"
+                            Padding="6">
+                        <FontIcon Glyph="&#xE8AB;" FontSize="14" />
+                    </Button>
+                </StackPanel>
+
+                <!-- Right: Provider selector -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4"
+                            VerticalAlignment="Center">
+                    <ComboBox x:Name="PresetComboBox"
+                              MinWidth="120"
+                              SelectionChanged="PresetComboBox_SelectionChanged"
+                              VerticalAlignment="Center"
+                              BorderThickness="0"
+                              Background="Transparent"
+                              Padding="8,4" />
+                </StackPanel>
+            </Grid>
         </Grid>
-    </Grid>
+    </Border>
 </UserControl>

@@ -17,6 +17,9 @@ internal class WebViewChatRenderer
     public event EventHandler<string>? CopyRequested;
     public event EventHandler<string>? ContinueRequested;
     public event EventHandler<string>? MessageCopyRequested;
+    public event EventHandler<string>? RetryRequested;
+    public event EventHandler<(string MessageId, string NewText)>? EditRequested;
+    public event EventHandler<string>? SummarizeRequested;
 
     public async Task InitializeAsync(WebView2 webView)
     {
@@ -144,6 +147,27 @@ internal class WebViewChatRenderer
                 var messageId = message["continue:".Length..];
                 ContinueRequested?.Invoke(this, messageId);
             }
+            else if (message?.StartsWith("retry:") == true)
+            {
+                var messageId = message["retry:".Length..];
+                RetryRequested?.Invoke(this, messageId);
+            }
+            else if (message?.StartsWith("edit:") == true)
+            {
+                var payload = message["edit:".Length..];
+                var colonIdx = payload.IndexOf(':');
+                if (colonIdx > 0)
+                {
+                    var messageId = payload[..colonIdx];
+                    var newText = payload[(colonIdx + 1)..];
+                    EditRequested?.Invoke(this, (messageId, newText));
+                }
+            }
+            else if (message?.StartsWith("summarize:") == true)
+            {
+                var messageId = message["summarize:".Length..];
+                SummarizeRequested?.Invoke(this, messageId);
+            }
         }
         catch
         {
@@ -257,15 +281,21 @@ internal class WebViewChatRenderer
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 
-    public Task FinalizeMessageAsync(string id, string fullMarkdown, bool truncated = false)
+    public Task FinalizeMessageAsync(string id, string fullMarkdown, bool truncated = false, int tokenCount = 0)
     {
-        var script = $"window.fluentChat.finalizeMessage({Js(id)}, {Js(fullMarkdown)}, {(truncated ? "true" : "false")})";
+        var script = $"window.fluentChat.finalizeMessage({Js(id)}, {Js(fullMarkdown)}, {(truncated ? "true" : "false")}, {tokenCount})";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 
     public Task ScrollToBottomAsync()
     {
         return _webView.ExecuteScriptAsync("window.fluentChat.scrollToBottom()").AsTask();
+    }
+
+    public Task RemoveMessagesAfterAsync(string messageId)
+    {
+        var script = $"window.fluentChat.removeMessagesAfter({Js(messageId)})";
+        return _webView.ExecuteScriptAsync(script).AsTask();
     }
 
     public Task SetLocaleStringsAsync(IDictionary<string, string> strings)

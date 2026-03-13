@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text;
 using DocumentFormat.OpenXml.Packaging;
@@ -9,6 +10,7 @@ using Microsoft.UI.Xaml.Input;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
 using Windows.Storage.Pickers;
+using Windows.Storage.Streams;
 using Windows.System;
 
 namespace FluentView.AI.Controls;
@@ -25,11 +27,21 @@ public sealed partial class InputContainer : UserControl
 
     public static readonly DependencyProperty PlaceholderProperty =
         DependencyProperty.Register(nameof(Placeholder), typeof(string), typeof(InputContainer),
-            new PropertyMetadata("Type a message..."));
+            new PropertyMetadata("Reply..."));
 
     public static readonly DependencyProperty IsInputEnabledProperty =
         DependencyProperty.Register(nameof(IsInputEnabled), typeof(bool), typeof(InputContainer),
             new PropertyMetadata(true, OnIsInputEnabledChanged));
+
+    public static readonly DependencyProperty AvailablePresetsProperty =
+        DependencyProperty.Register(nameof(AvailablePresets), typeof(IList), typeof(InputContainer),
+            new PropertyMetadata(null, OnAvailablePresetsChanged));
+
+    public static readonly DependencyProperty SelectedPresetProperty =
+        DependencyProperty.Register(nameof(SelectedPreset), typeof(ProviderPreset), typeof(InputContainer),
+            new PropertyMetadata(null, OnSelectedPresetChanged));
+
+    private bool _suppressPresetChanged;
 
     public InputContainer()
     {
@@ -48,20 +60,34 @@ public sealed partial class InputContainer : UserControl
         set => SetValue(IsInputEnabledProperty, value);
     }
 
-    public event EventHandler<MessageSentEventArgs>? MessageSent;
+    public IList? AvailablePresets
+    {
+        get => (IList?)GetValue(AvailablePresetsProperty);
+        set => SetValue(AvailablePresetsProperty, value);
+    }
 
-    private void MessageTextBox_KeyDown(object sender, KeyRoutedEventArgs e)
+    public ProviderPreset? SelectedPreset
+    {
+        get => (ProviderPreset?)GetValue(SelectedPresetProperty);
+        set => SetValue(SelectedPresetProperty, value);
+    }
+
+    public event EventHandler<MessageSentEventArgs>? MessageSent;
+    public event EventHandler<ProviderPreset>? PresetChanged;
+    public event EventHandler? SummarizeRequested;
+
+    public void FocusInput()
+    {
+        MessageTextBox.Focus(FocusState.Programmatic);
+    }
+
+    private void MessageTextBox_PreviewKeyDown(object sender, KeyRoutedEventArgs e)
     {
         if (e.Key == VirtualKey.Enter && !IsShiftPressed())
         {
             e.Handled = true;
             TrySend();
         }
-    }
-
-    private void SendButton_Click(object sender, RoutedEventArgs e)
-    {
-        TrySend();
     }
 
     private void TrySend()
@@ -84,7 +110,6 @@ public sealed partial class InputContainer : UserControl
         foreach (var ext in TextExtensions) picker.FileTypeFilter.Add(ext);
         foreach (var ext in DocumentExtensions) picker.FileTypeFilter.Add(ext);
 
-        // WinUI 3: need to initialize picker with window handle
         var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(GetWindow());
         WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
 
@@ -99,6 +124,69 @@ public sealed partial class InputContainer : UserControl
                 PreviewBar.AddAttachment(attachment);
             }
         }
+    }
+
+    private void SummarizeButton_Click(object sender, RoutedEventArgs e)
+    {
+        SummarizeRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void PresetComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressPresetChanged) return;
+        if (PresetComboBox.SelectedItem is ComboBoxItem item && item.Tag is ProviderPreset preset)
+        {
+            SelectedPreset = preset;
+            PresetChanged?.Invoke(this, preset);
+        }
+    }
+
+    private async void MessageTextBox_Paste(object sender, TextControlPasteEventArgs e)
+    {
+        var content = Clipboard.GetContent();
+
+        // Handle image from clipboard
+        if (content.Contains(StandardDataFormats.Bitmap))
+        {
+            e.Handled = true;
+            var streamRef = await content.GetBitmapAsync();
+            using var stream = await streamRef.OpenReadAsync();
+            var bytes = new byte[stream.Size];
+            using var reader = new DataReader(stream);
+            await reader.LoadAsync((uint)stream.Size);
+            reader.ReadBytes(bytes);
+
+            var attachment = new ChatAttachment
+            {
+                FileName = "clipboard-image.png",
+                Type = AttachmentType.Image,
+                Data = bytes,
+                MimeType = "image/png"
+            };
+            PreviewBar.AddAttachment(attachment);
+            return;
+        }
+
+        // Handle files from clipboard
+        if (content.Contains(StandardDataFormats.StorageItems))
+        {
+            e.Handled = true;
+            var items = await content.GetStorageItemsAsync();
+            foreach (var item in items)
+            {
+                if (item is StorageFile file)
+                {
+                    var attachment = await CreateAttachmentAsync(file);
+                    if (attachment is not null)
+                    {
+                        PreviewBar.AddAttachment(attachment);
+                    }
+                }
+            }
+            return;
+        }
+
+        // Text paste: let default behavior handle it
     }
 
     private void OnDragOver(object sender, DragEventArgs e)
@@ -141,7 +229,6 @@ public sealed partial class InputContainer : UserControl
 
         if (isDocument)
         {
-            // Extract text from PDF/DOCX and treat as TextFile
             var extractedText = ext switch
             {
                 ".pdf" => ExtractTextFromPdf(data),
@@ -206,7 +293,6 @@ public sealed partial class InputContainer : UserControl
 
     private Window GetWindow()
     {
-        // Walk up the XamlRoot to find the Window
         if (XamlRoot?.Content is FrameworkElement fe)
         {
             var window = GetWindowForElement(fe);
@@ -240,9 +326,60 @@ public sealed partial class InputContainer : UserControl
         {
             var enabled = (bool)e.NewValue;
             self.MessageTextBox.IsEnabled = enabled;
-            self.SendButton.IsEnabled = enabled;
             self.AttachButton.IsEnabled = enabled;
+            self.SummarizeButton.IsEnabled = enabled;
         }
+    }
+
+    private static void OnAvailablePresetsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is InputContainer self && e.NewValue is IList presets)
+        {
+            self.PopulatePresetCombo(presets);
+        }
+    }
+
+    private static void OnSelectedPresetChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is InputContainer self && e.NewValue is ProviderPreset preset)
+        {
+            self.SelectPresetInCombo(preset);
+            self.MessageTextBox.PlaceholderText = $"{preset.Name}에게 물어보기...";
+        }
+    }
+
+    private void PopulatePresetCombo(IList presets)
+    {
+        _suppressPresetChanged = true;
+        PresetComboBox.Items.Clear();
+        foreach (var obj in presets)
+        {
+            if (obj is ProviderPreset preset)
+            {
+                var item = new ComboBoxItem { Content = preset.Name, Tag = preset };
+                PresetComboBox.Items.Add(item);
+            }
+        }
+
+        if (SelectedPreset is not null)
+        {
+            SelectPresetInCombo(SelectedPreset);
+        }
+        _suppressPresetChanged = false;
+    }
+
+    private void SelectPresetInCombo(ProviderPreset preset)
+    {
+        _suppressPresetChanged = true;
+        foreach (ComboBoxItem item in PresetComboBox.Items)
+        {
+            if (item.Tag is ProviderPreset p && p.Name == preset.Name)
+            {
+                PresetComboBox.SelectedItem = item;
+                break;
+            }
+        }
+        _suppressPresetChanged = false;
     }
 }
 

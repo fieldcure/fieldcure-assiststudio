@@ -7,10 +7,10 @@
     /* ===== Theme Variables ===== */
     :root {
         --bg-primary: #f5f5f5;
-        --bg-user: #005fb8;
-        --bg-assistant: #ffffff;
+        --bg-user: #E8E8E8;
+        --bg-assistant: transparent;
         --text-primary: #1a1a1a;
-        --text-user: #ffffff;
+        --text-user: #1a1a1a;
         --text-assistant: #1a1a1a;
         --border-color: #e0e0e0;
         --shadow: 0 1px 3px rgba(0,0,0,0.08);
@@ -32,10 +32,10 @@
 
     [data-theme="dark"] {
         --bg-primary: #202020;
-        --bg-user: #0078d4;
-        --bg-assistant: #2d2d2d;
+        --bg-user: #3A3A3A;
+        --bg-assistant: transparent;
         --text-primary: #e0e0e0;
-        --text-user: #ffffff;
+        --text-user: #e0e0e0;
         --text-assistant: #e0e0e0;
         --border-color: #404040;
         --shadow: 0 1px 3px rgba(0,0,0,0.3);
@@ -74,6 +74,10 @@
         flex-direction: column;
         gap: 12px;
         padding: 16px;
+        max-width: 800px;
+        margin: 0 auto;
+        width: 100%;
+        box-sizing: border-box;
         min-height: 100vh;
     }
 
@@ -81,7 +85,7 @@
     .message {
         display: flex;
         flex-direction: column;
-        max-width: 80%;
+        max-width: 100%;
         animation: fadeIn 0.2s ease-out;
     }
     .message.user { align-self: flex-end; }
@@ -107,6 +111,7 @@
         background: var(--bg-assistant);
         color: var(--text-assistant);
         border-bottom-left-radius: 4px;
+        box-shadow: none;
     }
 
     .message-timestamp {
@@ -370,19 +375,19 @@
         background: var(--copy-btn-hover);
     }
 
-    /* ===== Message Actions (Copy) ===== */
+    /* ===== Message Actions ===== */
     .message {
         position: relative;
     }
 
-    /* User message: absolute copy button on the left */
+    /* User message: actions below bubble, right-aligned */
     .message.user .message-actions {
-        position: absolute;
-        top: 0;
-        left: -36px;
         opacity: 0;
         transition: opacity 0.15s;
-        z-index: 10;
+        display: flex;
+        gap: 2px;
+        justify-content: flex-end;
+        margin-top: 4px;
     }
     .message.user:hover .message-actions { opacity: 1; }
 
@@ -398,13 +403,15 @@
     .message-footer .message-actions {
         opacity: 0;
         transition: opacity 0.15s;
+        display: flex;
+        gap: 2px;
     }
     .message:hover .message-footer .message-actions { opacity: 1; }
     .message-footer .message-timestamp {
         margin-top: 0;
     }
 
-    .msg-copy-btn {
+    .msg-action-btn {
         width: 24px;
         height: 24px;
         border: none;
@@ -421,12 +428,50 @@
         padding: 0;
         line-height: 1;
     }
-    .msg-copy-btn:hover {
+    .msg-action-btn:hover {
         background: var(--copy-btn-hover);
         color: var(--text-primary);
     }
-    .msg-copy-btn.copied {
+    .msg-action-btn.copied {
         color: #2ea043;
+    }
+
+    /* Edit mode: inline editable textarea */
+    .message-edit-area {
+        width: 100%;
+        min-height: 60px;
+        padding: 8px 10px;
+        border: 1px solid var(--link-color);
+        border-radius: 8px;
+        background: var(--bg-user);
+        color: var(--text-user);
+        font-family: inherit;
+        font-size: inherit;
+        resize: vertical;
+        outline: none;
+        box-sizing: border-box;
+    }
+    .message-edit-actions {
+        display: flex;
+        gap: 6px;
+        margin-top: 6px;
+        justify-content: flex-end;
+    }
+    .message-edit-actions button {
+        padding: 4px 12px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+    }
+    .edit-confirm-btn {
+        background: var(--link-color);
+        color: #fff;
+    }
+    .edit-cancel-btn {
+        background: transparent;
+        color: var(--timestamp-color);
+        border: 1px solid var(--timestamp-color) !important;
     }
 
     /* ===== Provider Badge ===== */
@@ -434,17 +479,8 @@
         font-size: 11px;
         color: var(--timestamp-color);
         margin-bottom: 4px;
-        padding: 0 4px;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-    }
-    .provider-badge-dot {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: var(--link-color);
-        flex-shrink: 0;
+        padding: 0;
+        opacity: 0.7;
     }
 
     /* ===== Animations ===== */
@@ -577,23 +613,102 @@
         return '<span class="content">' + escapeHtml(fullText) + '</span>';
     }
 
-    function createMessageActions(msgId) {
+    function createActionBtn(icon, title, onClick) {
+        var btn = document.createElement('button');
+        btn.className = 'msg-action-btn';
+        btn.title = title;
+        btn.textContent = icon;
+        btn.addEventListener('click', onClick);
+        return btn;
+    }
+
+    function flashCopied(btn) {
+        var orig = btn.textContent;
+        btn.textContent = '\uE73E';
+        btn.classList.add('copied');
+        setTimeout(function() {
+            btn.textContent = orig;
+            btn.classList.remove('copied');
+        }, 1500);
+    }
+
+    function createUserMessageActions(msgId) {
         var actions = document.createElement('div');
         actions.className = 'message-actions';
-        var btn = document.createElement('button');
-        btn.className = 'msg-copy-btn';
-        btn.title = 'Copy';
-        btn.textContent = '\uE8C8';  // Segoe Fluent Icons: Copy
-        btn.addEventListener('click', function() {
+
+        // Copy
+        actions.appendChild(createActionBtn('\uE8C8', 'Copy', function() {
             window.chrome.webview.postMessage('copyMsg:' + msgId);
-            btn.textContent = '\uE73E';  // Segoe Fluent Icons: Checkmark
-            btn.classList.add('copied');
-            setTimeout(function() {
-                btn.textContent = '\uE8C8';
-                btn.classList.remove('copied');
-            }, 1500);
-        });
-        actions.appendChild(btn);
+            flashCopied(this);
+        }));
+
+        // Edit
+        actions.appendChild(createActionBtn('\uE70F', 'Edit', function() {
+            var msgEl = document.getElementById('msg-' + msgId);
+            if (!msgEl) return;
+            var bubble = msgEl.querySelector('.message-bubble');
+            if (!bubble || bubble.querySelector('.message-edit-area')) return;
+
+            var originalText = bubble.textContent;
+            var originalHtml = bubble.innerHTML;
+            bubble.innerHTML = '';
+
+            var textarea = document.createElement('textarea');
+            textarea.className = 'message-edit-area';
+            textarea.value = originalText;
+            bubble.appendChild(textarea);
+
+            var editActions = document.createElement('div');
+            editActions.className = 'message-edit-actions';
+
+            var confirmBtn = document.createElement('button');
+            confirmBtn.className = 'edit-confirm-btn';
+            confirmBtn.textContent = '\uE73E';
+            confirmBtn.style.fontFamily = "'Segoe Fluent Icons', 'Segoe MDL2 Assets'";
+            confirmBtn.addEventListener('click', function() {
+                var newText = textarea.value.trim();
+                if (newText) {
+                    window.chrome.webview.postMessage('edit:' + msgId + ':' + newText);
+                }
+            });
+
+            var cancelBtn = document.createElement('button');
+            cancelBtn.className = 'edit-cancel-btn';
+            cancelBtn.textContent = '\uE711';
+            cancelBtn.style.fontFamily = "'Segoe Fluent Icons', 'Segoe MDL2 Assets'";
+            cancelBtn.addEventListener('click', function() {
+                bubble.innerHTML = originalHtml;
+            });
+
+            editActions.appendChild(cancelBtn);
+            editActions.appendChild(confirmBtn);
+            bubble.appendChild(editActions);
+            textarea.focus();
+        }));
+
+        // Retry
+        actions.appendChild(createActionBtn('\uE72C', 'Retry', function() {
+            window.chrome.webview.postMessage('retry:' + msgId);
+        }));
+
+        return actions;
+    }
+
+    function createAssistantMessageActions(msgId) {
+        var actions = document.createElement('div');
+        actions.className = 'message-actions';
+
+        // Copy
+        actions.appendChild(createActionBtn('\uE8C8', 'Copy', function() {
+            window.chrome.webview.postMessage('copyMsg:' + msgId);
+            flashCopied(this);
+        }));
+
+        // Summarize
+        actions.appendChild(createActionBtn('\uE8AB', 'Summarize', function() {
+            window.chrome.webview.postMessage('summarize:' + msgId);
+        }));
+
         return actions;
     }
 
@@ -607,7 +722,7 @@
             msg.innerHTML =
                 '<div class="message-bubble">' + attachmentHtml + textHtml + '</div>' +
                 '<div class="message-timestamp">' + formatTimestamp(timestamp) + '</div>';
-            msg.appendChild(createMessageActions(id));
+            msg.appendChild(createUserMessageActions(id));
             container.appendChild(msg);
             doScroll('smooth');
         },
@@ -620,7 +735,7 @@
             var badgeHtml = '';
             if (providerName) {
                 var label = modelId ? (providerName + ' \u00b7 ' + modelId) : providerName;
-                badgeHtml = '<div class="provider-badge"><span class="provider-badge-dot"></span>' + escapeHtml(label) + '</div>';
+                badgeHtml = '<div class="provider-badge">' + escapeHtml(label) + '</div>';
             }
 
             msg.innerHTML = badgeHtml +
@@ -629,7 +744,7 @@
             // Footer: [actions ... timestamp]
             var footer = document.createElement('div');
             footer.className = 'message-footer';
-            footer.appendChild(createMessageActions(id));
+            footer.appendChild(createAssistantMessageActions(id));
             var ts = document.createElement('div');
             ts.className = 'message-timestamp';
             footer.appendChild(ts);
@@ -649,7 +764,7 @@
             doScroll('instant');
         },
 
-        finalizeMessage: function(id, fullText, truncated) {
+        finalizeMessage: function(id, fullText, truncated, tokenCount) {
             var msg = document.getElementById('msg-' + id);
             if (!msg) return;
             var bubble = msg.querySelector('.message-bubble');
@@ -672,7 +787,15 @@
             }
             var ts = msg.querySelector('.message-timestamp');
             if (ts) {
-                ts.textContent = formatTimestamp(new Date().toISOString());
+                var timeStr = formatTimestamp(new Date().toISOString());
+                if (tokenCount && tokenCount > 0) {
+                    var formatted = tokenCount >= 1000
+                        ? '~' + (tokenCount / 1000).toFixed(1) + 'k'
+                        : tokenCount.toString();
+                    ts.textContent = formatted + ' tokens \u00b7 ' + timeStr;
+                } else {
+                    ts.textContent = timeStr;
+                }
             }
             doScroll('smooth');
         },
@@ -691,6 +814,14 @@
 
         scrollToBottom: function() {
             doScroll('smooth');
+        },
+
+        removeMessagesAfter: function(messageId) {
+            var msgEl = document.getElementById('msg-' + messageId);
+            if (!msgEl) return;
+            while (msgEl.nextElementSibling) {
+                msgEl.nextElementSibling.remove();
+            }
         },
 
         setTheme: function(isDark) {

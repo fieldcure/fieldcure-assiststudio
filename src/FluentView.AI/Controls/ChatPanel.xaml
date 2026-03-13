@@ -9,16 +9,26 @@
     mc:Ignorable="d"
     Loaded="OnLoaded">
 
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+    <Grid x:Name="RootGrid"
+          Background="{ThemeResource LayerFillColorDefaultBrush}">
+        <!-- Empty state: input centered vertically -->
+        <Grid x:Name="EmptyStatePanel"
+              VerticalAlignment="Center"
+              HorizontalAlignment="Stretch"
+              Padding="24">
+            <local:InputContainer x:Name="InputArea"
+                                  HorizontalAlignment="Stretch"
+                                  Placeholder="{x:Bind Placeholder, Mode=OneWay}" />
+        </Grid>
 
-        <WebView2 x:Name="ChatWebView" Grid.Row="0" DefaultBackgroundColor="Transparent" />
+        <!-- Chat layout (initially collapsed) -->
+        <Grid x:Name="ChatLayout" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
-        <local:InputContainer x:Name="InputArea"
-                              Grid.Row="1"
-                              Placeholder="{x:Bind Placeholder, Mode=OneWay}" />
+            <WebView2 x:Name="ChatWebView" Grid.Row="0" DefaultBackgroundColor="Transparent" />
+        </Grid>
     </Grid>
 </UserControl>

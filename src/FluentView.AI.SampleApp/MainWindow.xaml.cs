@@ -85,7 +85,6 @@ public sealed partial class MainWindow : Window
             titleBar.InactiveBackgroundColor = transparent;
             titleBar.ButtonInactiveBackgroundColor = transparent;
 
-            // Determine effective theme (resolve "System" to actual)
             var isDark = theme == "Dark" ||
                 (theme != "Light" && Application.Current.RequestedTheme == ApplicationTheme.Dark);
 
@@ -119,13 +118,9 @@ public sealed partial class MainWindow : Window
 
         var scale = ShellTitlebarInset.XamlRoot.RasterizationScale;
 
-        // Left padding to account for system caption buttons inset
         LeftPaddingColumn.Width = new GridLength(_appWindow.TitleBar.LeftInset / scale);
         RightPaddingColumn.Width = new GridLength(_appWindow.TitleBar.RightInset / scale);
 
-        // The entire tab strip area (header + tabs + add button) needs to be
-        // passthrough so interactive elements (menu button, tabs, close buttons) work.
-        // TitleBarReservedArea is already set as the title bar drag region via SetTitleBar.
         var transform = ShellTitlebarInset.TransformToVisual(null);
         var bounds = transform.TransformBounds(new Rect(0, 0,
             ShellTitlebarInset.ActualWidth, ShellTitlebarInset.ActualHeight));
@@ -158,17 +153,17 @@ public sealed partial class MainWindow : Window
 
     private async void OnMenuSaveConversation(object sender, RoutedEventArgs e)
     {
-        if (Tabs.SelectedItem is not TabViewItem tab || tab.Content is not Grid grid)
+        if (Tabs.SelectedItem is not TabViewItem tab)
             return;
 
-        var chatPanel = FindChatPanel(grid);
+        var chatPanel = GetChatPanelFromTab(tab);
         if (chatPanel is null) return;
 
         var messages = chatPanel.GetMessages();
         if (messages.Count == 0) return;
 
         var tabName = tab.Header as string ?? $"Chat {_tabCounter}";
-        var presetName = GetCurrentPresetName(grid);
+        var presetName = chatPanel.SelectedPreset?.Name;
 
         try
         {
@@ -247,12 +242,15 @@ public sealed partial class MainWindow : Window
         var chatPanel = new ChatPanel
         {
             Provider = provider,
-            Placeholder = "Type a message...",
+            Placeholder = "Reply...",
             SystemPrompt = AppSettings.SystemPrompt,
             Theme = GetCurrentTheme(),
+            AvailablePresets = SettingsPane.Presets,
+            SelectedPreset = preset,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
         };
+        chatPanel.PresetChanged += OnChatPanelPresetChanged;
 
         // Restore messages
         foreach (var msg in data.Messages)
@@ -260,27 +258,10 @@ public sealed partial class MainWindow : Window
             chatPanel.AddRestoredMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId);
         }
 
-        var providerCombo = new ComboBox
-        {
-            Width = 180,
-            Margin = new Thickness(12, 8, 12, 4),
-            HorizontalAlignment = HorizontalAlignment.Left,
-        };
-        PopulateProviderCombo(providerCombo, preset.Name);
-        providerCombo.SelectionChanged += (s, _) => OnTabProviderChanged(s as ComboBox, chatPanel);
-
-        var grid = new Grid();
-        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        Grid.SetRow(providerCombo, 0);
-        Grid.SetRow(chatPanel, 1);
-        grid.Children.Add(providerCombo);
-        grid.Children.Add(chatPanel);
-
         var tab = new TabViewItem
         {
             Header = data.TabName,
-            Content = grid,
+            Content = chatPanel,
             IconSource = new SymbolIconSource { Symbol = Symbol.Message },
         };
 
@@ -302,53 +283,49 @@ public sealed partial class MainWindow : Window
 
     private async void OnCloseTab(TabView sender, TabViewTabCloseRequestedEventArgs args)
     {
-        if (args.Tab.Content is Grid grid)
+        var chatPanel = GetChatPanelFromTab(args.Tab);
+
+        // Ask to save if conversation has messages
+        if (chatPanel is not null && chatPanel.GetMessages().Count > 0)
         {
-            var chatPanel = FindChatPanel(grid);
-
-            // Ask to save if conversation has messages
-            if (chatPanel is not null && chatPanel.GetMessages().Count > 0)
+            var dialog = new ContentDialog
             {
-                var dialog = new ContentDialog
-                {
-                    Title = "Save conversation?",
-                    Content = "Do you want to save this conversation before closing?",
-                    PrimaryButtonText = "Save",
-                    SecondaryButtonText = "Don't Save",
-                    CloseButtonText = "Cancel",
-                    DefaultButton = ContentDialogButton.Primary,
-                    XamlRoot = Content.XamlRoot,
-                };
+                Title = "Save conversation?",
+                Content = "Do you want to save this conversation before closing?",
+                PrimaryButtonText = "Save",
+                SecondaryButtonText = "Don't Save",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = Content.XamlRoot,
+            };
 
-                var result = await dialog.ShowAsync();
-                if (result == ContentDialogResult.None) // Cancel
-                    return;
+            var result = await dialog.ShowAsync();
+            if (result == ContentDialogResult.None) // Cancel
+                return;
 
-                if (result == ContentDialogResult.Primary) // Save
+            if (result == ContentDialogResult.Primary) // Save
+            {
+                var tabName = args.Tab.Header as string ?? $"Chat {_tabCounter}";
+                var presetName = chatPanel.SelectedPreset?.Name;
+                try
                 {
-                    var tabName = args.Tab.Header as string ?? $"Chat {_tabCounter}";
-                    var presetName = GetCurrentPresetName(grid);
-                    try
-                    {
-                        await ConversationManager.SaveConversationAsync(
-                            tabName, presetName, chatPanel.GetMessages());
-                    }
-                    catch
-                    {
-                        // Save failed silently
-                    }
+                    await ConversationManager.SaveConversationAsync(
+                        tabName, presetName, chatPanel.GetMessages());
+                }
+                catch
+                {
+                    // Save failed silently
                 }
             }
+        }
 
-            if (chatPanel?.Provider is IDisposable disposable)
-            {
-                disposable.Dispose();
-            }
+        if (chatPanel?.Provider is IDisposable disposable)
+        {
+            disposable.Dispose();
         }
 
         sender.TabItems.Remove(args.Tab);
 
-        // Close window when all tabs are removed
         if (sender.TabItems.Count == 0)
         {
             Close();
@@ -370,38 +347,20 @@ public sealed partial class MainWindow : Window
         var chatPanel = new ChatPanel
         {
             Provider = provider,
-            Placeholder = "Type a message...",
+            Placeholder = "Reply...",
             SystemPrompt = AppSettings.SystemPrompt,
             Theme = GetCurrentTheme(),
+            AvailablePresets = SettingsPane.Presets,
+            SelectedPreset = preset,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
         };
-
-        // Provider selector ComboBox above the chat
-        var providerCombo = new ComboBox
-        {
-            Width = 180,
-            Margin = new Thickness(12, 8, 12, 4),
-            HorizontalAlignment = HorizontalAlignment.Left,
-        };
-
-        PopulateProviderCombo(providerCombo, preset.Name);
-        providerCombo.SelectionChanged += (s, e) => OnTabProviderChanged(s as ComboBox, chatPanel);
-
-        var grid = new Grid();
-        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-
-        Grid.SetRow(providerCombo, 0);
-        Grid.SetRow(chatPanel, 1);
-
-        grid.Children.Add(providerCombo);
-        grid.Children.Add(chatPanel);
+        chatPanel.PresetChanged += OnChatPanelPresetChanged;
 
         var tab = new TabViewItem
         {
             Header = preset.Name,
-            Content = grid,
+            Content = chatPanel,
             IconSource = new SymbolIconSource { Symbol = Symbol.Message },
         };
 
@@ -409,34 +368,11 @@ public sealed partial class MainWindow : Window
         Tabs.SelectedItem = tab;
     }
 
-    // ===== Provider Switching =====
+    // ===== Provider Switching (via InputContainer ComboBox) =====
 
-    private void PopulateProviderCombo(ComboBox combo, string? selectedPresetName)
+    private void OnChatPanelPresetChanged(object? sender, ProviderPreset preset)
     {
-        combo.Items.Clear();
-        foreach (var p in SettingsPane.Presets)
-        {
-            combo.Items.Add(new ComboBoxItem { Content = p.Name, Tag = p });
-        }
-
-        // Select matching preset
-        for (int i = 0; i < combo.Items.Count; i++)
-        {
-            if (combo.Items[i] is ComboBoxItem item && item.Content as string == selectedPresetName)
-            {
-                combo.SelectedIndex = i;
-                return;
-            }
-        }
-
-        if (combo.Items.Count > 0)
-            combo.SelectedIndex = 0;
-    }
-
-    private void OnTabProviderChanged(ComboBox? combo, ChatPanel chatPanel)
-    {
-        if (combo?.SelectedItem is not ComboBoxItem selected || selected.Tag is not ProviderPreset preset)
-            return;
+        if (sender is not ChatPanel chatPanel) return;
 
         // Dispose old provider
         if (chatPanel.Provider is IDisposable disposable)
@@ -448,9 +384,13 @@ public sealed partial class MainWindow : Window
         chatPanel.Provider = ProviderFactory.Create(preset);
 
         // Update tab header
-        if (combo.Parent is Grid grid && grid.Parent is TabViewItem tab)
+        foreach (var item in Tabs.TabItems)
         {
-            tab.Header = preset.Name;
+            if (item is TabViewItem tab && ReferenceEquals(tab.Content, chatPanel))
+            {
+                tab.Header = preset.Name;
+                break;
+            }
         }
     }
 
@@ -465,15 +405,13 @@ public sealed partial class MainWindow : Window
             _ => ChatTheme.System,
         };
 
-        // Apply app-wide theme + title bar colors
         ApplyAppTheme(theme);
 
-        // Apply to all chat panels
         foreach (var item in Tabs.TabItems)
         {
-            if (item is TabViewItem tab && tab.Content is Grid grid)
+            if (item is TabViewItem tab)
             {
-                var chatPanel = FindChatPanel(grid);
+                var chatPanel = GetChatPanelFromTab(tab);
                 if (chatPanel is not null)
                     chatPanel.Theme = chatTheme;
             }
@@ -484,9 +422,9 @@ public sealed partial class MainWindow : Window
     {
         foreach (var item in Tabs.TabItems)
         {
-            if (item is TabViewItem tab && tab.Content is Grid grid)
+            if (item is TabViewItem tab)
             {
-                var chatPanel = FindChatPanel(grid);
+                var chatPanel = GetChatPanelFromTab(tab);
                 if (chatPanel is not null)
                     chatPanel.SystemPrompt = prompt;
             }
@@ -497,15 +435,21 @@ public sealed partial class MainWindow : Window
     {
         foreach (var item in Tabs.TabItems)
         {
-            if (item is TabViewItem tab && tab.Content is Grid grid)
+            if (item is TabViewItem tab)
             {
-                foreach (var child in grid.Children)
+                var chatPanel = GetChatPanelFromTab(tab);
+                if (chatPanel is not null)
                 {
-                    if (child is ComboBox combo)
+                    var currentName = chatPanel.SelectedPreset?.Name;
+                    chatPanel.AvailablePresets = SettingsPane.Presets;
+                    // Re-select the same preset if it still exists
+                    if (currentName is not null)
                     {
-                        var currentPreset = (combo.SelectedItem as ComboBoxItem)?.Content as string;
-                        PopulateProviderCombo(combo, currentPreset);
-                        break;
+                        var match = SettingsPane.Presets.FirstOrDefault(p => p.Name == currentName);
+                        if (match is not null)
+                        {
+                            chatPanel.SelectedPreset = match;
+                        }
                     }
                 }
             }
@@ -514,24 +458,9 @@ public sealed partial class MainWindow : Window
 
     // ===== Helpers =====
 
-    private static ChatPanel? FindChatPanel(Grid grid)
+    private static ChatPanel? GetChatPanelFromTab(TabViewItem tab)
     {
-        foreach (var child in grid.Children)
-        {
-            if (child is ChatPanel cp)
-                return cp;
-        }
-        return null;
-    }
-
-    private static string? GetCurrentPresetName(Grid grid)
-    {
-        foreach (var child in grid.Children)
-        {
-            if (child is ComboBox combo && combo.SelectedItem is ComboBoxItem item)
-                return item.Content as string;
-        }
-        return null;
+        return tab.Content as ChatPanel;
     }
 
     private ProviderPreset GetDefaultPreset()
