@@ -50,10 +50,30 @@ public sealed partial class InputContainer : UserControl
             new PropertyMetadata(null));
 
     private bool _suppressPresetChanged;
+    private bool _pendingPresetPopulate;
+    private bool _pendingPromptPresetPopulate;
 
     public InputContainer()
     {
         InitializeComponent();
+        Loaded += OnLoaded;
+    }
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        Loaded -= OnLoaded;
+
+        if (_pendingPresetPopulate && AvailablePresets is { } presets)
+        {
+            _pendingPresetPopulate = false;
+            PopulatePresetCombo(presets);
+        }
+
+        if (_pendingPromptPresetPopulate)
+        {
+            _pendingPromptPresetPopulate = false;
+            PopulatePromptPresetCombo();
+        }
     }
 
     public string Placeholder
@@ -364,6 +384,11 @@ public sealed partial class InputContainer : UserControl
     {
         if (d is InputContainer self && e.NewValue is IList presets)
         {
+            if (!self.IsLoaded)
+            {
+                self._pendingPresetPopulate = true;
+                return;
+            }
             self.PopulatePresetCombo(presets);
         }
     }
@@ -372,6 +397,7 @@ public sealed partial class InputContainer : UserControl
     {
         if (d is InputContainer self && e.NewValue is ProviderPreset preset)
         {
+            if (!self.IsLoaded) return; // Will be set during pending populate
             self.SelectPresetInCombo(preset);
         }
     }
@@ -414,6 +440,11 @@ public sealed partial class InputContainer : UserControl
     {
         if (d is InputContainer self)
         {
+            if (!self.IsLoaded)
+            {
+                self._pendingPromptPresetPopulate = true;
+                return;
+            }
             self.PopulatePromptPresetCombo();
         }
     }
