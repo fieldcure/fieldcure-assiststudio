@@ -9,8 +9,7 @@
     mc:Ignorable="d"
     Loaded="OnLoaded">
 
-    <Grid x:Name="RootGrid"
-          Background="{ThemeResource LayerFillColorDefaultBrush}">
+    <Grid x:Name="RootGrid">
         <!-- Empty state: input centered vertically -->
         <Grid x:Name="EmptyStatePanel"
               VerticalAlignment="Center"

@@ -1138,56 +1138,187 @@ OnnxModelManager : IModelManager
 
 ---
 
-## 9. Phase 6 상세 계획 (Control 품질 향상 & 로컬라이제이션 보완)
+## 9. Phase 6 상세 계획 (UI/UX 개선 — PPTX 기반)
 
-### 6.1 XML Summary 태그 정비
-- Core 라이브러리(FluentView.AI)의 모든 public 클래스/인터페이스/메서드에 `<summary>` 태그 추가
-- NuGet 배포 시 IntelliSense 지원을 위한 필수 작업
-- 대상: Models/, Providers/, Controls/, Helpers/, Rendering/ 하위 모든 public API
+> 갱신: 2026-03-13 — PPTX UI 개선안 반영, 6a~6d 세부 분류
+>
+> **결정 사항:**
+> - 프로필 변수 바인딩({{lang}}) / 프로바이더별 오버라이드 → 후순위 (Phase 6 범위 밖)
+> - 메시지 편집 → 단순 버전 (편집 시 이후 히스토리 삭제 후 재생성, 분기 없음)
+> - ~~6.5 New Conversation default provider 반영~~ → 수정 완료 (commit 30ed7ee)
 
-### 6.2 Control UI/UX 리터치 — 멀티 프로바이더 대화 UX
-- 현재 구조: 하나의 대화에서 Provider를 자유롭게 변경 가능 (대화 히스토리 유지)
-- Provider 뱃지로 각 응답이 어떤 모델에서 온 건지 이미 표시됨
-- 구체적 UI 목업은 추후 확정 예정 (사용자 제공)
+### Phase 6a: Chat UI Core — 메시지 영역 개선
 
-### 6.3 Ctrl+V 기능 확대
-- 현재: 텍스트 붙여넣기만 지원
-- 확장: 클립보드 이미지 붙여넣기 (스크린샷 등)
-- 확장: 클립보드 파일 참조 붙여넣기 (탐색기에서 복사한 파일)
-- InputContainer에서 클립보드 DataPackageView 분석 → 이미지/파일 자동 첨부
+chat.html + WebViewChatRenderer 중심 작업.
 
-### 6.4 API Key 마스킹 표시 & 버튼 토글
-- 저장된 키가 있으면 TextBox에 마스킹된 값만 표시 (예: `sk-...xxx` — 앞/뒤 일부만 노출)
-- 버튼은 상태에 따라 1개만 표시:
-  - 키 없음 → +(추가) 아이콘 버튼 (키 입력/저장)
-  - 키 있음 → 휴지통(삭제) 아이콘 버튼 (키 제거)
-- 키를 교체하려면 휴지통으로 삭제 → + 버튼으로 새 키 입력/저장
-- + 버튼 클릭 시 API 호출(모델 목록 조회 등)로 키 유효성 검증
-  - 유효 → 저장
-  - 무효 → 저장하지 않고 TextBox 아래에 warning 메시지 표시 (예: "유효하지 않은 API Key입니다")
-- 대상: ModelsPage의 Provider별 API Key 입력 영역
+#### 6a-1. 메시지 max-width 800px 변경
+- **파일:** `src/FluentView.AI/Rendering/Resources/chat.html`
+- `.message-bubble`의 `max-width: 80%` → `max-width: 800px`
 
-### 6.5 New Conversation 시 default provider 반영
-- 새 탭(대화) 생성 시 model selector가 설정된 default provider/model을 선택하도록 수정
-- 현재 버그: default provider 설정이 있어도 새 대화에서 무시됨
+#### 6a-2. User 메시지 플로팅 액션 버튼 확장
+- **파일:** `chat.html`, `WebViewChatRenderer.cs`, `ChatPanel.xaml.cs`
+- 현재: 복사 버튼만 있음
+- 추가:
+  - **재시도** (↻ `\uE72C`): 같은 프롬프트로 AI 응답 재생성 → `retry:{messageId}` 웹 메시지
+  - **편집** (✏ `\uE70F`): 메시지를 편집 가능 상태로 전환 → 편집 확인 시 해당 메시지 이후 히스토리 삭제 + 재전송 → `edit:{messageId}:{newText}` 웹 메시지
+  - **프롬프트 복사** (`\uE8C8`): 기존 복사 버튼 (이미 있음, 위치 조정)
+- 버튼: 메시지 호버 시 표시, Segoe Fluent Icons 사용
 
-### 6.6 Running 상태 텍스트 색상 변경
-- 현재: 녹색 — Dark 테마에서 가독성 낮음
-- 변경: Accent color 또는 파란색 계열로 교체하여 Light/Dark 모두 가독성 확보
+#### 6a-3. AI 메시지 플로팅 액션 버튼 확장
+- **파일:** `chat.html`, `WebViewChatRenderer.cs`, `ChatPanel.xaml.cs`
+- 현재: 복사 + Continue
+- 추가:
+  - **요약** (`\uE8AB`): 이 답변만 요약 요청 → `summarize:{messageId}` 웹 메시지
+- "답글..." 기능은 복잡도가 높아 후순위
 
-### 6.7 시스템 프롬프트 기본값 설정
-- 시스템 프롬프트가 비어 있을 때 기본값 적용: "You are a helpful assistant."
-- 새 대화 생성 시 자동 적용
+#### 6a-4. AI 메시지 토큰 · 시간 표시
+- **파일:** `chat.html`, `WebViewChatRenderer.cs`
+- AI 메시지 하단에 `~x,xxx tokens · HH:mm` 표시
+- `finalizeMessage`에 `tokenCount` 파라미터 추가
+- 0이면 토큰 표시 숨김 (Ollama/Mock 등)
+- `WebViewChatRenderer.FinalizeMessageAsync()`에서 `Provider.LastUsage` 전달
 
-### 6.8 Recent Conversations 목록
-- 최근 대화 목록 관리 (대화 히스토리 저장/불러오기)
-- NavigationView 메뉴에 Recent Conversations 항목 추가
-- 목록에서 선택 시 해당 대화 복원
+#### 6a-5. Provider 뱃지 스타일 조정
+- **파일:** `chat.html`
+- `.provider-badge` → 투명 배경, 경계선 제거, 작은 muted 텍스트
 
-### 6.9 로컬라이제이션 누락 점검
-- Core 라이브러리(chat.html) 내 하드코딩 문자열 확인
-- SampleApp 전체 UI 문자열 중 x:Uid 미적용 항목 점검
+#### 6a-6. 빈 상태 UI (Input Bar 중앙 배치)
+- **파일:** `chat.html`, `ChatPanel.xaml`
+- 메시지 없을 때 환영 메시지/빈 상태 표시
+- chat.html: 빈 상태 placeholder (로고 + "무엇이든 물어보세요" 텍스트)
+- ChatPanel: Grid 레이아웃 조정 → InputContainer가 시각적으로 중앙
+- 첫 메시지 전송 시 빈 상태 제거 → 일반 레이아웃 전환
+
+### Phase 6b: Conversation Management — 대화 제목 & 유틸리티 AI
+
+#### 6b-1. ConversationData에 Title 필드 추가
+- **파일:** `src/FluentView.AI/Helpers/ConversationManager.cs`
+- `ConversationData`에 `Title` 속성 추가
+- 저장/로드 시 Title 포함
+
+#### 6b-2. 자동 제목 생성
+- **파일:** `ChatPanel.xaml.cs`
+- 첫 번째 응답 스트리밍 완료 후 비동기로 유틸리티 AI에 제목 요청
+- 프롬프트: "이 대화의 제목을 10자 내외로 지어줘"
+- `TitleGenerated` 이벤트 발생 → MainWindow에서 탭 헤더 업데이트
+
+#### 6b-3. 유틸리티 AI 설정
+- **파일:** `AppSettings.cs`, Settings UI (AdvancedPage 또는 신규 페이지)
+- 요약/제목 생성에 사용할 모델 선택
+  - 옵션: "현재 선택된 모델" / "특정 프로바이더 프리셋"
+- 유틸리티 AI Provider 인스턴스를 ChatPanel에 주입하는 구조
+
+#### 6b-4. 대화 제목 표시 & 수동 편집
+- **파일:** `ChatPanel.xaml(.cs)` 또는 MainWindow 탭 헤더
+- 탭 헤더에 자동 생성된 제목 표시
+- 더블클릭으로 수동 편집 가능
+
+#### 6b-5. 자동 요약 → 유틸리티 AI 연동
+- **파일:** `ChatPanel.xaml.cs`
+- 기존 AutoSummarize 로직에서 유틸리티 AI 설정 참조
+- 현재 Provider 대신 유틸리티 AI Provider로 요약 요청 가능
+
+#### 6b-6. "요약 요청하기" 버튼
+- **파일:** `InputContainer.xaml(.cs)`, `ChatPanel.xaml.cs`
+- Input Bar 영역에 요약 요청 버튼 추가
+- 클릭 시 대화 전체를 유틸리티 AI에 요약 → System 메시지로 삽입
+
+#### 6b-7. Recent Conversations 목록
+- NavigationView에 Recent Conversations 항목 추가
+- 저장된 대화 목록 (제목 + 날짜) 표시
+- 선택 시 해당 대화 복원
+
+### Phase 6c: Profile System — 프리셋 & 파라미터
+
+#### 6c-1. 시스템 프롬프트 프리셋
+- **파일:** `Settings/PromptPage.xaml(.cs)`
+- 프리셋 pill 버튼 3개: Professional / Analytical / Creative
+- 클릭 시 TextBox에 프리셋 내용 삽입 (자유 편집 가능)
+- 프리셋 내용:
+  - **Professional** — 친절하고 명확한 응답, 단계별 설명, 모르면 솔직히 표현
+  - **Analytical** — 간결하고 직접적, 코드 가독성/성능 우선, Markdown 활용
+  - **Creative** — 다각적 관점, 창의적 아이디어 제안, 후속 질문 유도
+- 기본값: Professional 프리셋 내용
+
+#### 6c-2. ProviderPreset에 기본 파라미터 추가
+- **파일:** `src/FluentView.AI/Models/ProviderPreset.cs`, `AppSettings.cs`
+- 추가: `Temperature` (double, 기본 0.7), `MaxTokens` (int, 기본 4096), `StreamingEnabled` (bool, 기본 true)
+- AiRequest 생성 시 프리셋 파라미터 적용
+
+#### 6c-3. 프로필 선택 UI (Input Bar 영역)
+- **파일:** `InputContainer.xaml(.cs)` 또는 `ChatPanel.xaml`
+- Input Bar 상단에 compact 프로필/모델 선택 드롭다운
+- 형태: `[Antrophic · Sonnet 4.6 ▼]`
+- MainWindow의 provider selector를 InputContainer 근처로 이동/통합
+
+### Phase 6d: Input & 기타 UX
+
+#### 6d-1. Ctrl+V 이미지/파일 붙여넣기
+- **파일:** `src/FluentView.AI/Controls/InputContainer.xaml.cs`
+- 클립보드 DataPackageView 분석: Bitmap → 이미지 첨부, StorageItems → 파일 첨부
+- 기존 첨부 로직 재활용
+
+#### 6d-2. API Key 마스킹 & 토글 버튼
+- **파일:** `Settings/ModelsPage.xaml(.cs)`
+- 저장된 키: `sk-...xxx` 마스킹 표시
+- 키 없음 → +(추가) 버튼, 키 있음 → 🗑(삭제) 버튼
+- + 클릭 시 API 호출로 유효성 검증 → 유효하면 저장, 무효하면 경고
+
+#### 6d-3. Running 상태 텍스트 색상 변경
+- 녹색 → Accent color 또는 파란색 계열로 변경
+- Light/Dark 모두 가독성 확보
+
+#### 6d-4. 로컬라이제이션 누락 점검
+- chat.html 하드코딩 문자열 확인
+- SampleApp x:Uid 미적용 항목 점검
 - en-US / ko-KR 리소스 파일 누락 키 확인
+
+#### 6d-5. XML Summary 태그 정비
+- Core 라이브러리 모든 public API에 `<summary>` 태그 추가
+- NuGet IntelliSense 지원 필수
+
+### Phase 6 구현 순서 (의존성 기반)
+
+```
+Phase 6a (Chat UI Core) → 독립적, 먼저 착수
+  6a-1 → 6a-5 → 6a-2 → 6a-3 → 6a-4 → 6a-6
+
+Phase 6b (Conversation Mgmt) → 6a와 병행 가능
+  6b-1 → 6b-2 → 6b-3 → 6b-4 → 6b-5 → 6b-6 → 6b-7
+
+Phase 6c (Profile System) → 6a 완료 후
+  6c-1 → 6c-2 → 6c-3
+
+Phase 6d (Input & Misc) → 독립적, 언제든 착수
+  6d-1 → 6d-2 → 6d-3 → 6d-4 → 6d-5
+```
+
+### Phase 6 완료 기준
+- [ ] 메시지 max-width 800px 적용
+- [ ] User 플로팅 액션 (재시도/편집/복사) 동작
+- [ ] AI 플로팅 액션 (복사/요약/Continue) 동작
+- [ ] 토큰 · 시간 표시 (상용 모델)
+- [ ] Provider 뱃지 투명 스타일
+- [ ] 빈 상태 UI + Input Bar 중앙 배치
+- [ ] 자동 제목 생성 + 수동 편집
+- [ ] 유틸리티 AI 설정 + 요약 연동
+- [ ] "요약 요청하기" 버튼
+- [ ] Recent Conversations 목록
+- [ ] 시스템 프롬프트 프리셋 (pill 탭)
+- [ ] ProviderPreset 파라미터 (temp/max_tokens)
+- [ ] 프로필 선택 UI (Input Bar 영역)
+- [ ] Ctrl+V 이미지/파일 붙여넣기
+- [ ] API Key 마스킹 & 토글
+- [ ] Running 상태 색상 변경
+- [ ] 로컬라이제이션 누락 점검
+- [ ] XML Summary 태그 정비
+- [ ] 솔루션 빌드 성공 (경고 0, 오류 0)
+
+### Phase 6 후순위 (Phase 7 이후)
+- 프로필 변수 바인딩 ({{lang}}, {{style}})
+- 프로바이더별 시스템 프롬프트 오버라이드
+- "답글..." 기능 (메시지 인용 + 후속 질문)
+- 메시지 편집 분기(branching) 버전
 
 ---
 

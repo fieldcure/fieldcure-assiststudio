@@ -79,6 +79,8 @@ public sealed partial class ChatPanel : UserControl
     public ChatPanel()
     {
         InitializeComponent();
+        // Set initial background to match CSS --bg-primary (before WebView2 loads)
+        RootGrid.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(LightBg);
         InputArea.MessageSent += OnMessageSent;
         InputArea.PresetChanged += OnInputPresetChanged;
         _renderer.ContinueRequested += OnContinueRequested;
@@ -598,12 +600,17 @@ public sealed partial class ChatPanel : UserControl
         }
     }
 
+    // Background colors matching chat.html --bg-primary (opaque, no alpha issues)
+    private static readonly Windows.UI.Color LightBg = Windows.UI.Color.FromArgb(255, 0xF5, 0xF5, 0xF5);
+    private static readonly Windows.UI.Color DarkBg = Windows.UI.Color.FromArgb(255, 0x20, 0x20, 0x20);
+
     private async Task ApplyThemeAsync()
     {
-        if (_isInitialized)
-        {
-            await _renderer.SetThemeAsync(IsDarkTheme());
-        }
+        if (!_isInitialized) return;
+
+        var isDark = IsDarkTheme();
+        RootGrid.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(isDark ? DarkBg : LightBg);
+        await _renderer.SetThemeAsync(isDark);
     }
 
     private async Task ApplyLocaleStringsAsync()

@@ -1,4 +1,4 @@
-using FluentView.AI.SampleApp.Helpers;
+﻿using FluentView.AI.SampleApp.Helpers;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 
@@ -24,7 +24,7 @@ public sealed partial class PersonalizationPage : Page
 
         // Load current theme
         var theme = AppSettings.Theme;
-        for (int i = 0; i < ThemeRadioButtons.Items.Count; i++)
+        for (var i = 0; i < ThemeRadioButtons.Items.Count; i++)
         {
             if (ThemeRadioButtons.Items[i] is RadioButton rb && rb.Tag as string == theme)
             {

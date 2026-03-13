@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using Windows.Globalization;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
@@ -46,7 +46,7 @@ public sealed partial class AdvancedPage : Page
 
         // Select current
         var currentId = ApplicationLanguages.PrimaryLanguageOverride ?? "";
-        for (int i = 0; i < LanguagePicker.Items.Count; i++)
+        for (var i = 0; i < LanguagePicker.Items.Count; i++)
         {
             if (LanguagePicker.Items[i] is LanguageItem item && item.Id == currentId)
             {
