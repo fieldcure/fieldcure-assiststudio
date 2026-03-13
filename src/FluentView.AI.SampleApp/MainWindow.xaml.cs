@@ -477,6 +477,8 @@ public sealed partial class MainWindow : Window
 #endif
         };
         chatPanel.PresetChanged += OnChatPanelPresetChanged;
+        chatPanel.AutoTitle = AppSettings.UtilityAutoTitle;
+        chatPanel.TitleGenerated += OnTitleGenerated;
 
         var tab = new TabViewItem
         {
@@ -510,6 +512,20 @@ public sealed partial class MainWindow : Window
             if (item is TabViewItem tab && ReferenceEquals(tab.Content, chatPanel))
             {
                 tab.Header = preset.Name;
+                break;
+            }
+        }
+    }
+
+    private void OnTitleGenerated(object? sender, string title)
+    {
+        if (sender is not ChatPanel chatPanel) return;
+
+        foreach (var item in Tabs.TabItems)
+        {
+            if (item is TabViewItem tab && ReferenceEquals(tab.Content, chatPanel))
+            {
+                tab.Header = title;
                 break;
             }
         }

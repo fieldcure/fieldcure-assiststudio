@@ -47,6 +47,7 @@
                                    Style="{StaticResource BodyStrongTextBlockStyle}"
                                    VerticalAlignment="Center" />
                         <Button x:Name="AddPresetButton" Grid.Column="1"
+                                x:Uid="Prompt_AddPreset"
                                 Click="OnAddPresetClicked"
                                 ToolTipService.ToolTip="Add preset"
                                 Padding="6">
@@ -67,6 +68,7 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
                                     <Button Grid.Column="1" Padding="4"
+                                            x:Uid="Prompt_DeletePreset"
                                             Visibility="{Binding IsBuiltIn, Converter={StaticResource InverseBoolToVisibility}}"
                                             Click="OnDeletePresetClicked"
                                             ToolTipService.ToolTip="Delete"
@@ -82,6 +84,7 @@
                 <!-- Editor -->
                 <StackPanel Spacing="8">
                     <TextBox x:Name="PresetNameBox"
+                             x:Uid="Prompt_PresetName"
                              Header="Name"
                              PlaceholderText="Preset name"
                              TextChanged="OnEditorChanged" />

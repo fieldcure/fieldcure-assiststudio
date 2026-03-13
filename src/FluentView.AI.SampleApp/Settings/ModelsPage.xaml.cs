@@ -451,8 +451,7 @@ public sealed partial class ModelsPage : Page
             if (isRunning)
             {
                 OllamaStatusText.Text = L("Models_Running");
-                OllamaStatusText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
-                    Microsoft.UI.Colors.Green);
+                OllamaStatusText.Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"];
                 BrowseModelsButton.Visibility = Visibility.Visible;
                 await LoadOllamaModelsAsync();
             }

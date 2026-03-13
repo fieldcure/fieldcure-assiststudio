@@ -15,9 +15,11 @@
               VerticalAlignment="Center"
               HorizontalAlignment="Stretch"
               Padding="24">
-            <local:InputContainer x:Name="InputArea"
-                                  HorizontalAlignment="Stretch"
-                                  Placeholder="{x:Bind Placeholder, Mode=OneWay}" />
+            <StackPanel x:Name="EmptyStateContent" VerticalAlignment="Center" MaxWidth="680">
+                <local:InputContainer x:Name="InputArea"
+                                      HorizontalAlignment="Stretch"
+                                      Placeholder="{x:Bind Placeholder, Mode=OneWay}" />
+            </StackPanel>
         </Grid>
 
         <!-- Chat layout (initially collapsed) -->

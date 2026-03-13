@@ -48,6 +48,21 @@ public partial class ProviderPreset : INotifyPropertyChanged
     }
 
     /// <summary>
+    /// Sampling temperature (0.0–2.0). Default is 0.7.
+    /// </summary>
+    public double Temperature { get; set; } = 0.7;
+
+    /// <summary>
+    /// Maximum tokens for the response. Default is 4096.
+    /// </summary>
+    public int MaxTokens { get; set; } = 4096;
+
+    /// <summary>
+    /// Whether streaming is enabled for this preset. Default is true.
+    /// </summary>
+    public bool StreamingEnabled { get; set; } = true;
+
+    /// <summary>
     /// Whether this provider type requires an API key.
     /// </summary>
     [JsonIgnore]

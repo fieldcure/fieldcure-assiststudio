@@ -80,6 +80,7 @@ public sealed partial class ChatPanel : UserControl
     private readonly ObservableCollection<ChatMessage> _messages = [];
     private CancellationTokenSource? _streamingCts;
     private bool _isInitialized;
+    private bool _titleGenerated;
 
     /// <summary>
     /// Maximum input tokens before auto-summarization triggers. 0 = disabled (default).
@@ -95,6 +96,17 @@ public sealed partial class ChatPanel : UserControl
     /// Enable automatic conversation summarization when input tokens exceed MaxInputTokens.
     /// </summary>
     public bool AutoSummarize { get; set; } = false;
+
+    /// <summary>
+    /// Provider used for utility tasks (title generation, summarization).
+    /// Falls back to the main Provider if not set.
+    /// </summary>
+    public IAiProvider? UtilityProvider { get; set; }
+
+    /// <summary>
+    /// Enable automatic title generation after the first assistant response.
+    /// </summary>
+    public bool AutoTitle { get; set; } = false;
 
     public ChatPanel()
     {
@@ -174,6 +186,7 @@ public sealed partial class ChatPanel : UserControl
 
     public event EventHandler<ProviderPreset>? PresetChanged;
     public event EventHandler<ChatMessage>? MessageAdded;
+    public event EventHandler<string>? TitleGenerated;
 
     public IReadOnlyList<ChatMessage> GetMessages() => _messages;
 
@@ -218,7 +231,7 @@ public sealed partial class ChatPanel : UserControl
         {
             ChatLayout.Children.Remove(InputArea);
             InputArea.HorizontalAlignment = Microsoft.UI.Xaml.HorizontalAlignment.Stretch;
-            EmptyStatePanel.Children.Add(InputArea);
+            EmptyStateContent.Children.Add(InputArea);
             ChatLayout.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
             EmptyStatePanel.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
         }
@@ -274,7 +287,7 @@ public sealed partial class ChatPanel : UserControl
         ChatLayout.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
 
         // Move InputArea from EmptyStatePanel into ChatLayout as Row 1
-        EmptyStatePanel.Children.Remove(InputArea);
+        EmptyStateContent.Children.Remove(InputArea);
         InputArea.HorizontalAlignment = Microsoft.UI.Xaml.HorizontalAlignment.Stretch;
         Grid.SetRow(InputArea, 1);
         ChatLayout.Children.Add(InputArea);
@@ -315,11 +328,7 @@ public sealed partial class ChatPanel : UserControl
 
         try
         {
-            var request = new AiRequest
-            {
-                Messages = _messages.ToList(),
-                SystemPrompt = SystemPrompt
-            };
+            var request = CreateRequest(_messages.ToList());
 
             await foreach (var token in Provider.StreamAsync(request, ct))
             {
@@ -328,6 +337,8 @@ public sealed partial class ChatPanel : UserControl
             }
 
             await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content, Provider.IsTruncated, Provider.LastUsage?.TotalTokens ?? 0);
+
+            TryGenerateTitleAsync();
 
             // Auto-summarize if enabled and token threshold exceeded
             if (AutoSummarize && MaxInputTokens > 0 && Provider.LastUsage is { } usage &&
@@ -387,11 +398,7 @@ public sealed partial class ChatPanel : UserControl
 
         try
         {
-            var request = new AiRequest
-            {
-                Messages = _messages.ToList(),
-                SystemPrompt = SystemPrompt
-            };
+            var request = CreateRequest(_messages.ToList());
 
             var continuationText = "";
             await foreach (var token in Provider.StreamAsync(request, ct))
@@ -590,11 +597,7 @@ public sealed partial class ChatPanel : UserControl
 
         try
         {
-            var request = new AiRequest
-            {
-                Messages = _messages.ToList(),
-                SystemPrompt = SystemPrompt
-            };
+            var request = CreateRequest(_messages.ToList());
 
             await foreach (var token in Provider.StreamAsync(request, ct))
             {
@@ -692,6 +695,50 @@ public sealed partial class ChatPanel : UserControl
     private static readonly Windows.UI.Color LightBg = Windows.UI.Color.FromArgb(255, 0xF5, 0xF5, 0xF5);
     private static readonly Windows.UI.Color DarkBg = Windows.UI.Color.FromArgb(255, 0x20, 0x20, 0x20);
 
+    private async void TryGenerateTitleAsync()
+    {
+        if (_titleGenerated || !AutoTitle) return;
+        _titleGenerated = true;
+
+        var provider = UtilityProvider ?? Provider;
+        if (provider is null or MockProvider) return;
+
+        // Build context from the first user+assistant exchange
+        var userMsg = _messages.FirstOrDefault(m => m.Role == ChatRole.User);
+        var assistantMsg = _messages.FirstOrDefault(m => m.Role == ChatRole.Assistant);
+        if (userMsg is null || assistantMsg is null) return;
+
+        var snippet = assistantMsg.Content.Length > 200
+            ? assistantMsg.Content[..200]
+            : assistantMsg.Content;
+
+        try
+        {
+            var titleRequest = new AiRequest
+            {
+                Messages =
+                [
+                    new ChatMessage(ChatRole.User,
+                        $"User: {userMsg.Content}\nAssistant: {snippet}\n\nGenerate a short title (max 6 words) for this conversation. Reply with ONLY the title, no quotes or punctuation.")
+                ],
+                SystemPrompt = "You generate concise conversation titles.",
+                Temperature = 0.3,
+                MaxTokens = 30
+            };
+
+            var title = await provider.CompleteAsync(titleRequest);
+            title = title.Trim().Trim('"', '\'', '.').Trim();
+            if (!string.IsNullOrEmpty(title))
+            {
+                DispatcherQueue.TryEnqueue(() => TitleGenerated?.Invoke(this, title));
+            }
+        }
+        catch
+        {
+            // Title generation is non-critical
+        }
+    }
+
     private async Task ApplyThemeAsync()
     {
         if (!_isInitialized) return;
@@ -738,6 +785,18 @@ public sealed partial class ChatPanel : UserControl
             // Resource loading may fail if no .resw files are available (consumer app).
             // Defaults in chat.html will be used.
         }
+    }
+
+    private AiRequest CreateRequest(IReadOnlyList<ChatMessage> messages, string? systemPrompt = null)
+    {
+        var preset = SelectedPreset;
+        return new AiRequest
+        {
+            Messages = messages,
+            SystemPrompt = systemPrompt ?? SystemPrompt,
+            Temperature = preset?.Temperature ?? 0.7,
+            MaxTokens = preset?.MaxTokens ?? 4096
+        };
     }
 
     private bool IsDarkTheme() => Theme switch

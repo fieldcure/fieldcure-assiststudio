@@ -41,6 +41,7 @@
                           SelectionChanged="OnLanguageChanged" />
 
                 <InfoBar x:Name="LanguageRestartInfo"
+                         x:Uid="Advanced_Restart"
                          IsOpen="False"
                          IsClosable="False"
                          Severity="Warning"
