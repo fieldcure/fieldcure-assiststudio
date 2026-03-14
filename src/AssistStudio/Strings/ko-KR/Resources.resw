@@ -124,6 +124,9 @@
   <data name="Models_CloudSection.Text" xml:space="preserve">
     <value>클라우드 추론 (SaaS)</value>
   </data>
+  <data name="Models_ApiKeyStorageInfo.Text" xml:space="preserve">
+    <value>API 키는 Windows에 안전하게 암호화 저장됩니다.</value>
+  </data>
   <data name="Models_LocalSection.Text" xml:space="preserve">
     <value>로컬 추론 (On-Device)</value>
   </data>

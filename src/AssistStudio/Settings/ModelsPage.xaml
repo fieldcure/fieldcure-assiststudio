@@ -31,6 +31,10 @@
                 <!-- ============================== -->
                 <TextBlock x:Uid="Models_CloudSection" Text="Cloud Inference (SaaS)"
                            Style="{StaticResource SubtitleTextBlockStyle}" />
+                <TextBlock x:Uid="Models_ApiKeyStorageInfo"
+                           Text="API keys are encrypted and stored in Windows Credential Locker."
+                           FontSize="12" Opacity="0.6"
+                           TextWrapping="Wrap" Margin="0,-16,0,0" />
 
                 <!-- Anthropic Claude -->
                 <StackPanel Spacing="8">

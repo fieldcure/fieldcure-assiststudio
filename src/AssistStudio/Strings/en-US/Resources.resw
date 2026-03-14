@@ -124,6 +124,9 @@
   <data name="Models_CloudSection.Text" xml:space="preserve">
     <value>Cloud Inference (SaaS)</value>
   </data>
+  <data name="Models_ApiKeyStorageInfo.Text" xml:space="preserve">
+    <value>API keys are securely encrypted and stored on Windows.</value>
+  </data>
   <data name="Models_LocalSection.Text" xml:space="preserve">
     <value>Local Inference (On-Device)</value>
   </data>
