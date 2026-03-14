@@ -305,6 +305,15 @@
   <data name="Models_ErrorStarting" xml:space="preserve">
     <value>시작 오류</value>
   </data>
+  <data name="Models_FitGpu" xml:space="preserve">
+    <value>GPU</value>
+  </data>
+  <data name="Models_FitCpu" xml:space="preserve">
+    <value>CPU</value>
+  </data>
+  <data name="Models_FitMaybe" xml:space="preserve">
+    <value>느릴 수 있음</value>
+  </data>
   <data name="Models_PullingModel" xml:space="preserve">
     <value>{0} 다운로드 중...</value>
   </data>

@@ -411,7 +411,8 @@ public sealed partial class ModelsPage : Page
         }
 
         // Ollama
-        var ollamaModel = OllamaModelCombo.SelectedItem as string ?? "";
+        var ollamaDisplay = OllamaModelCombo.SelectedItem as string ?? "";
+        var ollamaModel = StripFitSuffix(ollamaDisplay);
         AppSettings.SetDefaultModel("Ollama", ollamaModel);
         _settings.Presets.Add(new ProviderPreset
         {
@@ -432,11 +433,22 @@ public sealed partial class ModelsPage : Page
 
     private void OnOllamaModelChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (OllamaModelCombo.SelectedItem is string model && !string.IsNullOrEmpty(model))
+        if (OllamaModelCombo.SelectedItem is string display && !string.IsNullOrEmpty(display))
         {
+            // Strip fit-kind suffix before saving
+            var model = StripFitSuffix(display);
             AppSettings.SetDefaultModel("Ollama", model);
             SyncPresetsFromUI();
         }
+    }
+
+    /// <summary>
+    /// Strips the fit-kind suffix (e.g. "  (GPU)") from a display string.
+    /// </summary>
+    private static string StripFitSuffix(string display)
+    {
+        var idx = display.IndexOf("  (", StringComparison.Ordinal);
+        return idx >= 0 ? display[..idx] : display;
     }
 
     // ===== Ollama =====
@@ -500,11 +512,32 @@ public sealed partial class ModelsPage : Page
         try
         {
             using var manager = new OllamaModelManager();
-            var models = await manager.ListLocalModelsAsync();
+            var allModels = await manager.ListLocalModelsAsync();
+            var hw = await HardwareProbe.GetAsync();
+
+            var visibleModels = allModels
+                .Select(m => new
+                {
+                    Model = m,
+                    Fit = OllamaFitPolicy.Classify(
+                        new OllamaModelMeta(m.Id, m.SizeBytes, m.ParameterSize, m.QuantizationLevel),
+                        hw)
+                })
+                .Where(x => x.Fit != OllamaFitKind.NoFit)
+                .OrderBy(x => x.Fit)
+                .ToList();
+
             OllamaModelCombo.Items.Clear();
-            foreach (var m in models)
+            foreach (var x in visibleModels)
             {
-                OllamaModelCombo.Items.Add(m.Id);
+                var suffix = x.Fit switch
+                {
+                    OllamaFitKind.Gpu => $"  ({L("Models_FitGpu")})",
+                    OllamaFitKind.Cpu => $"  ({L("Models_FitCpu")})",
+                    OllamaFitKind.Maybe => $"  ({L("Models_FitMaybe")})",
+                    _ => ""
+                };
+                OllamaModelCombo.Items.Add(x.Model.Id + suffix);
             }
 
             if (OllamaModelCombo.Items.Count > 0)
@@ -514,7 +547,7 @@ public sealed partial class ModelsPage : Page
                 var found = false;
                 for (var i = 0; i < OllamaModelCombo.Items.Count; i++)
                 {
-                    if (OllamaModelCombo.Items[i] is string s && s == saved)
+                    if (OllamaModelCombo.Items[i] is string s && s.StartsWith(saved ?? ""))
                     {
                         OllamaModelCombo.SelectedIndex = i;
                         found = true;

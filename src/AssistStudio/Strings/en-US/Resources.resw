@@ -305,6 +305,15 @@
   <data name="Models_ErrorStarting" xml:space="preserve">
     <value>Error starting</value>
   </data>
+  <data name="Models_FitGpu" xml:space="preserve">
+    <value>GPU</value>
+  </data>
+  <data name="Models_FitCpu" xml:space="preserve">
+    <value>CPU</value>
+  </data>
+  <data name="Models_FitMaybe" xml:space="preserve">
+    <value>may be slow</value>
+  </data>
   <data name="Models_PullingModel" xml:space="preserve">
     <value>Pulling {0}...</value>
   </data>
