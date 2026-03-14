@@ -5,6 +5,8 @@ namespace FieldCure.AssistStudio.Models;
 /// </summary>
 public class PromptPreset
 {
+    #region Properties
+
     /// <summary>Unique display name for this preset.</summary>
     public string Name { get; set; } = "";
 
@@ -13,4 +15,6 @@ public class PromptPreset
 
     /// <summary>Whether this is a built-in preset (cannot be deleted).</summary>
     public bool IsBuiltIn { get; set; }
+
+    #endregion
 }

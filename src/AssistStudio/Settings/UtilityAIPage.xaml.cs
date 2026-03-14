@@ -1,20 +1,45 @@
-﻿using AssistStudio.Helpers;
+using AssistStudio.Helpers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 
 namespace AssistStudio.Settings;
 
+/// <summary>
+/// Settings page for configuring utility AI behavior, including the model source,
+/// auto-title generation, and auto-summarization toggles.
+/// </summary>
 public sealed partial class UtilityAIPage : Page
 {
+    #region Fields
+
+    /// <summary>
+    /// Reference to the parent settings panel for accessing presets.
+    /// </summary>
     private SettingsPanel? _settings;
+
+    /// <summary>
+    /// Flag to suppress event handlers during programmatic UI updates.
+    /// </summary>
     private bool _suppressEvents;
 
+    #endregion
+
+    #region Constructors
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UtilityAIPage"/> class.
+    /// </summary>
     public UtilityAIPage()
     {
         InitializeComponent();
     }
 
+    #endregion
+
+    #region Overrides
+
+    /// <inheritdoc/>
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
@@ -49,6 +74,13 @@ public sealed partial class UtilityAIPage : Page
         _suppressEvents = false;
     }
 
+    #endregion
+
+    #region Private Methods
+
+    /// <summary>
+    /// Populates the preset combo box with available provider presets and selects the saved choice.
+    /// </summary>
     private void PopulatePresetCombo()
     {
         PresetCombo.Items.Clear();
@@ -77,6 +109,13 @@ public sealed partial class UtilityAIPage : Page
         }
     }
 
+    #endregion
+
+    #region Event Handlers
+
+    /// <summary>
+    /// Handles model source radio button changes to switch between "Current" and "Specific" modes.
+    /// </summary>
     private void OnModelSourceChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_suppressEvents) return;
@@ -88,6 +127,9 @@ public sealed partial class UtilityAIPage : Page
         }
     }
 
+    /// <summary>
+    /// Handles preset combo box selection changes to persist the chosen utility AI preset.
+    /// </summary>
     private void OnPresetSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_suppressEvents) return;
@@ -98,15 +140,23 @@ public sealed partial class UtilityAIPage : Page
         }
     }
 
+    /// <summary>
+    /// Handles the auto-title toggle switch change to persist the setting.
+    /// </summary>
     private void OnAutoTitleToggled(object sender, RoutedEventArgs e)
     {
         if (_suppressEvents) return;
         AppSettings.UtilityAutoTitle = AutoTitleToggle.IsOn;
     }
 
+    /// <summary>
+    /// Handles the auto-summary toggle switch change to persist the setting.
+    /// </summary>
     private void OnAutoSummaryToggled(object sender, RoutedEventArgs e)
     {
         if (_suppressEvents) return;
         AppSettings.UtilityAutoSummary = AutoSummaryToggle.IsOn;
     }
+
+    #endregion
 }

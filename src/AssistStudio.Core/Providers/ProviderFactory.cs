@@ -7,11 +7,11 @@ namespace FieldCure.AssistStudio.Providers;
 /// </summary>
 public static class ProviderFactory
 {
+    #region Public Methods
+
     /// <summary>
     /// Creates an <see cref="IAiProvider"/> instance based on the specified preset configuration.
     /// </summary>
-    /// <param name="preset">The provider preset containing type, model, and credentials.</param>
-    /// <returns>A configured AI provider ready for use.</returns>
     public static IAiProvider Create(ProviderPreset preset)
     {
         var apiKey = preset.ApiKey;
@@ -40,7 +40,13 @@ public static class ProviderFactory
         };
     }
 
+    #endregion
+
+    #region Constants
+
     /// <summary>The list of all supported provider type keys.</summary>
     public static readonly string[] ProviderTypes =
         ["Mock", "Claude", "OpenAI", "Ollama", "Gemini", "Groq"];
+
+    #endregion
 }

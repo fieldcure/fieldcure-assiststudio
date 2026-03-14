@@ -23,14 +23,21 @@ public enum ChatRole
 /// </summary>
 public partial class ChatMessage : INotifyPropertyChanged
 {
+    #region Fields
+
+    /// <summary>Backing field for <see cref="Content"/>.</summary>
     private string _content;
+
+    /// <summary>Backing field for <see cref="IsStreaming"/>.</summary>
     private bool _isStreaming;
+
+    #endregion
+
+    #region Constructors
 
     /// <summary>
     /// Initializes a new <see cref="ChatMessage"/> with the specified role and optional content.
     /// </summary>
-    /// <param name="role">The role of the message sender.</param>
-    /// <param name="content">The initial text content of the message.</param>
     public ChatMessage(ChatRole role, string content = "")
     {
         Id = Guid.NewGuid().ToString("N");
@@ -39,6 +46,10 @@ public partial class ChatMessage : INotifyPropertyChanged
         Timestamp = DateTime.UtcNow;
         Attachments = [];
     }
+
+    #endregion
+
+    #region Properties
 
     /// <summary>A unique identifier for this message.</summary>
     public string Id { get; }
@@ -76,13 +87,24 @@ public partial class ChatMessage : INotifyPropertyChanged
     /// </summary>
     public string? ProviderModelId { get; init; }
 
+    #endregion
+
+    #region INotifyPropertyChanged
+
     /// <inheritdoc/>
     public event PropertyChangedEventHandler? PropertyChanged;
 
+    #endregion
+
+    #region Private Methods
+
+    /// <summary>Sets a backing field and raises <see cref="PropertyChanged"/> if the value changed.</summary>
     private void SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
     {
         if (EqualityComparer<T>.Default.Equals(field, value)) return;
         field = value;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
+
+    #endregion
 }

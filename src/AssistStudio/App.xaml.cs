@@ -7,15 +7,35 @@ using Windows.Storage;
 
 namespace AssistStudio;
 
+/// <summary>
+/// Application entry point that manages the main window lifecycle and file activation handling.
+/// </summary>
 public partial class App : Application
 {
+    #region Fields
+
+    /// <summary>
+    /// The main application window instance.
+    /// </summary>
     private MainWindow? _window;
 
+    #endregion
+
+    #region Constructors
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="App"/> class.
+    /// </summary>
     public App()
     {
         InitializeComponent();
     }
 
+    #endregion
+
+    #region Overrides
+
+    /// <inheritdoc/>
     protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
     {
         ConversationManager.Initialize(ApplicationData.Current.LocalFolder.Path);
@@ -37,6 +57,13 @@ public partial class App : Application
         AppInstance.GetCurrent().Activated += OnActivated;
     }
 
+    #endregion
+
+    #region Event Handlers
+
+    /// <summary>
+    /// Handles redirected activation events when the app is already running and a file is opened.
+    /// </summary>
     private void OnActivated(object? sender, AppActivationArguments args)
     {
         if (args.Kind == ExtendedActivationKind.File &&
@@ -51,4 +78,6 @@ public partial class App : Application
             });
         }
     }
+
+    #endregion
 }

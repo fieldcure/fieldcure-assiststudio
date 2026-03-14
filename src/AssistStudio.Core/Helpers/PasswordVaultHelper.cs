@@ -7,13 +7,18 @@ namespace FieldCure.AssistStudio.Helpers;
 /// </summary>
 public static class PasswordVaultHelper
 {
+    #region Constants
+
+    /// <summary>The resource name used to identify credentials in the Windows PasswordVault.</summary>
     private const string ResourceName = "FieldCure.AssistStudio";
+
+    #endregion
+
+    #region Public Methods
 
     /// <summary>
     /// Saves an API key for the specified preset name, replacing any existing entry.
     /// </summary>
-    /// <param name="presetName">The preset name used as the credential username.</param>
-    /// <param name="apiKey">The API key to store. If empty, any existing entry is removed.</param>
     public static void SaveApiKey(string presetName, string apiKey)
     {
         var vault = new PasswordVault();
@@ -38,8 +43,6 @@ public static class PasswordVaultHelper
     /// <summary>
     /// Loads the API key for the specified preset name from the credential store.
     /// </summary>
-    /// <param name="presetName">The preset name used as the credential username.</param>
-    /// <returns>The stored API key, or an empty string if not found.</returns>
     public static string LoadApiKey(string presetName)
     {
         try
@@ -58,7 +61,6 @@ public static class PasswordVaultHelper
     /// <summary>
     /// Deletes the stored API key for the specified preset name from the credential store.
     /// </summary>
-    /// <param name="presetName">The preset name whose API key should be removed.</param>
     public static void DeleteApiKey(string presetName)
     {
         try
@@ -72,4 +74,6 @@ public static class PasswordVaultHelper
             // Not found — OK
         }
     }
+
+    #endregion
 }

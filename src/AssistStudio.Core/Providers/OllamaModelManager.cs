@@ -10,10 +10,22 @@ namespace FieldCure.AssistStudio.Providers;
 /// </summary>
 public partial class OllamaModelManager : IModelManager, IDisposable
 {
+    #region Fields
+
+    /// <summary>The HTTP client used for API requests.</summary>
     private readonly HttpClient _httpClient;
+
+    /// <summary>The base URL of the Ollama server.</summary>
     private readonly string _baseUrl;
+
+    /// <summary>Whether this instance owns (and should dispose) the HTTP client.</summary>
     private readonly bool _ownsHttpClient;
 
+    #endregion
+
+    #region Constants
+
+    /// <summary>A curated list of recommended Ollama models for search results.</summary>
     private static readonly IReadOnlyList<(string Name, string DisplayName, string Family)> RecommendedModels =
     [
         ("llama3.1", "Meta Llama 3.1 (8B)", "llama"),
@@ -27,10 +39,13 @@ public partial class OllamaModelManager : IModelManager, IDisposable
         ("llava", "LLaVA (Vision)", "llava"),
     ];
 
+    #endregion
+
+    #region Constructors
+
     /// <summary>
     /// Initializes a new <see cref="OllamaModelManager"/> with an internally managed <see cref="HttpClient"/>.
     /// </summary>
-    /// <param name="baseUrl">The base URL of the Ollama server.</param>
     public OllamaModelManager(string baseUrl = "http://localhost:11434")
         : this(new HttpClient(), baseUrl, ownsHttpClient: true)
     {
@@ -39,19 +54,24 @@ public partial class OllamaModelManager : IModelManager, IDisposable
     /// <summary>
     /// Initializes a new <see cref="OllamaModelManager"/> with an externally managed <see cref="HttpClient"/>.
     /// </summary>
-    /// <param name="httpClient">The HTTP client to use for API requests.</param>
-    /// <param name="baseUrl">The base URL of the Ollama server.</param>
     public OllamaModelManager(HttpClient httpClient, string baseUrl = "http://localhost:11434")
         : this(httpClient, baseUrl, ownsHttpClient: false)
     {
     }
 
+    /// <summary>
+    /// Internal constructor that captures all dependencies.
+    /// </summary>
     private OllamaModelManager(HttpClient httpClient, string baseUrl, bool ownsHttpClient)
     {
         _httpClient = httpClient;
         _baseUrl = baseUrl.TrimEnd('/');
         _ownsHttpClient = ownsHttpClient;
     }
+
+    #endregion
+
+    #region IModelManager Implementation
 
     /// <inheritdoc/>
     public async Task<IReadOnlyList<LocalModel>> ListLocalModelsAsync(CancellationToken ct = default)
@@ -164,10 +184,16 @@ public partial class OllamaModelManager : IModelManager, IDisposable
         response.EnsureSuccessStatusCode();
     }
 
+    #endregion
+
+    #region IDisposable
+
     /// <inheritdoc/>
     public void Dispose()
     {
         if (_ownsHttpClient)
             _httpClient.Dispose();
     }
+
+    #endregion
 }

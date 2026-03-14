@@ -23,7 +23,9 @@ public enum CompatibilityLevel
 /// </summary>
 public static class ModelCompatibility
 {
-    // Estimated model sizes in bytes (approximate download/disk sizes for quantized models)
+    #region Constants
+
+    /// <summary>Estimated model sizes in bytes (approximate download/disk sizes for quantized models).</summary>
     private static readonly Dictionary<string, long> EstimatedModelSizes = new(StringComparer.OrdinalIgnoreCase)
     {
         ["llama3.1"] = 4_600_000_000L,         // ~4.6 GB (8B Q4)
@@ -37,15 +39,19 @@ public static class ModelCompatibility
         ["llava"] = 4_500_000_000L,            // ~4.5 GB (7B Q4)
     };
 
+    /// <summary>Two gigabytes in bytes, used as a comfortable VRAM headroom threshold.</summary>
     private const long TwoGb = 2L * 1024 * 1024 * 1024;
+
+    /// <summary>One gigabyte in bytes, used as a minimum VRAM headroom threshold.</summary>
     private const long OneGb = 1L * 1024 * 1024 * 1024;
+
+    #endregion
+
+    #region Public Methods
 
     /// <summary>
     /// Checks hardware compatibility for a model of the given size.
     /// </summary>
-    /// <param name="modelSizeBytes">The estimated model size in bytes.</param>
-    /// <param name="hw">The current hardware specifications.</param>
-    /// <returns>The compatibility level based on available VRAM.</returns>
     public static CompatibilityLevel Check(long modelSizeBytes, HardwareSpec hw)
     {
         if (modelSizeBytes <= 0 || hw.VramBytes <= 0)
@@ -63,9 +69,6 @@ public static class ModelCompatibility
     /// <summary>
     /// Checks hardware compatibility for a model identified by name, using estimated sizes.
     /// </summary>
-    /// <param name="modelName">The model name (e.g., "llama3.1", "phi4").</param>
-    /// <param name="hw">The current hardware specifications.</param>
-    /// <returns>The compatibility level, or <see cref="CompatibilityLevel.Unknown"/> if the model is not recognized.</returns>
     public static CompatibilityLevel CheckByModelName(string modelName, HardwareSpec hw)
     {
         var baseName = modelName.Split(':')[0].ToLowerInvariant();
@@ -81,8 +84,6 @@ public static class ModelCompatibility
     /// <summary>
     /// Returns the estimated download size in bytes for a known model name.
     /// </summary>
-    /// <param name="modelName">The model name to look up.</param>
-    /// <returns>The estimated size in bytes, or 0 if the model is not recognized.</returns>
     public static long GetEstimatedSize(string modelName)
     {
         var baseName = modelName.Split(':')[0].ToLowerInvariant();
@@ -98,8 +99,6 @@ public static class ModelCompatibility
     /// <summary>
     /// Returns a Unicode icon representing the given compatibility level.
     /// </summary>
-    /// <param name="level">The compatibility level.</param>
-    /// <returns>A Unicode emoji string.</returns>
     public static string GetCompatibilityIcon(CompatibilityLevel level) => level switch
     {
         CompatibilityLevel.Compatible => "\u2705",
@@ -111,8 +110,6 @@ public static class ModelCompatibility
     /// <summary>
     /// Returns a human-readable text description for the given compatibility level.
     /// </summary>
-    /// <param name="level">The compatibility level.</param>
-    /// <returns>A short description string.</returns>
     public static string GetCompatibilityText(CompatibilityLevel level) => level switch
     {
         CompatibilityLevel.Compatible => "Compatible",
@@ -120,4 +117,6 @@ public static class ModelCompatibility
         CompatibilityLevel.NotCompatible => "Not enough VRAM",
         _ => "Unknown"
     };
+
+    #endregion
 }

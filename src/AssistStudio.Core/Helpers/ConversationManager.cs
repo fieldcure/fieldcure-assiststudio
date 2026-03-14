@@ -9,16 +9,28 @@ namespace FieldCure.AssistStudio.Helpers;
 /// </summary>
 public static class ConversationManager
 {
+    #region Constants
+
     /// <summary>The file extension used for conversation files.</summary>
     public const string FileExtension = ".astx";
 
+    #endregion
+
+    #region Fields
+
+    /// <summary>The folder path where conversations are stored.</summary>
     private static string _conversationsFolder = "";
 
+    /// <summary>Shared JSON serializer options for conversation serialization.</summary>
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
         Converters = { new JsonStringEnumConverter() },
     };
+
+    #endregion
+
+    #region Public Methods
 
     /// <summary>
     /// Initialize the conversation manager with a base folder path.
@@ -79,8 +91,6 @@ public static class ConversationManager
     /// <summary>
     /// Loads a conversation from the specified file path.
     /// </summary>
-    /// <param name="filePath">The full path to the conversation file.</param>
-    /// <returns>The deserialized conversation data, or <see langword="null"/> if the file does not exist.</returns>
     public static async Task<ConversationData?> LoadConversationAsync(string filePath)
     {
         if (!File.Exists(filePath)) return null;
@@ -92,8 +102,6 @@ public static class ConversationManager
     /// <summary>
     /// Lists saved conversations in the conversations folder, ordered by most recently modified.
     /// </summary>
-    /// <param name="top">The maximum number of conversations to return.</param>
-    /// <returns>A list of conversation file information records.</returns>
     public static IReadOnlyList<ConversationFileInfo> ListSavedConversations(int top = int.MaxValue)
     {
         EnsureInitialized();
@@ -134,6 +142,10 @@ public static class ConversationManager
         }
     }
 
+    #endregion
+
+    #region Private Methods
+
     /// <summary>
     /// Write to a temp file first, then atomically replace the target.
     /// Prevents data loss if the process crashes or the write is interrupted
@@ -156,18 +168,22 @@ public static class ConversationManager
         }
     }
 
+    /// <summary>Sanitizes a file name by replacing invalid characters with underscores.</summary>
     private static string SanitizeFileName(string name)
     {
         var invalid = Path.GetInvalidFileNameChars();
         return string.Concat(name.Select(c => invalid.Contains(c) ? '_' : c));
     }
 
+    /// <summary>Throws if <see cref="Initialize"/> has not been called.</summary>
     private static void EnsureInitialized()
     {
         if (string.IsNullOrEmpty(_conversationsFolder))
             throw new InvalidOperationException(
                 "ConversationManager.Initialize() must be called before use.");
     }
+
+    #endregion
 }
 
 /// <summary>
@@ -175,6 +191,8 @@ public static class ConversationManager
 /// </summary>
 public class ConversationData
 {
+    #region Properties
+
     /// <summary>The JSON schema URI for the conversation format.</summary>
     [JsonPropertyName("$schema")]
     public string Schema { get; set; } = "https://assiststudio.dev/schema/conversation/v1";
@@ -198,6 +216,8 @@ public class ConversationData
 
     /// <summary>The list of messages in the conversation.</summary>
     public List<SavedMessage> Messages { get; set; } = [];
+
+    #endregion
 }
 
 /// <summary>
@@ -205,6 +225,8 @@ public class ConversationData
 /// </summary>
 public class SavedMessage
 {
+    #region Properties
+
     /// <summary>The role of the message sender.</summary>
     public ChatRole Role { get; set; }
 
@@ -219,6 +241,8 @@ public class SavedMessage
 
     /// <summary>The UTC timestamp when the message was created.</summary>
     public DateTime Timestamp { get; set; }
+
+    #endregion
 }
 
 /// <summary>
@@ -226,6 +250,8 @@ public class SavedMessage
 /// </summary>
 public class ConversationFileInfo
 {
+    #region Properties
+
     /// <summary>The full file path of the conversation file.</summary>
     public string FilePath { get; set; } = "";
 
@@ -234,4 +260,6 @@ public class ConversationFileInfo
 
     /// <summary>The last modified timestamp of the file in UTC.</summary>
     public DateTime ModifiedAt { get; set; }
+
+    #endregion
 }

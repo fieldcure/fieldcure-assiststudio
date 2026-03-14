@@ -11,11 +11,27 @@ namespace FieldCure.AssistStudio.Providers;
 /// </summary>
 public partial class GeminiProvider : IAiProvider, IDisposable
 {
+    #region Fields
+
+    /// <summary>The HTTP client used for API requests.</summary>
     private readonly HttpClient _httpClient;
+
+    /// <summary>The Google AI API key for authentication.</summary>
     private readonly string _apiKey;
+
+    /// <summary>Whether this instance owns (and should dispose) the HTTP client.</summary>
     private readonly bool _ownsHttpClient;
 
+    #endregion
+
+    #region Constants
+
+    /// <summary>The base URL for the Google Generative Language API.</summary>
     private const string BaseUrl = "https://generativelanguage.googleapis.com";
+
+    #endregion
+
+    #region Properties
 
     /// <inheritdoc/>
     public string ProviderName => "Gemini";
@@ -35,11 +51,13 @@ public partial class GeminiProvider : IAiProvider, IDisposable
     /// <inheritdoc/>
     public string? LastRawResponse { get; private set; }
 
+    #endregion
+
+    #region Constructors
+
     /// <summary>
     /// Initializes a new <see cref="GeminiProvider"/> with an internally managed <see cref="HttpClient"/>.
     /// </summary>
-    /// <param name="apiKey">The Google AI API key.</param>
-    /// <param name="model">The model identifier to use.</param>
     public GeminiProvider(string apiKey, string model = "gemini-2.0-flash")
         : this(new HttpClient(), apiKey, model, ownsHttpClient: true)
     {
@@ -48,14 +66,14 @@ public partial class GeminiProvider : IAiProvider, IDisposable
     /// <summary>
     /// Initializes a new <see cref="GeminiProvider"/> with an externally managed <see cref="HttpClient"/>.
     /// </summary>
-    /// <param name="httpClient">The HTTP client to use for API requests.</param>
-    /// <param name="apiKey">The Google AI API key.</param>
-    /// <param name="model">The model identifier to use.</param>
     public GeminiProvider(HttpClient httpClient, string apiKey, string model = "gemini-2.0-flash")
         : this(httpClient, apiKey, model, ownsHttpClient: false)
     {
     }
 
+    /// <summary>
+    /// Internal constructor that captures all dependencies.
+    /// </summary>
     private GeminiProvider(HttpClient httpClient, string apiKey, string model, bool ownsHttpClient)
     {
         _httpClient = httpClient;
@@ -63,6 +81,10 @@ public partial class GeminiProvider : IAiProvider, IDisposable
         _ownsHttpClient = ownsHttpClient;
         ModelId = model;
     }
+
+    #endregion
+
+    #region IAiProvider Implementation
 
     /// <inheritdoc/>
     public async Task<string> CompleteAsync(AiRequest request, CancellationToken ct = default)
@@ -152,6 +174,56 @@ public partial class GeminiProvider : IAiProvider, IDisposable
         LastRawResponse = responseSb.ToString();
     }
 
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<AiModel>> ListModelsAsync(CancellationToken ct = default)
+    {
+        var url = $"{BaseUrl}/v1beta/models?key={_apiKey}";
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        var response = await _httpClient.SendAsync(req, ct);
+        response.EnsureSuccessStatusCode();
+
+        var json = await response.Content.ReadAsStringAsync(ct);
+        using var doc = JsonDocument.Parse(json);
+
+        var models = new List<AiModel>();
+        foreach (var item in doc.RootElement.GetProperty("models").EnumerateArray())
+        {
+            // name is "models/gemini-2.0-flash" — strip prefix for Id
+            var fullName = item.GetProperty("name").GetString()!;
+            var id = fullName.StartsWith("models/") ? fullName["models/".Length..] : fullName;
+            var displayName = item.TryGetProperty("displayName", out var dn) ? dn.GetString() : null;
+            models.Add(new AiModel(id, displayName, "google"));
+        }
+
+        return models;
+    }
+
+    /// <inheritdoc/>
+    public async Task<ConnectionInfo> ValidateConnectionAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var url = $"{BaseUrl}/v1beta/models?key={_apiKey}";
+            using var req = new HttpRequestMessage(HttpMethod.Get, url);
+            var response = await _httpClient.SendAsync(req, ct);
+
+            if (response.IsSuccessStatusCode)
+                return new ConnectionInfo(true, null, null, null);
+
+            var errorBody = await response.Content.ReadAsStringAsync(ct);
+            return new ConnectionInfo(false, null, null, $"HTTP {(int)response.StatusCode}: {errorBody}");
+        }
+        catch (Exception ex)
+        {
+            return new ConnectionInfo(false, null, null, ex.Message);
+        }
+    }
+
+    #endregion
+
+    #region Private Methods
+
+    /// <summary>Builds the JSON request body for the Gemini generateContent API.</summary>
     private string BuildRequestBody(AiRequest request)
     {
         var contents = new JsonArray();
@@ -233,6 +305,7 @@ public partial class GeminiProvider : IAiProvider, IDisposable
         return body.ToJsonString();
     }
 
+    /// <summary>Sends an HTTP POST request to the Gemini API and validates the response.</summary>
     private async Task<HttpResponseMessage> SendRequestAsync(
         string url, string body, CancellationToken ct,
         HttpCompletionOption completionOption = HttpCompletionOption.ResponseContentRead)
@@ -256,50 +329,9 @@ public partial class GeminiProvider : IAiProvider, IDisposable
         return response;
     }
 
-    /// <inheritdoc/>
-    public async Task<IReadOnlyList<AiModel>> ListModelsAsync(CancellationToken ct = default)
-    {
-        var url = $"{BaseUrl}/v1beta/models?key={_apiKey}";
-        using var req = new HttpRequestMessage(HttpMethod.Get, url);
-        var response = await _httpClient.SendAsync(req, ct);
-        response.EnsureSuccessStatusCode();
+    #endregion
 
-        var json = await response.Content.ReadAsStringAsync(ct);
-        using var doc = JsonDocument.Parse(json);
-
-        var models = new List<AiModel>();
-        foreach (var item in doc.RootElement.GetProperty("models").EnumerateArray())
-        {
-            // name is "models/gemini-2.0-flash" — strip prefix for Id
-            var fullName = item.GetProperty("name").GetString()!;
-            var id = fullName.StartsWith("models/") ? fullName["models/".Length..] : fullName;
-            var displayName = item.TryGetProperty("displayName", out var dn) ? dn.GetString() : null;
-            models.Add(new AiModel(id, displayName, "google"));
-        }
-
-        return models;
-    }
-
-    /// <inheritdoc/>
-    public async Task<ConnectionInfo> ValidateConnectionAsync(CancellationToken ct = default)
-    {
-        try
-        {
-            var url = $"{BaseUrl}/v1beta/models?key={_apiKey}";
-            using var req = new HttpRequestMessage(HttpMethod.Get, url);
-            var response = await _httpClient.SendAsync(req, ct);
-
-            if (response.IsSuccessStatusCode)
-                return new ConnectionInfo(true, null, null, null);
-
-            var errorBody = await response.Content.ReadAsStringAsync(ct);
-            return new ConnectionInfo(false, null, null, $"HTTP {(int)response.StatusCode}: {errorBody}");
-        }
-        catch (Exception ex)
-        {
-            return new ConnectionInfo(false, null, null, ex.Message);
-        }
-    }
+    #region IDisposable
 
     /// <inheritdoc/>
     public void Dispose()
@@ -307,4 +339,6 @@ public partial class GeminiProvider : IAiProvider, IDisposable
         if (_ownsHttpClient)
             _httpClient.Dispose();
     }
+
+    #endregion
 }

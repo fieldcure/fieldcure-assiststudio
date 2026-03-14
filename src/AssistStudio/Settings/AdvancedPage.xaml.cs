@@ -1,19 +1,40 @@
-﻿using System.Globalization;
+using System.Globalization;
 using Windows.Globalization;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 
 namespace AssistStudio.Settings;
 
+/// <summary>
+/// Settings page for advanced options such as application language selection.
+/// </summary>
 public sealed partial class AdvancedPage : Page
 {
+    #region Fields
+
+    /// <summary>
+    /// The language ID that was active when the page was first navigated to,
+    /// used to detect changes that require a restart.
+    /// </summary>
     private string _initialLanguageId = "";
 
+    #endregion
+
+    #region Constructors
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AdvancedPage"/> class.
+    /// </summary>
     public AdvancedPage()
     {
         InitializeComponent();
     }
 
+    #endregion
+
+    #region Overrides
+
+    /// <inheritdoc/>
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
@@ -23,6 +44,13 @@ public sealed partial class AdvancedPage : Page
         LoadLanguages();
     }
 
+    #endregion
+
+    #region Private Methods
+
+    /// <summary>
+    /// Populates the language picker with the system default option and all manifest-declared languages.
+    /// </summary>
     private void LoadLanguages()
     {
         LanguagePicker.Items.Clear();
@@ -58,6 +86,14 @@ public sealed partial class AdvancedPage : Page
         LanguagePicker.SelectedIndex = 0;
     }
 
+    #endregion
+
+    #region Event Handlers
+
+    /// <summary>
+    /// Handles language picker selection changes, applying the language override
+    /// and showing a restart warning if the selection differs from the initial value.
+    /// </summary>
     private void OnLanguageChanged(object sender, SelectionChangedEventArgs e)
     {
         if (LanguagePicker.SelectedItem is not LanguageItem selected) return;
@@ -67,12 +103,33 @@ public sealed partial class AdvancedPage : Page
         // Show restart warning if language changed from initial
         LanguageRestartInfo.IsOpen = selected.Id != _initialLanguageId;
     }
+
+    #endregion
 }
 
+/// <summary>
+/// Represents a selectable language option with an identifier and display name.
+/// </summary>
 internal sealed class LanguageItem(string id, string displayName)
 {
+    #region Properties
+
+    /// <summary>
+    /// Gets the BCP-47 language tag, or an empty string for the system default.
+    /// </summary>
     public string Id { get; } = id;
+
+    /// <summary>
+    /// Gets the human-readable native name of the language.
+    /// </summary>
     public string DisplayName { get; } = displayName;
 
+    #endregion
+
+    #region Overrides
+
+    /// <inheritdoc/>
     public override string ToString() => DisplayName;
+
+    #endregion
 }

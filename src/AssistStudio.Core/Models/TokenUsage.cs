@@ -10,6 +10,10 @@ public partial record TokenUsage(
     int OutputTokens
 )
 {
+    #region Computed Properties
+
     /// <summary>The combined total of input and output tokens.</summary>
     public int TotalTokens => InputTokens + OutputTokens;
+
+    #endregion
 }

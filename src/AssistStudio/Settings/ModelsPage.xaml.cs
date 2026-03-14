@@ -1,4 +1,4 @@
-﻿using FieldCure.AssistStudio.Models;
+using FieldCure.AssistStudio.Models;
 using FieldCure.AssistStudio.Providers;
 using AssistStudio.Dialogs;
 using FieldCure.AssistStudio.Helpers;
@@ -10,39 +10,69 @@ using Microsoft.Windows.ApplicationModel.Resources;
 
 namespace AssistStudio.Settings;
 
+/// <summary>
+/// Settings page for managing AI provider API keys, model selection, default provider,
+/// and Ollama local model configuration.
+/// </summary>
 public sealed partial class ModelsPage : Page
 {
-    private static string L(string key)
-    {
-        try
-        {
-            var loader = new ResourceLoader();
-            return loader.GetString(key);
-        }
-        catch
-        {
-            return key;
-        }
-    }
+    #region Fields
 
+    /// <summary>
+    /// Reference to the parent settings panel for syncing preset changes.
+    /// </summary>
     private SettingsPanel? _settings;
+
+    /// <summary>
+    /// Flag to suppress event handlers during programmatic UI updates.
+    /// </summary>
     private bool _isLoading = true;
 
-    // Fallback models when cache is empty and API is unreachable
+    #endregion
+
+    #region Constants
+
+    /// <summary>
+    /// Fallback Claude model IDs used when the API is unreachable and no cache exists.
+    /// </summary>
     private static readonly string[] FallbackClaudeModels =
         ["claude-sonnet-4-20250514", "claude-opus-4-20250514", "claude-haiku-4-20250514"];
+
+    /// <summary>
+    /// Fallback OpenAI model IDs used when the API is unreachable and no cache exists.
+    /// </summary>
     private static readonly string[] FallbackOpenAIModels =
         ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "o1", "o1-mini", "o3-mini"];
+
+    /// <summary>
+    /// Fallback Gemini model IDs used when the API is unreachable and no cache exists.
+    /// </summary>
     private static readonly string[] FallbackGeminiModels =
         ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-pro-preview-05-06"];
+
+    /// <summary>
+    /// Fallback Groq model IDs used when the API is unreachable and no cache exists.
+    /// </summary>
     private static readonly string[] FallbackGroqModels =
         ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"];
 
+    #endregion
+
+    #region Constructors
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModelsPage"/> class.
+    /// </summary>
     public ModelsPage()
     {
         InitializeComponent();
     }
 
+    #endregion
+
+    #region Overrides
+
+    /// <inheritdoc/>
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
@@ -65,8 +95,34 @@ public sealed partial class ModelsPage : Page
         _ = CheckOllamaStatusAsync();
     }
 
-    // ===== API Key Management =====
+    #endregion
 
+    #region Private Methods
+
+    /// <summary>
+    /// Loads a localized string by key, returning the key itself if loading fails.
+    /// </summary>
+    /// <returns>The localized string or the key as fallback.</returns>
+    private static string L(string key)
+    {
+        try
+        {
+            var loader = new ResourceLoader();
+            return loader.GetString(key);
+        }
+        catch
+        {
+            return key;
+        }
+    }
+
+    #endregion
+
+    #region API Key Management
+
+    /// <summary>
+    /// Loads API keys from the password vault and sets the UI state for each provider card.
+    /// </summary>
     private void LoadApiKeys()
     {
         var claudeKey = PasswordVaultHelper.LoadApiKey("Claude");
@@ -80,6 +136,9 @@ public sealed partial class ModelsPage : Page
         SetKeyState(groqKey, GroqKeyInputPanel, GroqKeyDisplayPanel, GroqMaskedKeyText, GroqStatusText, GroqModelCombo);
     }
 
+    /// <summary>
+    /// Configures the visual state of a provider card based on whether an API key is present.
+    /// </summary>
     private void SetKeyState(string key, Grid inputPanel, Grid displayPanel, TextBlock maskedText, TextBlock statusText, ComboBox modelCombo)
     {
         if (!string.IsNullOrEmpty(key))
@@ -101,12 +160,19 @@ public sealed partial class ModelsPage : Page
         }
     }
 
+    /// <summary>
+    /// Masks an API key string, showing only the first and last three characters.
+    /// </summary>
+    /// <returns>A masked representation of the key.</returns>
     private static string MaskKey(string key)
     {
         if (key.Length <= 6) return "••••••";
         return key[..3] + "•••" + key[^3..];
     }
 
+    /// <summary>
+    /// Saves an API key for the specified provider, updates the UI state, and triggers a model cache refresh.
+    /// </summary>
     private void AddProviderKey(string provider, PasswordBox keyBox, Grid inputPanel, Grid displayPanel, TextBlock maskedText, TextBlock statusText, ComboBox modelCombo)
     {
         var key = keyBox.Password?.Trim();
@@ -126,6 +192,9 @@ public sealed partial class ModelsPage : Page
         RefreshDefaultProvider();
     }
 
+    /// <summary>
+    /// Removes the API key for the specified provider and resets the provider card UI.
+    /// </summary>
     private void RemoveProviderKey(string provider, Grid inputPanel, Grid displayPanel, TextBlock statusText, ComboBox modelCombo)
     {
         PasswordVaultHelper.DeleteApiKey(provider);
@@ -141,32 +210,65 @@ public sealed partial class ModelsPage : Page
         RefreshDefaultProvider();
     }
 
+    #endregion
+
+    #region API Key Event Handlers
+
+    /// <summary>
+    /// Handles adding the Claude API key.
+    /// </summary>
     private void OnAddClaudeKey(object sender, RoutedEventArgs e) =>
         AddProviderKey("Claude", ClaudeApiKeyBox, ClaudeKeyInputPanel, ClaudeKeyDisplayPanel, ClaudeMaskedKeyText, ClaudeStatusText, ClaudeModelCombo);
 
+    /// <summary>
+    /// Handles adding the OpenAI API key.
+    /// </summary>
     private void OnAddOpenAIKey(object sender, RoutedEventArgs e) =>
         AddProviderKey("OpenAI", OpenAIApiKeyBox, OpenAIKeyInputPanel, OpenAIKeyDisplayPanel, OpenAIMaskedKeyText, OpenAIStatusText, OpenAIModelCombo);
 
+    /// <summary>
+    /// Handles adding the Gemini API key.
+    /// </summary>
     private void OnAddGeminiKey(object sender, RoutedEventArgs e) =>
         AddProviderKey("Gemini", GeminiApiKeyBox, GeminiKeyInputPanel, GeminiKeyDisplayPanel, GeminiMaskedKeyText, GeminiStatusText, GeminiModelCombo);
 
+    /// <summary>
+    /// Handles adding the Groq API key.
+    /// </summary>
     private void OnAddGroqKey(object sender, RoutedEventArgs e) =>
         AddProviderKey("Groq", GroqApiKeyBox, GroqKeyInputPanel, GroqKeyDisplayPanel, GroqMaskedKeyText, GroqStatusText, GroqModelCombo);
 
+    /// <summary>
+    /// Handles removing the Claude API key.
+    /// </summary>
     private void OnRemoveClaudeKey(object sender, RoutedEventArgs e) =>
         RemoveProviderKey("Claude", ClaudeKeyInputPanel, ClaudeKeyDisplayPanel, ClaudeStatusText, ClaudeModelCombo);
 
+    /// <summary>
+    /// Handles removing the OpenAI API key.
+    /// </summary>
     private void OnRemoveOpenAIKey(object sender, RoutedEventArgs e) =>
         RemoveProviderKey("OpenAI", OpenAIKeyInputPanel, OpenAIKeyDisplayPanel, OpenAIStatusText, OpenAIModelCombo);
 
+    /// <summary>
+    /// Handles removing the Gemini API key.
+    /// </summary>
     private void OnRemoveGeminiKey(object sender, RoutedEventArgs e) =>
         RemoveProviderKey("Gemini", GeminiKeyInputPanel, GeminiKeyDisplayPanel, GeminiStatusText, GeminiModelCombo);
 
+    /// <summary>
+    /// Handles removing the Groq API key.
+    /// </summary>
     private void OnRemoveGroqKey(object sender, RoutedEventArgs e) =>
         RemoveProviderKey("Groq", GroqKeyInputPanel, GroqKeyDisplayPanel, GroqStatusText, GroqModelCombo);
 
-    // ===== Model ComboBoxes =====
+    #endregion
 
+    #region Model ComboBox Management
+
+    /// <summary>
+    /// Populates all provider model combo boxes from cache or fallback values, then starts background refresh.
+    /// </summary>
     private void PopulateModelCombos()
     {
         // Load from cache first, fall back to hardcoded defaults
@@ -179,6 +281,9 @@ public sealed partial class ModelsPage : Page
         _ = RefreshAllModelCachesAsync();
     }
 
+    /// <summary>
+    /// Populates a combo box from the model cache, falling back to the provided default model list.
+    /// </summary>
     private static void PopulateComboFromCacheOrFallback(string provider, ComboBox combo, string[] fallback)
     {
         var cached = AppSettings.GetCachedModels(provider);
@@ -188,6 +293,9 @@ public sealed partial class ModelsPage : Page
         PopulateCombo(combo, models, savedModel);
     }
 
+    /// <summary>
+    /// Fills a combo box with model IDs and selects the saved or first model.
+    /// </summary>
     private static void PopulateCombo(ComboBox combo, string[] models, string? savedModel)
     {
         combo.Items.Clear();
@@ -207,6 +315,9 @@ public sealed partial class ModelsPage : Page
             combo.SelectedIndex = 0;
     }
 
+    /// <summary>
+    /// Refreshes model caches in the background for all providers that have API keys.
+    /// </summary>
     private async Task RefreshAllModelCachesAsync()
     {
         // Fire-and-forget refresh for each provider with a valid key
@@ -231,6 +342,9 @@ public sealed partial class ModelsPage : Page
         await Task.WhenAll(tasks);
     }
 
+    /// <summary>
+    /// Fetches the model list from a provider's API, caches the results, and updates the combo box.
+    /// </summary>
     private async Task FetchAndCacheModelsAsync(string provider, string apiKey, ComboBox combo)
     {
         try
@@ -263,6 +377,10 @@ public sealed partial class ModelsPage : Page
         }
     }
 
+    /// <summary>
+    /// Creates a temporary AI provider instance configured for model listing only.
+    /// </summary>
+    /// <returns>An AI provider capable of listing models.</returns>
     private static IAiProvider CreateProviderForListing(string provider, string apiKey) => provider switch
     {
         "Claude" => new ClaudeProvider(apiKey, "dummy"),
@@ -273,6 +391,10 @@ public sealed partial class ModelsPage : Page
         _ => throw new ArgumentException($"Unknown provider: {provider}")
     };
 
+    /// <summary>
+    /// Filters the raw model list to include only chat-capable models based on naming conventions.
+    /// </summary>
+    /// <returns>A filtered list of model IDs appropriate for the provider.</returns>
     private static List<string> FilterChatModels(string provider, IReadOnlyList<AiModel> models)
     {
         return provider switch
@@ -292,8 +414,13 @@ public sealed partial class ModelsPage : Page
         };
     }
 
-    // ===== Default Provider =====
+    #endregion
 
+    #region Default Provider
+
+    /// <summary>
+    /// Populates the default provider combo box with providers that have API keys, plus Ollama and Mock.
+    /// </summary>
     private void PopulateDefaultProvider()
     {
         DefaultProviderCombo.Items.Clear();
@@ -329,6 +456,9 @@ public sealed partial class ModelsPage : Page
             DefaultProviderCombo.SelectedIndex = 0;
     }
 
+    /// <summary>
+    /// Refreshes the default provider combo box while suppressing change events.
+    /// </summary>
     private void RefreshDefaultProvider()
     {
         _isLoading = true;
@@ -336,6 +466,9 @@ public sealed partial class ModelsPage : Page
         _isLoading = false;
     }
 
+    /// <summary>
+    /// Handles default provider combo box selection changes to persist the user's choice.
+    /// </summary>
     private void OnDefaultProviderChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_isLoading || DefaultProviderCombo.SelectedItem is not string display) return;
@@ -345,6 +478,10 @@ public sealed partial class ModelsPage : Page
         SyncPresetsFromUI();
     }
 
+    /// <summary>
+    /// Maps a provider type key to its user-facing display name.
+    /// </summary>
+    /// <returns>The display name for the provider.</returns>
     private static string ProviderToDisplayName(string provider) => provider switch
     {
         "Claude" => "Anthropic Claude",
@@ -356,6 +493,10 @@ public sealed partial class ModelsPage : Page
         _ => "Mock"
     };
 
+    /// <summary>
+    /// Maps a user-facing display name back to its provider type key.
+    /// </summary>
+    /// <returns>The provider type key.</returns>
     private static string DisplayNameToProvider(string display) => display switch
     {
         "Anthropic Claude" => "Claude",
@@ -367,8 +508,14 @@ public sealed partial class ModelsPage : Page
         _ => "Mock"
     };
 
-    // ===== Sync presets back to SettingsPanel =====
+    #endregion
 
+    #region Preset Synchronization
+
+    /// <summary>
+    /// Rebuilds the provider preset collection from the current UI state (API keys and selected models)
+    /// and notifies the settings panel of the changes.
+    /// </summary>
     private void SyncPresetsFromUI()
     {
         if (_settings is null) return;
@@ -431,6 +578,9 @@ public sealed partial class ModelsPage : Page
         _settings.RaisePresetsChanged();
     }
 
+    /// <summary>
+    /// Handles Ollama model combo box selection changes to persist the model and sync presets.
+    /// </summary>
     private void OnOllamaModelChanged(object sender, SelectionChangedEventArgs e)
     {
         if (OllamaModelCombo.SelectedItem is string display && !string.IsNullOrEmpty(display))
@@ -445,19 +595,28 @@ public sealed partial class ModelsPage : Page
     /// <summary>
     /// Strips the fit-kind suffix (e.g. "  (GPU)") from a display string.
     /// </summary>
+    /// <returns>The model ID without the fit-kind suffix.</returns>
     private static string StripFitSuffix(string display)
     {
         var idx = display.IndexOf("  (", StringComparison.Ordinal);
         return idx >= 0 ? display[..idx] : display;
     }
 
-    // ===== Ollama =====
+    #endregion
 
+    #region Ollama Management
+
+    /// <summary>
+    /// Handles the check Ollama button click to refresh the Ollama connection status.
+    /// </summary>
     private async void OnCheckOllama(object sender, RoutedEventArgs e)
     {
         await CheckOllamaStatusAsync();
     }
 
+    /// <summary>
+    /// Checks whether Ollama is installed and running, updating the UI status indicators accordingly.
+    /// </summary>
     private async Task CheckOllamaStatusAsync()
     {
         OllamaSpinner.Visibility = Visibility.Visible;
@@ -507,6 +666,9 @@ public sealed partial class ModelsPage : Page
         }
     }
 
+    /// <summary>
+    /// Loads locally installed Ollama models, classifies their hardware fit, and populates the combo box.
+    /// </summary>
     private async Task LoadOllamaModelsAsync()
     {
         try
@@ -563,6 +725,9 @@ public sealed partial class ModelsPage : Page
         }
     }
 
+    /// <summary>
+    /// Handles the start Ollama button click to launch the Ollama service.
+    /// </summary>
     private async void OnStartOllama(object sender, RoutedEventArgs e)
     {
         StartOllamaButton.IsEnabled = false;
@@ -598,6 +763,9 @@ public sealed partial class ModelsPage : Page
         }
     }
 
+    /// <summary>
+    /// Opens the model selection dialog to browse and pull Ollama models.
+    /// </summary>
     private async void OnBrowseOllamaModels(object sender, RoutedEventArgs e)
     {
         using var manager = new OllamaModelManager();
@@ -617,6 +785,9 @@ public sealed partial class ModelsPage : Page
         await LoadOllamaModelsAsync();
     }
 
+    /// <summary>
+    /// Downloads one or more Ollama models sequentially, showing progress in the UI.
+    /// </summary>
     private async Task PullModelsAsync(List<string> modelNames)
     {
         PullProgressPanel.Visibility = Visibility.Visible;
@@ -671,4 +842,6 @@ public sealed partial class ModelsPage : Page
         PullProgressPanel.Visibility = Visibility.Collapsed;
         BrowseModelsButton.IsEnabled = true;
     }
+
+    #endregion
 }

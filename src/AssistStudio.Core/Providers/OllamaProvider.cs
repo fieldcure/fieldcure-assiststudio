@@ -11,9 +11,20 @@ namespace FieldCure.AssistStudio.Providers;
 /// </summary>
 public partial class OllamaProvider : IAiProvider, IDisposable
 {
+    #region Fields
+
+    /// <summary>The HTTP client used for API requests.</summary>
     private readonly HttpClient _httpClient;
+
+    /// <summary>The base URL of the Ollama server.</summary>
     private readonly string _baseUrl;
+
+    /// <summary>Whether this instance owns (and should dispose) the HTTP client.</summary>
     private readonly bool _ownsHttpClient;
+
+    #endregion
+
+    #region Properties
 
     /// <inheritdoc/>
     public string ProviderName => "Ollama";
@@ -33,11 +44,13 @@ public partial class OllamaProvider : IAiProvider, IDisposable
     /// <inheritdoc/>
     public string? LastRawResponse { get; private set; }
 
+    #endregion
+
+    #region Constructors
+
     /// <summary>
     /// Initializes a new <see cref="OllamaProvider"/> with an internally managed <see cref="HttpClient"/>.
     /// </summary>
-    /// <param name="model">The model name to use.</param>
-    /// <param name="baseUrl">The base URL of the Ollama server.</param>
     public OllamaProvider(string model = "llama3.1", string baseUrl = "http://localhost:11434")
         : this(new HttpClient(), model, baseUrl, ownsHttpClient: true)
     {
@@ -46,13 +59,14 @@ public partial class OllamaProvider : IAiProvider, IDisposable
     /// <summary>
     /// Initializes a new <see cref="OllamaProvider"/> with an externally managed <see cref="HttpClient"/>.
     /// </summary>
-    /// <param name="httpClient">The HTTP client to use for API requests.</param>
-    /// <param name="model">The model name to use.</param>
     public OllamaProvider(HttpClient httpClient, string model = "llama3.1")
         : this(httpClient, model, "http://localhost:11434", ownsHttpClient: false)
     {
     }
 
+    /// <summary>
+    /// Internal constructor that captures all dependencies.
+    /// </summary>
     private OllamaProvider(HttpClient httpClient, string model, string baseUrl, bool ownsHttpClient)
     {
         _httpClient = httpClient;
@@ -60,6 +74,10 @@ public partial class OllamaProvider : IAiProvider, IDisposable
         _baseUrl = baseUrl.TrimEnd('/');
         ModelId = model;
     }
+
+    #endregion
+
+    #region IAiProvider Implementation
 
     /// <inheritdoc/>
     public async Task<string> CompleteAsync(AiRequest request, CancellationToken ct = default)
@@ -137,6 +155,50 @@ public partial class OllamaProvider : IAiProvider, IDisposable
         LastRawResponse = responseSb.ToString();
     }
 
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<AiModel>> ListModelsAsync(CancellationToken ct = default)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Get, $"{_baseUrl}/api/tags");
+        var response = await _httpClient.SendAsync(req, ct);
+        response.EnsureSuccessStatusCode();
+
+        var json = await response.Content.ReadAsStringAsync(ct);
+        using var doc = JsonDocument.Parse(json);
+
+        var models = new List<AiModel>();
+        foreach (var item in doc.RootElement.GetProperty("models").EnumerateArray())
+        {
+            var name = item.GetProperty("name").GetString()!;
+            models.Add(new AiModel(name, name, "ollama"));
+        }
+
+        return models;
+    }
+
+    /// <inheritdoc/>
+    public async Task<ConnectionInfo> ValidateConnectionAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get, $"{_baseUrl}/api/tags");
+            var response = await _httpClient.SendAsync(req, ct);
+
+            if (response.IsSuccessStatusCode)
+                return new ConnectionInfo(true, null, null, null);
+
+            return new ConnectionInfo(false, null, null, $"HTTP {(int)response.StatusCode}");
+        }
+        catch (Exception ex)
+        {
+            return new ConnectionInfo(false, null, null, ex.Message);
+        }
+    }
+
+    #endregion
+
+    #region Private Methods
+
+    /// <summary>Builds the JSON request body for the Ollama chat API.</summary>
     private string BuildRequestBody(AiRequest request, bool stream)
     {
         var messages = new JsonArray();
@@ -210,6 +272,7 @@ public partial class OllamaProvider : IAiProvider, IDisposable
         return body.ToJsonString();
     }
 
+    /// <summary>Sends an HTTP POST request to the Ollama API and validates the response.</summary>
     private async Task<HttpResponseMessage> SendRequestAsync(
         string body, CancellationToken ct,
         HttpCompletionOption completionOption = HttpCompletionOption.ResponseContentRead)
@@ -233,44 +296,9 @@ public partial class OllamaProvider : IAiProvider, IDisposable
         return response;
     }
 
-    /// <inheritdoc/>
-    public async Task<IReadOnlyList<AiModel>> ListModelsAsync(CancellationToken ct = default)
-    {
-        using var req = new HttpRequestMessage(HttpMethod.Get, $"{_baseUrl}/api/tags");
-        var response = await _httpClient.SendAsync(req, ct);
-        response.EnsureSuccessStatusCode();
+    #endregion
 
-        var json = await response.Content.ReadAsStringAsync(ct);
-        using var doc = JsonDocument.Parse(json);
-
-        var models = new List<AiModel>();
-        foreach (var item in doc.RootElement.GetProperty("models").EnumerateArray())
-        {
-            var name = item.GetProperty("name").GetString()!;
-            models.Add(new AiModel(name, name, "ollama"));
-        }
-
-        return models;
-    }
-
-    /// <inheritdoc/>
-    public async Task<ConnectionInfo> ValidateConnectionAsync(CancellationToken ct = default)
-    {
-        try
-        {
-            using var req = new HttpRequestMessage(HttpMethod.Get, $"{_baseUrl}/api/tags");
-            var response = await _httpClient.SendAsync(req, ct);
-
-            if (response.IsSuccessStatusCode)
-                return new ConnectionInfo(true, null, null, null);
-
-            return new ConnectionInfo(false, null, null, $"HTTP {(int)response.StatusCode}");
-        }
-        catch (Exception ex)
-        {
-            return new ConnectionInfo(false, null, null, ex.Message);
-        }
-    }
+    #region IDisposable
 
     /// <inheritdoc/>
     public void Dispose()
@@ -278,4 +306,6 @@ public partial class OllamaProvider : IAiProvider, IDisposable
         if (_ownsHttpClient)
             _httpClient.Dispose();
     }
+
+    #endregion
 }

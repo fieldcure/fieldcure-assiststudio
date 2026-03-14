@@ -13,8 +13,21 @@ namespace FieldCure.AssistStudio.Controls;
 /// </summary>
 public sealed class AttachmentPreviewBar : Control
 {
+    #region Fields
+
+    /// <summary>
+    /// The observable collection backing the displayed attachments.
+    /// </summary>
     private readonly ObservableCollection<ChatAttachment> _attachments = [];
+
+    /// <summary>
+    /// The panel obtained from the control template that hosts preview item visuals.
+    /// </summary>
     private StackPanel? _itemsPanel;
+
+    #endregion
+
+    #region Constructors
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AttachmentPreviewBar"/> class.
@@ -25,27 +38,31 @@ public sealed class AttachmentPreviewBar : Control
         _attachments.CollectionChanged += OnAttachmentsChanged;
     }
 
-    /// <inheritdoc />
-    protected override void OnApplyTemplate()
-    {
-        base.OnApplyTemplate();
-        _itemsPanel = GetTemplateChild("PART_ItemsPanel") as StackPanel;
-    }
+    #endregion
+
+    #region Public Properties
 
     /// <summary>
     /// Gets the collection of attachments currently displayed in the preview bar.
     /// </summary>
     public ObservableCollection<ChatAttachment> Attachments => _attachments;
 
+    #endregion
+
+    #region Events
+
     /// <summary>
     /// Occurs when the user removes an attachment by clicking its remove button.
     /// </summary>
     public event EventHandler<ChatAttachment>? AttachmentRemoved;
 
+    #endregion
+
+    #region Public Methods
+
     /// <summary>
     /// Adds an attachment to the preview bar and renders its thumbnail.
     /// </summary>
-    /// <param name="attachment">The attachment to add.</param>
     public void AddAttachment(ChatAttachment attachment)
     {
         _attachments.Add(attachment);
@@ -60,6 +77,24 @@ public sealed class AttachmentPreviewBar : Control
         _itemsPanel?.Children.Clear();
     }
 
+    #endregion
+
+    #region Overrides
+
+    /// <inheritdoc />
+    protected override void OnApplyTemplate()
+    {
+        base.OnApplyTemplate();
+        _itemsPanel = GetTemplateChild("PART_ItemsPanel") as StackPanel;
+    }
+
+    #endregion
+
+    #region Event Handlers
+
+    /// <summary>
+    /// Handles changes to the attachments collection by adding or clearing preview items.
+    /// </summary>
     private void OnAttachmentsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems is not null)
@@ -77,6 +112,31 @@ public sealed class AttachmentPreviewBar : Control
         Visibility = _attachments.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    /// <summary>
+    /// Handles the remove button click by removing the associated attachment from the collection and UI.
+    /// </summary>
+    private void OnRemoveClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: ChatAttachment attachment })
+        {
+            var index = _attachments.IndexOf(attachment);
+            if (index >= 0)
+            {
+                _attachments.RemoveAt(index);
+                _itemsPanel?.Children.RemoveAt(index);
+                Visibility = _attachments.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+                AttachmentRemoved?.Invoke(this, attachment);
+            }
+        }
+    }
+
+    #endregion
+
+    #region Private Methods
+
+    /// <summary>
+    /// Creates a visual preview element for the given attachment, including a thumbnail and a remove button overlay.
+    /// </summary>
     private UIElement CreatePreviewItem(ChatAttachment attachment)
     {
         var container = new Grid
@@ -159,18 +219,5 @@ public sealed class AttachmentPreviewBar : Control
         return container;
     }
 
-    private void OnRemoveClick(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button { Tag: ChatAttachment attachment })
-        {
-            var index = _attachments.IndexOf(attachment);
-            if (index >= 0)
-            {
-                _attachments.RemoveAt(index);
-                _itemsPanel?.Children.RemoveAt(index);
-                Visibility = _attachments.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
-                AttachmentRemoved?.Invoke(this, attachment);
-            }
-        }
-    }
+    #endregion
 }

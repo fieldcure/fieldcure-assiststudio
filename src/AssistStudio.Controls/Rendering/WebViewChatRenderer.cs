@@ -9,18 +9,66 @@ using Windows.ApplicationModel.DataTransfer;
 
 namespace FieldCure.AssistStudio.Rendering;
 
+/// <summary>
+/// Renders chat messages inside a WebView2 control using an embedded HTML/JS chat UI.
+/// Handles message lifecycle (append, stream tokens, finalize), theming, locale strings,
+/// debug data, and WebView-to-host message routing.
+/// </summary>
 internal class WebViewChatRenderer
 {
+    #region Fields
+
+    /// <summary>
+    /// The WebView2 control used for rendering chat HTML.
+    /// </summary>
     private WebView2 _webView = null!;
+
+    /// <summary>
+    /// Task completion source used to await the initial navigation completion.
+    /// </summary>
     private TaskCompletionSource? _navigationTcs;
 
+    #endregion
+
+    #region Events
+
+    /// <summary>
+    /// Occurs when the user copies code from a code block in the chat.
+    /// </summary>
     public event EventHandler<string>? CopyRequested;
+
+    /// <summary>
+    /// Occurs when the user requests to continue a truncated assistant message.
+    /// </summary>
     public event EventHandler<string>? ContinueRequested;
+
+    /// <summary>
+    /// Occurs when the user requests to copy the full content of a message.
+    /// </summary>
     public event EventHandler<string>? MessageCopyRequested;
+
+    /// <summary>
+    /// Occurs when the user requests to retry (re-send) a user message.
+    /// </summary>
     public event EventHandler<string>? RetryRequested;
+
+    /// <summary>
+    /// Occurs when the user edits a user message, providing the message ID and new text.
+    /// </summary>
     public event EventHandler<(string MessageId, string NewText)>? EditRequested;
+
+    /// <summary>
+    /// Occurs when the user requests to summarize a specific message.
+    /// </summary>
     public event EventHandler<string>? SummarizeRequested;
 
+    #endregion
+
+    #region Public Methods
+
+    /// <summary>
+    /// Initializes the WebView2 control by loading the embedded chat HTML and injecting vendor scripts.
+    /// </summary>
     public async Task InitializeAsync(WebView2 webView)
     {
         _webView = webView;
@@ -41,6 +89,183 @@ internal class WebViewChatRenderer
         await InjectVendorScriptsAsync();
     }
 
+    /// <summary>
+    /// Appends a user message bubble to the chat UI with optional attachments.
+    /// </summary>
+    public Task AppendUserMessageAsync(string id, string text, string timestamp,
+        IReadOnlyList<ChatAttachment>? attachments = null)
+    {
+        var attachmentsJson = SerializeAttachments(attachments);
+        var script = $"window.fluentChat.appendUserMessage({Js(id)}, {Js(text)}, {Js(timestamp)}, {attachmentsJson})";
+        return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
+    /// <summary>
+    /// Begins a new assistant message bubble in the chat UI with provider and model information.
+    /// </summary>
+    public Task BeginAssistantMessageAsync(string id, string? providerName = null, string? modelId = null)
+    {
+        var script = $"window.fluentChat.beginAssistantMessage({Js(id)}, {Js(providerName ?? "")}, {Js(modelId ?? "")})";
+        return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
+    /// <summary>
+    /// Resumes streaming into an existing assistant message bubble after a continue operation.
+    /// </summary>
+    public Task ResumeMessageAsync(string id, string existingText)
+    {
+        var script = $"window.fluentChat.resumeMessage({Js(id)}, {Js(existingText)})";
+        return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
+    /// <summary>
+    /// Appends a single streaming token to an in-progress assistant message.
+    /// </summary>
+    public Task AppendTokenAsync(string id, string token)
+    {
+        var script = $"window.fluentChat.appendToken({Js(id)}, {Js(token)})";
+        return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
+    /// <summary>
+    /// Finalizes an assistant message with the full markdown content, truncation status, and token count.
+    /// </summary>
+    public Task FinalizeMessageAsync(string id, string fullMarkdown, bool truncated = false, int tokenCount = 0)
+    {
+        var script = $"window.fluentChat.finalizeMessage({Js(id)}, {Js(fullMarkdown)}, {(truncated ? "true" : "false")}, {tokenCount})";
+        return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
+    /// <summary>
+    /// Scrolls the chat view to the bottom.
+    /// </summary>
+    public Task ScrollToBottomAsync()
+    {
+        return _webView.ExecuteScriptAsync("window.fluentChat.scrollToBottom()").AsTask();
+    }
+
+    /// <summary>
+    /// Removes all message elements that appear after the specified message ID in the chat UI.
+    /// </summary>
+    public Task RemoveMessagesAfterAsync(string messageId)
+    {
+        var script = $"window.fluentChat.removeMessagesAfter({Js(messageId)})";
+        return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
+    /// <summary>
+    /// Sets localized UI strings (e.g., button labels) in the chat HTML.
+    /// </summary>
+    public Task SetLocaleStringsAsync(IDictionary<string, string> strings)
+    {
+        var json = JsonSerializer.Serialize(strings);
+        var script = $"Object.assign(window._L, {json})";
+        return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
+    /// <summary>
+    /// Applies a light or dark theme to the chat HTML.
+    /// </summary>
+    public Task SetThemeAsync(bool isDark)
+    {
+        var script = $"window.fluentChat.setTheme({(isDark ? "true" : "false")})";
+        return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
+    /// <summary>
+    /// Enables or disables debug mode, which shows "Copy Request" / "Copy Response" buttons.
+    /// </summary>
+    public Task SetDebugModeAsync(bool enabled)
+    {
+        var script = $"window.fluentChat.setDebugMode({(enabled ? "true" : "false")})";
+        return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
+    /// <summary>
+    /// Stores debug data (raw request body and response) for a user/assistant message pair.
+    /// </summary>
+    public Task SetDebugDataAsync(string userMsgId, string? requestBody, string assistantMsgId, string? rawResponse)
+    {
+        var script = $"window.fluentChat.setDebugData({Js(userMsgId)}, {Js(requestBody ?? "")}, {Js(assistantMsgId)}, {Js(rawResponse ?? "")})";
+        return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
+    #endregion
+
+    #region Event Handlers
+
+    /// <summary>
+    /// Handles the WebView2 navigation completed event to signal initialization is ready.
+    /// </summary>
+    private void OnNavigationCompleted(CoreWebView2 sender, CoreWebView2NavigationCompletedEventArgs args)
+    {
+        _navigationTcs?.TrySetResult();
+    }
+
+    /// <summary>
+    /// Handles incoming web messages from the chat HTML and routes them to the appropriate events.
+    /// </summary>
+    private void OnWebMessageReceived(CoreWebView2 sender, CoreWebView2WebMessageReceivedEventArgs args)
+    {
+        try
+        {
+            var message = args.TryGetWebMessageAsString();
+            if (message?.StartsWith("copyMsg:") == true)
+            {
+                var messageId = message["copyMsg:".Length..];
+                MessageCopyRequested?.Invoke(this, messageId);
+            }
+            else if (message?.StartsWith("copy:") == true)
+            {
+                var codeText = message["copy:".Length..];
+                CopyToClipboard(codeText);
+                CopyRequested?.Invoke(this, codeText);
+            }
+            else if (message?.StartsWith("continue:") == true)
+            {
+                var messageId = message["continue:".Length..];
+                ContinueRequested?.Invoke(this, messageId);
+            }
+            else if (message?.StartsWith("retry:") == true)
+            {
+                var messageId = message["retry:".Length..];
+                RetryRequested?.Invoke(this, messageId);
+            }
+            else if (message?.StartsWith("edit:") == true)
+            {
+                var payload = message["edit:".Length..];
+                var colonIdx = payload.IndexOf(':');
+                if (colonIdx > 0)
+                {
+                    var messageId = payload[..colonIdx];
+                    var newText = payload[(colonIdx + 1)..];
+                    EditRequested?.Invoke(this, (messageId, newText));
+                }
+            }
+            else if (message?.StartsWith("summarize:") == true)
+            {
+                var messageId = message["summarize:".Length..];
+                SummarizeRequested?.Invoke(this, messageId);
+            }
+            else if (message?.StartsWith("debugCopy:") == true)
+            {
+                var html = message["debugCopy:".Length..];
+                CopyToClipboard(html);
+            }
+        }
+        catch
+        {
+            // Ignore malformed messages
+        }
+    }
+
+    #endregion
+
+    #region Private Methods
+
+    /// <summary>
+    /// Injects vendor JavaScript libraries (marked.js, highlight.js, KaTeX) into the WebView2.
+    /// </summary>
     private async Task InjectVendorScriptsAsync()
     {
         // Inject marked.js
@@ -161,65 +386,9 @@ internal class WebViewChatRenderer
         await _webView.ExecuteScriptAsync(configScript).AsTask();
     }
 
-    private void OnNavigationCompleted(CoreWebView2 sender, CoreWebView2NavigationCompletedEventArgs args)
-    {
-        _navigationTcs?.TrySetResult();
-    }
-
-    private void OnWebMessageReceived(CoreWebView2 sender, CoreWebView2WebMessageReceivedEventArgs args)
-    {
-        try
-        {
-            var message = args.TryGetWebMessageAsString();
-            if (message?.StartsWith("copyMsg:") == true)
-            {
-                var messageId = message["copyMsg:".Length..];
-                MessageCopyRequested?.Invoke(this, messageId);
-            }
-            else if (message?.StartsWith("copy:") == true)
-            {
-                var codeText = message["copy:".Length..];
-                CopyToClipboard(codeText);
-                CopyRequested?.Invoke(this, codeText);
-            }
-            else if (message?.StartsWith("continue:") == true)
-            {
-                var messageId = message["continue:".Length..];
-                ContinueRequested?.Invoke(this, messageId);
-            }
-            else if (message?.StartsWith("retry:") == true)
-            {
-                var messageId = message["retry:".Length..];
-                RetryRequested?.Invoke(this, messageId);
-            }
-            else if (message?.StartsWith("edit:") == true)
-            {
-                var payload = message["edit:".Length..];
-                var colonIdx = payload.IndexOf(':');
-                if (colonIdx > 0)
-                {
-                    var messageId = payload[..colonIdx];
-                    var newText = payload[(colonIdx + 1)..];
-                    EditRequested?.Invoke(this, (messageId, newText));
-                }
-            }
-            else if (message?.StartsWith("summarize:") == true)
-            {
-                var messageId = message["summarize:".Length..];
-                SummarizeRequested?.Invoke(this, messageId);
-            }
-            else if (message?.StartsWith("debugCopy:") == true)
-            {
-                var html = message["debugCopy:".Length..];
-                CopyToClipboard(html);
-            }
-        }
-        catch
-        {
-            // Ignore malformed messages
-        }
-    }
-
+    /// <summary>
+    /// Copies the given text to the system clipboard.
+    /// </summary>
     private static void CopyToClipboard(string text)
     {
         var dp = new DataPackage();
@@ -228,6 +397,9 @@ internal class WebViewChatRenderer
         Clipboard.Flush();
     }
 
+    /// <summary>
+    /// Injects KaTeX CSS into the WebView2 with font URLs replaced by embedded base64 data URIs.
+    /// </summary>
     private async Task InjectKatexCssAsync()
     {
         var css = LoadEmbeddedResource("katex.min.css");
@@ -251,6 +423,9 @@ internal class WebViewChatRenderer
         await _webView.ExecuteScriptAsync(script).AsTask();
     }
 
+    /// <summary>
+    /// Loads an embedded binary resource (e.g., font file) matching the given suffix from the executing assembly.
+    /// </summary>
     private static byte[] LoadEmbeddedBinaryResource(string endsWith)
     {
         var assembly = Assembly.GetExecutingAssembly();
@@ -263,6 +438,9 @@ internal class WebViewChatRenderer
         return ms.ToArray();
     }
 
+    /// <summary>
+    /// Loads an embedded text resource (e.g., HTML, JS, CSS) matching the given suffix from the executing assembly.
+    /// </summary>
     private static string LoadEmbeddedResource(string endsWith)
     {
         var assembly = Assembly.GetExecutingAssembly();
@@ -274,14 +452,9 @@ internal class WebViewChatRenderer
         return reader.ReadToEnd();
     }
 
-    public Task AppendUserMessageAsync(string id, string text, string timestamp,
-        IReadOnlyList<ChatAttachment>? attachments = null)
-    {
-        var attachmentsJson = SerializeAttachments(attachments);
-        var script = $"window.fluentChat.appendUserMessage({Js(id)}, {Js(text)}, {Js(timestamp)}, {attachmentsJson})";
-        return _webView.ExecuteScriptAsync(script).AsTask();
-    }
-
+    /// <summary>
+    /// Serializes a list of chat attachments to a JSON array string for use in JavaScript calls.
+    /// </summary>
     private static string SerializeAttachments(IReadOnlyList<ChatAttachment>? attachments)
     {
         if (attachments is null || attachments.Count == 0)
@@ -308,65 +481,10 @@ internal class WebViewChatRenderer
         return array.ToJsonString();
     }
 
-    public Task BeginAssistantMessageAsync(string id, string? providerName = null, string? modelId = null)
-    {
-        var script = $"window.fluentChat.beginAssistantMessage({Js(id)}, {Js(providerName ?? "")}, {Js(modelId ?? "")})";
-        return _webView.ExecuteScriptAsync(script).AsTask();
-    }
-
-    public Task ResumeMessageAsync(string id, string existingText)
-    {
-        var script = $"window.fluentChat.resumeMessage({Js(id)}, {Js(existingText)})";
-        return _webView.ExecuteScriptAsync(script).AsTask();
-    }
-
-    public Task AppendTokenAsync(string id, string token)
-    {
-        var script = $"window.fluentChat.appendToken({Js(id)}, {Js(token)})";
-        return _webView.ExecuteScriptAsync(script).AsTask();
-    }
-
-    public Task FinalizeMessageAsync(string id, string fullMarkdown, bool truncated = false, int tokenCount = 0)
-    {
-        var script = $"window.fluentChat.finalizeMessage({Js(id)}, {Js(fullMarkdown)}, {(truncated ? "true" : "false")}, {tokenCount})";
-        return _webView.ExecuteScriptAsync(script).AsTask();
-    }
-
-    public Task ScrollToBottomAsync()
-    {
-        return _webView.ExecuteScriptAsync("window.fluentChat.scrollToBottom()").AsTask();
-    }
-
-    public Task RemoveMessagesAfterAsync(string messageId)
-    {
-        var script = $"window.fluentChat.removeMessagesAfter({Js(messageId)})";
-        return _webView.ExecuteScriptAsync(script).AsTask();
-    }
-
-    public Task SetLocaleStringsAsync(IDictionary<string, string> strings)
-    {
-        var json = JsonSerializer.Serialize(strings);
-        var script = $"Object.assign(window._L, {json})";
-        return _webView.ExecuteScriptAsync(script).AsTask();
-    }
-
-    public Task SetThemeAsync(bool isDark)
-    {
-        var script = $"window.fluentChat.setTheme({(isDark ? "true" : "false")})";
-        return _webView.ExecuteScriptAsync(script).AsTask();
-    }
-
-    public Task SetDebugModeAsync(bool enabled)
-    {
-        var script = $"window.fluentChat.setDebugMode({(enabled ? "true" : "false")})";
-        return _webView.ExecuteScriptAsync(script).AsTask();
-    }
-
-    public Task SetDebugDataAsync(string userMsgId, string? requestBody, string assistantMsgId, string? rawResponse)
-    {
-        var script = $"window.fluentChat.setDebugData({Js(userMsgId)}, {Js(requestBody ?? "")}, {Js(assistantMsgId)}, {Js(rawResponse ?? "")})";
-        return _webView.ExecuteScriptAsync(script).AsTask();
-    }
-
+    /// <summary>
+    /// JSON-escapes a string value for safe interpolation into JavaScript code.
+    /// </summary>
     private static string Js(string value) => JsonSerializer.Serialize(value);
+
+    #endregion
 }

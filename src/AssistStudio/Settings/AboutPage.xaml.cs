@@ -1,17 +1,30 @@
-﻿using FieldCure.AssistStudio.Helpers;
+using FieldCure.AssistStudio.Helpers;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 
 
 namespace AssistStudio.Settings;
 
+/// <summary>
+/// Settings page that displays application version information and detected hardware specifications.
+/// </summary>
 public sealed partial class AboutPage : Page
 {
+    #region Constructors
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AboutPage"/> class.
+    /// </summary>
     public AboutPage()
     {
         InitializeComponent();
     }
 
+    #endregion
+
+    #region Overrides
+
+    /// <inheritdoc/>
     protected override async void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
@@ -40,4 +53,6 @@ public sealed partial class AboutPage : Page
             }
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }
+
+    #endregion
 }

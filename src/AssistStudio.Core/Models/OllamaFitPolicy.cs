@@ -6,6 +6,8 @@ namespace FieldCure.AssistStudio.Models;
 /// </summary>
 public static class OllamaFitPolicy
 {
+    #region Constants
+
     /// <summary>GPU overhead factor (KV cache, CUDA context, etc.).</summary>
     private const double GpuOverheadFactor = 1.15;
 
@@ -17,6 +19,10 @@ public static class OllamaFitPolicy
 
     /// <summary>Weight applied to RAM contribution in hybrid mode (CPU offload is slower, so RAM is discounted).</summary>
     private const double HybridRamWeight = 0.6;
+
+    #endregion
+
+    #region Public Methods
 
     /// <summary>
     /// Classifies how well a model fits the available hardware.
@@ -44,4 +50,6 @@ public static class OllamaFitPolicy
 
         return OllamaFitKind.NoFit;
     }
+
+    #endregion
 }

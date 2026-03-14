@@ -8,6 +8,9 @@ namespace FieldCure.AssistStudio.Helpers;
 /// </summary>
 public static class HardwareProbe
 {
+    #region Native Interop
+
+    /// <summary>Native memory status structure for the GlobalMemoryStatusEx API.</summary>
     [StructLayout(LayoutKind.Sequential)]
     private struct MEMORYSTATUSEX
     {
@@ -22,9 +25,14 @@ public static class HardwareProbe
         public ulong ullAvailExtendedVirtual;
     }
 
+    /// <summary>Retrieves information about the system's current usage of both physical and virtual memory.</summary>
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GlobalMemoryStatusEx(ref MEMORYSTATUSEX lpBuffer);
+
+    #endregion
+
+    #region Public Methods
 
     /// <summary>
     /// Returns a snapshot of available memory resources.
@@ -38,6 +46,10 @@ public static class HardwareProbe
 
         return Task.FromResult(new HardwareBudget(availableRam, vram));
     }
+
+    #endregion
+
+    #region Private Methods
 
     /// <summary>
     /// Detects available (free) system RAM in bytes.
@@ -74,4 +86,6 @@ public static class HardwareProbe
             return 0;
         }
     }
+
+    #endregion
 }

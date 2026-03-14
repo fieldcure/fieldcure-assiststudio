@@ -19,12 +19,40 @@ using WinRT.Interop;
 
 namespace AssistStudio;
 
+/// <summary>
+/// Main application window that hosts tabs, the settings pane, and manages the custom title bar.
+/// </summary>
 public sealed partial class MainWindow : Window
 {
+    #region Fields
+
+    /// <summary>
+    /// Reference to the underlying <see cref="AppWindow"/> for title bar customization.
+    /// </summary>
     private AppWindow? _appWindow;
 
+    /// <summary>
+    /// Indicates whether the window is in the process of closing to prevent re-entrant close dialogs.
+    /// </summary>
+    private bool _isClosing;
+
+    #endregion
+
+    #region Properties
+
+    /// <summary>
+    /// Gets the main view model that manages tabs and application-level state.
+    /// </summary>
     public MainViewModel ViewModel { get; }
 
+    #endregion
+
+    #region Constructors
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MainWindow"/> class, sets up the title bar,
+    /// wires settings events, and registers keyboard accelerators.
+    /// </summary>
     public MainWindow()
     {
         InitializeComponent();
@@ -71,6 +99,13 @@ public sealed partial class MainWindow : Window
         RegisterAccelerator(VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, VirtualKey.S, OnMenuSaveAsConversation);
     }
 
+    #endregion
+
+    #region Keyboard Accelerators
+
+    /// <summary>
+    /// Registers a global keyboard accelerator on the root split view.
+    /// </summary>
     private void RegisterAccelerator(VirtualKeyModifiers modifiers, VirtualKey key, RoutedEventHandler handler)
     {
         var accel = new KeyboardAccelerator { Modifiers = modifiers, Key = key };
@@ -78,9 +113,13 @@ public sealed partial class MainWindow : Window
         RootSplitView.KeyboardAccelerators.Add(accel);
     }
 
+    #endregion
 
-    // ===== First Activation & Theme =====
+    #region First Activation and Theme
 
+    /// <summary>
+    /// Handles the first window activation to apply the saved theme and show the first-run dialog if needed.
+    /// </summary>
     private async void OnFirstActivated(object sender, WindowActivatedEventArgs args)
     {
         Activated -= OnFirstActivated;
@@ -94,6 +133,9 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// Applies the specified theme string to the content root and title bar colors.
+    /// </summary>
     private void ApplyAppTheme(string theme)
     {
         if (Content is FrameworkElement root)
@@ -138,8 +180,14 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    // ===== Custom Title Bar =====
+    #endregion
 
+    #region Custom Title Bar
+
+    /// <summary>
+    /// Configures the non-client passthrough regions for the custom title bar so that
+    /// interactive elements (tabs) receive pointer input.
+    /// </summary>
     private void SetRegionsForCustomTitleBar()
     {
         if (_appWindow is null || !ExtendsContentIntoTitleBar || ShellTitlebarInset.XamlRoot is null)
@@ -159,6 +207,10 @@ public sealed partial class MainWindow : Window
         nonClientInputSrc.SetRegionRects(NonClientRegionKind.Passthrough, [headerRect]);
     }
 
+    /// <summary>
+    /// Converts a <see cref="Rect"/> to a <see cref="RectInt32"/> by applying the given DPI scale factor.
+    /// </summary>
+    /// <returns>A scaled integer rectangle suitable for the non-client region API.</returns>
     private static RectInt32 GetRect(Rect bounds, double scale)
     {
         return new RectInt32(
@@ -168,19 +220,30 @@ public sealed partial class MainWindow : Window
             (int)Math.Round(bounds.Height * scale));
     }
 
-    // ===== Main Menu =====
+    #endregion
 
+    #region Main Menu
+
+    /// <summary>
+    /// Opens the main menu flyout after building the recent conversations sub-menu.
+    /// </summary>
     private void OnMainMenuClick(object sender, RoutedEventArgs e)
     {
         BuildRecentConversationsMenu();
         FlyoutBase.ShowAttachedFlyout(MainMenuButton);
     }
 
+    /// <summary>
+    /// Creates a new conversation tab.
+    /// </summary>
     private void OnMenuNewTab(object sender, RoutedEventArgs e)
     {
         ViewModel.AddTab();
     }
 
+    /// <summary>
+    /// Saves the current conversation to its existing file path, or prompts Save As if unsaved.
+    /// </summary>
     private async void OnMenuSaveConversation(object sender, RoutedEventArgs e)
     {
         var tab = ViewModel.SelectedTab;
@@ -200,6 +263,9 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// Prompts the user to choose a save location for the current conversation.
+    /// </summary>
     private async void OnMenuSaveAsConversation(object sender, RoutedEventArgs e)
     {
         var tab = ViewModel.SelectedTab;
@@ -207,6 +273,10 @@ public sealed partial class MainWindow : Window
         await SaveAsAsync(tab);
     }
 
+    /// <summary>
+    /// Displays a file save picker and saves the conversation to the chosen location.
+    /// </summary>
+    /// <returns><c>true</c> if the file was saved successfully; <c>false</c> if the user cancelled or save failed.</returns>
     private async Task<bool> SaveAsAsync(ChatTabViewModel tab)
     {
         var messages = tab.GetMessages();
@@ -235,6 +305,9 @@ public sealed partial class MainWindow : Window
         catch { return false; }
     }
 
+    /// <summary>
+    /// Saves all open conversation tabs, prompting Save As for any unsaved tabs.
+    /// </summary>
     private async void OnMenuSaveAllConversations(object sender, RoutedEventArgs e)
     {
         foreach (var tab in ViewModel.Tabs)
@@ -254,6 +327,9 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// Opens a file picker to load a conversation from disk into a new tab.
+    /// </summary>
     private async void OnMenuLoadConversation(object sender, RoutedEventArgs e)
     {
         var picker = new FileOpenPicker();
@@ -273,6 +349,9 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// Populates the recent conversations sub-menu with existing file entries from settings.
+    /// </summary>
     private void BuildRecentConversationsMenu()
     {
         RecentConversationsSubMenu.Items.Clear();
@@ -334,18 +413,29 @@ public sealed partial class MainWindow : Window
         RecentConversationsSubMenu.Items.Add(clearItem);
     }
 
+    /// <summary>
+    /// Toggles the settings side pane open or closed.
+    /// </summary>
     private void OnMenuSettings(object sender, RoutedEventArgs e)
     {
         RootSplitView.IsPaneOpen = !RootSplitView.IsPaneOpen;
     }
 
-    // ===== Tab Management =====
+    #endregion
 
+    #region Tab Management
+
+    /// <summary>
+    /// Handles the TabView add-tab button click to create a new conversation tab.
+    /// </summary>
     private void OnAddTab(TabView sender, object args)
     {
         ViewModel.AddTab();
     }
 
+    /// <summary>
+    /// Handles a tab close request, prompting the user to save unsaved changes before closing.
+    /// </summary>
     private async void OnCloseTab(TabView sender, TabViewTabCloseRequestedEventArgs args)
     {
         if (args.Item is not ChatTabViewModel vm) return;
@@ -391,10 +481,13 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    // ===== App Close — Unsaved Changes =====
+    #endregion
 
-    private bool _isClosing;
+    #region App Close
 
+    /// <summary>
+    /// Intercepts the window closing event to prompt saving of any tabs with unsaved changes.
+    /// </summary>
     private async void OnAppWindowClosing(AppWindow sender, AppWindowClosingEventArgs args)
     {
         if (_isClosing) return;
@@ -439,8 +532,13 @@ public sealed partial class MainWindow : Window
         Close();
     }
 
-    // ===== File Activation =====
+    #endregion
 
+    #region File Activation
+
+    /// <summary>
+    /// Opens a conversation file from a file-activation path (e.g., double-clicking an .astx file).
+    /// </summary>
     public async void OpenFileFromActivation(string filePath)
     {
         var data = await ConversationManager.LoadConversationAsync(filePath);
@@ -450,4 +548,6 @@ public sealed partial class MainWindow : Window
             AppSettings.AddRecentFile(filePath);
         }
     }
+
+    #endregion
 }

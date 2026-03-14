@@ -2,8 +2,16 @@ using Microsoft.Windows.AppLifecycle;
 
 namespace AssistStudio;
 
+/// <summary>
+/// Application bootstrap that ensures single-instance behavior and initializes the WinUI application.
+/// </summary>
 public static class Program
 {
+    #region Entry Point
+
+    /// <summary>
+    /// Main entry point for the application. Checks for single-instance redirection before starting.
+    /// </summary>
     [STAThread]
     static void Main(string[] args)
     {
@@ -20,6 +28,14 @@ public static class Program
         }
     }
 
+    #endregion
+
+    #region Private Methods
+
+    /// <summary>
+    /// Determines whether this instance should redirect its activation to the already-running main instance.
+    /// </summary>
+    /// <returns><c>true</c> if activation was redirected to another instance; <c>false</c> if this is the main instance.</returns>
     private static bool DecideRedirection()
     {
         var mainInstance = AppInstance.FindOrRegisterForKey("main");
@@ -33,4 +49,6 @@ public static class Program
 
         return false;
     }
+
+    #endregion
 }

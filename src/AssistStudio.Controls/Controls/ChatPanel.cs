@@ -28,6 +28,8 @@ public enum ChatTheme
 /// </summary>
 public sealed class ChatPanel : Control
 {
+    #region Dependency Properties
+
     /// <summary>Identifies the <see cref="Provider"/> dependency property.</summary>
     public static readonly DependencyProperty ProviderProperty =
         DependencyProperty.Register(nameof(Provider), typeof(IAiProvider), typeof(ChatPanel),
@@ -78,6 +80,13 @@ public sealed class ChatPanel : Control
         DependencyProperty.Register(nameof(Title), typeof(string), typeof(ChatPanel),
             new PropertyMetadata(null, OnTitlePropertyChanged));
 
+    #endregion
+
+    #region Dependency Property Callbacks
+
+    /// <summary>
+    /// Called when the <see cref="Theme"/> property changes to apply the new theme.
+    /// </summary>
     private static void OnThemePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is ChatPanel panel && panel._isInitialized)
@@ -86,6 +95,9 @@ public sealed class ChatPanel : Control
         }
     }
 
+    /// <summary>
+    /// Called when the <see cref="IsDebugMode"/> property changes to toggle debug UI in the renderer.
+    /// </summary>
     private static void OnIsDebugModeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is ChatPanel panel && panel._isInitialized)
@@ -94,6 +106,9 @@ public sealed class ChatPanel : Control
         }
     }
 
+    /// <summary>
+    /// Called when the <see cref="Title"/> property changes to update the title bar UI.
+    /// </summary>
     private static void OnTitlePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is ChatPanel panel)
@@ -112,23 +127,159 @@ public sealed class ChatPanel : Control
         }
     }
 
+    /// <summary>
+    /// Called when <see cref="AvailablePresets"/> changes to push preset list to the input area.
+    /// </summary>
+    private static void OnAvailablePresetsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && panel._inputArea is not null)
+        {
+            panel._inputArea.AvailablePresets = e.NewValue as IList;
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="SelectedPreset"/> changes to sync the input area and update placeholder text.
+    /// </summary>
+    private static void OnSelectedPresetChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && e.NewValue is ProviderPreset preset)
+        {
+            if (panel._inputArea is not null)
+                panel._inputArea.SelectedPreset = preset;
+            panel.UpdatePlaceholderWithProvider(preset.Name);
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="AvailablePromptPresets"/> changes to push prompt presets to the input area.
+    /// </summary>
+    private static void OnAvailablePromptPresetsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && e.NewValue is IList<PromptPreset> presets)
+        {
+            if (panel._inputArea is not null)
+                panel._inputArea.AvailablePromptPresets = presets;
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="SelectedPromptPreset"/> changes to sync the input area and update the system prompt.
+    /// </summary>
+    private static void OnSelectedPromptPresetChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && e.NewValue is PromptPreset preset)
+        {
+            if (panel._inputArea is not null)
+            {
+                panel._inputArea.SelectedPromptPreset = preset;
+                panel._inputArea.SelectPromptPresetInCombo(preset);
+            }
+            // Update the actual system prompt used in requests
+            panel.SystemPrompt = preset.Text;
+        }
+    }
+
+    #endregion
+
+    #region Fields
+
+    /// <summary>
+    /// The WebView-based chat renderer responsible for HTML rendering of messages.
+    /// </summary>
     private readonly WebViewChatRenderer _renderer = new();
+
+    /// <summary>
+    /// The in-memory collection of all chat messages in the current conversation.
+    /// </summary>
     private readonly ObservableCollection<ChatMessage> _messages = [];
+
+    /// <summary>
+    /// Cancellation token source for the currently active streaming operation.
+    /// </summary>
     private CancellationTokenSource? _streamingCts;
+
+    /// <summary>
+    /// Whether the WebView2 renderer has been initialized.
+    /// </summary>
     private bool _isInitialized;
+
+    /// <summary>
+    /// Whether a conversation title has already been auto-generated.
+    /// </summary>
     private bool _titleGenerated;
 
-    // Template parts
+    #endregion
+
+    #region Constants
+
+    /// <summary>
+    /// Background color matching chat.html --bg-primary for light theme (opaque, no alpha issues).
+    /// </summary>
+    private static readonly Windows.UI.Color LightBg = Windows.UI.Color.FromArgb(255, 0xF5, 0xF5, 0xF5);
+
+    /// <summary>
+    /// Background color matching chat.html --bg-primary for dark theme (opaque, no alpha issues).
+    /// </summary>
+    private static readonly Windows.UI.Color DarkBg = Windows.UI.Color.FromArgb(255, 0x20, 0x20, 0x20);
+
+    #endregion
+
+    #region Template Parts
+
+    /// <summary>
+    /// The root grid container of the control template.
+    /// </summary>
     private Grid? _rootGrid;
+
+    /// <summary>
+    /// The panel shown when no messages are present (empty/welcome state).
+    /// </summary>
     private Grid? _emptyStatePanel;
+
+    /// <summary>
+    /// The stack panel within the empty state that holds content and the input area.
+    /// </summary>
     private StackPanel? _emptyStateContent;
+
+    /// <summary>
+    /// The input container control for message composition.
+    /// </summary>
     private InputContainer? _inputArea;
+
+    /// <summary>
+    /// The grid layout containing the WebView and input area during active chat.
+    /// </summary>
     private Grid? _chatLayout;
+
+    /// <summary>
+    /// The title bar panel displaying the conversation title.
+    /// </summary>
     private StackPanel? _titleBar;
+
+    /// <summary>
+    /// The text block displaying the conversation title text.
+    /// </summary>
     private TextBlock? _titleText;
+
+    /// <summary>
+    /// The button that allows editing the conversation title.
+    /// </summary>
     private Button? _titleEditButton;
+
+    /// <summary>
+    /// The button that triggers title regeneration.
+    /// </summary>
     private Button? _titleRefreshButton;
+
+    /// <summary>
+    /// The WebView2 control used to render chat messages as HTML.
+    /// </summary>
     private WebView2? _chatWebView;
+
+    #endregion
+
+    #region Public Properties
 
     /// <summary>
     /// Maximum input tokens before auto-summarization triggers. 0 = disabled (default).
@@ -155,91 +306,6 @@ public sealed class ChatPanel : Control
     /// Enable automatic title generation after the first assistant response.
     /// </summary>
     public bool AutoTitle { get; set; } = false;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ChatPanel"/> class.
-    /// </summary>
-    public ChatPanel()
-    {
-        DefaultStyleKey = typeof(ChatPanel);
-        _renderer.ContinueRequested += OnContinueRequested;
-        _renderer.MessageCopyRequested += OnMessageCopyRequested;
-        _renderer.RetryRequested += OnRetryRequested;
-        _renderer.EditRequested += OnEditRequested;
-        _renderer.SummarizeRequested += OnSummarizeRequested;
-    }
-
-    /// <inheritdoc />
-    protected override void OnApplyTemplate()
-    {
-        base.OnApplyTemplate();
-
-        // Detach old event handlers
-        if (_inputArea is not null)
-        {
-            _inputArea.MessageSent -= OnMessageSent;
-            _inputArea.PresetChanged -= OnInputPresetChanged;
-            _inputArea.PromptPresetChanged -= OnInputPromptPresetChanged;
-        }
-        if (_rootGrid is not null)
-        {
-            _rootGrid.DragOver -= OnDragOver;
-            _rootGrid.Drop -= OnDrop;
-        }
-        if (_titleEditButton is not null)
-            _titleEditButton.Click -= OnTitleEditClick;
-        if (_titleRefreshButton is not null)
-            _titleRefreshButton.Click -= OnTitleRefreshClick;
-
-        // Get template parts
-        _rootGrid = GetTemplateChild("PART_RootGrid") as Grid;
-        _emptyStatePanel = GetTemplateChild("PART_EmptyStatePanel") as Grid;
-        _emptyStateContent = GetTemplateChild("PART_EmptyStateContent") as StackPanel;
-        _inputArea = GetTemplateChild("PART_InputArea") as InputContainer;
-        _chatLayout = GetTemplateChild("PART_ChatLayout") as Grid;
-        _titleBar = GetTemplateChild("PART_TitleBar") as StackPanel;
-        _titleText = GetTemplateChild("PART_TitleText") as TextBlock;
-        _titleEditButton = GetTemplateChild("PART_TitleEditButton") as Button;
-        _titleRefreshButton = GetTemplateChild("PART_TitleRefreshButton") as Button;
-        _chatWebView = GetTemplateChild("PART_ChatWebView") as WebView2;
-
-        // Set initial background to match CSS --bg-primary (before WebView2 loads)
-        if (_rootGrid is not null)
-            _rootGrid.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(LightBg);
-
-        // Attach event handlers and sync current property values
-        if (_inputArea is not null)
-        {
-            _inputArea.MessageSent += OnMessageSent;
-            _inputArea.PresetChanged += OnInputPresetChanged;
-            _inputArea.PromptPresetChanged += OnInputPromptPresetChanged;
-
-            // Push current values (may have been set before template was applied)
-            if (AvailablePresets is { } presets)
-                _inputArea.AvailablePresets = presets;
-            if (SelectedPreset is { } selectedPreset)
-                _inputArea.SelectedPreset = selectedPreset;
-            if (AvailablePromptPresets is { } promptPresets)
-                _inputArea.AvailablePromptPresets = promptPresets;
-            if (SelectedPromptPreset is { } selectedPromptPreset)
-            {
-                _inputArea.SelectedPromptPreset = selectedPromptPreset;
-                _inputArea.SelectPromptPresetInCombo(selectedPromptPreset);
-            }
-        }
-        if (_rootGrid is not null)
-        {
-            _rootGrid.DragOver += OnDragOver;
-            _rootGrid.Drop += OnDrop;
-        }
-        if (_titleEditButton is not null)
-            _titleEditButton.Click += OnTitleEditClick;
-        if (_titleRefreshButton is not null)
-            _titleRefreshButton.Click += OnTitleRefreshClick;
-
-        // Subscribe to Loaded for WebView2 initialization
-        Loaded += OnLoaded;
-    }
 
     /// <summary>
     /// Gets or sets the AI provider used for streaming chat responses.
@@ -332,6 +398,10 @@ public sealed class ChatPanel : Control
         set => SetValue(TitleProperty, value);
     }
 
+    #endregion
+
+    #region Events
+
     /// <summary>
     /// Occurs when the user selects a different provider preset.
     /// </summary>
@@ -351,6 +421,103 @@ public sealed class ChatPanel : Control
     /// Occurs when the user clicks the title edit button.
     /// </summary>
     public event EventHandler<string>? TitleEditRequested;
+
+    #endregion
+
+    #region Constructors
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatPanel"/> class.
+    /// </summary>
+    public ChatPanel()
+    {
+        DefaultStyleKey = typeof(ChatPanel);
+        _renderer.ContinueRequested += OnContinueRequested;
+        _renderer.MessageCopyRequested += OnMessageCopyRequested;
+        _renderer.RetryRequested += OnRetryRequested;
+        _renderer.EditRequested += OnEditRequested;
+        _renderer.SummarizeRequested += OnSummarizeRequested;
+    }
+
+    #endregion
+
+    #region Overrides
+
+    /// <inheritdoc />
+    protected override void OnApplyTemplate()
+    {
+        base.OnApplyTemplate();
+
+        // Detach old event handlers
+        if (_inputArea is not null)
+        {
+            _inputArea.MessageSent -= OnMessageSent;
+            _inputArea.PresetChanged -= OnInputPresetChanged;
+            _inputArea.PromptPresetChanged -= OnInputPromptPresetChanged;
+        }
+        if (_rootGrid is not null)
+        {
+            _rootGrid.DragOver -= OnDragOver;
+            _rootGrid.Drop -= OnDrop;
+        }
+        if (_titleEditButton is not null)
+            _titleEditButton.Click -= OnTitleEditClick;
+        if (_titleRefreshButton is not null)
+            _titleRefreshButton.Click -= OnTitleRefreshClick;
+
+        // Get template parts
+        _rootGrid = GetTemplateChild("PART_RootGrid") as Grid;
+        _emptyStatePanel = GetTemplateChild("PART_EmptyStatePanel") as Grid;
+        _emptyStateContent = GetTemplateChild("PART_EmptyStateContent") as StackPanel;
+        _inputArea = GetTemplateChild("PART_InputArea") as InputContainer;
+        _chatLayout = GetTemplateChild("PART_ChatLayout") as Grid;
+        _titleBar = GetTemplateChild("PART_TitleBar") as StackPanel;
+        _titleText = GetTemplateChild("PART_TitleText") as TextBlock;
+        _titleEditButton = GetTemplateChild("PART_TitleEditButton") as Button;
+        _titleRefreshButton = GetTemplateChild("PART_TitleRefreshButton") as Button;
+        _chatWebView = GetTemplateChild("PART_ChatWebView") as WebView2;
+
+        // Set initial background to match CSS --bg-primary (before WebView2 loads)
+        if (_rootGrid is not null)
+            _rootGrid.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(LightBg);
+
+        // Attach event handlers and sync current property values
+        if (_inputArea is not null)
+        {
+            _inputArea.MessageSent += OnMessageSent;
+            _inputArea.PresetChanged += OnInputPresetChanged;
+            _inputArea.PromptPresetChanged += OnInputPromptPresetChanged;
+
+            // Push current values (may have been set before template was applied)
+            if (AvailablePresets is { } presets)
+                _inputArea.AvailablePresets = presets;
+            if (SelectedPreset is { } selectedPreset)
+                _inputArea.SelectedPreset = selectedPreset;
+            if (AvailablePromptPresets is { } promptPresets)
+                _inputArea.AvailablePromptPresets = promptPresets;
+            if (SelectedPromptPreset is { } selectedPromptPreset)
+            {
+                _inputArea.SelectedPromptPreset = selectedPromptPreset;
+                _inputArea.SelectPromptPresetInCombo(selectedPromptPreset);
+            }
+        }
+        if (_rootGrid is not null)
+        {
+            _rootGrid.DragOver += OnDragOver;
+            _rootGrid.Drop += OnDrop;
+        }
+        if (_titleEditButton is not null)
+            _titleEditButton.Click += OnTitleEditClick;
+        if (_titleRefreshButton is not null)
+            _titleRefreshButton.Click += OnTitleRefreshClick;
+
+        // Subscribe to Loaded for WebView2 initialization
+        Loaded += OnLoaded;
+    }
+
+    #endregion
+
+    #region Public Methods
 
     /// <summary>
     /// Returns a read-only snapshot of all messages in the conversation.
@@ -410,6 +577,21 @@ public sealed class ChatPanel : Control
         }
     }
 
+    /// <summary>
+    /// Regenerates the conversation title from the full message history.
+    /// </summary>
+    public async Task RegenerateTitleAsync()
+    {
+        await GenerateTitleCoreAsync();
+    }
+
+    #endregion
+
+    #region Event Handlers
+
+    /// <summary>
+    /// Handles the Loaded event to initialize the WebView2 renderer and render any pre-existing messages.
+    /// </summary>
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         if (_isInitialized) return;
@@ -454,22 +636,9 @@ public sealed class ChatPanel : Control
         }
     }
 
-    private void SwitchToChatLayout()
-    {
-        if (_chatLayout is null || _emptyStatePanel is null ||
-            _emptyStateContent is null || _inputArea is null) return;
-        if (_chatLayout.Visibility == Microsoft.UI.Xaml.Visibility.Visible) return;
-
-        _emptyStatePanel.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
-        _chatLayout.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
-
-        // Move InputArea from EmptyStatePanel into ChatLayout as Row 2
-        _emptyStateContent.Children.Remove(_inputArea);
-        _inputArea.HorizontalAlignment = Microsoft.UI.Xaml.HorizontalAlignment.Stretch;
-        Grid.SetRow(_inputArea, 2);
-        _chatLayout.Children.Add(_inputArea);
-    }
-
+    /// <summary>
+    /// Handles the MessageSent event from the input area to send a user message and stream an assistant response.
+    /// </summary>
     private async void OnMessageSent(object? sender, MessageSentEventArgs e)
     {
         if (!_isInitialized) return;
@@ -554,6 +723,9 @@ public sealed class ChatPanel : Control
         }
     }
 
+    /// <summary>
+    /// Handles the message copy request from the renderer by copying message content to the clipboard.
+    /// </summary>
     private void OnMessageCopyRequested(object? sender, string messageId)
     {
         var message = _messages.FirstOrDefault(m => m.Id == messageId);
@@ -565,6 +737,9 @@ public sealed class ChatPanel : Control
         Clipboard.Flush();
     }
 
+    /// <summary>
+    /// Handles the continue request from the renderer to resume streaming an assistant message.
+    /// </summary>
     private async void OnContinueRequested(object? sender, string messageId)
     {
         if (!_isInitialized || Provider is null) return;
@@ -633,49 +808,9 @@ public sealed class ChatPanel : Control
         }
     }
 
-    private async Task SummarizeHistoryAsync(CancellationToken ct)
-    {
-        if (Provider is null) return;
-
-        // Keep the most recent turns
-        var turnsToKeep = Math.Min(RecentTurnsToKeep, _messages.Count);
-        var oldMessages = _messages.Take(_messages.Count - turnsToKeep).ToList();
-        if (oldMessages.Count == 0) return;
-
-        // Build summarization prompt
-        var historyText = string.Join("\n",
-            oldMessages.Select(m => $"{m.Role}: {m.Content}"));
-
-        var summaryRequest = new AiRequest
-        {
-            Messages =
-            [
-                new ChatMessage(ChatRole.User,
-                    "Summarize the following conversation concisely, preserving key context and decisions:\n\n" +
-                    historyText)
-            ],
-            SystemPrompt = "You are a helpful assistant that creates concise conversation summaries."
-        };
-
-        try
-        {
-            var summary = await Provider.CompleteAsync(summaryRequest, ct);
-
-            // Replace old messages with a summary system message
-            for (var i = 0; i < oldMessages.Count; i++)
-            {
-                _messages.RemoveAt(0);
-            }
-
-            _messages.Insert(0, new ChatMessage(ChatRole.System,
-                $"[Previous conversation summary]\n{summary}"));
-        }
-        catch
-        {
-            // Summarization failed -- keep messages as-is
-        }
-    }
-
+    /// <summary>
+    /// Handles the retry request from the renderer to re-send a user message and get a new response.
+    /// </summary>
     private async void OnRetryRequested(object? sender, string messageId)
     {
         if (!_isInitialized || Provider is null) return;
@@ -696,6 +831,9 @@ public sealed class ChatPanel : Control
         await StreamAssistantResponseAsync(userMessage);
     }
 
+    /// <summary>
+    /// Handles the edit request from the renderer to update a user message and re-stream a response.
+    /// </summary>
     private async void OnEditRequested(object? sender, (string MessageId, string NewText) e)
     {
         if (!_isInitialized || Provider is null) return;
@@ -727,6 +865,9 @@ public sealed class ChatPanel : Control
         await StreamAssistantResponseAsync(userMessage);
     }
 
+    /// <summary>
+    /// Handles the summarize request from the renderer to summarize a single message via AI.
+    /// </summary>
     private async void OnSummarizeRequested(object? sender, string messageId)
     {
         if (!_isInitialized || Provider is null) return;
@@ -783,6 +924,135 @@ public sealed class ChatPanel : Control
         }
     }
 
+    /// <summary>
+    /// Handles the preset changed event from the input area to propagate the selection.
+    /// </summary>
+    private void OnInputPresetChanged(object? sender, ProviderPreset preset)
+    {
+        SelectedPreset = preset;
+        PresetChanged?.Invoke(this, preset);
+    }
+
+    /// <summary>
+    /// Handles the prompt preset changed event from the input area to update the system prompt.
+    /// </summary>
+    private void OnInputPromptPresetChanged(object? sender, PromptPreset preset)
+    {
+        SelectedPromptPreset = preset;
+        SystemPrompt = preset.Text;
+    }
+
+    /// <summary>
+    /// Handles the title edit button click to raise the <see cref="TitleEditRequested"/> event.
+    /// </summary>
+    private void OnTitleEditClick(object sender, RoutedEventArgs e)
+    {
+        TitleEditRequested?.Invoke(this, Title ?? "");
+    }
+
+    /// <summary>
+    /// Handles the title refresh button click to regenerate the conversation title.
+    /// </summary>
+    private async void OnTitleRefreshClick(object sender, RoutedEventArgs e)
+    {
+        await RegenerateTitleAsync();
+    }
+
+    /// <summary>
+    /// Handles the DragOver event to accept file drop operations.
+    /// </summary>
+    private void OnDragOver(object sender, DragEventArgs e)
+    {
+        if (e.DataView.Contains(StandardDataFormats.StorageItems))
+        {
+            e.AcceptedOperation = DataPackageOperation.Copy;
+        }
+    }
+
+    /// <summary>
+    /// Handles the Drop event to add dropped files as attachments.
+    /// </summary>
+    private async void OnDrop(object sender, DragEventArgs e)
+    {
+        if (!e.DataView.Contains(StandardDataFormats.StorageItems)) return;
+
+        var items = await e.DataView.GetStorageItemsAsync();
+        if (_inputArea is not null)
+            await _inputArea.AddFilesAsync(items);
+    }
+
+    #endregion
+
+    #region Private Methods
+
+    /// <summary>
+    /// Transitions the layout from the empty state panel to the active chat layout.
+    /// </summary>
+    private void SwitchToChatLayout()
+    {
+        if (_chatLayout is null || _emptyStatePanel is null ||
+            _emptyStateContent is null || _inputArea is null) return;
+        if (_chatLayout.Visibility == Microsoft.UI.Xaml.Visibility.Visible) return;
+
+        _emptyStatePanel.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+        _chatLayout.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+
+        // Move InputArea from EmptyStatePanel into ChatLayout as Row 2
+        _emptyStateContent.Children.Remove(_inputArea);
+        _inputArea.HorizontalAlignment = Microsoft.UI.Xaml.HorizontalAlignment.Stretch;
+        Grid.SetRow(_inputArea, 2);
+        _chatLayout.Children.Add(_inputArea);
+    }
+
+    /// <summary>
+    /// Summarizes older conversation messages into a single system message to reduce token usage.
+    /// </summary>
+    private async Task SummarizeHistoryAsync(CancellationToken ct)
+    {
+        if (Provider is null) return;
+
+        // Keep the most recent turns
+        var turnsToKeep = Math.Min(RecentTurnsToKeep, _messages.Count);
+        var oldMessages = _messages.Take(_messages.Count - turnsToKeep).ToList();
+        if (oldMessages.Count == 0) return;
+
+        // Build summarization prompt
+        var historyText = string.Join("\n",
+            oldMessages.Select(m => $"{m.Role}: {m.Content}"));
+
+        var summaryRequest = new AiRequest
+        {
+            Messages =
+            [
+                new ChatMessage(ChatRole.User,
+                    "Summarize the following conversation concisely, preserving key context and decisions:\n\n" +
+                    historyText)
+            ],
+            SystemPrompt = "You are a helpful assistant that creates concise conversation summaries."
+        };
+
+        try
+        {
+            var summary = await Provider.CompleteAsync(summaryRequest, ct);
+
+            // Replace old messages with a summary system message
+            for (var i = 0; i < oldMessages.Count; i++)
+            {
+                _messages.RemoveAt(0);
+            }
+
+            _messages.Insert(0, new ChatMessage(ChatRole.System,
+                $"[Previous conversation summary]\n{summary}"));
+        }
+        catch
+        {
+            // Summarization failed -- keep messages as-is
+        }
+    }
+
+    /// <summary>
+    /// Streams a new assistant response for the given user message using the configured provider.
+    /// </summary>
     private async Task StreamAssistantResponseAsync(ChatMessage userMessage)
     {
         if (Provider is null) return;
@@ -838,30 +1108,9 @@ public sealed class ChatPanel : Control
         }
     }
 
-    private void OnInputPresetChanged(object? sender, ProviderPreset preset)
-    {
-        SelectedPreset = preset;
-        PresetChanged?.Invoke(this, preset);
-    }
-
-    private static void OnAvailablePresetsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        if (d is ChatPanel panel && panel._inputArea is not null)
-        {
-            panel._inputArea.AvailablePresets = e.NewValue as IList;
-        }
-    }
-
-    private static void OnSelectedPresetChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        if (d is ChatPanel panel && e.NewValue is ProviderPreset preset)
-        {
-            if (panel._inputArea is not null)
-                panel._inputArea.SelectedPreset = preset;
-            panel.UpdatePlaceholderWithProvider(preset.Name);
-        }
-    }
-
+    /// <summary>
+    /// Updates the input area placeholder text to include the provider name.
+    /// </summary>
     private void UpdatePlaceholderWithProvider(string providerName)
     {
         try
@@ -879,45 +1128,9 @@ public sealed class ChatPanel : Control
         Placeholder = $"Ask {providerName}...";
     }
 
-    private static void OnAvailablePromptPresetsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        if (d is ChatPanel panel && e.NewValue is IList<PromptPreset> presets)
-        {
-            if (panel._inputArea is not null)
-                panel._inputArea.AvailablePromptPresets = presets;
-        }
-    }
-
-    private static void OnSelectedPromptPresetChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        if (d is ChatPanel panel && e.NewValue is PromptPreset preset)
-        {
-            if (panel._inputArea is not null)
-            {
-                panel._inputArea.SelectedPromptPreset = preset;
-                panel._inputArea.SelectPromptPresetInCombo(preset);
-            }
-            // Update the actual system prompt used in requests
-            panel.SystemPrompt = preset.Text;
-        }
-    }
-
-    private void OnInputPromptPresetChanged(object? sender, PromptPreset preset)
-    {
-        SelectedPromptPreset = preset;
-        SystemPrompt = preset.Text;
-    }
-
-    private void OnTitleEditClick(object sender, RoutedEventArgs e)
-    {
-        TitleEditRequested?.Invoke(this, Title ?? "");
-    }
-
-    private async void OnTitleRefreshClick(object sender, RoutedEventArgs e)
-    {
-        await RegenerateTitleAsync();
-    }
-
+    /// <summary>
+    /// Updates the title refresh button tooltip to include the provider name.
+    /// </summary>
     private void UpdateRefreshTooltip()
     {
         var provider = UtilityProvider ?? Provider;
@@ -944,27 +1157,9 @@ public sealed class ChatPanel : Control
         }
     }
 
-    private void OnDragOver(object sender, DragEventArgs e)
-    {
-        if (e.DataView.Contains(StandardDataFormats.StorageItems))
-        {
-            e.AcceptedOperation = DataPackageOperation.Copy;
-        }
-    }
-
-    private async void OnDrop(object sender, DragEventArgs e)
-    {
-        if (!e.DataView.Contains(StandardDataFormats.StorageItems)) return;
-
-        var items = await e.DataView.GetStorageItemsAsync();
-        if (_inputArea is not null)
-            await _inputArea.AddFilesAsync(items);
-    }
-
-    // Background colors matching chat.html --bg-primary (opaque, no alpha issues)
-    private static readonly Windows.UI.Color LightBg = Windows.UI.Color.FromArgb(255, 0xF5, 0xF5, 0xF5);
-    private static readonly Windows.UI.Color DarkBg = Windows.UI.Color.FromArgb(255, 0x20, 0x20, 0x20);
-
+    /// <summary>
+    /// Attempts to auto-generate a title for the conversation after the first assistant response.
+    /// </summary>
     private async void TryGenerateTitleAsync()
     {
         if (_titleGenerated || !AutoTitle) return;
@@ -973,13 +1168,8 @@ public sealed class ChatPanel : Control
     }
 
     /// <summary>
-    /// Regenerates the conversation title from the full message history.
+    /// Core logic for generating or regenerating the conversation title using the utility or main provider.
     /// </summary>
-    public async Task RegenerateTitleAsync()
-    {
-        await GenerateTitleCoreAsync();
-    }
-
     private async Task GenerateTitleCoreAsync()
     {
         var provider = UtilityProvider ?? Provider;
@@ -1034,6 +1224,9 @@ public sealed class ChatPanel : Control
         }
     }
 
+    /// <summary>
+    /// Applies the current theme (light or dark) to the root grid background and WebView renderer.
+    /// </summary>
     private async Task ApplyThemeAsync()
     {
         if (!_isInitialized) return;
@@ -1044,6 +1237,9 @@ public sealed class ChatPanel : Control
         await _renderer.SetThemeAsync(isDark);
     }
 
+    /// <summary>
+    /// Loads localized UI strings from resources and pushes them to the WebView renderer.
+    /// </summary>
     private async Task ApplyLocaleStringsAsync()
     {
         if (!_isInitialized) return;
@@ -1085,6 +1281,9 @@ public sealed class ChatPanel : Control
         }
     }
 
+    /// <summary>
+    /// Builds an <see cref="AiRequest"/> from the current messages and selected preset settings.
+    /// </summary>
     private AiRequest CreateRequest(IReadOnlyList<ChatMessage> messages, string? systemPrompt = null)
     {
         var preset = SelectedPreset;
@@ -1097,10 +1296,15 @@ public sealed class ChatPanel : Control
         };
     }
 
+    /// <summary>
+    /// Determines whether the current theme is dark based on the <see cref="Theme"/> property or system setting.
+    /// </summary>
     private bool IsDarkTheme() => Theme switch
     {
         ChatTheme.Light => false,
         ChatTheme.Dark => true,
         _ => ActualTheme == ElementTheme.Dark
     };
+
+    #endregion
 }

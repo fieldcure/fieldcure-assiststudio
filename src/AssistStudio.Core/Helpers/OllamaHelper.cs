@@ -7,19 +7,26 @@ namespace FieldCure.AssistStudio.Helpers;
 /// </summary>
 public static class OllamaHelper
 {
+    #region Constants
+
+    /// <summary>The default local Ollama server URL.</summary>
     private const string OllamaUrl = "http://localhost:11434";
+
+    /// <summary>The URL where Ollama can be downloaded.</summary>
     private const string InstallUrl = "https://ollama.com/download";
+
+    #endregion
+
+    #region Public Methods
 
     /// <summary>
     /// Returns the URL where Ollama can be downloaded.
     /// </summary>
-    /// <returns>The Ollama download page URL.</returns>
     public static string GetInstallUrl() => InstallUrl;
 
     /// <summary>
     /// Checks whether Ollama is installed on the local machine by inspecting known paths and the system PATH.
     /// </summary>
-    /// <returns><see langword="true"/> if Ollama is installed; otherwise, <see langword="false"/>.</returns>
     public static bool IsOllamaInstalled()
     {
         // Check common install locations on Windows
@@ -53,8 +60,6 @@ public static class OllamaHelper
     /// <summary>
     /// Checks whether the Ollama server is currently running and responsive.
     /// </summary>
-    /// <param name="ct">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the Ollama server responds successfully; otherwise, <see langword="false"/>.</returns>
     public static async Task<bool> IsOllamaRunningAsync(CancellationToken ct = default)
     {
         try
@@ -72,8 +77,6 @@ public static class OllamaHelper
     /// <summary>
     /// Attempts to start the Ollama server process and waits for it to become responsive.
     /// </summary>
-    /// <param name="ct">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the server started successfully; otherwise, <see langword="false"/>.</returns>
     public static async Task<bool> StartOllamaAsync(CancellationToken ct = default)
     {
         try
@@ -108,10 +111,17 @@ public static class OllamaHelper
         }
     }
 
+    #endregion
+
+    #region Private Methods
+
+    /// <summary>Finds the Ollama executable in common install locations.</summary>
     private static string? FindOllamaExe()
     {
         var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         var path = Path.Combine(localAppData, "Programs", "Ollama", "ollama.exe");
         return File.Exists(path) ? path : null;
     }
+
+    #endregion
 }

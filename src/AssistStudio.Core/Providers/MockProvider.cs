@@ -8,6 +8,8 @@ namespace FieldCure.AssistStudio.Providers;
 /// </summary>
 public class MockProvider : IAiProvider
 {
+    #region Properties
+
     /// <inheritdoc/>
     public string ProviderName => "Mock";
 
@@ -26,6 +28,11 @@ public class MockProvider : IAiProvider
     /// <inheritdoc/>
     public string? LastRawResponse => null;
 
+    #endregion
+
+    #region Constants
+
+    /// <summary>The static Markdown response returned by the mock provider.</summary>
     private const string MarkdownResponse = """
         Here's a **Markdown** demo response!
 
@@ -74,6 +81,10 @@ public class MockProvider : IAiProvider
         That's the end of the demo!
         """;
 
+    #endregion
+
+    #region IAiProvider Implementation
+
     /// <inheritdoc/>
     public async Task<string> CompleteAsync(AiRequest request, CancellationToken ct = default)
     {
@@ -107,4 +118,6 @@ public class MockProvider : IAiProvider
             await Task.Delay(30, ct);
         }
     }
+
+    #endregion
 }

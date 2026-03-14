@@ -11,10 +11,23 @@ namespace FieldCure.AssistStudio.Providers;
 /// </summary>
 public partial class OpenAiProvider : IAiProvider, IDisposable
 {
+    #region Fields
+
+    /// <summary>The HTTP client used for API requests.</summary>
     private readonly HttpClient _httpClient;
+
+    /// <summary>The API key for authentication.</summary>
     private readonly string _apiKey;
+
+    /// <summary>The base URL of the OpenAI-compatible API endpoint.</summary>
     private readonly string _baseUrl;
+
+    /// <summary>Whether this instance owns (and should dispose) the HTTP client.</summary>
     private readonly bool _ownsHttpClient;
+
+    #endregion
+
+    #region Properties
 
     /// <inheritdoc/>
     public string ProviderName { get; }
@@ -34,13 +47,13 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
     /// <inheritdoc/>
     public string? LastRawResponse { get; private set; }
 
+    #endregion
+
+    #region Constructors
+
     /// <summary>
     /// Initializes a new <see cref="OpenAiProvider"/> with an internally managed <see cref="HttpClient"/>.
     /// </summary>
-    /// <param name="apiKey">The API key for authentication.</param>
-    /// <param name="model">The model identifier to use.</param>
-    /// <param name="baseUrl">The base URL of the API endpoint.</param>
-    /// <param name="providerName">The display name for this provider instance.</param>
     public OpenAiProvider(string apiKey, string model = "gpt-4o",
         string baseUrl = "https://api.openai.com/v1", string providerName = "OpenAI")
         : this(new HttpClient(), apiKey, model, baseUrl, providerName, ownsHttpClient: true)
@@ -50,17 +63,15 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
     /// <summary>
     /// Initializes a new <see cref="OpenAiProvider"/> with an externally managed <see cref="HttpClient"/>.
     /// </summary>
-    /// <param name="httpClient">The HTTP client to use for API requests.</param>
-    /// <param name="apiKey">The API key for authentication.</param>
-    /// <param name="model">The model identifier to use.</param>
-    /// <param name="baseUrl">The base URL of the API endpoint.</param>
-    /// <param name="providerName">The display name for this provider instance.</param>
     public OpenAiProvider(HttpClient httpClient, string apiKey, string model = "gpt-4o",
         string baseUrl = "https://api.openai.com/v1", string providerName = "OpenAI")
         : this(httpClient, apiKey, model, baseUrl, providerName, ownsHttpClient: false)
     {
     }
 
+    /// <summary>
+    /// Internal constructor that captures all dependencies.
+    /// </summary>
     private OpenAiProvider(HttpClient httpClient, string apiKey, string model,
         string baseUrl, string providerName, bool ownsHttpClient)
     {
@@ -71,6 +82,10 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
         ProviderName = providerName;
         ModelId = model;
     }
+
+    #endregion
+
+    #region IAiProvider Implementation
 
     /// <inheritdoc/>
     public async Task<string> CompleteAsync(AiRequest request, CancellationToken ct = default)
@@ -158,6 +173,61 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
         LastRawResponse = responseSb.ToString();
     }
 
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<AiModel>> ListModelsAsync(CancellationToken ct = default)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Get, $"{_baseUrl}/models");
+        req.Headers.Add("Authorization", $"Bearer {_apiKey}");
+
+        var response = await _httpClient.SendAsync(req, ct);
+        response.EnsureSuccessStatusCode();
+
+        var json = await response.Content.ReadAsStringAsync(ct);
+        using var doc = JsonDocument.Parse(json);
+
+        var models = new List<AiModel>();
+        foreach (var item in doc.RootElement.GetProperty("data").EnumerateArray())
+        {
+            var id = item.GetProperty("id").GetString()!;
+            var ownedBy = item.TryGetProperty("owned_by", out var ob) ? ob.GetString() : null;
+            models.Add(new AiModel(id, null, ownedBy));
+        }
+
+        return models;
+    }
+
+    /// <inheritdoc/>
+    public async Task<ConnectionInfo> ValidateConnectionAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get, $"{_baseUrl}/models");
+            req.Headers.Add("Authorization", $"Bearer {_apiKey}");
+
+            var response = await _httpClient.SendAsync(req, ct);
+            if (response.IsSuccessStatusCode)
+            {
+                string? orgId = null;
+                if (response.Headers.TryGetValues("openai-organization", out var orgValues))
+                    orgId = orgValues.FirstOrDefault();
+
+                return new ConnectionInfo(true, orgId, orgId, null);
+            }
+
+            var errorBody = await response.Content.ReadAsStringAsync(ct);
+            return new ConnectionInfo(false, null, null, $"HTTP {(int)response.StatusCode}: {errorBody}");
+        }
+        catch (Exception ex)
+        {
+            return new ConnectionInfo(false, null, null, ex.Message);
+        }
+    }
+
+    #endregion
+
+    #region Private Methods
+
+    /// <summary>Builds the JSON request body for the OpenAI-compatible chat completions API.</summary>
     private string BuildRequestBody(AiRequest request, bool stream)
     {
         var messages = new JsonArray();
@@ -265,6 +335,7 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
         return body.ToJsonString();
     }
 
+    /// <summary>Sends an HTTP POST request to the OpenAI-compatible API and validates the response.</summary>
     private async Task<HttpResponseMessage> SendRequestAsync(
         string body, CancellationToken ct,
         HttpCompletionOption completionOption = HttpCompletionOption.ResponseContentRead)
@@ -289,55 +360,9 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
         return response;
     }
 
-    /// <inheritdoc/>
-    public async Task<IReadOnlyList<AiModel>> ListModelsAsync(CancellationToken ct = default)
-    {
-        using var req = new HttpRequestMessage(HttpMethod.Get, $"{_baseUrl}/models");
-        req.Headers.Add("Authorization", $"Bearer {_apiKey}");
+    #endregion
 
-        var response = await _httpClient.SendAsync(req, ct);
-        response.EnsureSuccessStatusCode();
-
-        var json = await response.Content.ReadAsStringAsync(ct);
-        using var doc = JsonDocument.Parse(json);
-
-        var models = new List<AiModel>();
-        foreach (var item in doc.RootElement.GetProperty("data").EnumerateArray())
-        {
-            var id = item.GetProperty("id").GetString()!;
-            var ownedBy = item.TryGetProperty("owned_by", out var ob) ? ob.GetString() : null;
-            models.Add(new AiModel(id, null, ownedBy));
-        }
-
-        return models;
-    }
-
-    /// <inheritdoc/>
-    public async Task<ConnectionInfo> ValidateConnectionAsync(CancellationToken ct = default)
-    {
-        try
-        {
-            using var req = new HttpRequestMessage(HttpMethod.Get, $"{_baseUrl}/models");
-            req.Headers.Add("Authorization", $"Bearer {_apiKey}");
-
-            var response = await _httpClient.SendAsync(req, ct);
-            if (response.IsSuccessStatusCode)
-            {
-                string? orgId = null;
-                if (response.Headers.TryGetValues("openai-organization", out var orgValues))
-                    orgId = orgValues.FirstOrDefault();
-
-                return new ConnectionInfo(true, orgId, orgId, null);
-            }
-
-            var errorBody = await response.Content.ReadAsStringAsync(ct);
-            return new ConnectionInfo(false, null, null, $"HTTP {(int)response.StatusCode}: {errorBody}");
-        }
-        catch (Exception ex)
-        {
-            return new ConnectionInfo(false, null, null, ex.Message);
-        }
-    }
+    #region IDisposable
 
     /// <inheritdoc/>
     public void Dispose()
@@ -345,4 +370,6 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
         if (_ownsHttpClient)
             _httpClient.Dispose();
     }
+
+    #endregion
 }

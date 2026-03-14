@@ -9,10 +9,23 @@ namespace FieldCure.AssistStudio.Models;
 /// </summary>
 public partial class ProviderPreset : INotifyPropertyChanged
 {
+    #region Fields
+
+    /// <summary>Backing field for <see cref="Name"/>.</summary>
     private string _name = "";
+
+    /// <summary>Backing field for <see cref="ProviderType"/>.</summary>
     private string _providerType = "Mock";
+
+    /// <summary>Backing field for <see cref="ModelId"/>.</summary>
     private string _modelId = "";
+
+    /// <summary>Backing field for <see cref="BaseUrl"/>.</summary>
     private string? _baseUrl;
+
+    #endregion
+
+    #region Properties
 
     /// <summary>
     /// The display name of this preset.
@@ -77,13 +90,24 @@ public partial class ProviderPreset : INotifyPropertyChanged
     [JsonIgnore]
     public bool RequiresApiKey => ProviderType is "Claude" or "OpenAI" or "Gemini" or "Groq";
 
+    #endregion
+
+    #region INotifyPropertyChanged
+
     /// <inheritdoc/>
     public event PropertyChangedEventHandler? PropertyChanged;
 
+    #endregion
+
+    #region Private Methods
+
+    /// <summary>Sets a backing field and raises <see cref="PropertyChanged"/> if the value changed.</summary>
     private void SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
     {
         if (EqualityComparer<T>.Default.Equals(field, value)) return;
         field = value;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
+
+    #endregion
 }

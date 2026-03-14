@@ -12,6 +12,8 @@ public partial record LocalModel(
     string? OwnedBy
 ) : AiModel(Id, DisplayName, OwnedBy)
 {
+    #region Properties
+
     /// <summary>The model file size in bytes.</summary>
     public long SizeBytes { get; init; }
 
@@ -29,4 +31,6 @@ public partial record LocalModel(
 
     /// <summary>Whether the model has been downloaded to the local machine.</summary>
     public bool IsDownloaded { get; init; }
+
+    #endregion
 }

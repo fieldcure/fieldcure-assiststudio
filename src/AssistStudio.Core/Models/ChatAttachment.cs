@@ -20,6 +20,8 @@ public enum AttachmentType
 /// </summary>
 public partial class ChatAttachment
 {
+    #region Constructors
+
     /// <summary>
     /// Initializes a new empty <see cref="ChatAttachment"/>.
     /// </summary>
@@ -28,10 +30,6 @@ public partial class ChatAttachment
     /// <summary>
     /// Initializes a new <see cref="ChatAttachment"/> with the specified file name, type, data, and optional MIME type.
     /// </summary>
-    /// <param name="fileName">The name of the attached file.</param>
-    /// <param name="type">The type of attachment.</param>
-    /// <param name="data">The raw byte content of the file.</param>
-    /// <param name="mimeType">The MIME type of the file, or <see langword="null"/> to infer automatically.</param>
     public ChatAttachment(string fileName, AttachmentType type, byte[] data, string? mimeType = null)
     {
         FileName = fileName;
@@ -39,6 +37,10 @@ public partial class ChatAttachment
         Data = data;
         MimeType = mimeType;
     }
+
+    #endregion
+
+    #region Properties
 
     /// <summary>The name of the attached file.</summary>
     public string FileName { get; set; } = "";
@@ -51,4 +53,6 @@ public partial class ChatAttachment
 
     /// <summary>The MIME type of the file (e.g., "image/png").</summary>
     public string? MimeType { get; set; }
+
+    #endregion
 }

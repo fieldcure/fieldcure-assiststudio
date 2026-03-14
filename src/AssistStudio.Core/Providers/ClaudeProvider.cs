@@ -11,12 +11,30 @@ namespace FieldCure.AssistStudio.Providers;
 /// </summary>
 public partial class ClaudeProvider : IAiProvider, IDisposable
 {
+    #region Fields
+
+    /// <summary>The HTTP client used for API requests.</summary>
     private readonly HttpClient _httpClient;
+
+    /// <summary>The Anthropic API key for authentication.</summary>
     private readonly string _apiKey;
+
+    /// <summary>Whether this instance owns (and should dispose) the HTTP client.</summary>
     private readonly bool _ownsHttpClient;
 
+    #endregion
+
+    #region Constants
+
+    /// <summary>The Anthropic Messages API endpoint URL.</summary>
     private const string ApiUrl = "https://api.anthropic.com/v1/messages";
+
+    /// <summary>The Anthropic API version header value.</summary>
     private const string AnthropicVersion = "2023-06-01";
+
+    #endregion
+
+    #region Properties
 
     /// <inheritdoc/>
     public string ProviderName => "Claude";
@@ -36,11 +54,13 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
     /// <inheritdoc/>
     public string? LastRawResponse { get; private set; }
 
+    #endregion
+
+    #region Constructors
+
     /// <summary>
     /// Initializes a new <see cref="ClaudeProvider"/> with an internally managed <see cref="HttpClient"/>.
     /// </summary>
-    /// <param name="apiKey">The Anthropic API key.</param>
-    /// <param name="model">The model identifier to use.</param>
     public ClaudeProvider(string apiKey, string model = "claude-sonnet-4-20250514")
         : this(new HttpClient(), apiKey, model, ownsHttpClient: true)
     {
@@ -49,14 +69,14 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
     /// <summary>
     /// Initializes a new <see cref="ClaudeProvider"/> with an externally managed <see cref="HttpClient"/>.
     /// </summary>
-    /// <param name="httpClient">The HTTP client to use for API requests.</param>
-    /// <param name="apiKey">The Anthropic API key.</param>
-    /// <param name="model">The model identifier to use.</param>
     public ClaudeProvider(HttpClient httpClient, string apiKey, string model = "claude-sonnet-4-20250514")
         : this(httpClient, apiKey, model, ownsHttpClient: false)
     {
     }
 
+    /// <summary>
+    /// Internal constructor that captures all dependencies.
+    /// </summary>
     private ClaudeProvider(HttpClient httpClient, string apiKey, string model, bool ownsHttpClient)
     {
         _httpClient = httpClient;
@@ -64,6 +84,10 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
         _ownsHttpClient = ownsHttpClient;
         ModelId = model;
     }
+
+    #endregion
+
+    #region IAiProvider Implementation
 
     /// <inheritdoc/>
     public async Task<string> CompleteAsync(AiRequest request, CancellationToken ct = default)
@@ -155,6 +179,57 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
         LastRawResponse = responseSb.ToString();
     }
 
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<AiModel>> ListModelsAsync(CancellationToken ct = default)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Get, "https://api.anthropic.com/v1/models");
+        req.Headers.Add("x-api-key", _apiKey);
+        req.Headers.Add("anthropic-version", AnthropicVersion);
+
+        var response = await _httpClient.SendAsync(req, ct);
+        response.EnsureSuccessStatusCode();
+
+        var json = await response.Content.ReadAsStringAsync(ct);
+        using var doc = JsonDocument.Parse(json);
+
+        var models = new List<AiModel>();
+        foreach (var item in doc.RootElement.GetProperty("data").EnumerateArray())
+        {
+            var id = item.GetProperty("id").GetString()!;
+            var displayName = item.TryGetProperty("display_name", out var dn) ? dn.GetString() : null;
+            models.Add(new AiModel(id, displayName, "anthropic"));
+        }
+
+        return models;
+    }
+
+    /// <inheritdoc/>
+    public async Task<ConnectionInfo> ValidateConnectionAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get, "https://api.anthropic.com/v1/models");
+            req.Headers.Add("x-api-key", _apiKey);
+            req.Headers.Add("anthropic-version", AnthropicVersion);
+
+            var response = await _httpClient.SendAsync(req, ct);
+            if (response.IsSuccessStatusCode)
+                return new ConnectionInfo(true, null, null, null);
+
+            var errorBody = await response.Content.ReadAsStringAsync(ct);
+            return new ConnectionInfo(false, null, null, $"HTTP {(int)response.StatusCode}: {errorBody}");
+        }
+        catch (Exception ex)
+        {
+            return new ConnectionInfo(false, null, null, ex.Message);
+        }
+    }
+
+    #endregion
+
+    #region Private Methods
+
+    /// <summary>Builds the JSON request body for the Anthropic Messages API.</summary>
     private string BuildRequestBody(AiRequest request, bool stream)
     {
         var messages = new JsonArray();
@@ -254,6 +329,7 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
         return body.ToJsonString();
     }
 
+    /// <summary>Sends an HTTP POST request to the Claude API and validates the response.</summary>
     private async Task<HttpResponseMessage> SendRequestAsync(
         string body, CancellationToken ct,
         HttpCompletionOption completionOption = HttpCompletionOption.ResponseContentRead)
@@ -279,51 +355,9 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
         return response;
     }
 
-    /// <inheritdoc/>
-    public async Task<IReadOnlyList<AiModel>> ListModelsAsync(CancellationToken ct = default)
-    {
-        using var req = new HttpRequestMessage(HttpMethod.Get, "https://api.anthropic.com/v1/models");
-        req.Headers.Add("x-api-key", _apiKey);
-        req.Headers.Add("anthropic-version", AnthropicVersion);
+    #endregion
 
-        var response = await _httpClient.SendAsync(req, ct);
-        response.EnsureSuccessStatusCode();
-
-        var json = await response.Content.ReadAsStringAsync(ct);
-        using var doc = JsonDocument.Parse(json);
-
-        var models = new List<AiModel>();
-        foreach (var item in doc.RootElement.GetProperty("data").EnumerateArray())
-        {
-            var id = item.GetProperty("id").GetString()!;
-            var displayName = item.TryGetProperty("display_name", out var dn) ? dn.GetString() : null;
-            models.Add(new AiModel(id, displayName, "anthropic"));
-        }
-
-        return models;
-    }
-
-    /// <inheritdoc/>
-    public async Task<ConnectionInfo> ValidateConnectionAsync(CancellationToken ct = default)
-    {
-        try
-        {
-            using var req = new HttpRequestMessage(HttpMethod.Get, "https://api.anthropic.com/v1/models");
-            req.Headers.Add("x-api-key", _apiKey);
-            req.Headers.Add("anthropic-version", AnthropicVersion);
-
-            var response = await _httpClient.SendAsync(req, ct);
-            if (response.IsSuccessStatusCode)
-                return new ConnectionInfo(true, null, null, null);
-
-            var errorBody = await response.Content.ReadAsStringAsync(ct);
-            return new ConnectionInfo(false, null, null, $"HTTP {(int)response.StatusCode}: {errorBody}");
-        }
-        catch (Exception ex)
-        {
-            return new ConnectionInfo(false, null, null, ex.Message);
-        }
-    }
+    #region IDisposable
 
     /// <inheritdoc/>
     public void Dispose()
@@ -331,4 +365,6 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
         if (_ownsHttpClient)
             _httpClient.Dispose();
     }
+
+    #endregion
 }

@@ -6,16 +6,41 @@ using FieldCure.AssistStudio.Helpers;
 
 namespace AssistStudio.Dialogs;
 
+/// <summary>
+/// Dialog for browsing, pulling, and deleting Ollama models.
+/// Displays local models and available models with hardware compatibility indicators.
+/// </summary>
 public sealed partial class ModelSelectionDialog : ContentDialog
 {
+    #region Fields
+
+    /// <summary>
+    /// The Ollama model manager used to list, pull, and delete models.
+    /// </summary>
     private readonly OllamaModelManager _manager;
+
+    /// <summary>
+    /// Detected hardware specifications for compatibility checking.
+    /// </summary>
     private readonly HardwareSpec _hw;
+
+    #endregion
+
+    #region Properties
 
     /// <summary>
     /// Models requested to pull. Caller handles the actual download.
     /// </summary>
     public List<string> ModelsToPull { get; } = [];
 
+    #endregion
+
+    #region Constructors
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModelSelectionDialog"/> class with
+    /// the given model manager and detects hardware for compatibility display.
+    /// </summary>
     public ModelSelectionDialog(OllamaModelManager manager)
     {
         InitializeComponent();
@@ -28,6 +53,13 @@ public sealed partial class ModelSelectionDialog : ContentDialog
         Loaded += async (_, _) => await RefreshAsync();
     }
 
+    #endregion
+
+    #region Private Methods
+
+    /// <summary>
+    /// Refreshes both the local and available model lists, filtering out already-installed models.
+    /// </summary>
     private async Task RefreshAsync()
     {
         var localIds = new HashSet<string>();
@@ -79,14 +111,9 @@ public sealed partial class ModelSelectionDialog : ContentDialog
         }
     }
 
-    private void OnDeleteModel(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button btn && btn.Tag is string modelName)
-        {
-            _ = DeleteModelAsync(modelName);
-        }
-    }
-
+    /// <summary>
+    /// Deletes the specified model from the local Ollama instance and refreshes the lists.
+    /// </summary>
     private async Task DeleteModelAsync(string modelName)
     {
         try
@@ -100,6 +127,38 @@ public sealed partial class ModelSelectionDialog : ContentDialog
         }
     }
 
+    /// <summary>
+    /// Formats a byte count into a human-readable size string (KB, MB, or GB).
+    /// </summary>
+    /// <returns>A formatted size string such as "4.2 GB".</returns>
+    private static string FormatSize(long bytes)
+    {
+        return bytes switch
+        {
+            >= 1_073_741_824 => $"{bytes / 1_073_741_824.0:F1} GB",
+            >= 1_048_576 => $"{bytes / 1_048_576.0:F1} MB",
+            _ => $"{bytes / 1024.0:F1} KB"
+        };
+    }
+
+    #endregion
+
+    #region Event Handlers
+
+    /// <summary>
+    /// Handles the delete button click for a local model.
+    /// </summary>
+    private void OnDeleteModel(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is string modelName)
+        {
+            _ = DeleteModelAsync(modelName);
+        }
+    }
+
+    /// <summary>
+    /// Handles the pull button click for an available model, queuing it for download.
+    /// </summary>
     private void OnPullModel(object sender, RoutedEventArgs e)
     {
         if (sender is Button btn && btn.Tag is string modelName)
@@ -110,6 +169,9 @@ public sealed partial class ModelSelectionDialog : ContentDialog
         }
     }
 
+    /// <summary>
+    /// Handles pulling a custom model by name entered in the text box.
+    /// </summary>
     private void OnPullCustomModel(object sender, RoutedEventArgs e)
     {
         var name = CustomModelBox.Text?.Trim();
@@ -120,13 +182,5 @@ public sealed partial class ModelSelectionDialog : ContentDialog
         }
     }
 
-    private static string FormatSize(long bytes)
-    {
-        return bytes switch
-        {
-            >= 1_073_741_824 => $"{bytes / 1_073_741_824.0:F1} GB",
-            >= 1_048_576 => $"{bytes / 1_048_576.0:F1} MB",
-            _ => $"{bytes / 1024.0:F1} KB"
-        };
-    }
+    #endregion
 }

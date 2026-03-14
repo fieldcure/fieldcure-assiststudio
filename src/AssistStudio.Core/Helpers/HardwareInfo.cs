@@ -18,17 +18,26 @@ public record HardwareSpec(
     string OsDisplay
 )
 {
+    #region Computed Properties
+
     /// <summary>A human-readable display string for the VRAM amount (e.g., "8.0 GB").</summary>
     public string VramDisplay => FormatBytes(VramBytes);
 
     /// <summary>A human-readable display string for the total RAM amount (e.g., "32.0 GB").</summary>
     public string RamDisplay => FormatBytes(TotalRamBytes);
 
+    #endregion
+
+    #region Private Methods
+
+    /// <summary>Formats a byte count as a human-readable GB string.</summary>
     private static string FormatBytes(long bytes)
     {
         const double gb = 1024.0 * 1024 * 1024;
         return $"{bytes / gb:F1} GB";
     }
+
+    #endregion
 }
 
 /// <summary>
@@ -36,6 +45,9 @@ public record HardwareSpec(
 /// </summary>
 public static class HardwareInfo
 {
+    #region Native Interop
+
+    /// <summary>Native memory status structure for the GlobalMemoryStatusEx API.</summary>
     [StructLayout(LayoutKind.Sequential)]
     private struct MEMORYSTATUSEX
     {
@@ -50,17 +62,25 @@ public static class HardwareInfo
         public ulong ullAvailExtendedVirtual;
     }
 
+    /// <summary>Retrieves information about the system's current usage of both physical and virtual memory.</summary>
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GlobalMemoryStatusEx(ref MEMORYSTATUSEX lpBuffer);
 
-    // Registry path for display adapters
+    #endregion
+
+    #region Constants
+
+    /// <summary>Registry path for display adapter device class.</summary>
     private const string DisplayClassKey = @"SYSTEM\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}";
+
+    #endregion
+
+    #region Public Methods
 
     /// <summary>
     /// Detects and returns the current system's hardware specifications.
     /// </summary>
-    /// <returns>A <see cref="HardwareSpec"/> containing GPU, RAM, and OS information.</returns>
     public static HardwareSpec Detect()
     {
         var (gpuName, vram) = DetectGpu();
@@ -69,6 +89,11 @@ public static class HardwareInfo
         return new HardwareSpec(gpuName, vram, ram, os);
     }
 
+    #endregion
+
+    #region Private Methods
+
+    /// <summary>Detects the primary GPU name and VRAM, trying registry first then WMI fallback.</summary>
     private static (string Name, long VramBytes) DetectGpu()
     {
         // Try registry first for accurate 64-bit VRAM
@@ -80,6 +105,7 @@ public static class HardwareInfo
         return DetectGpuViaWmi();
     }
 
+    /// <summary>Detects GPU information via the Windows registry (supports 64-bit VRAM values).</summary>
     private static (string Name, long VramBytes) DetectGpuViaRegistry()
     {
         try
@@ -122,6 +148,7 @@ public static class HardwareInfo
         }
     }
 
+    /// <summary>Detects GPU information via WMI (fallback, limited to 4 GB due to uint32 AdapterRAM).</summary>
     private static (string Name, long VramBytes) DetectGpuViaWmi()
     {
         try
@@ -157,6 +184,7 @@ public static class HardwareInfo
         }
     }
 
+    /// <summary>Detects the Windows OS version and architecture.</summary>
     private static string DetectOs()
     {
         var build = Environment.OSVersion.Version.Build;
@@ -165,6 +193,7 @@ public static class HardwareInfo
         return $"Windows {winVersion} (Build {build}, {arch})";
     }
 
+    /// <summary>Detects total physical RAM in bytes using native API with GC fallback.</summary>
     private static long DetectRam()
     {
         try
@@ -177,4 +206,6 @@ public static class HardwareInfo
 
         return GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
     }
+
+    #endregion
 }

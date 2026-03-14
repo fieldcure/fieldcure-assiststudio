@@ -5,6 +5,8 @@ namespace FieldCure.AssistStudio.Models;
 /// </summary>
 public partial class AiRequest
 {
+    #region Properties
+
     /// <summary>The conversation messages to send to the AI provider.</summary>
     public required IReadOnlyList<ChatMessage> Messages { get; init; }
 
@@ -16,4 +18,6 @@ public partial class AiRequest
 
     /// <summary>Maximum number of tokens the model can generate in the response. Default is 4096.</summary>
     public int MaxTokens { get; init; } = 4096;
+
+    #endregion
 }

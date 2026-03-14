@@ -6,12 +6,37 @@ using FieldCure.AssistStudio.Helpers;
 
 namespace AssistStudio.Dialogs;
 
+/// <summary>
+/// First-run wizard dialog that guides the user through initial hardware detection,
+/// provider selection (local vs. cloud), and optional Ollama model setup.
+/// </summary>
 public sealed partial class FirstRunDialog : ContentDialog
 {
+    #region Fields
+
+    /// <summary>
+    /// Detected hardware specifications used for model compatibility checks.
+    /// </summary>
     private readonly HardwareSpec _hw;
+
+    /// <summary>
+    /// The current wizard step number (1-based).
+    /// </summary>
     private int _currentStep = 1;
+
+    /// <summary>
+    /// The Ollama model ID recommended based on the detected hardware.
+    /// </summary>
     private string? _recommendedModel;
 
+    #endregion
+
+    #region Constructors
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FirstRunDialog"/> class,
+    /// detects hardware, and displays GPU/RAM information.
+    /// </summary>
     public FirstRunDialog()
     {
         InitializeComponent();
@@ -24,6 +49,13 @@ public sealed partial class FirstRunDialog : ContentDialog
         PrimaryButtonClick += OnPrimaryButton;
     }
 
+    #endregion
+
+    #region Event Handlers
+
+    /// <summary>
+    /// Handles the primary button click to advance through wizard steps.
+    /// </summary>
     private void OnPrimaryButton(ContentDialog sender, ContentDialogButtonClickEventArgs args)
     {
         args.Cancel = true; // Prevent dialog from closing
@@ -42,6 +74,50 @@ public sealed partial class FirstRunDialog : ContentDialog
         }
     }
 
+    /// <summary>
+    /// Handles the download model button click to pull the recommended Ollama model.
+    /// </summary>
+    private async void OnDownloadModel(object sender, RoutedEventArgs e)
+    {
+        if (_recommendedModel is null) return;
+
+        DownloadModelButton.IsEnabled = false;
+        DownloadProgressPanel.Visibility = Visibility.Visible;
+        DownloadStatus.Text = $"Pulling {_recommendedModel}...";
+        DownloadProgress.Value = 0;
+
+        var progress = new Progress<ModelDownloadProgress>(p =>
+        {
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                DownloadStatus.Text = p.Status;
+                DownloadProgress.Value = p.Percent * 100;
+            });
+        });
+
+        try
+        {
+            using var manager = new OllamaModelManager();
+            await manager.DownloadModelAsync(_recommendedModel, progress);
+            DownloadStatus.Text = "\u2705 Download complete!";
+        }
+        catch (Exception ex)
+        {
+            DownloadStatus.Text = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            DownloadModelButton.IsEnabled = true;
+        }
+    }
+
+    #endregion
+
+    #region Private Methods
+
+    /// <summary>
+    /// Transitions to step 2 of the wizard, showing the provider selection (local vs. cloud).
+    /// </summary>
     private void ShowStep2()
     {
         _currentStep = 2;
@@ -50,6 +126,9 @@ public sealed partial class FirstRunDialog : ContentDialog
         RadioLocal.IsChecked = true;
     }
 
+    /// <summary>
+    /// Transitions to step 3 of the wizard, showing either the Ollama setup or cloud instructions.
+    /// </summary>
     private async void ShowStep3()
     {
         _currentStep = 3;
@@ -67,6 +146,9 @@ public sealed partial class FirstRunDialog : ContentDialog
         }
     }
 
+    /// <summary>
+    /// Checks Ollama installation and running status, then recommends a model if none are installed.
+    /// </summary>
     private async Task SetupOllamaAsync()
     {
         OllamaSetupSpinner.Visibility = Visibility.Visible;
@@ -128,6 +210,10 @@ public sealed partial class FirstRunDialog : ContentDialog
         }
     }
 
+    /// <summary>
+    /// Selects the best Ollama model that fits the detected hardware capabilities.
+    /// </summary>
+    /// <returns>The model ID to recommend, or a fallback model if no ideal match is found.</returns>
     private string? PickRecommendedModel()
     {
         // Pick the best model that fits the hardware
@@ -158,37 +244,5 @@ public sealed partial class FirstRunDialog : ContentDialog
         return "qwen2.5"; // Smallest as last resort
     }
 
-    private async void OnDownloadModel(object sender, RoutedEventArgs e)
-    {
-        if (_recommendedModel is null) return;
-
-        DownloadModelButton.IsEnabled = false;
-        DownloadProgressPanel.Visibility = Visibility.Visible;
-        DownloadStatus.Text = $"Pulling {_recommendedModel}...";
-        DownloadProgress.Value = 0;
-
-        var progress = new Progress<ModelDownloadProgress>(p =>
-        {
-            DispatcherQueue.TryEnqueue(() =>
-            {
-                DownloadStatus.Text = p.Status;
-                DownloadProgress.Value = p.Percent * 100;
-            });
-        });
-
-        try
-        {
-            using var manager = new OllamaModelManager();
-            await manager.DownloadModelAsync(_recommendedModel, progress);
-            DownloadStatus.Text = "\u2705 Download complete!";
-        }
-        catch (Exception ex)
-        {
-            DownloadStatus.Text = $"Error: {ex.Message}";
-        }
-        finally
-        {
-            DownloadModelButton.IsEnabled = true;
-        }
-    }
+    #endregion
 }

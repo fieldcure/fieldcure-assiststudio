@@ -21,13 +21,28 @@ namespace FieldCure.AssistStudio.Controls;
 /// </summary>
 public sealed class InputContainer : Control
 {
+    #region Constants
+
+    /// <summary>
+    /// Set of file extensions recognized as image attachments.
+    /// </summary>
     private static readonly HashSet<string> ImageExtensions =
         [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp"];
 
+    /// <summary>
+    /// Set of file extensions recognized as plain text attachments.
+    /// </summary>
     private static readonly HashSet<string> TextExtensions =
         [".txt", ".csv", ".log", ".md", ".json", ".xml"];
 
+    /// <summary>
+    /// Set of file extensions recognized as document attachments requiring text extraction.
+    /// </summary>
     private static readonly HashSet<string> DocumentExtensions = [".pdf", ".docx"];
+
+    #endregion
+
+    #region Dependency Properties
 
     /// <summary>Identifies the <see cref="Placeholder"/> dependency property.</summary>
     public static readonly DependencyProperty PlaceholderProperty =
@@ -59,17 +74,67 @@ public sealed class InputContainer : Control
         DependencyProperty.Register(nameof(SelectedPromptPreset), typeof(PromptPreset), typeof(InputContainer),
             new PropertyMetadata(null));
 
+    #endregion
+
+    #region Fields
+
+    /// <summary>
+    /// Flag to suppress preset changed events during programmatic ComboBox updates.
+    /// </summary>
     private bool _suppressPresetChanged;
+
+    /// <summary>
+    /// Flag indicating a pending preset ComboBox population deferred until control is loaded.
+    /// </summary>
     private bool _pendingPresetPopulate;
+
+    /// <summary>
+    /// Flag indicating a pending prompt preset ComboBox population deferred until control is loaded.
+    /// </summary>
     private bool _pendingPromptPresetPopulate;
 
+    #endregion
+
+    #region Template Parts
+
+    /// <summary>
+    /// The attachment preview bar displaying file and image thumbnails.
+    /// </summary>
     private AttachmentPreviewBar? _previewBar;
+
+    /// <summary>
+    /// The text box for composing chat messages.
+    /// </summary>
     private TextBox? _messageTextBox;
+
+    /// <summary>
+    /// The button that opens the file picker to attach files.
+    /// </summary>
     private Button? _attachButton;
+
+    /// <summary>
+    /// The button that triggers conversation summarization.
+    /// </summary>
     private Button? _summarizeButton;
+
+    /// <summary>
+    /// The combo box for selecting provider presets.
+    /// </summary>
     private ComboBox? _presetComboBox;
+
+    /// <summary>
+    /// The combo box for selecting prompt presets.
+    /// </summary>
     private ComboBox? _promptPresetComboBox;
+
+    /// <summary>
+    /// The border container that receives a theme shadow.
+    /// </summary>
     private Border? _containerBorder;
+
+    #endregion
+
+    #region Constructors
 
     /// <summary>
     /// Initializes a new instance of the <see cref="InputContainer"/> class.
@@ -79,6 +144,92 @@ public sealed class InputContainer : Control
         DefaultStyleKey = typeof(InputContainer);
         Loaded += OnLoaded;
     }
+
+    #endregion
+
+    #region Public Properties
+
+    /// <summary>
+    /// Gets or sets the placeholder text displayed in the message text box.
+    /// </summary>
+    public string Placeholder
+    {
+        get => (string)GetValue(PlaceholderProperty);
+        set => SetValue(PlaceholderProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets whether the input area is enabled for user interaction.
+    /// </summary>
+    public bool IsInputEnabled
+    {
+        get => (bool)GetValue(IsInputEnabledProperty);
+        set => SetValue(IsInputEnabledProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the list of available provider presets for the preset selector.
+    /// </summary>
+    public IList? AvailablePresets
+    {
+        get => (IList?)GetValue(AvailablePresetsProperty);
+        set => SetValue(AvailablePresetsProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the currently selected provider preset.
+    /// </summary>
+    public ProviderPreset? SelectedPreset
+    {
+        get => (ProviderPreset?)GetValue(SelectedPresetProperty);
+        set => SetValue(SelectedPresetProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the list of available prompt presets for the prompt preset selector.
+    /// </summary>
+    public IList<PromptPreset>? AvailablePromptPresets
+    {
+        get => (IList<PromptPreset>?)GetValue(AvailablePromptPresetsProperty);
+        set => SetValue(AvailablePromptPresetsProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the currently selected prompt preset.
+    /// </summary>
+    public PromptPreset? SelectedPromptPreset
+    {
+        get => (PromptPreset?)GetValue(SelectedPromptPresetProperty);
+        set => SetValue(SelectedPromptPresetProperty, value);
+    }
+
+    #endregion
+
+    #region Events
+
+    /// <summary>
+    /// Occurs when the user sends a message by pressing Enter or submitting the input.
+    /// </summary>
+    public event EventHandler<MessageSentEventArgs>? MessageSent;
+
+    /// <summary>
+    /// Occurs when the user selects a different provider preset from the dropdown.
+    /// </summary>
+    public event EventHandler<ProviderPreset>? PresetChanged;
+
+    /// <summary>
+    /// Occurs when the user selects a different prompt preset from the dropdown.
+    /// </summary>
+    public event EventHandler<PromptPreset>? PromptPresetChanged;
+
+    /// <summary>
+    /// Occurs when the user clicks the summarize button.
+    /// </summary>
+    public event EventHandler? SummarizeRequested;
+
+    #endregion
+
+    #region Overrides
 
     /// <inheritdoc />
     protected override void OnApplyTemplate()
@@ -136,6 +287,62 @@ public sealed class InputContainer : Control
         Drop += OnDrop;
     }
 
+    #endregion
+
+    #region Public Methods
+
+    /// <summary>
+    /// Sets keyboard focus to the message text box.
+    /// </summary>
+    public void FocusInput()
+    {
+        _messageTextBox?.Focus(FocusState.Programmatic);
+    }
+
+    /// <summary>
+    /// Add storage items as attachments. Called from drag-drop and external sources.
+    /// </summary>
+    public async Task AddFilesAsync(IReadOnlyList<IStorageItem> items)
+    {
+        foreach (var item in items)
+        {
+            if (item is StorageFile file)
+            {
+                var attachment = await CreateAttachmentAsync(file);
+                if (attachment is not null)
+                {
+                    _previewBar?.AddAttachment(attachment);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Selects the matching prompt preset in the ComboBox.
+    /// </summary>
+    public void SelectPromptPresetInCombo(PromptPreset preset)
+    {
+        if (_promptPresetComboBox is null) return;
+
+        _suppressPresetChanged = true;
+        foreach (ComboBoxItem item in _promptPresetComboBox.Items)
+        {
+            if (item.Tag is PromptPreset p && p.Name == preset.Name)
+            {
+                _promptPresetComboBox.SelectedItem = item;
+                break;
+            }
+        }
+        _suppressPresetChanged = false;
+    }
+
+    #endregion
+
+    #region Event Handlers
+
+    /// <summary>
+    /// Handles the Loaded event to perform deferred ComboBox population.
+    /// </summary>
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         Loaded -= OnLoaded;
@@ -154,87 +361,8 @@ public sealed class InputContainer : Control
     }
 
     /// <summary>
-    /// Gets or sets the placeholder text displayed in the message text box.
+    /// Handles the PreviewKeyDown event on the message text box to send on Enter (without Shift).
     /// </summary>
-    public string Placeholder
-    {
-        get => (string)GetValue(PlaceholderProperty);
-        set => SetValue(PlaceholderProperty, value);
-    }
-
-    /// <summary>
-    /// Gets or sets whether the input area is enabled for user interaction.
-    /// </summary>
-    public bool IsInputEnabled
-    {
-        get => (bool)GetValue(IsInputEnabledProperty);
-        set => SetValue(IsInputEnabledProperty, value);
-    }
-
-    /// <summary>
-    /// Gets or sets the list of available provider presets for the preset selector.
-    /// </summary>
-    public IList? AvailablePresets
-    {
-        get => (IList?)GetValue(AvailablePresetsProperty);
-        set => SetValue(AvailablePresetsProperty, value);
-    }
-
-    /// <summary>
-    /// Gets or sets the currently selected provider preset.
-    /// </summary>
-    public ProviderPreset? SelectedPreset
-    {
-        get => (ProviderPreset?)GetValue(SelectedPresetProperty);
-        set => SetValue(SelectedPresetProperty, value);
-    }
-
-    /// <summary>
-    /// Gets or sets the list of available prompt presets for the prompt preset selector.
-    /// </summary>
-    public IList<PromptPreset>? AvailablePromptPresets
-    {
-        get => (IList<PromptPreset>?)GetValue(AvailablePromptPresetsProperty);
-        set => SetValue(AvailablePromptPresetsProperty, value);
-    }
-
-    /// <summary>
-    /// Gets or sets the currently selected prompt preset.
-    /// </summary>
-    public PromptPreset? SelectedPromptPreset
-    {
-        get => (PromptPreset?)GetValue(SelectedPromptPresetProperty);
-        set => SetValue(SelectedPromptPresetProperty, value);
-    }
-
-    /// <summary>
-    /// Occurs when the user sends a message by pressing Enter or submitting the input.
-    /// </summary>
-    public event EventHandler<MessageSentEventArgs>? MessageSent;
-
-    /// <summary>
-    /// Occurs when the user selects a different provider preset from the dropdown.
-    /// </summary>
-    public event EventHandler<ProviderPreset>? PresetChanged;
-
-    /// <summary>
-    /// Occurs when the user selects a different prompt preset from the dropdown.
-    /// </summary>
-    public event EventHandler<PromptPreset>? PromptPresetChanged;
-
-    /// <summary>
-    /// Occurs when the user clicks the summarize button.
-    /// </summary>
-    public event EventHandler? SummarizeRequested;
-
-    /// <summary>
-    /// Sets keyboard focus to the message text box.
-    /// </summary>
-    public void FocusInput()
-    {
-        _messageTextBox?.Focus(FocusState.Programmatic);
-    }
-
     private void MessageTextBox_PreviewKeyDown(object sender, KeyRoutedEventArgs e)
     {
         if (e.Key == VirtualKey.Enter && !IsShiftPressed())
@@ -244,20 +372,9 @@ public sealed class InputContainer : Control
         }
     }
 
-    private void TrySend()
-    {
-        var text = _messageTextBox?.Text?.Trim() ?? "";
-        var attachments = _previewBar?.Attachments.ToList() ?? [];
-
-        if (string.IsNullOrEmpty(text) && attachments.Count == 0) return;
-
-        if (_messageTextBox is not null)
-            _messageTextBox.Text = string.Empty;
-        _previewBar?.Clear();
-
-        MessageSent?.Invoke(this, new MessageSentEventArgs(text, attachments));
-    }
-
+    /// <summary>
+    /// Handles the attach button click to open a file picker and add selected files as attachments.
+    /// </summary>
     private async void AttachButton_Click(object sender, RoutedEventArgs e)
     {
         var picker = new FileOpenPicker();
@@ -281,11 +398,17 @@ public sealed class InputContainer : Control
         }
     }
 
+    /// <summary>
+    /// Handles the summarize button click to raise the <see cref="SummarizeRequested"/> event.
+    /// </summary>
     private void SummarizeButton_Click(object sender, RoutedEventArgs e)
     {
         SummarizeRequested?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>
+    /// Handles the preset ComboBox selection change to propagate the new preset.
+    /// </summary>
     private void PresetComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_suppressPresetChanged) return;
@@ -296,6 +419,9 @@ public sealed class InputContainer : Control
         }
     }
 
+    /// <summary>
+    /// Handles the Paste event on the message text box to support image and file paste from clipboard.
+    /// </summary>
     private async void MessageTextBox_Paste(object sender, TextControlPasteEventArgs e)
     {
         var content = Clipboard.GetContent();
@@ -344,6 +470,9 @@ public sealed class InputContainer : Control
         // Text paste: let default behavior handle it
     }
 
+    /// <summary>
+    /// Handles the DragOver event to accept file drop operations.
+    /// </summary>
     private void OnDragOver(object sender, DragEventArgs e)
     {
         if (e.DataView.Contains(StandardDataFormats.StorageItems))
@@ -352,6 +481,9 @@ public sealed class InputContainer : Control
         }
     }
 
+    /// <summary>
+    /// Handles the Drop event to add dropped files as attachments.
+    /// </summary>
     private async void OnDrop(object sender, DragEventArgs e)
     {
         if (!e.DataView.Contains(StandardDataFormats.StorageItems)) return;
@@ -361,23 +493,180 @@ public sealed class InputContainer : Control
     }
 
     /// <summary>
-    /// Add storage items as attachments. Called from drag-drop and external sources.
+    /// Handles the prompt preset ComboBox selection change to propagate the new prompt preset.
     /// </summary>
-    public async Task AddFilesAsync(IReadOnlyList<IStorageItem> items)
+    private void PromptPresetComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        foreach (var item in items)
+        if (_suppressPresetChanged) return;
+        if (_promptPresetComboBox?.SelectedItem is ComboBoxItem item && item.Tag is PromptPreset preset)
         {
-            if (item is StorageFile file)
-            {
-                var attachment = await CreateAttachmentAsync(file);
-                if (attachment is not null)
-                {
-                    _previewBar?.AddAttachment(attachment);
-                }
-            }
+            SelectedPromptPreset = preset;
+            PromptPresetChanged?.Invoke(this, preset);
         }
     }
 
+    #endregion
+
+    #region Dependency Property Callbacks
+
+    /// <summary>
+    /// Called when <see cref="IsInputEnabled"/> changes to enable or disable input controls.
+    /// </summary>
+    private static void OnIsInputEnabledChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is InputContainer self)
+        {
+            var enabled = (bool)e.NewValue;
+            if (self._messageTextBox is not null)
+                self._messageTextBox.IsEnabled = enabled;
+            if (self._attachButton is not null)
+                self._attachButton.IsEnabled = enabled;
+            if (self._summarizeButton is not null)
+                self._summarizeButton.IsEnabled = enabled;
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="AvailablePresets"/> changes to populate or defer ComboBox items.
+    /// </summary>
+    private static void OnAvailablePresetsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is InputContainer self && e.NewValue is IList presets)
+        {
+            if (!self.IsLoaded)
+            {
+                self._pendingPresetPopulate = true;
+                return;
+            }
+            self.PopulatePresetCombo(presets);
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="SelectedPreset"/> changes to sync the ComboBox selection.
+    /// </summary>
+    private static void OnSelectedPresetChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is InputContainer self && e.NewValue is ProviderPreset preset)
+        {
+            if (!self.IsLoaded) return; // Will be set during pending populate
+            self.SelectPresetInCombo(preset);
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="AvailablePromptPresets"/> changes to populate or defer ComboBox items.
+    /// </summary>
+    private static void OnAvailablePromptPresetsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is InputContainer self)
+        {
+            if (!self.IsLoaded)
+            {
+                self._pendingPromptPresetPopulate = true;
+                return;
+            }
+            self.PopulatePromptPresetCombo();
+        }
+    }
+
+    #endregion
+
+    #region Private Methods
+
+    /// <summary>
+    /// Sends the current message text and attachments, then clears the input area.
+    /// </summary>
+    private void TrySend()
+    {
+        var text = _messageTextBox?.Text?.Trim() ?? "";
+        var attachments = _previewBar?.Attachments.ToList() ?? [];
+
+        if (string.IsNullOrEmpty(text) && attachments.Count == 0) return;
+
+        if (_messageTextBox is not null)
+            _messageTextBox.Text = string.Empty;
+        _previewBar?.Clear();
+
+        MessageSent?.Invoke(this, new MessageSentEventArgs(text, attachments));
+    }
+
+    /// <summary>
+    /// Populates the provider preset ComboBox with items from the given list.
+    /// </summary>
+    private void PopulatePresetCombo(IList presets)
+    {
+        if (_presetComboBox is null) return;
+
+        _suppressPresetChanged = true;
+        _presetComboBox.Items.Clear();
+        foreach (var obj in presets)
+        {
+            if (obj is ProviderPreset preset)
+            {
+                var item = new ComboBoxItem { Content = preset.Name, Tag = preset };
+                _presetComboBox.Items.Add(item);
+            }
+        }
+
+        if (SelectedPreset is not null)
+        {
+            SelectPresetInCombo(SelectedPreset);
+        }
+        _suppressPresetChanged = false;
+    }
+
+    /// <summary>
+    /// Selects the matching provider preset in the ComboBox without raising change events.
+    /// </summary>
+    private void SelectPresetInCombo(ProviderPreset preset)
+    {
+        if (_presetComboBox is null) return;
+
+        _suppressPresetChanged = true;
+        foreach (ComboBoxItem item in _presetComboBox.Items)
+        {
+            if (item.Tag is ProviderPreset p && p.Name == preset.Name)
+            {
+                _presetComboBox.SelectedItem = item;
+                break;
+            }
+        }
+        _suppressPresetChanged = false;
+    }
+
+    /// <summary>
+    /// Populates the prompt preset ComboBox with items from the current <see cref="AvailablePromptPresets"/>.
+    /// </summary>
+    private void PopulatePromptPresetCombo()
+    {
+        if (_promptPresetComboBox is null) return;
+
+        _suppressPresetChanged = true;
+        _promptPresetComboBox.Items.Clear();
+        var presets = AvailablePromptPresets;
+        if (presets is null || presets.Count == 0)
+        {
+            _suppressPresetChanged = false;
+            return;
+        }
+
+        foreach (var preset in presets)
+        {
+            var item = new ComboBoxItem { Content = preset.Name, Tag = preset };
+            _promptPresetComboBox.Items.Add(item);
+        }
+
+        if (SelectedPromptPreset is not null)
+        {
+            SelectPromptPresetInCombo(SelectedPromptPreset);
+        }
+        _suppressPresetChanged = false;
+    }
+
+    /// <summary>
+    /// Creates a <see cref="ChatAttachment"/> from a storage file by reading its contents and determining its type.
+    /// </summary>
     private static async Task<ChatAttachment?> CreateAttachmentAsync(StorageFile file)
     {
         var ext = file.FileType.ToLowerInvariant();
@@ -417,6 +706,9 @@ public sealed class InputContainer : Control
         };
     }
 
+    /// <summary>
+    /// Extracts plain text content from a PDF file byte array using PdfPig.
+    /// </summary>
     private static string ExtractTextFromPdf(byte[] data)
     {
         using var document = UglyToad.PdfPig.PdfDocument.Open(data);
@@ -429,6 +721,9 @@ public sealed class InputContainer : Control
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Extracts plain text content from a DOCX file byte array using Open XML SDK.
+    /// </summary>
     private static string ExtractTextFromDocx(byte[] data)
     {
         using var stream = new MemoryStream(data);
@@ -444,6 +739,9 @@ public sealed class InputContainer : Control
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Returns the MIME type string for the given image file extension.
+    /// </summary>
     private static string GetImageMimeType(string extension) => extension switch
     {
         ".png" => "image/png",
@@ -454,6 +752,9 @@ public sealed class InputContainer : Control
         _ => "application/octet-stream"
     };
 
+    /// <summary>
+    /// Retrieves the parent <see cref="Window"/> for the current XamlRoot, used for native interop.
+    /// </summary>
     private Window GetWindow()
     {
         if (XamlRoot?.Content is FrameworkElement fe)
@@ -464,6 +765,9 @@ public sealed class InputContainer : Control
         throw new InvalidOperationException("Unable to find the parent Window for FileOpenPicker.");
     }
 
+    /// <summary>
+    /// Finds the <see cref="Window"/> that owns the given UI element by matching XamlRoot instances.
+    /// </summary>
     private static Window? GetWindowForElement(UIElement element)
     {
         if (element.XamlRoot is not null)
@@ -477,151 +781,14 @@ public sealed class InputContainer : Control
         return null;
     }
 
+    /// <summary>
+    /// Checks whether the Shift key is currently pressed.
+    /// </summary>
     private static bool IsShiftPressed()
     {
         var state = Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift);
         return (state & Windows.UI.Core.CoreVirtualKeyStates.Down) == Windows.UI.Core.CoreVirtualKeyStates.Down;
     }
 
-    private static void OnIsInputEnabledChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        if (d is InputContainer self)
-        {
-            var enabled = (bool)e.NewValue;
-            if (self._messageTextBox is not null)
-                self._messageTextBox.IsEnabled = enabled;
-            if (self._attachButton is not null)
-                self._attachButton.IsEnabled = enabled;
-            if (self._summarizeButton is not null)
-                self._summarizeButton.IsEnabled = enabled;
-        }
-    }
-
-    private static void OnAvailablePresetsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        if (d is InputContainer self && e.NewValue is IList presets)
-        {
-            if (!self.IsLoaded)
-            {
-                self._pendingPresetPopulate = true;
-                return;
-            }
-            self.PopulatePresetCombo(presets);
-        }
-    }
-
-    private static void OnSelectedPresetChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        if (d is InputContainer self && e.NewValue is ProviderPreset preset)
-        {
-            if (!self.IsLoaded) return; // Will be set during pending populate
-            self.SelectPresetInCombo(preset);
-        }
-    }
-
-    private void PopulatePresetCombo(IList presets)
-    {
-        if (_presetComboBox is null) return;
-
-        _suppressPresetChanged = true;
-        _presetComboBox.Items.Clear();
-        foreach (var obj in presets)
-        {
-            if (obj is ProviderPreset preset)
-            {
-                var item = new ComboBoxItem { Content = preset.Name, Tag = preset };
-                _presetComboBox.Items.Add(item);
-            }
-        }
-
-        if (SelectedPreset is not null)
-        {
-            SelectPresetInCombo(SelectedPreset);
-        }
-        _suppressPresetChanged = false;
-    }
-
-    private void SelectPresetInCombo(ProviderPreset preset)
-    {
-        if (_presetComboBox is null) return;
-
-        _suppressPresetChanged = true;
-        foreach (ComboBoxItem item in _presetComboBox.Items)
-        {
-            if (item.Tag is ProviderPreset p && p.Name == preset.Name)
-            {
-                _presetComboBox.SelectedItem = item;
-                break;
-            }
-        }
-        _suppressPresetChanged = false;
-    }
-
-    private static void OnAvailablePromptPresetsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        if (d is InputContainer self)
-        {
-            if (!self.IsLoaded)
-            {
-                self._pendingPromptPresetPopulate = true;
-                return;
-            }
-            self.PopulatePromptPresetCombo();
-        }
-    }
-
-    private void PopulatePromptPresetCombo()
-    {
-        if (_promptPresetComboBox is null) return;
-
-        _suppressPresetChanged = true;
-        _promptPresetComboBox.Items.Clear();
-        var presets = AvailablePromptPresets;
-        if (presets is null || presets.Count == 0)
-        {
-            _suppressPresetChanged = false;
-            return;
-        }
-
-        foreach (var preset in presets)
-        {
-            var item = new ComboBoxItem { Content = preset.Name, Tag = preset };
-            _promptPresetComboBox.Items.Add(item);
-        }
-
-        if (SelectedPromptPreset is not null)
-        {
-            SelectPromptPresetInCombo(SelectedPromptPreset);
-        }
-        _suppressPresetChanged = false;
-    }
-
-    /// <summary>
-    /// Selects the matching prompt preset in the ComboBox.
-    /// </summary>
-    public void SelectPromptPresetInCombo(PromptPreset preset)
-    {
-        if (_promptPresetComboBox is null) return;
-
-        _suppressPresetChanged = true;
-        foreach (ComboBoxItem item in _promptPresetComboBox.Items)
-        {
-            if (item.Tag is PromptPreset p && p.Name == preset.Name)
-            {
-                _promptPresetComboBox.SelectedItem = item;
-                break;
-            }
-        }
-        _suppressPresetChanged = false;
-    }
-
-    private void PromptPresetComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (_suppressPresetChanged) return;
-        if (_promptPresetComboBox?.SelectedItem is ComboBoxItem item && item.Tag is PromptPreset preset)
-        {
-            SelectedPromptPreset = preset;
-            PromptPresetChanged?.Invoke(this, preset);
-        }
-    }
+    #endregion
 }

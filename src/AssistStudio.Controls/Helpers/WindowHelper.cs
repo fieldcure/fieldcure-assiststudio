@@ -8,7 +8,16 @@ namespace FieldCure.AssistStudio.Controls;
 /// </summary>
 public static class WindowHelper
 {
+    #region Fields
+
+    /// <summary>
+    /// The list of currently active windows registered via <see cref="TrackWindow"/>.
+    /// </summary>
     internal static readonly List<Window> ActiveWindows = [];
+
+    #endregion
+
+    #region Public Methods
 
     /// <summary>
     /// Registers a window so controls can find it for native interop (e.g. FileOpenPicker).
@@ -22,4 +31,6 @@ public static class WindowHelper
             window.Closed += (_, _) => ActiveWindows.Remove(window);
         }
     }
+
+    #endregion
 }
