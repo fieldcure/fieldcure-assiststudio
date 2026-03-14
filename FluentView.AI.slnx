@@ -10,7 +10,13 @@
       <Platform Project="x64" />
       <Deploy />
     </Project>
-    <Project Path="src/FluentView.AI/FluentView.AI.csproj">
+    <Project Path="src/AssistStudio.Core/AssistStudio.Core.csproj">
+      <Configuration Solution="Debug|x64" Project="Debug|AnyCPU" />
+      <Configuration Solution="Debug|arm64" Project="Debug|AnyCPU" />
+      <Configuration Solution="Release|x64" Project="Release|AnyCPU" />
+      <Configuration Solution="Release|arm64" Project="Release|AnyCPU" />
+    </Project>
+    <Project Path="src/AssistStudio.Controls/AssistStudio.Controls.csproj">
       <Configuration Solution="Debug|x64" Project="Debug|AnyCPU" />
       <Configuration Solution="Debug|arm64" Project="Debug|AnyCPU" />
       <Configuration Solution="Release|x64" Project="Release|AnyCPU" />

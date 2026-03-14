@@ -1,8 +1,8 @@
-using FluentView.AI.Providers;
+using FieldCure.AssistStudio.Providers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
-using FluentView.AI.Helpers;
+using FieldCure.AssistStudio.Helpers;
 
 namespace AssistStudio.Dialogs;
 

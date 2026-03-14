@@ -97,10 +97,10 @@ ClaudeProvider (SSE), OpenAiProvider, OllamaProvider, SseReader 공용 유틸
 Core: Provider 뱃지, 메시지 복사, 요약 버튼, 테마 시스템, 로컬라이즈, ChatMessage.ProviderName
 SampleApp: 멀티 Provider preset, Ollama 자동 설치/시작, 하드웨어 감지 + 모델 추천, First Run Experience
 
-### Phase 6: Control 품질 향상 & 로컬라이제이션 보완
-XML Summary 태그 정비, Control UI/UX 리터치 (멀티 프로바이더 대화 UX), Ctrl+V 확장 (파일/이미지 붙여넣기), 로컬라이제이션 누락 점검
+### Phase 6: Control 품질 향상 & 로컬라이제이션 보완 — 완료 (6d-5 XML Summary 제외)
+Chat UI 개선 (max-width, 플로팅 액션, 토큰 표시, Provider 뱃지, 빈 상태 UI), 대화 관리 (자동 제목, 유틸리티 AI, 요약, Recent Conversations), 프로필 시스템 (프리셋, 파라미터, 선택 UI), Input UX (Ctrl+V, API Key 마스킹), 로컬라이제이션 보완
 
-### Phase 7: 샘플앱 완성 & 문서 & 배포
+### Phase 7: 샘플앱 완성 & 문서 & 배포 — 진행 예정
 SampleApp 완성, README, NuGet 배포, CI/CD
 
 ---
@@ -1294,27 +1294,28 @@ Phase 6d (Input & Misc) → 독립적, 언제든 착수
 ```
 
 ### Phase 6 완료 기준
-- [ ] 메시지 max-width 800px 적용
-- [ ] User 플로팅 액션 (재시도/편집/복사) 동작
-- [ ] AI 플로팅 액션 (복사/요약/Continue) 동작
-- [ ] 토큰 · 시간 표시 (상용 모델)
-- [ ] Provider 뱃지 투명 스타일
-- [ ] 빈 상태 UI + Input Bar 중앙 배치
-- [ ] 자동 제목 생성 + 수동 편집
-- [ ] 유틸리티 AI 설정 + 요약 연동
-- [ ] "요약 요청하기" 버튼
-- [ ] Recent Conversations 목록
-- [ ] 시스템 프롬프트 프리셋 (pill 탭)
-- [ ] ProviderPreset 파라미터 (temp/max_tokens)
-- [ ] 프로필 선택 UI (Input Bar 영역)
-- [ ] Ctrl+V 이미지/파일 붙여넣기
-- [ ] API Key 마스킹 & 토글
-- [ ] Running 상태 색상 변경
-- [ ] 로컬라이제이션 누락 점검
+- [x] 메시지 max-width 800px 적용
+- [x] User 플로팅 액션 (재시도/편집/복사) 동작
+- [x] AI 플로팅 액션 (복사/요약/Continue) 동작
+- [x] 토큰 · 시간 표시 (상용 모델)
+- [x] Provider 뱃지 투명 스타일
+- [x] 빈 상태 UI + Input Bar 중앙 배치
+- [x] 자동 제목 생성 + 수동 편집
+- [x] 유틸리티 AI 설정 + 요약 연동
+- [x] "요약 요청하기" 버튼
+- [x] Recent Conversations 목록
+- [x] 시스템 프롬프트 프리셋 (pill 탭)
+- [x] ProviderPreset 파라미터 (temp/max_tokens)
+- [x] 프로필 선택 UI (Input Bar 영역)
+- [x] Ctrl+V 이미지/파일 붙여넣기
+- [x] API Key 마스킹 & 토글
+- [x] Running 상태 색상 변경
+- [x] 로컬라이제이션 누락 점검
 - [ ] XML Summary 태그 정비
-- [ ] 솔루션 빌드 성공 (경고 0, 오류 0)
+- [x] 솔루션 빌드 성공 (경고 0, 오류 0)
 
 ### Phase 6 후순위 (Phase 7 이후)
+- XML Summary 태그 정비 (6d-5)
 - 프로필 변수 바인딩 ({{lang}}, {{style}})
 - 프로바이더별 시스템 프롬프트 오버라이드
 - "답글..." 기능 (메시지 인용 + 후속 질문)

@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>FieldCure.AssistStudio</RootNamespace>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <UseWinUI>true</UseWinUI>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>12</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!-- NuGet Package Metadata -->
+    <PackageId>FieldCure.AssistStudio.Controls.WinUI</PackageId>
+    <Description>AI Chat UI Controls for WinUI 3. Supports Claude, OpenAI, Gemini, Ollama and more.</Description>
+    <Authors>diluculo</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.*" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.*" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.*" />
+    <PackageReference Include="PdfPig" Version="0.1.*" />
+    <PackageReference Include="DocumentFormat.OpenXml" Version="3.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AssistStudio.Core\AssistStudio.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PRIResource Include="Strings\**\*.resw" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Rendering\Resources\chat.html" />
+    <EmbeddedResource Include="Rendering\Resources\vendor\marked.min.js" />
+    <EmbeddedResource Include="Rendering\Resources\vendor\highlight.min.js" />
+    <EmbeddedResource Include="Rendering\Resources\vendor\katex.min.js" />
+    <EmbeddedResource Include="Rendering\Resources\vendor\katex.min.css" />
+    <EmbeddedResource Include="Rendering\Resources\vendor\katex-fonts\*.woff2" />
+  </ItemGroup>
+
+</Project>

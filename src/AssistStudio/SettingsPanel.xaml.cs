@@ -1,5 +1,5 @@
 using System.Collections.ObjectModel;
-using FluentView.AI.Models;
+using FieldCure.AssistStudio.Models;
 using AssistStudio.Helpers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;

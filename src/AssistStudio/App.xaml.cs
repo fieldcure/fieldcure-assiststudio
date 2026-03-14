@@ -1,4 +1,4 @@
-using FluentView.AI.Helpers;
+using FieldCure.AssistStudio.Helpers;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.Windows.AppLifecycle;
@@ -21,7 +21,7 @@ public partial class App : Application
         ConversationManager.Initialize(ApplicationData.Current.LocalFolder.Path);
 
         _window = new MainWindow();
-        FluentView.AI.Controls.WindowHelper.TrackWindow(_window);
+        FieldCure.AssistStudio.Controls.WindowHelper.TrackWindow(_window);
         _window.Activate();
 
         // Handle file activation on cold start

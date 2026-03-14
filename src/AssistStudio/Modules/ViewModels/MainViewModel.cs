@@ -1,9 +1,9 @@
 using System.Collections;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
-using FluentView.AI.Controls;
-using FluentView.AI.Helpers;
-using FluentView.AI.Models;
+using FieldCure.AssistStudio.Controls;
+using FieldCure.AssistStudio.Helpers;
+using FieldCure.AssistStudio.Models;
 using AssistStudio.Helpers;
 
 namespace AssistStudio.ViewModels;

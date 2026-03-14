@@ -1,8 +1,8 @@
 using System.Collections;
 using CommunityToolkit.Mvvm.ComponentModel;
-using FluentView.AI.Controls;
-using FluentView.AI.Models;
-using FluentView.AI.Providers;
+using FieldCure.AssistStudio.Controls;
+using FieldCure.AssistStudio.Models;
+using FieldCure.AssistStudio.Providers;
 using AssistStudio.Helpers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;

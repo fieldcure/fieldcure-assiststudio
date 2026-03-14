@@ -2,8 +2,8 @@ using System.Collections.ObjectModel;
 using System.Text.Json;
 using Windows.Storage;
 
-using FluentView.AI.Helpers;
-using FluentView.AI.Models;
+using FieldCure.AssistStudio.Helpers;
+using FieldCure.AssistStudio.Models;
 
 namespace AssistStudio.Helpers;
 

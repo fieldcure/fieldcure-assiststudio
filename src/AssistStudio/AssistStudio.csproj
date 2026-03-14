@@ -47,7 +47,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\FluentView.AI\FluentView.AI.csproj" />
+    <ProjectReference Include="..\AssistStudio.Controls\AssistStudio.Controls.csproj" />
   </ItemGroup>
 
   <!--

@@ -1,4 +1,4 @@
-﻿using FluentView.AI.Helpers;
+﻿using FieldCure.AssistStudio.Helpers;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 

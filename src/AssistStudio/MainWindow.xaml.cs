@@ -1,6 +1,6 @@
 using AssistStudio.Dialogs;
-using FluentView.AI.Helpers;
-using FluentView.AI.Models;
+using FieldCure.AssistStudio.Helpers;
+using FieldCure.AssistStudio.Models;
 using AssistStudio.Helpers;
 using AssistStudio.ViewModels;
 using Microsoft.UI;
