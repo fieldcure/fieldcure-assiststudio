@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0-windows10.0.19041.0</TargetFramework>
+    <TargetFrameworks>net8.0-windows10.0.19041.0;net9.0-windows10.0.19041.0</TargetFrameworks>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>FieldCure.AssistStudio</RootNamespace>
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
@@ -15,7 +15,7 @@
     <!-- NuGet Package Metadata -->
     <PackageId>FieldCure.AssistStudio.Controls.WinUI</PackageId>
     <Description>AI Chat UI Controls for WinUI 3. Supports Claude, OpenAI, Gemini, Ollama and more.</Description>
-    <Authors>diluculo</Authors>
+    <Authors>Jong Hyun Kim</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
