@@ -1,5 +1,6 @@
 using System.Management;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using Microsoft.Win32;
 
 namespace FieldCure.AssistStudio.Helpers;
@@ -11,6 +12,7 @@ namespace FieldCure.AssistStudio.Helpers;
 /// <param name="VramBytes">The total VRAM in bytes.</param>
 /// <param name="TotalRamBytes">The total system RAM in bytes.</param>
 /// <param name="OsDisplay">A human-readable OS version string.</param>
+[SupportedOSPlatform("windows")]
 public record HardwareSpec(
     string GpuName,
     long VramBytes,
@@ -43,6 +45,7 @@ public record HardwareSpec(
 /// <summary>
 /// Detects hardware specifications including GPU, VRAM, RAM, and OS version on Windows.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public static class HardwareInfo
 {
     #region Native Interop

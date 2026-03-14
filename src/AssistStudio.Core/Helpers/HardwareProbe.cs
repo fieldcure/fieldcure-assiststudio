@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using FieldCure.AssistStudio.Models;
 
 namespace FieldCure.AssistStudio.Helpers;
@@ -6,6 +7,7 @@ namespace FieldCure.AssistStudio.Helpers;
 /// <summary>
 /// Probes available system RAM and GPU VRAM for model fit classification.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public static class HardwareProbe
 {
     #region Native Interop

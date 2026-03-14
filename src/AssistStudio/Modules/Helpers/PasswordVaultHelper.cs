@@ -1,11 +1,11 @@
 using Windows.Security.Credentials;
 
-namespace FieldCure.AssistStudio.Helpers;
+namespace AssistStudio.Helpers;
 
 /// <summary>
 /// Provides methods for securely storing and retrieving API keys using the Windows Credential Manager (PasswordVault).
 /// </summary>
-public static class PasswordVaultHelper
+internal static class PasswordVaultHelper
 {
     #region Constants
 

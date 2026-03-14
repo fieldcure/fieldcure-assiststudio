@@ -1,3 +1,5 @@
+using System.Runtime.Versioning;
+
 namespace FieldCure.AssistStudio.Helpers;
 
 /// <summary>
@@ -21,6 +23,7 @@ public enum CompatibilityLevel
 /// <summary>
 /// Checks whether a local AI model is compatible with the current system's hardware.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public static class ModelCompatibility
 {
     #region Constants
