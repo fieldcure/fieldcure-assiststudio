@@ -110,7 +110,7 @@
                                             Style="{StaticResource SubtleButtonStyle}"
                                             VerticalAlignment="Center"
                                             Padding="6">
-                                        <FontIcon Glyph="&#xE724;" FontSize="16" />
+                                        <FontIcon Glyph="&#xE7EB;" FontSize="16" />
                                     </Button>
                                     <!-- Stop button (visible when streaming) -->
                                     <Button x:Name="PART_StopButton"
