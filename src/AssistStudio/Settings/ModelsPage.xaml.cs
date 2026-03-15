@@ -449,7 +449,10 @@ public sealed partial class ModelsPage : Page
             };
 
             var modelId = modelCombo?.SelectedItem as string ?? "";
-            AppSettings.SetDefaultModel(provider, modelId);
+            if (string.IsNullOrEmpty(modelId))
+                modelId = AppSettings.GetDefaultModel(provider) ?? "";
+            else
+                AppSettings.SetDefaultModel(provider, modelId);
 
             var preset = new ProviderPreset
             {
@@ -468,7 +471,10 @@ public sealed partial class ModelsPage : Page
         // Ollama
         var ollamaDisplay = OllamaModelCombo.SelectedItem as string ?? "";
         var ollamaModel = StripFitSuffix(ollamaDisplay);
-        AppSettings.SetDefaultModel("Ollama", ollamaModel);
+        if (string.IsNullOrEmpty(ollamaModel))
+            ollamaModel = AppSettings.GetDefaultModel("Ollama") ?? "";
+        else
+            AppSettings.SetDefaultModel("Ollama", ollamaModel);
         _settings.Presets.Add(new ProviderPreset
         {
             Name = "Ollama",
