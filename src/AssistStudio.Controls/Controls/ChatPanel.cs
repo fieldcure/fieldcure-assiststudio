@@ -148,7 +148,10 @@ public sealed class ChatPanel : Control
         {
             if (panel._inputArea is not null)
                 panel._inputArea.SelectedPreset = preset;
-            panel.UpdatePlaceholderWithProvider(preset.Name);
+            var label = string.IsNullOrEmpty(preset.ModelId)
+                ? preset.Name
+                : $"{preset.Name}/{preset.ModelId}";
+            panel.UpdatePlaceholderWithProvider(label);
         }
     }
 
