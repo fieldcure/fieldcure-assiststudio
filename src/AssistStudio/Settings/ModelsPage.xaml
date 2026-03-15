@@ -83,7 +83,8 @@
                                   x:Uid="Models_ModelNotAvailable"
                                   HorizontalAlignment="Stretch"
                                   IsEnabled="False"
-                                  PlaceholderText="Not available" />
+                                  PlaceholderText="Not available"
+                                  SelectionChanged="OnCloudModelChanged" />
                     </StackPanel>
                 </StackPanel>
 
@@ -132,7 +133,8 @@
                         <ComboBox x:Name="OpenAIModelCombo"
                                   HorizontalAlignment="Stretch"
                                   IsEnabled="False"
-                                  PlaceholderText="Not available" />
+                                  PlaceholderText="Not available"
+                                  SelectionChanged="OnCloudModelChanged" />
                     </StackPanel>
                 </StackPanel>
 
@@ -181,7 +183,8 @@
                         <ComboBox x:Name="GeminiModelCombo"
                                   HorizontalAlignment="Stretch"
                                   IsEnabled="False"
-                                  PlaceholderText="Not available" />
+                                  PlaceholderText="Not available"
+                                  SelectionChanged="OnCloudModelChanged" />
                     </StackPanel>
                 </StackPanel>
 
@@ -230,7 +233,8 @@
                         <ComboBox x:Name="GroqModelCombo"
                                   HorizontalAlignment="Stretch"
                                   IsEnabled="False"
-                                  PlaceholderText="Not available" />
+                                  PlaceholderText="Not available"
+                                  SelectionChanged="OnCloudModelChanged" />
                     </StackPanel>
                 </StackPanel>
 

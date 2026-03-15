@@ -216,7 +216,8 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         var currentModelId = CurrentPreset?.ModelId;
         var currentApiKey = CurrentPreset?.ApiKey;
         var currentBaseUrl = CurrentPreset?.BaseUrl;
-        ChatPanel.AvailablePresets = presets;
+        // Force DP change callback by passing a new list instance
+        ChatPanel.AvailablePresets = new System.Collections.ArrayList(presets);
 
         if (currentName is not null)
         {

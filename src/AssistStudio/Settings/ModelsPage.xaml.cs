@@ -493,6 +493,29 @@ public sealed partial class ModelsPage : Page
     }
 
     /// <summary>
+    /// Handles cloud provider model combo box selection changes to persist the model and sync presets.
+    /// </summary>
+    private void OnCloudModelChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is not ComboBox combo || combo.SelectedItem is not string model || string.IsNullOrEmpty(model))
+            return;
+
+        var provider = combo.Name switch
+        {
+            nameof(ClaudeModelCombo) => "Claude",
+            nameof(OpenAIModelCombo) => "OpenAI",
+            nameof(GeminiModelCombo) => "Gemini",
+            nameof(GroqModelCombo) => "Groq",
+            _ => null
+        };
+
+        if (provider is null) return;
+
+        AppSettings.SetDefaultModel(provider, model);
+        SyncPresetsFromUI();
+    }
+
+    /// <summary>
     /// Handles Ollama model combo box selection changes to persist the model and sync presets.
     /// </summary>
     private void OnOllamaModelChanged(object sender, SelectionChangedEventArgs e)
