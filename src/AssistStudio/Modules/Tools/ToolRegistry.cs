@@ -1,4 +1,4 @@
-using FieldCure.AssistStudio.Models;
+﻿using FieldCure.AssistStudio.Models;
 
 namespace AssistStudio.Modules.Tools;
 
@@ -11,7 +11,7 @@ public static class ToolRegistry
     #region Fields
 
     /// <summary>Backing store for registered tools.</summary>
-    private static readonly Dictionary<string, IAssistTool> _tools = new();
+    private static readonly Dictionary<string, IAssistTool> _tools = [];
 
     #endregion
 
@@ -27,12 +27,12 @@ public static class ToolRegistry
     /// Unknown names are silently skipped.
     /// </summary>
     public static IReadOnlyList<IAssistTool> Resolve(IEnumerable<string> names)
-        => names.Where(_tools.ContainsKey).Select(n => _tools[n]).ToList();
+        => [.. names.Where(_tools.ContainsKey).Select(n => _tools[n])];
 
     /// <summary>
     /// Gets all registered tools.
     /// </summary>
-    public static IReadOnlyList<IAssistTool> All => _tools.Values.ToList();
+    public static IReadOnlyList<IAssistTool> All => [.. _tools.Values];
 
     #endregion
 }

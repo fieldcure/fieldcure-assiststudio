@@ -28,7 +28,7 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// Reference to the underlying <see cref="AppWindow"/> for title bar customization.
     /// </summary>
-    private AppWindow? _appWindow;
+    private readonly AppWindow? _appWindow;
 
     /// <summary>
     /// Indicates whether the window is in the process of closing to prevent re-entrant close dialogs.
@@ -60,7 +60,7 @@ public sealed partial class MainWindow : Window
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(TitleBarReservedArea);
         TitleBarReservedArea.MinWidth = 188;
-        _appWindow = this.AppWindow;
+        _appWindow = AppWindow;
 
         // Create ViewModel
         ViewModel = new MainViewModel
@@ -343,7 +343,7 @@ public sealed partial class MainWindow : Window
         var data = await ConversationManager.LoadConversationAsync(file.Path);
         if (data is not null)
         {
-            var tab = ViewModel.LoadConversation(data, file.Path);
+            ViewModel.LoadConversation(data, file.Path);
             AppSettings.AddRecentFile(file.Path);
         }
     }

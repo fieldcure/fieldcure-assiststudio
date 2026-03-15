@@ -435,7 +435,7 @@ public sealed partial class ProfilePage : Page
 /// Converts a boolean value to <see cref="Visibility"/>: <c>true</c> maps to Collapsed, <c>false</c> maps to Visible.
 /// Used to hide delete buttons on built-in profiles.
 /// </summary>
-public class InverseBoolToVisibilityConverter : IValueConverter
+public partial class InverseBoolToVisibilityConverter : IValueConverter
 {
     #region Public Methods
 

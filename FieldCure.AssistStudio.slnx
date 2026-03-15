@@ -4,6 +4,12 @@
   <Configuration Solution="Debug|arm64" />
   <Configuration Solution="Release|x64" />
   <Configuration Solution="Release|arm64" />
+  <Folder Name="/docs/">
+    <File Path="README.md" />
+    <File Path="RELEASENOTES.App.md" />
+    <File Path="RELEASENOTES.Controls.md" />
+    <File Path="RELEASENOTES.Core.md" />
+  </Folder>
 
   <Folder Name="/src/">
     <Project Path="src/AssistStudio/AssistStudio.csproj" Id="ad2171d6-2c2f-4c6a-b467-425f09c13247">

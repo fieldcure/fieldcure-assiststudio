@@ -1,11 +1,11 @@
-﻿using AssistStudio.Modules.Helpers;
+using AssistStudio.Modules.Helpers;
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Animation;
 using System.Collections.ObjectModel;
 
-namespace AssistStudio;
+namespace AssistStudio.Settings;
 
 /// <summary>
 /// Settings side panel that hosts navigation to individual settings pages and
@@ -114,13 +114,13 @@ public sealed partial class SettingsPanel : Page
     {
         var pageType = tag switch
         {
-            "Models" => typeof(Settings.ModelsPage),
-            "Personalization" => typeof(Settings.PersonalizationPage),
-            "Profile" => typeof(Settings.ProfilePage),
-            "UtilityAI" => typeof(Settings.UtilityAIPage),
-            "Advanced" => typeof(Settings.AdvancedPage),
-            "About" => typeof(Settings.AboutPage),
-            _ => typeof(Settings.ModelsPage),
+            "Models" => typeof(ModelsPage),
+            "Personalization" => typeof(PersonalizationPage),
+            "Profile" => typeof(ProfilePage),
+            "UtilityAI" => typeof(UtilityAIPage),
+            "Advanced" => typeof(AdvancedPage),
+            "About" => typeof(AboutPage),
+            _ => typeof(ModelsPage),
         };
 
         ContentFrame.Navigate(pageType, this, new EntranceNavigationTransitionInfo());

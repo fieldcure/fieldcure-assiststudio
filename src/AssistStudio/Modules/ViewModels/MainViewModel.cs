@@ -143,7 +143,7 @@ public partial class MainViewModel : ObservableObject
     /// <summary>
     /// Saves a single tab's conversation to its file path or to the default conversation store.
     /// </summary>
-    public async Task SaveTabAsync(ChatTabViewModel? tab)
+    public static async Task SaveTabAsync(ChatTabViewModel? tab)
     {
         if (tab is null) return;
 

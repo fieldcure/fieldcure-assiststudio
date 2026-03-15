@@ -1,12 +1,12 @@
-using System.Collections;
-using System.Runtime.InteropServices.WindowsRuntime;
-using System.Text;
-using DocumentFormat.OpenXml.Packaging;
+﻿using DocumentFormat.OpenXml.Packaging;
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using System.Collections;
+using System.Runtime.InteropServices.WindowsRuntime;
+using System.Text;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
 using Windows.Storage.Pickers;
@@ -19,7 +19,7 @@ namespace FieldCure.AssistStudio.Controls;
 /// A templated control that provides a chat input area with text entry, file attachments,
 /// preset selection, and drag-and-drop support. Default style is defined in Generic.xaml.
 /// </summary>
-public sealed class InputContainer : Control
+public sealed partial class InputContainer : Control
 {
     #region Constants
 
@@ -325,9 +325,9 @@ public sealed class InputContainer : Control
         if (_profileComboBox is null) return;
 
         _suppressPresetChanged = true;
-        foreach (ComboBoxItem item in _profileComboBox.Items)
+        foreach (var obj in _profileComboBox.Items)
         {
-            if (item.Tag is Profile p && p.Name == preset.Name)
+            if (obj is ComboBoxItem item && item.Tag is Profile p && p.Name == preset.Name)
             {
                 _profileComboBox.SelectedItem = item;
                 break;
@@ -624,9 +624,9 @@ public sealed class InputContainer : Control
         if (_presetComboBox is null) return;
 
         _suppressPresetChanged = true;
-        foreach (ComboBoxItem item in _presetComboBox.Items)
+        foreach (var obj in _presetComboBox.Items)
         {
-            if (item.Tag is ProviderPreset p && p.Name == preset.Name)
+            if (obj is ComboBoxItem item && item.Tag is ProviderPreset p && p.Name == preset.Name)
             {
                 _presetComboBox.SelectedItem = item;
                 break;

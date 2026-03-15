@@ -231,6 +231,8 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
+        GC.SuppressFinalize(this);
+
         ChatPanel.PresetChanged -= OnPresetChanged;
         ChatPanel.ProfileChanged -= OnProfileChanged;
         ChatPanel.TitleGenerated -= OnTitleGenerated;

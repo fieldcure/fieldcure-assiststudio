@@ -75,7 +75,7 @@ public sealed partial class ModelSelectionDialog : ContentDialog
 
             LocalModelsList.ItemsSource = items;
             NoLocalModelsText.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-            localIds = localModels.Select(m => m.Id).ToHashSet();
+            localIds = [.. localModels.Select(m => m.Id)];
         }
         catch
         {

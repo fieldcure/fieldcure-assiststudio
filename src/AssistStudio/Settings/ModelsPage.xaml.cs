@@ -131,7 +131,7 @@ public sealed partial class ModelsPage : Page
     /// <summary>
     /// Configures the visual state of a provider card based on whether an API key is present.
     /// </summary>
-    private void SetKeyState(string key, Grid inputPanel, Grid displayPanel, TextBlock maskedText, TextBlock statusText, ComboBox modelCombo)
+    private static void SetKeyState(string key, Grid inputPanel, Grid displayPanel, TextBlock maskedText, TextBlock statusText, ComboBox modelCombo)
     {
         if (!string.IsNullOrEmpty(key))
         {
@@ -353,7 +353,7 @@ public sealed partial class ModelsPage : Page
                 DispatcherQueue.TryEnqueue(() =>
                 {
                     var current = combo.SelectedItem as string;
-                    PopulateCombo(combo, filtered.ToArray(), current ?? AppSettings.GetDefaultModel(provider));
+                    PopulateCombo(combo, [.. filtered], current ?? AppSettings.GetDefaultModel(provider));
                 });
             }
             finally
@@ -389,18 +389,18 @@ public sealed partial class ModelsPage : Page
     {
         return provider switch
         {
-            "Claude" => models
+            "Claude" => [.. models
                 .Where(m => m.Id.StartsWith("claude-"))
-                .Select(m => m.Id).ToList(),
-            "OpenAI" => models
+                .Select(m => m.Id)],
+            "OpenAI" => [.. models
                 .Where(m => m.Id.StartsWith("gpt-") || m.Id.StartsWith("o1") || m.Id.StartsWith("o3") || m.Id.StartsWith("o4"))
-                .Select(m => m.Id).ToList(),
-            "Gemini" => models
+                .Select(m => m.Id)],
+            "Gemini" => [.. models
                 .Where(m => m.Id.StartsWith("gemini-"))
-                .Select(m => m.Id).ToList(),
-            "Groq" => models
-                .Select(m => m.Id).ToList(),
-            _ => models.Select(m => m.Id).ToList()
+                .Select(m => m.Id)],
+            "Groq" => [.. models
+                .Select(m => m.Id)],
+            _ => [.. models.Select(m => m.Id)]
         };
     }
 
