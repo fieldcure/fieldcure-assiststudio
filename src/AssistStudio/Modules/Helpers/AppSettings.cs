@@ -146,6 +146,7 @@ public static class AppSettings
                    "Never execute destructive actions (move, rename, delete) without showing the plan first. " +
                    "If a step fails, explain what went wrong and suggest alternatives." },
         new() { Name = "File Organizer", IsBuiltIn = true,
+            ToolNames = ["scan_directory"],
             Text = "You are a file organization assistant with access to filesystem tools. " +
                    "When asked to organize files: (1) Scan the directory first, " +
                    "(2) Identify duplicates by hash, " +

@@ -96,6 +96,28 @@
                              TextWrapping="Wrap"
                              MinHeight="200"
                              TextChanged="OnEditorChanged" />
+
+                    <!-- Preferred Provider -->
+                    <ComboBox x:Name="ProviderCombo"
+                              x:Uid="Profile_PreferredProvider"
+                              Header="Preferred Provider"
+                              HorizontalAlignment="Stretch"
+                              SelectionChanged="OnProviderChanged" />
+
+                    <!-- Preferred Model -->
+                    <ComboBox x:Name="ModelCombo"
+                              x:Uid="Profile_PreferredModel"
+                              Header="Preferred Model"
+                              HorizontalAlignment="Stretch"
+                              IsEnabled="False"
+                              SelectionChanged="OnModelChanged" />
+
+                    <!-- Tools -->
+                    <StackPanel Spacing="4">
+                        <TextBlock x:Uid="Profile_Tools" Text="Tools"
+                                   Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <StackPanel x:Name="ToolsPanel" Spacing="4" />
+                    </StackPanel>
                 </StackPanel>
             </StackPanel>
         </ScrollViewer>

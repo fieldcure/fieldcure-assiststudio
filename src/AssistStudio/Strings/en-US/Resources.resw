@@ -192,6 +192,18 @@
   <data name="Profile_Placeholder.Header" xml:space="preserve">
     <value>System Prompt</value>
   </data>
+  <data name="Profile_NewProfileDialog" xml:space="preserve">
+    <value>New Profile</value>
+  </data>
+  <data name="Profile_PreferredProvider.Header" xml:space="preserve">
+    <value>Preferred Provider</value>
+  </data>
+  <data name="Profile_PreferredModel.Header" xml:space="preserve">
+    <value>Preferred Model</value>
+  </data>
+  <data name="Profile_Tools.Text" xml:space="preserve">
+    <value>Tools</value>
+  </data>
   <!-- Utility AI Page -->
   <data name="Nav_UtilityAI.Content" xml:space="preserve">
     <value>Utility AI</value>
