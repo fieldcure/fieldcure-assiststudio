@@ -53,9 +53,9 @@ public sealed partial class SettingsPanel : Page
     public event EventHandler? PresetsChanged;
 
     /// <summary>
-    /// Raised when prompt presets are added, removed, or modified.
+    /// Raised when profiles are added, removed, or modified.
     /// </summary>
-    public event EventHandler? PromptPresetsChanged;
+    public event EventHandler? ProfilesChanged;
 
     #endregion
 
@@ -116,7 +116,7 @@ public sealed partial class SettingsPanel : Page
         {
             "Models" => typeof(Settings.ModelsPage),
             "Personalization" => typeof(Settings.PersonalizationPage),
-            "Prompt" => typeof(Settings.PromptPage),
+            "Profile" => typeof(Settings.ProfilePage),
             "UtilityAI" => typeof(Settings.UtilityAIPage),
             "Advanced" => typeof(Settings.AdvancedPage),
             "About" => typeof(Settings.AboutPage),
@@ -161,12 +161,12 @@ public sealed partial class SettingsPanel : Page
     }
 
     /// <summary>
-    /// Raises the <see cref="PromptPresetsChanged"/> event.
-    /// Called by sub-pages when prompt presets are modified.
+    /// Raises the <see cref="ProfilesChanged"/> event.
+    /// Called by sub-pages when profiles are modified.
     /// </summary>
-    internal void RaisePromptPresetsChanged()
+    internal void RaiseProfilesChanged()
     {
-        PromptPresetsChanged?.Invoke(this, EventArgs.Empty);
+        ProfilesChanged?.Invoke(this, EventArgs.Empty);
     }
 
     #endregion

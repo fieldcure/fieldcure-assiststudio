@@ -9,7 +9,7 @@ namespace AssistStudio.Modules.Helpers;
 
 /// <summary>
 /// Centralized application settings backed by <see cref="ApplicationData.Current.LocalSettings"/>.
-/// Manages theme, system prompt, provider presets, prompt presets, MRU file paths, and model caches.
+/// Manages theme, system prompt, provider presets, profiles, MRU file paths, and model caches.
 /// </summary>
 public static class AppSettings
 {
@@ -93,12 +93,12 @@ public static class AppSettings
     }
 
     /// <summary>
-    /// Gets or sets the name of the active prompt preset (empty string means custom/manual).
+    /// Gets or sets the name of the active profile (empty string means custom/manual).
     /// </summary>
-    public static string ActivePromptPreset
+    public static string ActiveProfile
     {
-        get => Settings.Values["ActivePromptPreset"] as string ?? "Professional";
-        set => Settings.Values["ActivePromptPreset"] = value;
+        get => Settings.Values["ActiveProfile"] as string ?? "Professional";
+        set => Settings.Values["ActiveProfile"] = value;
     }
 
     /// <summary>
@@ -134,9 +134,9 @@ public static class AppSettings
     #region Fields
 
     /// <summary>
-    /// The built-in prompt presets that ship with the application.
+    /// The built-in profiles that ship with the application.
     /// </summary>
-    private static readonly List<PromptPreset> BuiltInPromptPresets =
+    private static readonly List<Profile> BuiltInProfiles =
     [
         new() { Name = "Professional", IsBuiltIn = true,
             Text = "You are a helpful assistant. Provide clear, well-structured responses. " +
@@ -205,22 +205,22 @@ public static class AppSettings
 
     #endregion
 
-    #region Prompt Preset Methods
+    #region Profile Methods
 
     /// <summary>
-    /// Loads all prompt presets, combining built-in presets with user-created custom presets from storage.
+    /// Loads all profiles, combining built-in profiles with user-created custom profiles from storage.
     /// </summary>
-    /// <returns>A list of all available prompt presets.</returns>
-    public static List<PromptPreset> LoadPromptPresets()
+    /// <returns>A list of all available profiles.</returns>
+    public static List<Profile> LoadProfiles()
     {
-        var result = new List<PromptPreset>(BuiltInPromptPresets);
+        var result = new List<Profile>(BuiltInProfiles);
 
-        var json = Settings.Values["CustomPromptPresets"] as string;
+        var json = Settings.Values["CustomProfiles"] as string;
         if (!string.IsNullOrEmpty(json))
         {
             try
             {
-                var custom = JsonSerializer.Deserialize<List<PromptPreset>>(json) ?? [];
+                var custom = JsonSerializer.Deserialize<List<Profile>>(json) ?? [];
                 result.AddRange(custom);
             }
             catch { /* ignore corrupt data */ }
@@ -230,13 +230,13 @@ public static class AppSettings
     }
 
     /// <summary>
-    /// Saves only the custom (non-built-in) prompt presets to local storage.
+    /// Saves only the custom (non-built-in) profiles to local storage.
     /// </summary>
-    public static void SaveCustomPromptPresets(IEnumerable<PromptPreset> allPresets)
+    public static void SaveCustomProfiles(IEnumerable<Profile> allProfiles)
     {
-        var custom = allPresets.Where(p => !p.IsBuiltIn).ToList();
+        var custom = allProfiles.Where(p => !p.IsBuiltIn).ToList();
         var json = JsonSerializer.Serialize(custom);
-        Settings.Values["CustomPromptPresets"] = json;
+        Settings.Values["CustomProfiles"] = json;
     }
 
     #endregion

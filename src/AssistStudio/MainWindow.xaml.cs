@@ -77,7 +77,7 @@ public sealed partial class MainWindow : Window
         };
         SettingsPane.SystemPromptChanged += (_, prompt) => ViewModel.ApplySystemPromptToAll(prompt);
         SettingsPane.PresetsChanged += (_, _) => ViewModel.RefreshPresetsOnAll();
-        SettingsPane.PromptPresetsChanged += (_, _) => ViewModel.RefreshPromptPresetsOnAll();
+        SettingsPane.ProfilesChanged += (_, _) => ViewModel.RefreshProfilesOnAll();
 
         // Handle app close with unsaved changes check
         _appWindow!.Closing += OnAppWindowClosing;

@@ -64,14 +64,14 @@ public sealed class InputContainer : Control
         DependencyProperty.Register(nameof(SelectedPreset), typeof(ProviderPreset), typeof(InputContainer),
             new PropertyMetadata(null, OnSelectedPresetChanged));
 
-    /// <summary>Identifies the <see cref="AvailablePromptPresets"/> dependency property.</summary>
-    public static readonly DependencyProperty AvailablePromptPresetsProperty =
-        DependencyProperty.Register(nameof(AvailablePromptPresets), typeof(IList<PromptPreset>), typeof(InputContainer),
-            new PropertyMetadata(null, OnAvailablePromptPresetsChanged));
+    /// <summary>Identifies the <see cref="AvailableProfiles"/> dependency property.</summary>
+    public static readonly DependencyProperty AvailableProfilesProperty =
+        DependencyProperty.Register(nameof(AvailableProfiles), typeof(IList<Profile>), typeof(InputContainer),
+            new PropertyMetadata(null, OnAvailableProfilesChanged));
 
-    /// <summary>Identifies the <see cref="SelectedPromptPreset"/> dependency property.</summary>
-    public static readonly DependencyProperty SelectedPromptPresetProperty =
-        DependencyProperty.Register(nameof(SelectedPromptPreset), typeof(PromptPreset), typeof(InputContainer),
+    /// <summary>Identifies the <see cref="SelectedProfile"/> dependency property.</summary>
+    public static readonly DependencyProperty SelectedProfileProperty =
+        DependencyProperty.Register(nameof(SelectedProfile), typeof(Profile), typeof(InputContainer),
             new PropertyMetadata(null));
 
     #endregion
@@ -91,7 +91,7 @@ public sealed class InputContainer : Control
     /// <summary>
     /// Flag indicating a pending prompt preset ComboBox population deferred until control is loaded.
     /// </summary>
-    private bool _pendingPromptPresetPopulate;
+    private bool _pendingProfilePopulate;
 
     #endregion
 
@@ -125,7 +125,7 @@ public sealed class InputContainer : Control
     /// <summary>
     /// The combo box for selecting prompt presets.
     /// </summary>
-    private ComboBox? _promptPresetComboBox;
+    private ComboBox? _profileComboBox;
 
     /// <summary>
     /// The border container that receives a theme shadow.
@@ -188,19 +188,19 @@ public sealed class InputContainer : Control
     /// <summary>
     /// Gets or sets the list of available prompt presets for the prompt preset selector.
     /// </summary>
-    public IList<PromptPreset>? AvailablePromptPresets
+    public IList<Profile>? AvailableProfiles
     {
-        get => (IList<PromptPreset>?)GetValue(AvailablePromptPresetsProperty);
-        set => SetValue(AvailablePromptPresetsProperty, value);
+        get => (IList<Profile>?)GetValue(AvailableProfilesProperty);
+        set => SetValue(AvailableProfilesProperty, value);
     }
 
     /// <summary>
     /// Gets or sets the currently selected prompt preset.
     /// </summary>
-    public PromptPreset? SelectedPromptPreset
+    public Profile? SelectedProfile
     {
-        get => (PromptPreset?)GetValue(SelectedPromptPresetProperty);
-        set => SetValue(SelectedPromptPresetProperty, value);
+        get => (Profile?)GetValue(SelectedProfileProperty);
+        set => SetValue(SelectedProfileProperty, value);
     }
 
     #endregion
@@ -220,7 +220,7 @@ public sealed class InputContainer : Control
     /// <summary>
     /// Occurs when the user selects a different prompt preset from the dropdown.
     /// </summary>
-    public event EventHandler<PromptPreset>? PromptPresetChanged;
+    public event EventHandler<Profile>? ProfileChanged;
 
     /// <summary>
     /// Occurs when the user clicks the summarize button.
@@ -248,8 +248,8 @@ public sealed class InputContainer : Control
             _summarizeButton.Click -= SummarizeButton_Click;
         if (_presetComboBox is not null)
             _presetComboBox.SelectionChanged -= PresetComboBox_SelectionChanged;
-        if (_promptPresetComboBox is not null)
-            _promptPresetComboBox.SelectionChanged -= PromptPresetComboBox_SelectionChanged;
+        if (_profileComboBox is not null)
+            _profileComboBox.SelectionChanged -= ProfileComboBox_SelectionChanged;
 
         // Get template parts
         _previewBar = GetTemplateChild("PART_PreviewBar") as AttachmentPreviewBar;
@@ -257,7 +257,7 @@ public sealed class InputContainer : Control
         _attachButton = GetTemplateChild("PART_AttachButton") as Button;
         _summarizeButton = GetTemplateChild("PART_SummarizeButton") as Button;
         _presetComboBox = GetTemplateChild("PART_PresetComboBox") as ComboBox;
-        _promptPresetComboBox = GetTemplateChild("PART_PromptPresetComboBox") as ComboBox;
+        _profileComboBox = GetTemplateChild("PART_ProfileComboBox") as ComboBox;
         _containerBorder = GetTemplateChild("PART_ContainerBorder") as Border;
 
         // Apply ThemeShadow in code (XAML compiler crashes with ThemeShadow in ControlTemplate.Resources)
@@ -278,8 +278,8 @@ public sealed class InputContainer : Control
             _summarizeButton.Click += SummarizeButton_Click;
         if (_presetComboBox is not null)
             _presetComboBox.SelectionChanged += PresetComboBox_SelectionChanged;
-        if (_promptPresetComboBox is not null)
-            _promptPresetComboBox.SelectionChanged += PromptPresetComboBox_SelectionChanged;
+        if (_profileComboBox is not null)
+            _profileComboBox.SelectionChanged += ProfileComboBox_SelectionChanged;
 
         // Set up drag-drop on the control itself
         AllowDrop = true;
@@ -320,16 +320,16 @@ public sealed class InputContainer : Control
     /// <summary>
     /// Selects the matching prompt preset in the ComboBox.
     /// </summary>
-    public void SelectPromptPresetInCombo(PromptPreset preset)
+    public void SelectProfileInCombo(Profile preset)
     {
-        if (_promptPresetComboBox is null) return;
+        if (_profileComboBox is null) return;
 
         _suppressPresetChanged = true;
-        foreach (ComboBoxItem item in _promptPresetComboBox.Items)
+        foreach (ComboBoxItem item in _profileComboBox.Items)
         {
-            if (item.Tag is PromptPreset p && p.Name == preset.Name)
+            if (item.Tag is Profile p && p.Name == preset.Name)
             {
-                _promptPresetComboBox.SelectedItem = item;
+                _profileComboBox.SelectedItem = item;
                 break;
             }
         }
@@ -353,10 +353,10 @@ public sealed class InputContainer : Control
             PopulatePresetCombo(presets);
         }
 
-        if (_pendingPromptPresetPopulate)
+        if (_pendingProfilePopulate)
         {
-            _pendingPromptPresetPopulate = false;
-            PopulatePromptPresetCombo();
+            _pendingProfilePopulate = false;
+            PopulateProfileCombo();
         }
     }
 
@@ -495,13 +495,13 @@ public sealed class InputContainer : Control
     /// <summary>
     /// Handles the prompt preset ComboBox selection change to propagate the new prompt preset.
     /// </summary>
-    private void PromptPresetComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void ProfileComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_suppressPresetChanged) return;
-        if (_promptPresetComboBox?.SelectedItem is ComboBoxItem item && item.Tag is PromptPreset preset)
+        if (_profileComboBox?.SelectedItem is ComboBoxItem item && item.Tag is Profile preset)
         {
-            SelectedPromptPreset = preset;
-            PromptPresetChanged?.Invoke(this, preset);
+            SelectedProfile = preset;
+            ProfileChanged?.Invoke(this, preset);
         }
     }
 
@@ -555,18 +555,18 @@ public sealed class InputContainer : Control
     }
 
     /// <summary>
-    /// Called when <see cref="AvailablePromptPresets"/> changes to populate or defer ComboBox items.
+    /// Called when <see cref="AvailableProfiles"/> changes to populate or defer ComboBox items.
     /// </summary>
-    private static void OnAvailablePromptPresetsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    private static void OnAvailableProfilesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is InputContainer self)
         {
             if (!self.IsLoaded)
             {
-                self._pendingPromptPresetPopulate = true;
+                self._pendingProfilePopulate = true;
                 return;
             }
-            self.PopulatePromptPresetCombo();
+            self.PopulateProfileCombo();
         }
     }
 
@@ -636,15 +636,15 @@ public sealed class InputContainer : Control
     }
 
     /// <summary>
-    /// Populates the prompt preset ComboBox with items from the current <see cref="AvailablePromptPresets"/>.
+    /// Populates the prompt preset ComboBox with items from the current <see cref="AvailableProfiles"/>.
     /// </summary>
-    private void PopulatePromptPresetCombo()
+    private void PopulateProfileCombo()
     {
-        if (_promptPresetComboBox is null) return;
+        if (_profileComboBox is null) return;
 
         _suppressPresetChanged = true;
-        _promptPresetComboBox.Items.Clear();
-        var presets = AvailablePromptPresets;
+        _profileComboBox.Items.Clear();
+        var presets = AvailableProfiles;
         if (presets is null || presets.Count == 0)
         {
             _suppressPresetChanged = false;
@@ -654,12 +654,12 @@ public sealed class InputContainer : Control
         foreach (var preset in presets)
         {
             var item = new ComboBoxItem { Content = preset.Name, Tag = preset };
-            _promptPresetComboBox.Items.Add(item);
+            _profileComboBox.Items.Add(item);
         }
 
-        if (SelectedPromptPreset is not null)
+        if (SelectedProfile is not null)
         {
-            SelectPromptPresetInCombo(SelectedPromptPreset);
+            SelectProfileInCombo(SelectedProfile);
         }
         _suppressPresetChanged = false;
     }

@@ -47,20 +47,20 @@ public partial class MainViewModel : ObservableObject
     private int _tabCounter;
 
     /// <summary>
-    /// Cached list of prompt presets loaded from settings.
+    /// Cached list of profiles loaded from settings.
     /// </summary>
-    private List<PromptPreset> _promptPresets;
+    private List<Profile> _profiles;
 
     #endregion
 
     #region Constructors
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="MainViewModel"/> class and loads prompt presets.
+    /// Initializes a new instance of the <see cref="MainViewModel"/> class and loads profiles.
     /// </summary>
     public MainViewModel()
     {
-        _promptPresets = AppSettings.LoadPromptPresets();
+        _profiles = AppSettings.LoadProfiles();
 
         // Register available tools
         ToolRegistry.Register(new ScanDirectoryTool());
@@ -84,8 +84,8 @@ public partial class MainViewModel : ObservableObject
             GetActivePromptText(),
             GetCurrentTheme(),
             GetPresets(),
-            _promptPresets,
-            GetActivePromptPreset(),
+            _profiles,
+            GetActiveProfile(),
             _tabCounter);
 
         Tabs.Add(vm);
@@ -122,8 +122,8 @@ public partial class MainViewModel : ObservableObject
             GetActivePromptText(),
             GetCurrentTheme(),
             presets,
-            _promptPresets,
-            GetActivePromptPreset());
+            _profiles,
+            GetActiveProfile());
 
         // Restore messages
         foreach (var msg in data.Messages)
@@ -207,30 +207,30 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Updates the system prompt on all open conversation tabs and reloads prompt presets.
+    /// Updates the system prompt on all open conversation tabs and reloads profiles.
     /// </summary>
     public void ApplySystemPromptToAll(string prompt)
     {
-        _promptPresets = AppSettings.LoadPromptPresets();
-        var active = GetActivePromptPreset();
+        _profiles = AppSettings.LoadProfiles();
+        var active = GetActiveProfile();
 
         foreach (var tab in Tabs)
         {
-            tab.ApplySystemPrompt(prompt, _promptPresets, active);
+            tab.ApplySystemPrompt(prompt, _profiles, active);
         }
     }
 
     /// <summary>
-    /// Refreshes prompt presets on all open conversation tabs after a preset change.
+    /// Refreshes profiles on all open conversation tabs after a profile change.
     /// </summary>
-    public void RefreshPromptPresetsOnAll()
+    public void RefreshProfilesOnAll()
     {
-        _promptPresets = AppSettings.LoadPromptPresets();
-        var active = GetActivePromptPreset();
+        _profiles = AppSettings.LoadProfiles();
+        var active = GetActiveProfile();
 
         foreach (var tab in Tabs)
         {
-            tab.ApplyPromptPresets(_promptPresets, active);
+            tab.ApplyProfiles(_profiles, active);
         }
     }
 
@@ -284,22 +284,22 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Finds the currently active prompt preset by name, falling back to the first preset.
+    /// Finds the currently active profile by name, falling back to the first profile.
     /// </summary>
-    /// <returns>The active prompt preset, or <c>null</c> if none exist.</returns>
-    private PromptPreset? GetActivePromptPreset()
+    /// <returns>The active profile, or <c>null</c> if none exist.</returns>
+    private Profile? GetActiveProfile()
     {
-        var name = AppSettings.ActivePromptPreset;
-        return _promptPresets.Find(p => p.Name == name) ?? _promptPresets.FirstOrDefault();
+        var name = AppSettings.ActiveProfile;
+        return _profiles.Find(p => p.Name == name) ?? _profiles.FirstOrDefault();
     }
 
     /// <summary>
-    /// Gets the text of the active prompt preset, falling back to the stored system prompt.
+    /// Gets the text of the active profile, falling back to the stored system prompt.
     /// </summary>
     /// <returns>The system prompt text to use for new conversations.</returns>
     private string GetActivePromptText()
     {
-        return GetActivePromptPreset()?.Text ?? AppSettings.SystemPrompt;
+        return GetActiveProfile()?.Text ?? AppSettings.SystemPrompt;
     }
 
     #endregion

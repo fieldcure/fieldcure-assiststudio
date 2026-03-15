@@ -27,7 +27,7 @@
                         <FontIcon Glyph="&#xE8D4;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem x:Uid="Nav_Prompt" Content="Prompt" Tag="Prompt">
+                <NavigationViewItem x:Uid="Nav_Profile" Content="Profile" Tag="Profile">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE8BD;" />
                     </NavigationViewItem.Icon>

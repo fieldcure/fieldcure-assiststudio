@@ -61,15 +61,15 @@ public sealed class ChatPanel : Control
         DependencyProperty.Register(nameof(SelectedPreset), typeof(ProviderPreset), typeof(ChatPanel),
             new PropertyMetadata(null, OnSelectedPresetChanged));
 
-    /// <summary>Identifies the <see cref="AvailablePromptPresets"/> dependency property.</summary>
-    public static readonly DependencyProperty AvailablePromptPresetsProperty =
-        DependencyProperty.Register(nameof(AvailablePromptPresets), typeof(IList<PromptPreset>), typeof(ChatPanel),
-            new PropertyMetadata(null, OnAvailablePromptPresetsChanged));
+    /// <summary>Identifies the <see cref="AvailableProfiles"/> dependency property.</summary>
+    public static readonly DependencyProperty AvailableProfilesProperty =
+        DependencyProperty.Register(nameof(AvailableProfiles), typeof(IList<Profile>), typeof(ChatPanel),
+            new PropertyMetadata(null, OnAvailableProfilesChanged));
 
-    /// <summary>Identifies the <see cref="SelectedPromptPreset"/> dependency property.</summary>
-    public static readonly DependencyProperty SelectedPromptPresetProperty =
-        DependencyProperty.Register(nameof(SelectedPromptPreset), typeof(PromptPreset), typeof(ChatPanel),
-            new PropertyMetadata(null, OnSelectedPromptPresetChanged));
+    /// <summary>Identifies the <see cref="SelectedProfile"/> dependency property.</summary>
+    public static readonly DependencyProperty SelectedProfileProperty =
+        DependencyProperty.Register(nameof(SelectedProfile), typeof(Profile), typeof(ChatPanel),
+            new PropertyMetadata(null, OnSelectedProfileChanged));
 
     /// <summary>Identifies the <see cref="IsDebugMode"/> dependency property.</summary>
     public static readonly DependencyProperty IsDebugModeProperty =
@@ -153,28 +153,28 @@ public sealed class ChatPanel : Control
     }
 
     /// <summary>
-    /// Called when <see cref="AvailablePromptPresets"/> changes to push prompt presets to the input area.
+    /// Called when <see cref="AvailableProfiles"/> changes to push prompt presets to the input area.
     /// </summary>
-    private static void OnAvailablePromptPresetsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    private static void OnAvailableProfilesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is ChatPanel panel && e.NewValue is IList<PromptPreset> presets)
+        if (d is ChatPanel panel && e.NewValue is IList<Profile> presets)
         {
             if (panel._inputArea is not null)
-                panel._inputArea.AvailablePromptPresets = presets;
+                panel._inputArea.AvailableProfiles = presets;
         }
     }
 
     /// <summary>
-    /// Called when <see cref="SelectedPromptPreset"/> changes to sync the input area and update the system prompt.
+    /// Called when <see cref="SelectedProfile"/> changes to sync the input area and update the system prompt.
     /// </summary>
-    private static void OnSelectedPromptPresetChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    private static void OnSelectedProfileChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is ChatPanel panel && e.NewValue is PromptPreset preset)
+        if (d is ChatPanel panel && e.NewValue is Profile preset)
         {
             if (panel._inputArea is not null)
             {
-                panel._inputArea.SelectedPromptPreset = preset;
-                panel._inputArea.SelectPromptPresetInCombo(preset);
+                panel._inputArea.SelectedProfile = preset;
+                panel._inputArea.SelectProfileInCombo(preset);
             }
             // Update the actual system prompt used in requests
             panel.SystemPrompt = preset.Text;
@@ -376,19 +376,19 @@ public sealed class ChatPanel : Control
     /// <summary>
     /// Gets or sets the list of available prompt presets shown in the input area dropdown.
     /// </summary>
-    public IList<PromptPreset>? AvailablePromptPresets
+    public IList<Profile>? AvailableProfiles
     {
-        get => (IList<PromptPreset>?)GetValue(AvailablePromptPresetsProperty);
-        set => SetValue(AvailablePromptPresetsProperty, value);
+        get => (IList<Profile>?)GetValue(AvailableProfilesProperty);
+        set => SetValue(AvailableProfilesProperty, value);
     }
 
     /// <summary>
     /// Gets or sets the currently selected prompt preset.
     /// </summary>
-    public PromptPreset? SelectedPromptPreset
+    public Profile? SelectedProfile
     {
-        get => (PromptPreset?)GetValue(SelectedPromptPresetProperty);
-        set => SetValue(SelectedPromptPresetProperty, value);
+        get => (Profile?)GetValue(SelectedProfileProperty);
+        set => SetValue(SelectedProfileProperty, value);
     }
 
     /// <summary>
@@ -430,6 +430,11 @@ public sealed class ChatPanel : Control
     public event EventHandler<string>? TitleGenerated;
 
     /// <summary>
+    /// Occurs when the user selects a different profile.
+    /// </summary>
+    public event EventHandler<Profile>? ProfileChanged;
+
+    /// <summary>
     /// Occurs when the user clicks the title edit button.
     /// </summary>
     public event EventHandler<string>? TitleEditRequested;
@@ -465,7 +470,7 @@ public sealed class ChatPanel : Control
         {
             _inputArea.MessageSent -= OnMessageSent;
             _inputArea.PresetChanged -= OnInputPresetChanged;
-            _inputArea.PromptPresetChanged -= OnInputPromptPresetChanged;
+            _inputArea.ProfileChanged -= OnInputProfileChanged;
         }
         if (_rootGrid is not null)
         {
@@ -498,19 +503,19 @@ public sealed class ChatPanel : Control
         {
             _inputArea.MessageSent += OnMessageSent;
             _inputArea.PresetChanged += OnInputPresetChanged;
-            _inputArea.PromptPresetChanged += OnInputPromptPresetChanged;
+            _inputArea.ProfileChanged += OnInputProfileChanged;
 
             // Push current values (may have been set before template was applied)
             if (AvailablePresets is { } presets)
                 _inputArea.AvailablePresets = presets;
             if (SelectedPreset is { } selectedPreset)
                 _inputArea.SelectedPreset = selectedPreset;
-            if (AvailablePromptPresets is { } promptPresets)
-                _inputArea.AvailablePromptPresets = promptPresets;
-            if (SelectedPromptPreset is { } selectedPromptPreset)
+            if (AvailableProfiles is { } promptPresets)
+                _inputArea.AvailableProfiles = promptPresets;
+            if (SelectedProfile is { } selectedProfile)
             {
-                _inputArea.SelectedPromptPreset = selectedPromptPreset;
-                _inputArea.SelectPromptPresetInCombo(selectedPromptPreset);
+                _inputArea.SelectedProfile = selectedProfile;
+                _inputArea.SelectProfileInCombo(selectedProfile);
             }
         }
         if (_rootGrid is not null)
@@ -957,10 +962,11 @@ public sealed class ChatPanel : Control
     /// <summary>
     /// Handles the prompt preset changed event from the input area to update the system prompt.
     /// </summary>
-    private void OnInputPromptPresetChanged(object? sender, PromptPreset preset)
+    private void OnInputProfileChanged(object? sender, Profile profile)
     {
-        SelectedPromptPreset = preset;
-        SystemPrompt = preset.Text;
+        SelectedProfile = profile;
+        SystemPrompt = profile.Text;
+        ProfileChanged?.Invoke(this, profile);
     }
 
     /// <summary>

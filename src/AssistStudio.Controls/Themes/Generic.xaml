@@ -82,7 +82,7 @@
 
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4"
                                             VerticalAlignment="Center">
-                                    <ComboBox x:Name="PART_PromptPresetComboBox"
+                                    <ComboBox x:Name="PART_ProfileComboBox"
                                               MinWidth="100"
                                               VerticalAlignment="Center"
                                               BorderThickness="0"

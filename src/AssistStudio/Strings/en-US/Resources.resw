@@ -108,8 +108,8 @@
   <data name="Nav_Personalization.Content" xml:space="preserve">
     <value>Personalization</value>
   </data>
-  <data name="Nav_Prompt.Content" xml:space="preserve">
-    <value>Prompt</value>
+  <data name="Nav_Profile.Content" xml:space="preserve">
+    <value>Profile</value>
   </data>
   <data name="Nav_Advanced.Content" xml:space="preserve">
     <value>Advanced</value>
@@ -167,32 +167,32 @@
   <data name="Personalization_Dark.Content" xml:space="preserve">
     <value>Dark</value>
   </data>
-  <!-- Prompt Page -->
-  <data name="Prompt_Title.Text" xml:space="preserve">
-    <value>System Prompt</value>
+  <!-- Profile Page -->
+  <data name="Profile_Title.Text" xml:space="preserve">
+    <value>Profile</value>
   </data>
-  <data name="Prompt_Description.Text" xml:space="preserve">
-    <value>Configure the system prompt sent to AI models.</value>
+  <data name="Profile_Description.Text" xml:space="preserve">
+    <value>Configure profiles with system prompts and preferences.</value>
   </data>
-  <data name="Prompt_Placeholder.PlaceholderText" xml:space="preserve">
+  <data name="Profile_Placeholder.PlaceholderText" xml:space="preserve">
     <value>Enter system prompt...</value>
   </data>
-  <data name="Prompt_Presets.Text" xml:space="preserve">
-    <value>Presets</value>
+  <data name="Profile_Profiles.Text" xml:space="preserve">
+    <value>Profiles</value>
   </data>
-  <data name="Prompt_AddPreset.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
-    <value>Add preset</value>
+  <data name="Profile_AddProfile.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Add profile</value>
   </data>
-  <data name="Prompt_DeletePreset.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+  <data name="Profile_DeleteProfile.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Delete</value>
   </data>
-  <data name="Prompt_PresetName.Header" xml:space="preserve">
+  <data name="Profile_ProfileName.Header" xml:space="preserve">
     <value>Name</value>
   </data>
-  <data name="Prompt_PresetName.PlaceholderText" xml:space="preserve">
-    <value>Preset name</value>
+  <data name="Profile_ProfileName.PlaceholderText" xml:space="preserve">
+    <value>Profile name</value>
   </data>
-  <data name="Prompt_Placeholder.Header" xml:space="preserve">
+  <data name="Profile_Placeholder.Header" xml:space="preserve">
     <value>System Prompt</value>
   </data>
   <!-- Utility AI Page -->

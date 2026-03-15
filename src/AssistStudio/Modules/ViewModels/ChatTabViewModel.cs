@@ -120,8 +120,8 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         string systemPrompt,
         ChatTheme theme,
         IList availablePresets,
-        List<PromptPreset> promptPresets,
-        PromptPreset? selectedPromptPreset,
+        List<Profile> profiles,
+        Profile? selectedProfile,
         int tabNumber = 0)
     {
         CurrentPreset = preset;
@@ -141,8 +141,8 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             Theme = theme,
             AvailablePresets = availablePresets,
             SelectedPreset = preset,
-            AvailablePromptPresets = promptPresets,
-            SelectedPromptPreset = selectedPromptPreset,
+            AvailableProfiles = profiles,
+            SelectedProfile = selectedProfile,
             HorizontalAlignment = Microsoft.UI.Xaml.HorizontalAlignment.Stretch,
             VerticalAlignment = Microsoft.UI.Xaml.VerticalAlignment.Stretch,
             AutoTitle = AppSettings.UtilityAutoTitle,
@@ -152,13 +152,14 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 #endif
         };
 
-        // Apply linked tools from preset
-        if (preset.ToolNames.Count > 0)
+        // Apply linked tools from active profile
+        if (selectedProfile?.ToolNames.Count > 0)
         {
-            ChatPanel.RegisteredTools = ToolRegistry.Resolve(preset.ToolNames);
+            ChatPanel.RegisteredTools = ToolRegistry.Resolve(selectedProfile.ToolNames);
         }
 
         ChatPanel.PresetChanged += OnPresetChanged;
+        ChatPanel.ProfileChanged += OnProfileChanged;
         ChatPanel.TitleGenerated += OnTitleGenerated;
         ChatPanel.MessageAdded += OnMessageAdded;
         ChatPanel.TitleEditRequested += OnTitleEditRequested;
@@ -188,22 +189,22 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     public void ApplyTheme(ChatTheme theme) => ChatPanel.Theme = theme;
 
     /// <summary>
-    /// Updates the system prompt and prompt presets on the chat panel.
+    /// Updates the system prompt and profiles on the chat panel.
     /// </summary>
-    public void ApplySystemPrompt(string prompt, List<PromptPreset> promptPresets, PromptPreset? selectedPromptPreset)
+    public void ApplySystemPrompt(string prompt, List<Profile> profiles, Profile? selectedProfile)
     {
         ChatPanel.SystemPrompt = prompt;
-        ChatPanel.AvailablePromptPresets = promptPresets;
-        ChatPanel.SelectedPromptPreset = selectedPromptPreset;
+        ChatPanel.AvailableProfiles = profiles;
+        ChatPanel.SelectedProfile = selectedProfile;
     }
 
     /// <summary>
-    /// Updates the available prompt presets and selected preset on the chat panel.
+    /// Updates the available profiles and selected profile on the chat panel.
     /// </summary>
-    public void ApplyPromptPresets(List<PromptPreset> promptPresets, PromptPreset? selectedPromptPreset)
+    public void ApplyProfiles(List<Profile> profiles, Profile? selectedProfile)
     {
-        ChatPanel.AvailablePromptPresets = promptPresets;
-        ChatPanel.SelectedPromptPreset = selectedPromptPreset;
+        ChatPanel.AvailableProfiles = profiles;
+        ChatPanel.SelectedProfile = selectedProfile;
     }
 
     /// <summary>
@@ -231,6 +232,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         ChatPanel.PresetChanged -= OnPresetChanged;
+        ChatPanel.ProfileChanged -= OnProfileChanged;
         ChatPanel.TitleGenerated -= OnTitleGenerated;
         ChatPanel.MessageAdded -= OnMessageAdded;
         ChatPanel.TitleEditRequested -= OnTitleEditRequested;
@@ -265,24 +267,20 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         CurrentPreset = preset;
         Title = preset.Name;
 
-        // Auto-apply linked prompt preset
-        if (preset.PromptPresetName is not null)
-        {
-            var promptPreset = ChatPanel.AvailablePromptPresets
-                ?.FirstOrDefault(p => p.Name == preset.PromptPresetName);
-            if (promptPreset is not null)
-            {
-                ChatPanel.SelectedPromptPreset = promptPreset;
-                ChatPanel.SystemPrompt = promptPreset.Text;
-            }
-        }
-
-        // Auto-apply linked tools
-        ChatPanel.RegisteredTools = preset.ToolNames.Count > 0
-            ? ToolRegistry.Resolve(preset.ToolNames)
-            : [];
-
         PresetSwitched?.Invoke(this, preset);
+    }
+
+    /// <summary>
+    /// Handles profile changes by updating the system prompt and registered tools.
+    /// </summary>
+    private void OnProfileChanged(object? sender, Profile profile)
+    {
+        ChatPanel.SystemPrompt = profile.Text;
+
+        // Auto-apply linked tools from profile
+        ChatPanel.RegisteredTools = profile.ToolNames.Count > 0
+            ? ToolRegistry.Resolve(profile.ToolNames)
+            : [];
     }
 
     /// <summary>

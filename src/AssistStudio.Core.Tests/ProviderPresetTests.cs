@@ -40,41 +40,58 @@ public class ProviderPresetTests
         Assert.AreEqual("Name", changedProperty);
     }
 
+}
+
+[TestClass]
+public class ProfileTests
+{
     [TestMethod]
-    public void Defaults_PromptPresetNameAndToolNames()
+    public void Defaults_AreCorrect()
     {
-        var preset = new ProviderPreset();
-        Assert.IsNull(preset.PromptPresetName);
-        Assert.AreEqual(0, preset.ToolNames.Count);
+        var profile = new Profile();
+        Assert.AreEqual("", profile.Name);
+        Assert.AreEqual("", profile.Text);
+        Assert.IsFalse(profile.IsBuiltIn);
+        Assert.IsNull(profile.PreferredProviderType);
+        Assert.IsNull(profile.PreferredModelId);
+        Assert.AreEqual(0, profile.ToolNames.Count);
     }
 
     [TestMethod]
-    public void Serialize_IncludesPromptPresetNameAndToolNames()
+    public void Serialize_IncludesAllFields()
     {
-        var preset = new ProviderPreset
+        var profile = new Profile
         {
             Name = "File Organizer",
-            ProviderType = "Ollama",
-            ModelId = "llama3.1",
-            PromptPresetName = "File Organizer",
+            Text = "You are a file organization assistant.",
+            IsBuiltIn = false,
+            PreferredProviderType = "Ollama",
+            PreferredModelId = "llama3.2",
             ToolNames = ["scan_directory"]
         };
 
-        var json = JsonSerializer.Serialize(preset);
-        var deserialized = JsonSerializer.Deserialize<ProviderPreset>(json)!;
+        var json = JsonSerializer.Serialize(profile);
+        var deserialized = JsonSerializer.Deserialize<Profile>(json)!;
 
-        Assert.AreEqual("File Organizer", deserialized.PromptPresetName);
+        Assert.AreEqual("File Organizer", deserialized.Name);
+        Assert.AreEqual("You are a file organization assistant.", deserialized.Text);
+        Assert.IsFalse(deserialized.IsBuiltIn);
+        Assert.AreEqual("Ollama", deserialized.PreferredProviderType);
+        Assert.AreEqual("llama3.2", deserialized.PreferredModelId);
         Assert.AreEqual(1, deserialized.ToolNames.Count);
         Assert.AreEqual("scan_directory", deserialized.ToolNames[0]);
     }
 
     [TestMethod]
-    public void Deserialize_MissingPromptPresetNameAndToolNames_UsesDefaults()
+    public void Deserialize_MissingOptionalFields_UsesDefaults()
     {
-        var json = """{"Name":"Test","ProviderType":"Mock","ModelId":"test"}""";
-        var preset = JsonSerializer.Deserialize<ProviderPreset>(json)!;
+        var json = """{"Name":"Test","Text":"Hello"}""";
+        var profile = JsonSerializer.Deserialize<Profile>(json)!;
 
-        Assert.IsNull(preset.PromptPresetName);
-        Assert.AreEqual(0, preset.ToolNames.Count);
+        Assert.AreEqual("Test", profile.Name);
+        Assert.AreEqual("Hello", profile.Text);
+        Assert.IsNull(profile.PreferredProviderType);
+        Assert.IsNull(profile.PreferredModelId);
+        Assert.AreEqual(0, profile.ToolNames.Count);
     }
 }
