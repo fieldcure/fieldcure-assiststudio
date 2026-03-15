@@ -3,11 +3,12 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using FieldCure.AssistStudio.Controls;
 using FieldCure.AssistStudio.Models;
 using FieldCure.AssistStudio.Providers;
-using AssistStudio.Helpers;
+using AssistStudio.Modules.Helpers;
+using AssistStudio.Modules.Tools;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
-namespace AssistStudio.ViewModels;
+namespace AssistStudio.Modules.ViewModels;
 
 /// <summary>
 /// View model for a single conversation tab, managing the chat panel, provider preset,
@@ -151,6 +152,12 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 #endif
         };
 
+        // Apply linked tools from preset
+        if (preset.ToolNames.Count > 0)
+        {
+            ChatPanel.RegisteredTools = ToolRegistry.Resolve(preset.ToolNames);
+        }
+
         ChatPanel.PresetChanged += OnPresetChanged;
         ChatPanel.TitleGenerated += OnTitleGenerated;
         ChatPanel.MessageAdded += OnMessageAdded;
@@ -257,6 +264,23 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         ChatPanel.Provider = ProviderFactory.Create(preset);
         CurrentPreset = preset;
         Title = preset.Name;
+
+        // Auto-apply linked prompt preset
+        if (preset.PromptPresetName is not null)
+        {
+            var promptPreset = ChatPanel.AvailablePromptPresets
+                ?.FirstOrDefault(p => p.Name == preset.PromptPresetName);
+            if (promptPreset is not null)
+            {
+                ChatPanel.SelectedPromptPreset = promptPreset;
+                ChatPanel.SystemPrompt = promptPreset.Text;
+            }
+        }
+
+        // Auto-apply linked tools
+        ChatPanel.RegisteredTools = preset.ToolNames.Count > 0
+            ? ToolRegistry.Resolve(preset.ToolNames)
+            : [];
 
         PresetSwitched?.Invoke(this, preset);
     }

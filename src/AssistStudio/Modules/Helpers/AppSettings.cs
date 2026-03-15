@@ -5,7 +5,7 @@ using Windows.Storage;
 using FieldCure.AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
 
-namespace AssistStudio.Helpers;
+namespace AssistStudio.Modules.Helpers;
 
 /// <summary>
 /// Centralized application settings backed by <see cref="ApplicationData.Current.LocalSettings"/>.

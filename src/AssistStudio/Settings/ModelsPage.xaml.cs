@@ -2,7 +2,7 @@ using FieldCure.AssistStudio.Models;
 using FieldCure.AssistStudio.Providers;
 using AssistStudio.Dialogs;
 using FieldCure.AssistStudio.Helpers;
-using AssistStudio.Helpers;
+using AssistStudio.Modules.Helpers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;

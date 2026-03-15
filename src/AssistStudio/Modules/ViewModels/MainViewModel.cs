@@ -4,9 +4,10 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using FieldCure.AssistStudio.Controls;
 using FieldCure.AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
-using AssistStudio.Helpers;
+using AssistStudio.Modules.Helpers;
+using AssistStudio.Modules.Tools;
 
-namespace AssistStudio.ViewModels;
+namespace AssistStudio.Modules.ViewModels;
 
 /// <summary>
 /// Top-level view model that manages the collection of conversation tabs and
@@ -60,6 +61,9 @@ public partial class MainViewModel : ObservableObject
     public MainViewModel()
     {
         _promptPresets = AppSettings.LoadPromptPresets();
+
+        // Register available tools
+        ToolRegistry.Register(new ScanDirectoryTool());
     }
 
     #endregion

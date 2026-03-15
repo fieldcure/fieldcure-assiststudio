@@ -1,6 +1,6 @@
 using Windows.Security.Credentials;
 
-namespace AssistStudio.Helpers;
+namespace AssistStudio.Modules.Helpers;
 
 /// <summary>
 /// Provides methods for securely storing and retrieving API keys using the Windows Credential Manager (PasswordVault).

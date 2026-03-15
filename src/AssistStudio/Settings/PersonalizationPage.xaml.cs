@@ -1,4 +1,4 @@
-using AssistStudio.Helpers;
+using AssistStudio.Modules.Helpers;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 

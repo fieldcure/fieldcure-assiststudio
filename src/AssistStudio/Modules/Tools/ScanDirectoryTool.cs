@@ -1,7 +1,7 @@
 using System.Text.Json;
 using FieldCure.AssistStudio.Models;
 
-namespace FieldCure.AssistStudio.Modules.Tools;
+namespace AssistStudio.Modules.Tools;
 
 /// <summary>
 /// A demo tool that scans a directory and returns a list of files with name, size, and modified date.

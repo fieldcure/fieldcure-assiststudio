@@ -85,6 +85,16 @@ public partial class ProviderPreset : INotifyPropertyChanged
     public bool StreamingEnabled { get; set; } = true;
 
     /// <summary>
+    /// Name of the associated prompt preset to auto-select when this provider preset is activated.
+    /// </summary>
+    public string? PromptPresetName { get; set; }
+
+    /// <summary>
+    /// Tool names to enable when this preset is active.
+    /// </summary>
+    public List<string> ToolNames { get; set; } = [];
+
+    /// <summary>
     /// Whether this provider type requires an API key.
     /// </summary>
     [JsonIgnore]
