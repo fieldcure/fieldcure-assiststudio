@@ -130,9 +130,6 @@
   <data name="Models_LocalSection.Text" xml:space="preserve">
     <value>Local Inference (On-Device)</value>
   </data>
-  <data name="Models_DefaultProvider.Text" xml:space="preserve">
-    <value>Default Provider</value>
-  </data>
   <data name="Models_DefaultModel.Text" xml:space="preserve">
     <value>Default Model</value>
   </data>

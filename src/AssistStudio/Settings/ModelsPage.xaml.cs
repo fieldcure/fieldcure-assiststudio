@@ -1,8 +1,8 @@
+﻿using AssistStudio.Dialogs;
+using AssistStudio.Modules.Helpers;
+using FieldCure.AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
 using FieldCure.AssistStudio.Providers;
-using AssistStudio.Dialogs;
-using FieldCure.AssistStudio.Helpers;
-using AssistStudio.Modules.Helpers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
@@ -11,7 +11,7 @@ using Microsoft.Windows.ApplicationModel.Resources;
 namespace AssistStudio.Settings;
 
 /// <summary>
-/// Settings page for managing AI provider API keys, model selection, default provider,
+/// Settings page for managing AI provider API keys, model selection,
 /// and Ollama local model configuration.
 /// </summary>
 public sealed partial class ModelsPage : Page
@@ -22,11 +22,6 @@ public sealed partial class ModelsPage : Page
     /// Reference to the parent settings panel for syncing preset changes.
     /// </summary>
     private SettingsPanel? _settings;
-
-    /// <summary>
-    /// Flag to suppress event handlers during programmatic UI updates.
-    /// </summary>
-    private bool _isLoading = true;
 
     #endregion
 
@@ -82,11 +77,8 @@ public sealed partial class ModelsPage : Page
             _settings = settings;
         }
 
-        _isLoading = true;
         LoadApiKeys();
         PopulateModelCombos();
-        PopulateDefaultProvider();
-        _isLoading = false;
 
         // Sync presets from current API keys/models so tabs get correct provider list
         SyncPresetsFromUI();
@@ -189,7 +181,6 @@ public sealed partial class ModelsPage : Page
 
         _ = FetchAndCacheModelsAsync(provider, key, modelCombo);
         SyncPresetsFromUI();
-        RefreshDefaultProvider();
     }
 
     /// <summary>
@@ -207,7 +198,6 @@ public sealed partial class ModelsPage : Page
         modelCombo.IsEnabled = false;
 
         SyncPresetsFromUI();
-        RefreshDefaultProvider();
     }
 
     #endregion
@@ -416,67 +406,7 @@ public sealed partial class ModelsPage : Page
 
     #endregion
 
-    #region Default Provider
-
-    /// <summary>
-    /// Populates the default provider combo box with providers that have API keys, plus Ollama and Mock.
-    /// </summary>
-    private void PopulateDefaultProvider()
-    {
-        DefaultProviderCombo.Items.Clear();
-
-        // Add available providers (those with API keys or local)
-        var claudeKey = PasswordVaultHelper.LoadApiKey("Claude");
-        var openAIKey = PasswordVaultHelper.LoadApiKey("OpenAI");
-        var geminiKey = PasswordVaultHelper.LoadApiKey("Gemini");
-        var groqKey = PasswordVaultHelper.LoadApiKey("Groq");
-
-        if (!string.IsNullOrEmpty(claudeKey)) DefaultProviderCombo.Items.Add("Anthropic Claude");
-        if (!string.IsNullOrEmpty(openAIKey)) DefaultProviderCombo.Items.Add("OpenAI");
-        if (!string.IsNullOrEmpty(geminiKey)) DefaultProviderCombo.Items.Add("Google Gemini");
-        if (!string.IsNullOrEmpty(groqKey)) DefaultProviderCombo.Items.Add("Groq");
-        // Ollama is always available if installed
-        DefaultProviderCombo.Items.Add("Ollama");
-        DefaultProviderCombo.Items.Add("Mock");
-
-        // Select saved default
-        var saved = AppSettings.DefaultProvider;
-        var displayName = ProviderToDisplayName(saved);
-        for (var i = 0; i < DefaultProviderCombo.Items.Count; i++)
-        {
-            if (DefaultProviderCombo.Items[i] is string s && s == displayName)
-            {
-                DefaultProviderCombo.SelectedIndex = i;
-                return;
-            }
-        }
-
-        // Fallback: select first
-        if (DefaultProviderCombo.Items.Count > 0)
-            DefaultProviderCombo.SelectedIndex = 0;
-    }
-
-    /// <summary>
-    /// Refreshes the default provider combo box while suppressing change events.
-    /// </summary>
-    private void RefreshDefaultProvider()
-    {
-        _isLoading = true;
-        PopulateDefaultProvider();
-        _isLoading = false;
-    }
-
-    /// <summary>
-    /// Handles default provider combo box selection changes to persist the user's choice.
-    /// </summary>
-    private void OnDefaultProviderChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (_isLoading || DefaultProviderCombo.SelectedItem is not string display) return;
-
-        var providerKey = DisplayNameToProvider(display);
-        AppSettings.DefaultProvider = providerKey;
-        SyncPresetsFromUI();
-    }
+    #region Preset Synchronization
 
     /// <summary>
     /// Maps a provider type key to its user-facing display name.
@@ -494,25 +424,6 @@ public sealed partial class ModelsPage : Page
     };
 
     /// <summary>
-    /// Maps a user-facing display name back to its provider type key.
-    /// </summary>
-    /// <returns>The provider type key.</returns>
-    private static string DisplayNameToProvider(string display) => display switch
-    {
-        "Anthropic Claude" => "Claude",
-        "OpenAI" => "OpenAI",
-        "Google Gemini" => "Gemini",
-        "Groq" => "Groq",
-        "Ollama" => "Ollama",
-        "Mock" => "Mock",
-        _ => "Mock"
-    };
-
-    #endregion
-
-    #region Preset Synchronization
-
-    /// <summary>
     /// Rebuilds the provider preset collection from the current UI state (API keys and selected models)
     /// and notifies the settings panel of the changes.
     /// </summary>
@@ -521,9 +432,6 @@ public sealed partial class ModelsPage : Page
         if (_settings is null) return;
 
         _settings.Presets.Clear();
-
-        // Build presets from current UI state
-        var defaultProvider = AppSettings.DefaultProvider;
 
         // Cloud providers
         foreach (var provider in new[] { "Claude", "OpenAI", "Gemini", "Groq" })

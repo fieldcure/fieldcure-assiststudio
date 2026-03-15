@@ -1,9 +1,7 @@
+﻿using FieldCure.AssistStudio.Models;
 using System.Collections.ObjectModel;
 using System.Text.Json;
 using Windows.Storage;
-
-using FieldCure.AssistStudio.Helpers;
-using FieldCure.AssistStudio.Models;
 
 namespace AssistStudio.Modules.Helpers;
 
@@ -45,15 +43,6 @@ public static class AppSettings
     {
         get => Settings.Values["SystemPrompt"] as string ?? "";
         set => Settings.Values["SystemPrompt"] = value;
-    }
-
-    /// <summary>
-    /// Gets or sets the default provider type key (e.g., "Claude", "OpenAI", "Mock").
-    /// </summary>
-    public static string DefaultProvider
-    {
-        get => Settings.Values["DefaultProvider"] as string ?? "Mock";
-        set => Settings.Values["DefaultProvider"] = value;
     }
 
     /// <summary>

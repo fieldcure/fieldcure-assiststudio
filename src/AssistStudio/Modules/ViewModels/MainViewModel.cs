@@ -1,11 +1,11 @@
-using System.Collections;
-using System.Collections.ObjectModel;
+﻿using AssistStudio.Modules.Helpers;
+using AssistStudio.Modules.Tools;
 using CommunityToolkit.Mvvm.ComponentModel;
 using FieldCure.AssistStudio.Controls;
 using FieldCure.AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
-using AssistStudio.Modules.Helpers;
-using AssistStudio.Modules.Tools;
+using System.Collections;
+using System.Collections.ObjectModel;
 
 namespace AssistStudio.Modules.ViewModels;
 
@@ -251,8 +251,8 @@ public partial class MainViewModel : ObservableObject
     #region Private Methods
 
     /// <summary>
-    /// Gets the default provider preset based on the user's saved preference.
-    /// Falls back to Mock if no presets are available or the saved default is not found.
+    /// Gets the default provider preset based on the active profile's preferred provider type.
+    /// Falls back to the first available preset, or Mock if none exist.
     /// </summary>
     /// <returns>The default provider preset.</returns>
     private ProviderPreset GetDefaultPreset()
@@ -261,11 +261,15 @@ public partial class MainViewModel : ObservableObject
         if (presets.Count == 0)
             return new ProviderPreset { Name = "Mock", ProviderType = "Mock" };
 
-        var defaultName = AppSettings.DefaultProvider;
-        foreach (ProviderPreset p in presets)
+        var preferredType = GetActiveProfile()?.PreferredProviderType;
+        if (preferredType is not null)
         {
-            if (p.Name == defaultName) return p;
+            foreach (ProviderPreset p in presets)
+            {
+                if (p.ProviderType == preferredType) return p;
+            }
         }
+
         return (ProviderPreset)presets[0]!;
     }
 

@@ -300,18 +300,6 @@
                     </StackPanel>
                 </StackPanel>
 
-                <!-- ============================== -->
-                <!-- Default Provider               -->
-                <!-- ============================== -->
-                <Rectangle Height="2" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="0,8" />
-
-                <TextBlock x:Uid="Models_DefaultProvider" Text="Default Provider"
-                           Style="{StaticResource SubtitleTextBlockStyle}" />
-
-                <ComboBox x:Name="DefaultProviderCombo"
-                          HorizontalAlignment="Stretch"
-                          SelectionChanged="OnDefaultProviderChanged" />
-
             </StackPanel>
         </ScrollViewer>
     </Grid>

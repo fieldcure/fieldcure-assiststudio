@@ -130,9 +130,6 @@
   <data name="Models_LocalSection.Text" xml:space="preserve">
     <value>로컬 추론 (On-Device)</value>
   </data>
-  <data name="Models_DefaultProvider.Text" xml:space="preserve">
-    <value>기본 프로바이더</value>
-  </data>
   <data name="Models_DefaultModel.Text" xml:space="preserve">
     <value>기본 모델</value>
   </data>
