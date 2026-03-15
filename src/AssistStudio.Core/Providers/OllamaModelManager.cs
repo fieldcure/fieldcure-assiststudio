@@ -150,6 +150,9 @@ public partial class OllamaModelManager : IModelManager, IDisposable
         using var stream = await response.Content.ReadAsStreamAsync(ct);
         using var reader = new StreamReader(stream);
 
+        var lastReport = DateTime.MinValue;
+        ModelDownloadProgress? pending = null;
+
         while (!reader.EndOfStream)
         {
             ct.ThrowIfCancellationRequested();
@@ -167,8 +170,25 @@ public partial class OllamaModelManager : IModelManager, IDisposable
                 ? (double)completed.Value / total.Value
                 : 0.0;
 
-            progress?.Report(new ModelDownloadProgress(status, percent, total, completed));
+            var p = new ModelDownloadProgress(status, percent, total, completed);
+            var now = DateTime.UtcNow;
+
+            // Throttle progress reports to avoid flooding the UI dispatcher
+            if ((now - lastReport).TotalMilliseconds >= 200 || percent >= 1.0)
+            {
+                progress?.Report(p);
+                lastReport = now;
+                pending = null;
+            }
+            else
+            {
+                pending = p;
+            }
         }
+
+        // Report any remaining progress
+        if (pending is not null)
+            progress?.Report(pending);
     }
 
     /// <inheritdoc/>

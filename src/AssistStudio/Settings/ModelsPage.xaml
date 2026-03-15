@@ -285,7 +285,8 @@
                             Visibility="Collapsed" />
 
                     <!-- Download Progress -->
-                    <StackPanel x:Name="PullProgressPanel" Visibility="Collapsed" Spacing="4">
+                    <StackPanel x:Name="PullProgressPanel" Visibility="Collapsed" Spacing="4"
+                                Margin="0,0,0,8">
                         <TextBlock x:Name="PullProgressStatus" FontSize="12" />
                         <ProgressBar x:Name="PullProgressBar" Minimum="0" Maximum="100" />
                     </StackPanel>

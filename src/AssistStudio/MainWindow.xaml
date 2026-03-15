@@ -71,22 +71,18 @@
                                 <MenuFlyout x:Name="MainMenuFlyout"
                                             Placement="BottomEdgeAlignedLeft">
                                     <MenuFlyoutItem x:Uid="Menu_New" Text="New"
-                                                    Click="OnMenuNewTab">
+                                                    Click="OnMenuNewTab"
+                                                    KeyboardAcceleratorTextOverride="Ctrl+N">
                                         <MenuFlyoutItem.Icon>
                                             <FontIcon Glyph="&#xE8F4;" />
                                         </MenuFlyoutItem.Icon>
-                                        <MenuFlyoutItem.KeyboardAccelerators>
-                                            <KeyboardAccelerator Modifiers="Control" Key="N" />
-                                        </MenuFlyoutItem.KeyboardAccelerators>
                                     </MenuFlyoutItem>
                                     <MenuFlyoutItem x:Uid="Menu_Open" Text="Open..."
-                                                    Click="OnMenuLoadConversation">
+                                                    Click="OnMenuLoadConversation"
+                                                    KeyboardAcceleratorTextOverride="Ctrl+O">
                                         <MenuFlyoutItem.Icon>
                                             <FontIcon Glyph="&#xE8E5;" />
                                         </MenuFlyoutItem.Icon>
-                                        <MenuFlyoutItem.KeyboardAccelerators>
-                                            <KeyboardAccelerator Modifiers="Control" Key="O" />
-                                        </MenuFlyoutItem.KeyboardAccelerators>
                                     </MenuFlyoutItem>
                                     <MenuFlyoutSubItem x:Name="RecentConversationsSubMenu"
                                                        x:Uid="Menu_RecentConversations"
@@ -97,22 +93,18 @@
                                     </MenuFlyoutSubItem>
                                     <MenuFlyoutSeparator />
                                     <MenuFlyoutItem x:Uid="Menu_Save" Text="Save"
-                                                    Click="OnMenuSaveConversation">
+                                                    Click="OnMenuSaveConversation"
+                                                    KeyboardAcceleratorTextOverride="Ctrl+S">
                                         <MenuFlyoutItem.Icon>
                                             <FontIcon Glyph="&#xE74E;" />
                                         </MenuFlyoutItem.Icon>
-                                        <MenuFlyoutItem.KeyboardAccelerators>
-                                            <KeyboardAccelerator Modifiers="Control" Key="S" />
-                                        </MenuFlyoutItem.KeyboardAccelerators>
                                     </MenuFlyoutItem>
                                     <MenuFlyoutItem x:Uid="Menu_SaveAs" Text="Save As..."
-                                                    Click="OnMenuSaveAsConversation">
+                                                    Click="OnMenuSaveAsConversation"
+                                                    KeyboardAcceleratorTextOverride="Ctrl+Shift+S">
                                         <MenuFlyoutItem.Icon>
                                             <FontIcon Glyph="&#xE792;" />
                                         </MenuFlyoutItem.Icon>
-                                        <MenuFlyoutItem.KeyboardAccelerators>
-                                            <KeyboardAccelerator Modifiers="Control,Shift" Key="S" />
-                                        </MenuFlyoutItem.KeyboardAccelerators>
                                     </MenuFlyoutItem>
                                     <MenuFlyoutItem x:Uid="Menu_SaveAll" Text="Save All"
                                                     Click="OnMenuSaveAllConversations">
