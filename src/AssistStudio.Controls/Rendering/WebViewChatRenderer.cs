@@ -364,22 +364,29 @@ internal class WebViewChatRenderer
                     }
                 };
 
-                marked.use({
-                    extensions: [mathBlock, mathBlockBracket, mathInline, mathInlineParen]
-                });
-
-                marked.setOptions({
-                    breaks: true,
-                    gfm: true,
-                    highlight: function(code, lang) {
-                        if (lang && hljs.getLanguage(lang)) {
-                            try { return hljs.highlight(code, { language: lang }).value; }
-                            catch(e) {}
-                        }
-                        try { return hljs.highlightAuto(code).value; }
-                        catch(e) {}
-                        return '';
+                // Custom renderer: syntax-highlight code blocks via hljs
+                var renderer = new marked.Renderer();
+                renderer.code = function(token) {
+                    var code = token.text || '';
+                    var lang = (token.lang || '').trim();
+                    var highlighted;
+                    if (lang && hljs.getLanguage(lang)) {
+                        try { highlighted = hljs.highlight(code, { language: lang }).value; }
+                        catch(e) { highlighted = null; }
                     }
+                    if (!highlighted) {
+                        try { highlighted = hljs.highlightAuto(code).value; }
+                        catch(e) { highlighted = code; }
+                    }
+                    var escaped = lang ? lang.replace(/"/g, '&quot;') : '';
+                    return '<pre><code class="hljs language-' + escaped + '">' + highlighted + '</code></pre>';
+                };
+
+                marked.use({
+                    extensions: [mathBlock, mathBlockBracket, mathInline, mathInlineParen],
+                    renderer: renderer,
+                    breaks: true,
+                    gfm: true
                 });
             })();
             """;

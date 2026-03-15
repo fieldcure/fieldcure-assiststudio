@@ -51,6 +51,9 @@
   <data name="Chat_Code" xml:space="preserve">
     <value>code</value>
   </data>
+  <data name="Chat_CopyPrompt" xml:space="preserve">
+    <value>Copy prompt</value>
+  </data>
   <data name="Chat_CopyMessage" xml:space="preserve">
     <value>Copy response</value>
   </data>
@@ -86,5 +89,20 @@
   </data>
   <data name="InputContainer_Summarize.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Summarize conversation</value>
+  </data>
+  <data name="InputContainer_Stop.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Stop generating</value>
+  </data>
+  <data name="InputContainer_AttachTooltip" xml:space="preserve">
+    <value>Attach file</value>
+  </data>
+  <data name="InputContainer_SummarizeTooltip" xml:space="preserve">
+    <value>Summarize conversation</value>
+  </data>
+  <data name="InputContainer_StopTooltip" xml:space="preserve">
+    <value>Stop generating</value>
+  </data>
+  <data name="InputContainer_SendTooltip" xml:space="preserve">
+    <value>Send message</value>
   </data>
 </root>

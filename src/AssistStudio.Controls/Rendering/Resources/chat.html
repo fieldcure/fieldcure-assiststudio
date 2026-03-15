@@ -513,6 +513,7 @@
         copied: 'Copied!',
         continue_label: '\u25B6 Continue',
         code: 'code',
+        copyPrompt: 'Copy prompt',
         copyMessage: 'Copy response',
         edit: 'Edit',
         retry: 'Retry',
@@ -658,7 +659,7 @@
         actions.className = 'message-actions';
 
         // Copy
-        actions.appendChild(createActionBtn('\uE8C8', _L.copyMessage, function() {
+        actions.appendChild(createActionBtn('\uE8C8', _L.copyPrompt, function() {
             window.chrome.webview.postMessage('copyMsg:' + msgId);
             flashCopied(this);
         }));

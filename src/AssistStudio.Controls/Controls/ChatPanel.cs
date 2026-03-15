@@ -474,6 +474,7 @@ public sealed class ChatPanel : Control
             _inputArea.MessageSent -= OnMessageSent;
             _inputArea.PresetChanged -= OnInputPresetChanged;
             _inputArea.ProfileChanged -= OnInputProfileChanged;
+            _inputArea.StopRequested -= OnStopRequested;
         }
         if (_rootGrid is not null)
         {
@@ -507,6 +508,7 @@ public sealed class ChatPanel : Control
             _inputArea.MessageSent += OnMessageSent;
             _inputArea.PresetChanged += OnInputPresetChanged;
             _inputArea.ProfileChanged += OnInputProfileChanged;
+            _inputArea.StopRequested += OnStopRequested;
 
             // Push current values (may have been set before template was applied)
             if (AvailablePresets is { } presets)
@@ -963,6 +965,14 @@ public sealed class ChatPanel : Control
     }
 
     /// <summary>
+    /// Handles the stop button click from the input area to cancel the current streaming operation.
+    /// </summary>
+    private void OnStopRequested(object? sender, EventArgs e)
+    {
+        _streamingCts?.Cancel();
+    }
+
+    /// <summary>
     /// Handles the prompt preset changed event from the input area to update the system prompt.
     /// </summary>
     private void OnInputProfileChanged(object? sender, Profile profile)
@@ -1285,6 +1295,7 @@ public sealed class ChatPanel : Control
                 ["copied"] = loader.GetString("Chat_Copied"),
                 ["continue_label"] = loader.GetString("Chat_Continue"),
                 ["code"] = loader.GetString("Chat_Code"),
+                ["copyPrompt"] = loader.GetString("Chat_CopyPrompt"),
                 ["copyMessage"] = loader.GetString("Chat_CopyMessage"),
                 ["edit"] = loader.GetString("Chat_Edit"),
                 ["retry"] = loader.GetString("Chat_Retry"),

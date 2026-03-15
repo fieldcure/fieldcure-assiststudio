@@ -118,6 +118,16 @@ public sealed partial class InputContainer : Control
     private Button? _summarizeButton;
 
     /// <summary>
+    /// The button that sends the current message.
+    /// </summary>
+    private Button? _sendButton;
+
+    /// <summary>
+    /// The button that cancels the current streaming operation.
+    /// </summary>
+    private Button? _stopButton;
+
+    /// <summary>
     /// The combo box for selecting provider presets.
     /// </summary>
     private ComboBox? _presetComboBox;
@@ -227,6 +237,11 @@ public sealed partial class InputContainer : Control
     /// </summary>
     public event EventHandler? SummarizeRequested;
 
+    /// <summary>
+    /// Occurs when the user clicks the stop button to cancel the current streaming response.
+    /// </summary>
+    public event EventHandler? StopRequested;
+
     #endregion
 
     #region Overrides
@@ -241,11 +256,16 @@ public sealed partial class InputContainer : Control
         {
             _messageTextBox.PreviewKeyDown -= MessageTextBox_PreviewKeyDown;
             _messageTextBox.Paste -= MessageTextBox_Paste;
+            _messageTextBox.TextChanged -= MessageTextBox_TextChanged;
         }
         if (_attachButton is not null)
             _attachButton.Click -= AttachButton_Click;
         if (_summarizeButton is not null)
             _summarizeButton.Click -= SummarizeButton_Click;
+        if (_sendButton is not null)
+            _sendButton.Click -= SendButton_Click;
+        if (_stopButton is not null)
+            _stopButton.Click -= StopButton_Click;
         if (_presetComboBox is not null)
             _presetComboBox.SelectionChanged -= PresetComboBox_SelectionChanged;
         if (_profileComboBox is not null)
@@ -256,6 +276,8 @@ public sealed partial class InputContainer : Control
         _messageTextBox = GetTemplateChild("PART_MessageTextBox") as TextBox;
         _attachButton = GetTemplateChild("PART_AttachButton") as Button;
         _summarizeButton = GetTemplateChild("PART_SummarizeButton") as Button;
+        _sendButton = GetTemplateChild("PART_SendButton") as Button;
+        _stopButton = GetTemplateChild("PART_StopButton") as Button;
         _presetComboBox = GetTemplateChild("PART_PresetComboBox") as ComboBox;
         _profileComboBox = GetTemplateChild("PART_ProfileComboBox") as ComboBox;
         _containerBorder = GetTemplateChild("PART_ContainerBorder") as Border;
@@ -271,15 +293,39 @@ public sealed partial class InputContainer : Control
         {
             _messageTextBox.PreviewKeyDown += MessageTextBox_PreviewKeyDown;
             _messageTextBox.Paste += MessageTextBox_Paste;
+            _messageTextBox.TextChanged += MessageTextBox_TextChanged;
         }
         if (_attachButton is not null)
             _attachButton.Click += AttachButton_Click;
         if (_summarizeButton is not null)
             _summarizeButton.Click += SummarizeButton_Click;
+        if (_sendButton is not null)
+            _sendButton.Click += SendButton_Click;
+        if (_stopButton is not null)
+            _stopButton.Click += StopButton_Click;
         if (_presetComboBox is not null)
             _presetComboBox.SelectionChanged += PresetComboBox_SelectionChanged;
         if (_profileComboBox is not null)
             _profileComboBox.SelectionChanged += ProfileComboBox_SelectionChanged;
+
+        // Apply localized tooltips (x:Uid doesn't work in TemplatedControls from library assemblies)
+        try
+        {
+            var loader = new Windows.ApplicationModel.Resources.ResourceLoader(
+                "AssistStudio.Controls/Resources");
+            SetTooltip(_attachButton, loader.GetString("InputContainer_AttachTooltip"));
+            SetTooltip(_summarizeButton, loader.GetString("InputContainer_SummarizeTooltip"));
+            SetTooltip(_stopButton, loader.GetString("InputContainer_StopTooltip"));
+            SetTooltip(_sendButton, loader.GetString("InputContainer_SendTooltip"));
+        }
+        catch { /* Resource not found — tooltips will be empty */ }
+
+        // Update Send button when attachments change
+        if (_previewBar is not null)
+            _previewBar.Attachments.CollectionChanged += (_, _) => UpdateSendButtonState();
+
+        // Disable Send button until text is entered
+        UpdateSendButtonState();
 
         // Set up drag-drop on the control itself
         AllowDrop = true;
@@ -407,6 +453,30 @@ public sealed partial class InputContainer : Control
     }
 
     /// <summary>
+    /// Handles text changes in the message text box to update the Send button enabled state.
+    /// </summary>
+    private void MessageTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        UpdateSendButtonState();
+    }
+
+    /// <summary>
+    /// Handles the send button click to submit the current message.
+    /// </summary>
+    private void SendButton_Click(object sender, RoutedEventArgs e)
+    {
+        TrySend();
+    }
+
+    /// <summary>
+    /// Handles the stop button click to cancel the current streaming response.
+    /// </summary>
+    private void StopButton_Click(object sender, RoutedEventArgs e)
+    {
+        StopRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
     /// Handles the preset ComboBox selection change to propagate the new preset.
     /// </summary>
     private void PresetComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -523,6 +593,15 @@ public sealed partial class InputContainer : Control
                 self._attachButton.IsEnabled = enabled;
             if (self._summarizeButton is not null)
                 self._summarizeButton.IsEnabled = enabled;
+            // Toggle Send ↔ Stop button
+            if (self._sendButton is not null)
+                self._sendButton.Visibility = enabled
+                    ? Microsoft.UI.Xaml.Visibility.Visible
+                    : Microsoft.UI.Xaml.Visibility.Collapsed;
+            if (self._stopButton is not null)
+                self._stopButton.Visibility = enabled
+                    ? Microsoft.UI.Xaml.Visibility.Collapsed
+                    : Microsoft.UI.Xaml.Visibility.Visible;
         }
     }
 
@@ -573,6 +652,28 @@ public sealed partial class InputContainer : Control
     #endregion
 
     #region Private Methods
+
+    /// <summary>
+    /// Sets a tooltip on a button with placement below the control.
+    /// </summary>
+    /// <summary>
+    /// Updates the Send button enabled state based on whether the message text box has content
+    /// or attachments are present.
+    /// </summary>
+    private void UpdateSendButtonState()
+    {
+        if (_sendButton is null) return;
+        var hasText = !string.IsNullOrWhiteSpace(_messageTextBox?.Text);
+        var hasAttachments = _previewBar?.Attachments.Count > 0;
+        _sendButton.IsEnabled = hasText || hasAttachments == true;
+    }
+
+    private static void SetTooltip(Button? button, string? text)
+    {
+        if (button is null || string.IsNullOrEmpty(text)) return;
+        var tooltip = new ToolTip { Content = text, Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse };
+        ToolTipService.SetToolTip(button, tooltip);
+    }
 
     /// <summary>
     /// Sends the current message text and attachments, then clears the input area.

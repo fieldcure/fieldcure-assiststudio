@@ -105,6 +105,21 @@
                                               BorderThickness="0"
                                               Background="Transparent"
                                               Padding="8,4" />
+                                    <!-- Send button (visible when idle) -->
+                                    <Button x:Name="PART_SendButton"
+                                            Style="{StaticResource SubtleButtonStyle}"
+                                            VerticalAlignment="Center"
+                                            Padding="6">
+                                        <FontIcon Glyph="&#xE724;" FontSize="16" />
+                                    </Button>
+                                    <!-- Stop button (visible when streaming) -->
+                                    <Button x:Name="PART_StopButton"
+                                            Style="{StaticResource SubtleButtonStyle}"
+                                            VerticalAlignment="Center"
+                                            Padding="6"
+                                            Visibility="Collapsed">
+                                        <FontIcon Glyph="&#xE71A;" FontSize="16" />
+                                    </Button>
                                 </StackPanel>
                             </Grid>
                         </Grid>

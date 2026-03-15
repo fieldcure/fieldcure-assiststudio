@@ -51,6 +51,9 @@
   <data name="Chat_Code" xml:space="preserve">
     <value>&#xCF54;&#xB4DC;</value>
   </data>
+  <data name="Chat_CopyPrompt" xml:space="preserve">
+    <value>프롬프트 복사</value>
+  </data>
   <data name="Chat_CopyMessage" xml:space="preserve">
     <value>답변 복사</value>
   </data>
@@ -86,5 +89,20 @@
   </data>
   <data name="InputContainer_Summarize.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>대화 요약</value>
+  </data>
+  <data name="InputContainer_Stop.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>생성 중지</value>
+  </data>
+  <data name="InputContainer_AttachTooltip" xml:space="preserve">
+    <value>파일 첨부</value>
+  </data>
+  <data name="InputContainer_SummarizeTooltip" xml:space="preserve">
+    <value>대화 요약</value>
+  </data>
+  <data name="InputContainer_StopTooltip" xml:space="preserve">
+    <value>생성 중지</value>
+  </data>
+  <data name="InputContainer_SendTooltip" xml:space="preserve">
+    <value>메시지 전송</value>
   </data>
 </root>
