@@ -57,7 +57,18 @@
                                      MinHeight="32"
                                      BorderThickness="0"
                                      Background="Transparent"
-                                     PlaceholderText="{TemplateBinding Placeholder}" />
+                                     PlaceholderText="{TemplateBinding Placeholder}">
+                                <TextBox.Resources>
+                                    <SolidColorBrush x:Key="TextControlBackground" Color="Transparent" />
+                                    <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="Transparent" />
+                                    <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="Transparent" />
+                                    <SolidColorBrush x:Key="TextControlBorderBrush" Color="Transparent" />
+                                    <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="Transparent" />
+                                    <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="Transparent" />
+                                    <Thickness x:Key="TextControlBorderThemeThickness">0</Thickness>
+                                    <Thickness x:Key="TextControlBorderThemeThicknessFocused">0</Thickness>
+                                </TextBox.Resources>
+                            </TextBox>
 
                             <!-- Row 2: Toolbar -->
                             <Grid Grid.Row="2">

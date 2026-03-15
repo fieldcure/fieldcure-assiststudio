@@ -20,7 +20,8 @@
                OpenPaneLength="420"
                DisplayMode="Overlay"
                PaneBackground="{ThemeResource SolidBackgroundFillColorBaseBrush}"
-               PanePlacement="Right">
+               PanePlacement="Right"
+               KeyboardAcceleratorPlacementMode="Hidden">
 
         <!-- Settings Pane -->
         <SplitView.Pane>

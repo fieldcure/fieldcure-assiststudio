@@ -97,6 +97,13 @@ public sealed class AttachmentPreviewBar : Control
     /// </summary>
     private void OnAttachmentsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
+        // Ensure template is applied (may be deferred when control starts Collapsed)
+        if (_itemsPanel is null)
+        {
+            ApplyTemplate();
+            _itemsPanel = GetTemplateChild("PART_ItemsPanel") as StackPanel;
+        }
+
         if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems is not null)
         {
             foreach (ChatAttachment item in e.NewItems)
