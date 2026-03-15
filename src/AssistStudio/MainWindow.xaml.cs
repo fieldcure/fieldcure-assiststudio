@@ -1,8 +1,7 @@
-using AssistStudio.Dialogs;
-using FieldCure.AssistStudio.Helpers;
-using FieldCure.AssistStudio.Models;
+﻿using AssistStudio.Dialogs;
 using AssistStudio.Modules.Helpers;
 using AssistStudio.Modules.ViewModels;
+using FieldCure.AssistStudio.Helpers;
 using Microsoft.UI;
 using Microsoft.UI.Input;
 using Microsoft.UI.Windowing;

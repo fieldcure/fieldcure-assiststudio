@@ -1,8 +1,7 @@
+﻿using FieldCure.AssistStudio.Helpers;
 using FieldCure.AssistStudio.Providers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-
-using FieldCure.AssistStudio.Helpers;
 
 namespace AssistStudio.Dialogs;
 

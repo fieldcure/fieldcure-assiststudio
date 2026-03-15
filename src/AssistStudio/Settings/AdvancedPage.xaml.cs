@@ -1,7 +1,7 @@
+﻿using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Navigation;
 using System.Globalization;
 using Windows.Globalization;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Navigation;
 
 namespace AssistStudio.Settings;
 

@@ -1,5 +1,5 @@
+﻿using AssistStudio.Modules.Helpers;
 using FieldCure.AssistStudio.Models;
-using AssistStudio.Modules.Helpers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Data;

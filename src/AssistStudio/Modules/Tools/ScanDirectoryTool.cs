@@ -1,5 +1,5 @@
+﻿using FieldCure.AssistStudio.Models;
 using System.Text.Json;
-using FieldCure.AssistStudio.Models;
 
 namespace AssistStudio.Modules.Tools;
 

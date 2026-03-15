@@ -1,7 +1,6 @@
-using FieldCure.AssistStudio.Helpers;
+﻿using FieldCure.AssistStudio.Helpers;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
-
 
 namespace AssistStudio.Settings;
 

@@ -1,12 +1,12 @@
-using System.Collections;
+﻿using AssistStudio.Modules.Helpers;
+using AssistStudio.Modules.Tools;
 using CommunityToolkit.Mvvm.ComponentModel;
 using FieldCure.AssistStudio.Controls;
 using FieldCure.AssistStudio.Models;
 using FieldCure.AssistStudio.Providers;
-using AssistStudio.Modules.Helpers;
-using AssistStudio.Modules.Tools;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using System.Collections;
 
 namespace AssistStudio.Modules.ViewModels;
 
