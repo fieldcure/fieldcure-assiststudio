@@ -49,7 +49,7 @@ public class MockProvider : IAiProvider
         {
             public static void Main(string[] args)
             {
-                Console.WriteLine("Hello, FluentView.AI!");
+                Console.WriteLine("Hello, AssistStudio!");
             }
         }
         ```

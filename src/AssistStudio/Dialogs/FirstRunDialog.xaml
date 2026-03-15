@@ -3,7 +3,7 @@
     x:Class="AssistStudio.Dialogs.FirstRunDialog"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Title="Welcome to FluentView.AI"
+    Title="Welcome to AssistStudio"
     CloseButtonText="Skip"
     DefaultButton="Primary">
 
