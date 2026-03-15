@@ -19,5 +19,8 @@ public partial class AiRequest
     /// <summary>Maximum number of tokens the model can generate in the response. Default is 4096.</summary>
     public int MaxTokens { get; init; } = 4096;
 
+    /// <summary>Optional list of tools available for the AI model to invoke.</summary>
+    public IReadOnlyList<IAssistTool>? Tools { get; init; }
+
     #endregion
 }

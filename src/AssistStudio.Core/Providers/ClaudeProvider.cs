@@ -90,7 +90,7 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
     #region IAiProvider Implementation
 
     /// <inheritdoc/>
-    public async Task<string> CompleteAsync(AiRequest request, CancellationToken ct = default)
+    public async Task<AiResponse> CompleteAsync(AiRequest request, CancellationToken ct = default)
     {
         var body = BuildRequestBody(request, stream: false);
         LastRequestBody = body;
@@ -100,20 +100,29 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
         LastRawResponse = json;
         using var doc = JsonDocument.Parse(json);
 
+        TokenUsage? tokenUsage = null;
         if (doc.RootElement.TryGetProperty("usage", out var usage))
         {
-            LastUsage = new TokenUsage(
+            tokenUsage = new TokenUsage(
                 usage.GetProperty("input_tokens").GetInt32(),
                 usage.GetProperty("output_tokens").GetInt32());
+            LastUsage = tokenUsage;
         }
 
         IsTruncated = doc.RootElement.TryGetProperty("stop_reason", out var sr) &&
                       sr.GetString() == "max_tokens";
 
-        return doc.RootElement
+        var content = doc.RootElement
             .GetProperty("content")[0]
             .GetProperty("text")
             .GetString() ?? "";
+
+        return new AiResponse
+        {
+            Content = content,
+            Usage = tokenUsage,
+            IsTruncated = IsTruncated
+        };
     }
 
     /// <inheritdoc/>
@@ -243,6 +252,9 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
                 systemPrompt ??= msg.Content;
                 continue;
             }
+
+            // Skip tool messages until Claude tool calling is implemented
+            if (msg.Role == ChatRole.Tool) continue;
 
             var role = msg.Role == ChatRole.User ? "user" : "assistant";
             var imageAttachments = msg.Attachments

@@ -81,6 +81,8 @@ public static class ConversationManager
                 ProviderName = m.ProviderName,
                 ProviderModelId = m.ProviderModelId,
                 Timestamp = m.Timestamp,
+                ToolCalls = m.ToolCalls,
+                ToolCallId = m.ToolCallId,
             }).ToList(),
         };
 
@@ -241,6 +243,12 @@ public class SavedMessage
 
     /// <summary>The UTC timestamp when the message was created.</summary>
     public DateTime Timestamp { get; set; }
+
+    /// <summary>Tool calls requested by the assistant in this message.</summary>
+    public IReadOnlyList<ToolCall>? ToolCalls { get; set; }
+
+    /// <summary>The ID of the tool call this message is a result for (tool role messages only).</summary>
+    public string? ToolCallId { get; set; }
 
     #endregion
 }

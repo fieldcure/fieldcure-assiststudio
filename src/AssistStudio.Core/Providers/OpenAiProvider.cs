@@ -88,7 +88,7 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
     #region IAiProvider Implementation
 
     /// <inheritdoc/>
-    public async Task<string> CompleteAsync(AiRequest request, CancellationToken ct = default)
+    public async Task<AiResponse> CompleteAsync(AiRequest request, CancellationToken ct = default)
     {
         var body = BuildRequestBody(request, stream: false);
         LastRequestBody = body;
@@ -98,21 +98,30 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
         LastRawResponse = json;
         using var doc = JsonDocument.Parse(json);
 
+        TokenUsage? tokenUsage = null;
         if (doc.RootElement.TryGetProperty("usage", out var usage))
         {
-            LastUsage = new TokenUsage(
+            tokenUsage = new TokenUsage(
                 usage.GetProperty("prompt_tokens").GetInt32(),
                 usage.GetProperty("completion_tokens").GetInt32());
+            LastUsage = tokenUsage;
         }
 
         var firstChoice = doc.RootElement.GetProperty("choices")[0];
         IsTruncated = firstChoice.TryGetProperty("finish_reason", out var fr) &&
                       fr.GetString() == "length";
 
-        return firstChoice
+        var content = firstChoice
             .GetProperty("message")
             .GetProperty("content")
             .GetString() ?? "";
+
+        return new AiResponse
+        {
+            Content = content,
+            Usage = tokenUsage,
+            IsTruncated = IsTruncated
+        };
     }
 
     /// <inheritdoc/>
@@ -249,6 +258,7 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
                 ChatRole.User => "user",
                 ChatRole.Assistant => "assistant",
                 ChatRole.System => "system",
+                ChatRole.Tool => "tool",
                 _ => "user"
             };
 

@@ -87,7 +87,7 @@ public partial class GeminiProvider : IAiProvider, IDisposable
     #region IAiProvider Implementation
 
     /// <inheritdoc/>
-    public async Task<string> CompleteAsync(AiRequest request, CancellationToken ct = default)
+    public async Task<AiResponse> CompleteAsync(AiRequest request, CancellationToken ct = default)
     {
         var body = BuildRequestBody(request);
         LastRequestBody = body;
@@ -98,22 +98,31 @@ public partial class GeminiProvider : IAiProvider, IDisposable
         LastRawResponse = json;
         using var doc = JsonDocument.Parse(json);
 
+        TokenUsage? tokenUsage = null;
         if (doc.RootElement.TryGetProperty("usageMetadata", out var usage))
         {
             var input = usage.TryGetProperty("promptTokenCount", out var pEl) ? pEl.GetInt32() : 0;
             var output = usage.TryGetProperty("candidatesTokenCount", out var cEl) ? cEl.GetInt32() : 0;
-            LastUsage = new TokenUsage(input, output);
+            tokenUsage = new TokenUsage(input, output);
+            LastUsage = tokenUsage;
         }
 
         var firstCandidate = doc.RootElement.GetProperty("candidates")[0];
         IsTruncated = firstCandidate.TryGetProperty("finishReason", out var frEl) &&
                       frEl.GetString() == "MAX_TOKENS";
 
-        return firstCandidate
+        var content = firstCandidate
             .GetProperty("content")
             .GetProperty("parts")[0]
             .GetProperty("text")
             .GetString() ?? "";
+
+        return new AiResponse
+        {
+            Content = content,
+            Usage = tokenUsage,
+            IsTruncated = IsTruncated
+        };
     }
 
     /// <inheritdoc/>
@@ -237,6 +246,9 @@ public partial class GeminiProvider : IAiProvider, IDisposable
                 systemText ??= msg.Content;
                 continue;
             }
+
+            // Skip tool messages until Gemini tool calling is implemented
+            if (msg.Role == ChatRole.Tool) continue;
 
             var role = msg.Role == ChatRole.User ? "user" : "model";
             var parts = new JsonArray();

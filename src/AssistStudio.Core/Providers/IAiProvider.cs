@@ -31,8 +31,8 @@ public interface IAiProvider
 
     #region Methods
 
-    /// <summary>Sends a chat completion request and returns the full response text.</summary>
-    Task<string> CompleteAsync(AiRequest request, CancellationToken ct = default);
+    /// <summary>Sends a chat completion request and returns a structured response that may contain text, tool calls, or both.</summary>
+    Task<AiResponse> CompleteAsync(AiRequest request, CancellationToken ct = default);
 
     /// <summary>Sends a chat completion request and streams response tokens as they arrive.</summary>
     IAsyncEnumerable<string> StreamAsync(AiRequest request, CancellationToken ct = default);

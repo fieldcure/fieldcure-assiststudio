@@ -15,7 +15,10 @@ public enum ChatRole
     Assistant,
 
     /// <summary>A system-level instruction that guides the assistant's behavior.</summary>
-    System
+    System,
+
+    /// <summary>A tool result message containing the output of a tool invocation.</summary>
+    Tool
 }
 
 /// <summary>
@@ -86,6 +89,16 @@ public partial class ChatMessage : INotifyPropertyChanged
     /// Model ID used to generate this message (e.g., "claude-sonnet-4-20250514").
     /// </summary>
     public string? ProviderModelId { get; init; }
+
+    /// <summary>
+    /// Tool calls requested by the assistant in this message. Only set for <see cref="ChatRole.Assistant"/> messages.
+    /// </summary>
+    public IReadOnlyList<ToolCall>? ToolCalls { get; init; }
+
+    /// <summary>
+    /// The ID of the tool call this message is a result for. Only set for <see cref="ChatRole.Tool"/> messages.
+    /// </summary>
+    public string? ToolCallId { get; init; }
 
     #endregion
 

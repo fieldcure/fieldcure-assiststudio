@@ -80,7 +80,7 @@ public partial class OllamaProvider : IAiProvider, IDisposable
     #region IAiProvider Implementation
 
     /// <inheritdoc/>
-    public async Task<string> CompleteAsync(AiRequest request, CancellationToken ct = default)
+    public async Task<AiResponse> CompleteAsync(AiRequest request, CancellationToken ct = default)
     {
         var body = BuildRequestBody(request, stream: false);
         LastRequestBody = body;
@@ -91,19 +91,45 @@ public partial class OllamaProvider : IAiProvider, IDisposable
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
 
+        TokenUsage? usage = null;
         if (root.TryGetProperty("prompt_eval_count", out var promptEl) &&
             root.TryGetProperty("eval_count", out var evalEl))
         {
-            LastUsage = new TokenUsage(promptEl.GetInt32(), evalEl.GetInt32());
+            usage = new TokenUsage(promptEl.GetInt32(), evalEl.GetInt32());
+            LastUsage = usage;
         }
 
         IsTruncated = root.TryGetProperty("done_reason", out var drEl) &&
                       drEl.GetString() == "length";
 
-        return root
-            .GetProperty("message")
-            .GetProperty("content")
-            .GetString() ?? "";
+        var message = root.GetProperty("message");
+        var content = message.TryGetProperty("content", out var contentEl)
+            ? contentEl.GetString()
+            : null;
+
+        // Parse tool calls from the response
+        var toolCalls = new List<ToolCall>();
+        if (message.TryGetProperty("tool_calls", out var toolCallsEl))
+        {
+            foreach (var tc in toolCallsEl.EnumerateArray())
+            {
+                var function = tc.GetProperty("function");
+                toolCalls.Add(new ToolCall
+                {
+                    Id = Guid.NewGuid().ToString("N"),
+                    FunctionName = function.GetProperty("name").GetString()!,
+                    Arguments = function.GetProperty("arguments").GetRawText()
+                });
+            }
+        }
+
+        return new AiResponse
+        {
+            Content = content,
+            ToolCalls = toolCalls,
+            Usage = usage,
+            IsTruncated = IsTruncated
+        };
     }
 
     /// <inheritdoc/>
@@ -219,6 +245,7 @@ public partial class OllamaProvider : IAiProvider, IDisposable
                 ChatRole.User => "user",
                 ChatRole.Assistant => "assistant",
                 ChatRole.System => "system",
+                ChatRole.Tool => "tool",
                 _ => "user"
             };
 
@@ -242,6 +269,24 @@ public partial class OllamaProvider : IAiProvider, IDisposable
                 ["role"] = role,
                 ["content"] = textContent
             };
+
+            // Include tool_calls on assistant messages that initiated tool calls
+            if (msg.Role == ChatRole.Assistant && msg.ToolCalls is { Count: > 0 })
+            {
+                var toolCallsArr = new JsonArray();
+                foreach (var tc in msg.ToolCalls)
+                {
+                    toolCallsArr.Add(new JsonObject
+                    {
+                        ["function"] = new JsonObject
+                        {
+                            ["name"] = tc.FunctionName,
+                            ["arguments"] = JsonNode.Parse(tc.Arguments)
+                        }
+                    });
+                }
+                msgObj["tool_calls"] = toolCallsArr;
+            }
 
             // Ollama uses "images" field for base64 image data
             if (imageAttachments.Count > 0)
@@ -268,6 +313,26 @@ public partial class OllamaProvider : IAiProvider, IDisposable
                 ["num_predict"] = request.MaxTokens
             }
         };
+
+        // Add tool definitions when available
+        if (request.Tools is { Count: > 0 })
+        {
+            var tools = new JsonArray();
+            foreach (var tool in request.Tools)
+            {
+                tools.Add(new JsonObject
+                {
+                    ["type"] = "function",
+                    ["function"] = new JsonObject
+                    {
+                        ["name"] = tool.Name,
+                        ["description"] = tool.Description,
+                        ["parameters"] = JsonNode.Parse(tool.ParameterSchema)
+                    }
+                });
+            }
+            body["tools"] = tools;
+        }
 
         return body.ToJsonString();
     }

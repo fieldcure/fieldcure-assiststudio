@@ -86,10 +86,10 @@ public class MockProvider : IAiProvider
     #region IAiProvider Implementation
 
     /// <inheritdoc/>
-    public async Task<string> CompleteAsync(AiRequest request, CancellationToken ct = default)
+    public async Task<AiResponse> CompleteAsync(AiRequest request, CancellationToken ct = default)
     {
         await Task.Delay(100, ct);
-        return MarkdownResponse;
+        return new AiResponse { Content = MarkdownResponse };
     }
 
     /// <inheritdoc/>

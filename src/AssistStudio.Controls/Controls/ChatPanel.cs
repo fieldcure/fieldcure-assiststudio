@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.ObjectModel;
+using FieldCure.AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
 using FieldCure.AssistStudio.Providers;
 using FieldCure.AssistStudio.Rendering;
@@ -306,6 +307,17 @@ public sealed class ChatPanel : Control
     /// Enable automatic title generation after the first assistant response.
     /// </summary>
     public bool AutoTitle { get; set; } = false;
+
+    /// <summary>
+    /// Registered tools available for AI tool calling. When non-empty, the provider uses
+    /// CompleteAsync (non-streaming) to enable tool call responses.
+    /// </summary>
+    public IReadOnlyList<IAssistTool> RegisteredTools { get; set; } = [];
+
+    /// <summary>
+    /// Maximum number of consecutive tool call rounds before forcing a text response. Default is 10.
+    /// </summary>
+    public int MaxToolCallRounds { get; set; } = 10;
 
     /// <summary>
     /// Gets or sets the AI provider used for streaming chat responses.
@@ -683,15 +695,24 @@ public sealed class ChatPanel : Control
 
         try
         {
-            var request = CreateRequest(_messages.ToList());
-
-            await foreach (var token in Provider.StreamAsync(request, ct))
+            if (RegisteredTools.Count > 0)
             {
-                assistantMessage.Content += token;
-                await _renderer.AppendTokenAsync(assistantMessage.Id, token);
+                // Tool calling mode: use CompleteAsync (non-streaming) to support tool calls
+                await ExecuteWithToolCallingAsync(assistantMessage, userMessage, ct);
             }
+            else
+            {
+                // Standard streaming mode
+                var request = CreateRequest(_messages.ToList());
 
-            await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content, Provider.IsTruncated, Provider.LastUsage?.TotalTokens ?? 0);
+                await foreach (var token in Provider.StreamAsync(request, ct))
+                {
+                    assistantMessage.Content += token;
+                    await _renderer.AppendTokenAsync(assistantMessage.Id, token);
+                }
+
+                await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content, Provider.IsTruncated, Provider.LastUsage?.TotalTokens ?? 0);
+            }
 
             if (IsDebugMode)
                 await _renderer.SetDebugDataAsync(userMessage.Id, Provider.LastRequestBody, assistantMessage.Id, Provider.LastRawResponse);
@@ -1033,7 +1054,7 @@ public sealed class ChatPanel : Control
 
         try
         {
-            var summary = await Provider.CompleteAsync(summaryRequest, ct);
+            var summary = (await Provider.CompleteAsync(summaryRequest, ct)).Content ?? "";
 
             // Replace old messages with a summary system message
             for (var i = 0; i < oldMessages.Count; i++)
@@ -1204,8 +1225,8 @@ public sealed class ChatPanel : Control
                 MaxTokens = 200
             };
 
-            var title = await provider.CompleteAsync(titleRequest);
-            title = title.Trim().Trim('"', '\'', '.').Trim();
+            var titleResponse = await provider.CompleteAsync(titleRequest);
+            var title = (titleResponse.Content ?? "").Trim().Trim('"', '\'', '.').Trim();
             if (string.IsNullOrEmpty(title))
             {
                 title = userMsg.Content.Length > 40
@@ -1282,6 +1303,69 @@ public sealed class ChatPanel : Control
     }
 
     /// <summary>
+    /// Executes a tool calling loop: sends CompleteAsync, processes tool calls, re-sends with results,
+    /// repeating until the AI returns a text-only response or max rounds are reached.
+    /// </summary>
+    private async Task ExecuteWithToolCallingAsync(ChatMessage assistantMessage, ChatMessage userMessage, CancellationToken ct)
+    {
+        var executor = new ToolCallExecutor(RegisteredTools);
+        var request = CreateRequest(_messages.ToList());
+
+        var response = await Provider!.CompleteAsync(request, ct);
+        var round = 0;
+
+        while (response.HasToolCalls && round < MaxToolCallRounds)
+        {
+            round++;
+
+            // Add the assistant's tool call message to history (once per round)
+            var toolCallMsg = new ChatMessage(ChatRole.Assistant)
+            {
+                ToolCalls = response.ToolCalls,
+                ProviderName = Provider.ProviderName,
+                ProviderModelId = Provider.ModelId
+            };
+            if (!string.IsNullOrEmpty(response.Content))
+                toolCallMsg.Content = response.Content;
+            _messages.Add(toolCallMsg);
+
+            // Execute each tool call and add results
+            foreach (var call in response.ToolCalls)
+            {
+                string result;
+                try
+                {
+                    result = await executor.ExecuteAsync(call, ct);
+                }
+                catch (Exception ex)
+                {
+                    result = $"{{\"error\":\"{ex.Message}\"}}";
+                }
+
+                // Add tool result message to history
+                var toolResultMsg = new ChatMessage(ChatRole.Tool, result) { ToolCallId = call.Id };
+                _messages.Add(toolResultMsg);
+
+                // Show tool activity in the UI
+                var toolStatus = $"[Tool: {call.FunctionName}]\n";
+                assistantMessage.Content += toolStatus;
+                await _renderer.AppendTokenAsync(assistantMessage.Id, toolStatus);
+            }
+
+            // Re-send with tool results
+            request = CreateRequest(_messages.ToList());
+            response = await Provider.CompleteAsync(request, ct);
+        }
+
+        // Display final text response
+        var finalText = response.Content ?? "";
+        assistantMessage.Content += finalText;
+        await _renderer.AppendTokenAsync(assistantMessage.Id, finalText);
+        await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content,
+            response.IsTruncated, response.Usage?.TotalTokens ?? 0);
+    }
+
+    /// <summary>
     /// Builds an <see cref="AiRequest"/> from the current messages and selected preset settings.
     /// </summary>
     private AiRequest CreateRequest(IReadOnlyList<ChatMessage> messages, string? systemPrompt = null)
@@ -1292,7 +1376,8 @@ public sealed class ChatPanel : Control
             Messages = messages,
             SystemPrompt = systemPrompt ?? SystemPrompt,
             Temperature = preset?.Temperature ?? 0.7,
-            MaxTokens = preset?.MaxTokens ?? 4096
+            MaxTokens = preset?.MaxTokens ?? 4096,
+            Tools = RegisteredTools.Count > 0 ? RegisteredTools : null
         };
     }
 
