@@ -378,7 +378,7 @@ public static class AppSettings
         {
             Name = "Ollama",
             ProviderType = "Ollama",
-            ModelId = ollamaModel ?? "llama3.2",
+            ModelId = ollamaModel ?? "llama3.1",
         });
 
         // Mock

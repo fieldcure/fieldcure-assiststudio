@@ -212,7 +212,10 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// </summary>
     public void ApplyPresets(IList presets)
     {
-        var currentName = ChatPanel.SelectedPreset?.Name;
+        var currentName = CurrentPreset?.Name;
+        var currentModelId = CurrentPreset?.ModelId;
+        var currentApiKey = CurrentPreset?.ApiKey;
+        var currentBaseUrl = CurrentPreset?.BaseUrl;
         ChatPanel.AvailablePresets = presets;
 
         if (currentName is not null)
@@ -222,6 +225,14 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                 if (p.Name == currentName)
                 {
                     ChatPanel.SelectedPreset = p;
+
+                    // Recreate provider if connection-relevant fields changed
+                    if (p.ModelId != currentModelId ||
+                        p.ApiKey != currentApiKey ||
+                        p.BaseUrl != currentBaseUrl)
+                    {
+                        OnPresetChanged(this, p);
+                    }
                     break;
                 }
             }

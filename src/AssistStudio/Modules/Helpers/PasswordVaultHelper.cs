@@ -10,7 +10,7 @@ internal static class PasswordVaultHelper
     #region Constants
 
     /// <summary>The resource name used to identify credentials in the Windows PasswordVault.</summary>
-    private const string ResourceName = "FieldCure.AssistStudio";
+    private const string ResourceName = "FieldLab.AssistStudio";
 
     #endregion
 
