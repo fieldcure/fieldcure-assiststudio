@@ -51,6 +51,9 @@ public partial class GeminiProvider : IAiProvider, IDisposable
     /// <inheritdoc/>
     public string? LastRawResponse { get; private set; }
 
+    /// <inheritdoc/>
+    public PdfCapability PdfCapability => PdfCapability.NativePdf;
+
     #endregion
 
     #region Constructors
@@ -259,6 +262,9 @@ public partial class GeminiProvider : IAiProvider, IDisposable
             var textAttachments = msg.Attachments
                 .Where(a => a.Type == AttachmentType.TextFile)
                 .ToList();
+            var documentAttachments = msg.Attachments
+                .Where(a => a.Type == AttachmentType.Document)
+                .ToList();
 
             // Add image parts (inlineData)
             foreach (var att in imageAttachments)
@@ -268,6 +274,19 @@ public partial class GeminiProvider : IAiProvider, IDisposable
                     ["inlineData"] = new JsonObject
                     {
                         ["mimeType"] = att.MimeType ?? "image/png",
+                        ["data"] = Convert.ToBase64String(att.Data)
+                    }
+                });
+            }
+
+            // Add native PDF document parts (inlineData)
+            foreach (var att in documentAttachments)
+            {
+                parts.Add(new JsonObject
+                {
+                    ["inlineData"] = new JsonObject
+                    {
+                        ["mimeType"] = att.MimeType ?? "application/pdf",
                         ["data"] = Convert.ToBase64String(att.Data)
                     }
                 });

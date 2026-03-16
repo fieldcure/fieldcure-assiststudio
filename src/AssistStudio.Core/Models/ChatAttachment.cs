@@ -11,8 +11,20 @@ public enum AttachmentType
     /// <summary>A plain text file whose contents are appended to the message.</summary>
     TextFile,
 
-    /// <summary>A document attachment for future multimodal support (e.g., PDF Vision).</summary>
+    /// <summary>A document attachment for multimodal support (e.g., native PDF).</summary>
     Document
+}
+
+/// <summary>
+/// Specifies how a provider handles PDF document attachments.
+/// </summary>
+public enum PdfCapability
+{
+    /// <summary>PDF is text-extracted client-side and sent as plain text.</summary>
+    TextExtraction,
+
+    /// <summary>PDF raw bytes are sent natively to the provider API.</summary>
+    NativePdf
 }
 
 /// <summary>

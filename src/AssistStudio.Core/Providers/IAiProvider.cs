@@ -27,6 +27,9 @@ public interface IAiProvider
     /// <summary>The raw response body received from the most recent API call, for debugging purposes.</summary>
     string? LastRawResponse { get; }
 
+    /// <summary>Declares how this provider handles PDF document attachments.</summary>
+    PdfCapability PdfCapability { get; }
+
     #endregion
 
     #region Methods

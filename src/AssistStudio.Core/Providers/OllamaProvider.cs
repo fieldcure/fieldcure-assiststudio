@@ -44,6 +44,9 @@ public partial class OllamaProvider : IAiProvider, IDisposable
     /// <inheritdoc/>
     public string? LastRawResponse { get; private set; }
 
+    /// <inheritdoc/>
+    public PdfCapability PdfCapability => PdfCapability.TextExtraction;
+
     #endregion
 
     #region Constructors
@@ -255,6 +258,9 @@ public partial class OllamaProvider : IAiProvider, IDisposable
             var textAttachments = msg.Attachments
                 .Where(a => a.Type == AttachmentType.TextFile)
                 .ToList();
+            var documentAttachments = msg.Attachments
+                .Where(a => a.Type == AttachmentType.Document)
+                .ToList();
 
             // Append text file contents inline
             var textContent = msg.Content;
@@ -262,6 +268,13 @@ public partial class OllamaProvider : IAiProvider, IDisposable
             {
                 var fileText = Encoding.UTF8.GetString(att.Data);
                 textContent += $"\n\n[File: {att.FileName}]\n{fileText}";
+            }
+
+            // Document attachments: text extraction fallback (Ollama has no native PDF support)
+            foreach (var att in documentAttachments)
+            {
+                var pdfText = Helpers.AttachmentProcessor.ExtractTextFromPdf(att.Data);
+                textContent += $"\n\n[File: {att.FileName}]\n{pdfText}";
             }
 
             var msgObj = new JsonObject

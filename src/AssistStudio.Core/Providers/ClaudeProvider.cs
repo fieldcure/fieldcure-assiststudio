@@ -54,6 +54,9 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
     /// <inheritdoc/>
     public string? LastRawResponse { get; private set; }
 
+    /// <inheritdoc/>
+    public PdfCapability PdfCapability => PdfCapability.NativePdf;
+
     #endregion
 
     #region Constructors
@@ -263,10 +266,13 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
             var textAttachments = msg.Attachments
                 .Where(a => a.Type == AttachmentType.TextFile)
                 .ToList();
+            var documentAttachments = msg.Attachments
+                .Where(a => a.Type == AttachmentType.Document)
+                .ToList();
 
-            if (imageAttachments.Count > 0)
+            if (imageAttachments.Count > 0 || documentAttachments.Count > 0)
             {
-                // Use multi-part content for messages with images
+                // Use multi-part content for messages with images or documents
                 var contentParts = new JsonArray();
 
                 foreach (var att in imageAttachments)
@@ -278,6 +284,21 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
                         {
                             ["type"] = "base64",
                             ["media_type"] = att.MimeType ?? "image/png",
+                            ["data"] = Convert.ToBase64String(att.Data)
+                        }
+                    });
+                }
+
+                // Native PDF documents
+                foreach (var att in documentAttachments)
+                {
+                    contentParts.Add(new JsonObject
+                    {
+                        ["type"] = "document",
+                        ["source"] = new JsonObject
+                        {
+                            ["type"] = "base64",
+                            ["media_type"] = att.MimeType ?? "application/pdf",
                             ["data"] = Convert.ToBase64String(att.Data)
                         }
                     });

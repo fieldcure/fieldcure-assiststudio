@@ -25,6 +25,9 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
     /// <summary>Whether this instance owns (and should dispose) the HTTP client.</summary>
     private readonly bool _ownsHttpClient;
 
+    /// <summary>How this instance handles PDF document attachments.</summary>
+    private readonly PdfCapability _pdfCapability;
+
     #endregion
 
     #region Properties
@@ -47,6 +50,9 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
     /// <inheritdoc/>
     public string? LastRawResponse { get; private set; }
 
+    /// <inheritdoc/>
+    public PdfCapability PdfCapability => _pdfCapability;
+
     #endregion
 
     #region Constructors
@@ -55,8 +61,9 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
     /// Initializes a new <see cref="OpenAiProvider"/> with an internally managed <see cref="HttpClient"/>.
     /// </summary>
     public OpenAiProvider(string apiKey, string model = "gpt-4o",
-        string baseUrl = "https://api.openai.com/v1", string providerName = "OpenAI")
-        : this(new HttpClient(), apiKey, model, baseUrl, providerName, ownsHttpClient: true)
+        string baseUrl = "https://api.openai.com/v1", string providerName = "OpenAI",
+        PdfCapability pdfCapability = PdfCapability.NativePdf)
+        : this(new HttpClient(), apiKey, model, baseUrl, providerName, ownsHttpClient: true, pdfCapability)
     {
     }
 
@@ -64,8 +71,9 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
     /// Initializes a new <see cref="OpenAiProvider"/> with an externally managed <see cref="HttpClient"/>.
     /// </summary>
     public OpenAiProvider(HttpClient httpClient, string apiKey, string model = "gpt-4o",
-        string baseUrl = "https://api.openai.com/v1", string providerName = "OpenAI")
-        : this(httpClient, apiKey, model, baseUrl, providerName, ownsHttpClient: false)
+        string baseUrl = "https://api.openai.com/v1", string providerName = "OpenAI",
+        PdfCapability pdfCapability = PdfCapability.NativePdf)
+        : this(httpClient, apiKey, model, baseUrl, providerName, ownsHttpClient: false, pdfCapability)
     {
     }
 
@@ -73,12 +81,13 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
     /// Internal constructor that captures all dependencies.
     /// </summary>
     private OpenAiProvider(HttpClient httpClient, string apiKey, string model,
-        string baseUrl, string providerName, bool ownsHttpClient)
+        string baseUrl, string providerName, bool ownsHttpClient, PdfCapability pdfCapability)
     {
         _httpClient = httpClient;
         _apiKey = apiKey;
         _baseUrl = baseUrl.TrimEnd('/');
         _ownsHttpClient = ownsHttpClient;
+        _pdfCapability = pdfCapability;
         ProviderName = providerName;
         ModelId = model;
     }
@@ -268,10 +277,13 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
             var textAttachments = msg.Attachments
                 .Where(a => a.Type == AttachmentType.TextFile)
                 .ToList();
+            var documentAttachments = msg.Attachments
+                .Where(a => a.Type == AttachmentType.Document)
+                .ToList();
 
-            if (imageAttachments.Count > 0)
+            if (imageAttachments.Count > 0 || documentAttachments.Count > 0)
             {
-                // Use multi-part content for messages with images
+                // Use multi-part content for messages with images or documents
                 var contentParts = new JsonArray();
 
                 foreach (var att in imageAttachments)
@@ -287,8 +299,31 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
                     });
                 }
 
-                // Append text file contents inline
+                // Document attachments: native PDF or text extraction fallback
                 var textContent = msg.Content;
+                foreach (var att in documentAttachments)
+                {
+                    if (_pdfCapability == PdfCapability.NativePdf)
+                    {
+                        var dataUrl = $"data:{att.MimeType ?? "application/pdf"};base64,{Convert.ToBase64String(att.Data)}";
+                        contentParts.Add(new JsonObject
+                        {
+                            ["type"] = "file",
+                            ["file"] = new JsonObject
+                            {
+                                ["filename"] = att.FileName,
+                                ["file_data"] = dataUrl
+                            }
+                        });
+                    }
+                    else
+                    {
+                        var pdfText = Helpers.AttachmentProcessor.ExtractTextFromPdf(att.Data);
+                        textContent += $"\n\n[File: {att.FileName}]\n{pdfText}";
+                    }
+                }
+
+                // Append text file contents inline
                 foreach (var att in textAttachments)
                 {
                     var fileText = Encoding.UTF8.GetString(att.Data);

@@ -28,6 +28,9 @@ public class MockProvider : IAiProvider
     /// <inheritdoc/>
     public string? LastRawResponse => null;
 
+    /// <inheritdoc/>
+    public PdfCapability PdfCapability => PdfCapability.TextExtraction;
+
     #endregion
 
     #region Constants

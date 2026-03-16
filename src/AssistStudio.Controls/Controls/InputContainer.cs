@@ -782,13 +782,20 @@ public sealed partial class InputContainer : Control
 
         if (isDocument)
         {
-            var extractedText = ext switch
+            // PDF: preserve raw bytes for native provider support; text extraction deferred to provider
+            if (ext == ".pdf")
             {
-                ".pdf" => ExtractTextFromPdf(data),
-                ".docx" => ExtractTextFromDocx(data),
-                _ => ""
-            };
+                return new ChatAttachment
+                {
+                    FileName = file.Name,
+                    Type = AttachmentType.Document,
+                    Data = data,
+                    MimeType = "application/pdf"
+                };
+            }
 
+            // DOCX: always text-extract (no provider supports native DOCX)
+            var extractedText = ExtractTextFromDocx(data);
             return new ChatAttachment
             {
                 FileName = file.Name,
@@ -805,21 +812,6 @@ public sealed partial class InputContainer : Control
             Data = data,
             MimeType = isImage ? GetImageMimeType(ext) : "text/plain"
         };
-    }
-
-    /// <summary>
-    /// Extracts plain text content from a PDF file byte array using PdfPig.
-    /// </summary>
-    private static string ExtractTextFromPdf(byte[] data)
-    {
-        using var document = UglyToad.PdfPig.PdfDocument.Open(data);
-        var sb = new StringBuilder();
-        foreach (var page in document.GetPages())
-        {
-            if (sb.Length > 0) sb.AppendLine();
-            sb.Append(page.Text);
-        }
-        return sb.ToString();
     }
 
     /// <summary>

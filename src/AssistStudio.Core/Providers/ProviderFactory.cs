@@ -35,7 +35,8 @@ public static class ProviderFactory
                 apiKey,
                 string.IsNullOrEmpty(model) ? "llama-3.3-70b-versatile" : model,
                 "https://api.groq.com/openai/v1",
-                "Groq"),
+                "Groq",
+                PdfCapability.TextExtraction),
             _ => new MockProvider()
         };
     }
