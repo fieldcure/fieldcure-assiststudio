@@ -301,7 +301,7 @@ public static class AppSettings
         {
             if (p.RequiresApiKey && !string.IsNullOrEmpty(p.ApiKey))
             {
-                PasswordVaultHelper.SaveApiKey(p.Name, p.ApiKey);
+                PasswordVaultHelper.SaveApiKey(p.ProviderType, p.ApiKey);
             }
         }
 
@@ -328,7 +328,7 @@ public static class AppSettings
                     {
                         if (p.RequiresApiKey)
                         {
-                            p.ApiKey = PasswordVaultHelper.LoadApiKey(p.Name);
+                            p.ApiKey = PasswordVaultHelper.LoadApiKey(p.ProviderType);
                         }
                     }
 

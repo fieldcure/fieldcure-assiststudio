@@ -41,6 +41,7 @@ public partial class App : Application
         ConversationManager.Initialize(ApplicationData.Current.LocalFolder.Path);
 
         _window = new MainWindow();
+
         FieldCure.AssistStudio.Controls.WindowHelper.TrackWindow(_window);
         _window.Activate();
 

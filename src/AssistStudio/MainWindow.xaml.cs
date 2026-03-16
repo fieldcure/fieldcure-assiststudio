@@ -88,7 +88,10 @@ public sealed partial class MainWindow : Window
         ViewModel.AddTab();
 
         // Title bar layout
-        Tabs.Loaded += (_, _) => SetRegionsForCustomTitleBar();
+        Tabs.Loaded += (_, _) =>
+        {
+            SetRegionsForCustomTitleBar();
+        };
         Tabs.SizeChanged += (_, _) => SetRegionsForCustomTitleBar();
 
         // Global keyboard accelerators (MenuFlyout accelerators only work while open)
@@ -418,6 +421,10 @@ public sealed partial class MainWindow : Window
     private void OnMenuSettings(object sender, RoutedEventArgs e)
     {
         RootSplitView.IsPaneOpen = !RootSplitView.IsPaneOpen;
+        if (RootSplitView.IsPaneOpen)
+        {
+            SettingsPane.EnsureInitialNavigation();
+        }
     }
 
     #endregion

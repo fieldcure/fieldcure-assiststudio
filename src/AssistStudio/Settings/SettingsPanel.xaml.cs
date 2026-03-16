@@ -20,6 +20,12 @@ public sealed partial class SettingsPanel : Page
     /// </summary>
     private ObservableCollection<ProviderPreset> _presets;
 
+    /// <summary>
+    /// Whether the initial navigation to ModelsPage has been performed.
+    /// Deferred until the settings pane is first shown to avoid unnecessary vault calls at startup.
+    /// </summary>
+    private bool _initialNavigationDone;
+
     #endregion
 
     #region Properties
@@ -82,10 +88,21 @@ public sealed partial class SettingsPanel : Page
     /// </summary>
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        // Navigate to initial page
+        // Defer initial navigation — performed when the pane is first shown
+        // to avoid triggering PasswordVault calls at app startup.
+    }
+
+    /// <summary>
+    /// Ensures the initial settings page navigation has been performed.
+    /// Called when the settings pane is first opened.
+    /// </summary>
+    internal void EnsureInitialNavigation()
+    {
+        if (_initialNavigationDone) return;
+        _initialNavigationDone = true;
+
         NavigateTo("Models");
 
-        // Select first item
         if (NavView.MenuItems.Count > 0)
         {
             NavView.SelectedItem = NavView.MenuItems[0];
