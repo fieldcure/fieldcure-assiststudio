@@ -22,6 +22,7 @@ public sealed partial class ModelsPage : Page
     /// Reference to the parent settings panel for syncing preset changes.
     /// </summary>
     private SettingsPanel? _settings;
+    private bool _isPopulating;
 
     #endregion
 
@@ -80,8 +81,9 @@ public sealed partial class ModelsPage : Page
         LoadApiKeys();
         PopulateModelCombos();
 
-        // Sync presets from current API keys/models so tabs get correct provider list
-        SyncPresetsFromUI();
+        // Note: SyncPresetsFromUI is NOT called here — presets are already loaded by
+        // AppSettings.LoadPresets() at startup. Sync only happens when the user changes
+        // API keys or model selections (via OnCloudModelChanged / OnApiKeyChanged).
 
         // Auto-check Ollama status
         _ = CheckOllamaStatusAsync();
@@ -265,11 +267,19 @@ public sealed partial class ModelsPage : Page
     /// </summary>
     private void PopulateModelCombos()
     {
-        // Load from cache first, fall back to hardcoded defaults
-        PopulateComboFromCacheOrFallback("Claude", ClaudeModelCombo, FallbackClaudeModels);
-        PopulateComboFromCacheOrFallback("OpenAI", OpenAIModelCombo, FallbackOpenAIModels);
-        PopulateComboFromCacheOrFallback("Gemini", GeminiModelCombo, FallbackGeminiModels);
-        PopulateComboFromCacheOrFallback("Groq", GroqModelCombo, FallbackGroqModels);
+        // Suppress SelectionChanged → SyncPresetsFromUI during initial population
+        _isPopulating = true;
+        try
+        {
+            PopulateComboFromCacheOrFallback("Claude", ClaudeModelCombo, FallbackClaudeModels);
+            PopulateComboFromCacheOrFallback("OpenAI", OpenAIModelCombo, FallbackOpenAIModels);
+            PopulateComboFromCacheOrFallback("Gemini", GeminiModelCombo, FallbackGeminiModels);
+            PopulateComboFromCacheOrFallback("Groq", GroqModelCombo, FallbackGroqModels);
+        }
+        finally
+        {
+            _isPopulating = false;
+        }
 
         // Background refresh for providers that have API keys
         _ = RefreshAllModelCachesAsync();
@@ -503,6 +513,7 @@ public sealed partial class ModelsPage : Page
     /// </summary>
     private void OnCloudModelChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (_isPopulating) return;
         if (sender is not ComboBox combo || combo.SelectedItem is not string model || string.IsNullOrEmpty(model))
             return;
 
