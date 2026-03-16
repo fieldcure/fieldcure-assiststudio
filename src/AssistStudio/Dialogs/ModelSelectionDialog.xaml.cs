@@ -1,4 +1,5 @@
-﻿using FieldCure.AssistStudio.Helpers;
+﻿using AssistStudio.Modules.Helpers;
+using FieldCure.AssistStudio.Helpers;
 using FieldCure.AssistStudio.Providers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -77,8 +78,9 @@ public sealed partial class ModelSelectionDialog : ContentDialog
             NoLocalModelsText.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             localIds = [.. localModels.Select(m => m.Id)];
         }
-        catch
+        catch (Exception ex)
         {
+            LoggingService.LogException(ex);
             NoLocalModelsText.Visibility = Visibility.Visible;
         }
 
@@ -104,9 +106,9 @@ public sealed partial class ModelSelectionDialog : ContentDialog
                 })
                 .ToList();
         }
-        catch
+        catch (Exception ex)
         {
-            // Should not happen since SearchAvailableModelsAsync is local
+            LoggingService.LogException(ex);
         }
     }
 
@@ -120,9 +122,9 @@ public sealed partial class ModelSelectionDialog : ContentDialog
             await _manager.DeleteModelAsync(modelName);
             await RefreshAsync();
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore delete errors
+            LoggingService.LogException(ex);
         }
     }
 

@@ -669,7 +669,7 @@ public sealed class ChatPanel : Control
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"WebView2 init failed: {ex.Message}");
+            DiagnosticLogger.LogException(ex);
         }
     }
 
@@ -751,13 +751,10 @@ public sealed class ChatPanel : Control
                 await SummarizeHistoryAsync(ct);
             }
         }
-        catch (OperationCanceledException)
-        {
-            System.Diagnostics.Debug.WriteLine("ChatPanel: Streaming cancelled");
-        }
+        catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"ChatPanel: Streaming error: {ex}");
+            DiagnosticLogger.LogException(ex);
             assistantMessage.Content += $"\n\n[Error: {ex.Message}]";
             await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content);
         }
@@ -837,12 +834,10 @@ public sealed class ChatPanel : Control
                     await _renderer.SetDebugDataAsync(origUserMsg.Id, Provider.LastRequestBody, assistantMessage.Id, Provider.LastRawResponse);
             }
         }
-        catch (OperationCanceledException)
-        {
-            // Streaming was cancelled
-        }
+        catch (OperationCanceledException) { }
         catch (Exception ex)
         {
+            DiagnosticLogger.LogException(ex);
             assistantMessage.Content += $"\n\n[Error: {ex.Message}]";
             await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content);
         }
@@ -959,6 +954,7 @@ public sealed class ChatPanel : Control
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
+            DiagnosticLogger.LogException(ex);
             summaryMessage.Content += $"\n\n[Error: {ex.Message}]";
             await _renderer.FinalizeMessageAsync(summaryMessage.Id, summaryMessage.Content);
         }
@@ -1099,9 +1095,9 @@ public sealed class ChatPanel : Control
             _messages.Insert(0, new ChatMessage(ChatRole.System,
                 $"[Previous conversation summary]\n{summary}"));
         }
-        catch
+        catch (Exception ex)
         {
-            // Summarization failed -- keep messages as-is
+            DiagnosticLogger.LogException(ex);
         }
     }
 
@@ -1152,6 +1148,7 @@ public sealed class ChatPanel : Control
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
+            DiagnosticLogger.LogException(ex);
             assistantMessage.Content += $"\n\n[Error: {ex.Message}]";
             await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content);
         }
@@ -1282,8 +1279,9 @@ public sealed class ChatPanel : Control
 
             DispatcherQueue.TryEnqueue(() => TitleGenerated?.Invoke(this, title));
         }
-        catch
+        catch (Exception ex)
         {
+            DiagnosticLogger.LogException(ex);
             var fallback = userMsg.Content.Length > 40
                 ? userMsg.Content[..40].TrimEnd() + "\u2026"
                 : userMsg.Content;
@@ -1386,6 +1384,7 @@ public sealed class ChatPanel : Control
                 }
                 catch (Exception ex)
                 {
+                    DiagnosticLogger.LogException(ex);
                     result = $"{{\"error\":\"{ex.Message}\"}}";
                 }
 

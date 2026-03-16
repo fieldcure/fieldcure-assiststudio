@@ -381,9 +381,10 @@ public sealed partial class ModelsPage : Page
                 (provider_ as IDisposable)?.Dispose();
             }
         }
-        catch
+        catch (Exception ex)
         {
             // API unreachable — keep current list (cache or fallback)
+            LoggingService.LogException(ex);
         }
     }
 
@@ -611,8 +612,9 @@ public sealed partial class ModelsPage : Page
                 OllamaInstallPanel.Visibility = Visibility.Visible;
             }
         }
-        catch
+        catch (Exception ex)
         {
+            LoggingService.LogException(ex);
             OllamaStatusText.Text = L("Models_Error");
             OllamaStatusText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
                 Microsoft.UI.Colors.OrangeRed);
@@ -677,9 +679,9 @@ public sealed partial class ModelsPage : Page
                 if (!found) OllamaModelCombo.SelectedIndex = 0;
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Failed to load models
+            LoggingService.LogException(ex);
         }
     }
 
@@ -707,8 +709,9 @@ public sealed partial class ModelsPage : Page
                     Microsoft.UI.Colors.OrangeRed);
             }
         }
-        catch
+        catch (Exception ex)
         {
+            LoggingService.LogException(ex);
             OllamaStatusText.Text = L("Models_ErrorStarting");
             OllamaStatusText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
                 Microsoft.UI.Colors.OrangeRed);
@@ -791,6 +794,7 @@ public sealed partial class ModelsPage : Page
             }
             catch (Exception ex)
             {
+                LoggingService.LogException(ex);
                 PullProgressStatus.Text = $"{prefix}Error: {ex.Message}";
                 await Task.Delay(2000);
             }

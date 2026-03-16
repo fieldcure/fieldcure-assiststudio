@@ -135,7 +135,7 @@ public static class ConversationManager
         foreach (var file in files)
         {
             try { File.Delete(file); }
-            catch { /* ignore individual file deletion errors */ }
+            catch (Exception ex) { DiagnosticLogger.LogException(ex); }
         }
     }
 
@@ -157,9 +157,9 @@ public static class ConversationManager
             await File.WriteAllTextAsync(tempPath, content);
             File.Move(tempPath, filePath, overwrite: true);
         }
-        catch
+        catch (Exception ex)
         {
-            // Clean up temp file on failure
+            DiagnosticLogger.LogException(ex);
             try { File.Delete(tempPath); } catch { }
             throw;
         }

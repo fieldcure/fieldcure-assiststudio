@@ -330,7 +330,7 @@ public sealed partial class MainWindow : Window
             AppSettings.AddRecentFile(file.Path);
             return true;
         }
-        catch { return false; }
+        catch (Exception ex) { LoggingService.LogException(ex); return false; }
     }
 
     /// <summary>

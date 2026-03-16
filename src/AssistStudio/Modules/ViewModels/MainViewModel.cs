@@ -198,7 +198,7 @@ public partial class MainViewModel : ObservableObject
                 await ConversationManager.SaveConversationAsync(tabName, presetName, messages);
             tab.IsDirty = false;
         }
-        catch { /* Save failed silently */ }
+        catch (Exception ex) { LoggingService.LogException(ex); }
     }
 
     /// <summary>

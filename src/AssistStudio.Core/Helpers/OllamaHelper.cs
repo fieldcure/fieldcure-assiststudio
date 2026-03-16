@@ -51,8 +51,9 @@ public static class OllamaHelper
             proc.WaitForExit(3000);
             return proc.ExitCode == 0;
         }
-        catch
+        catch (Exception ex)
         {
+            DiagnosticLogger.LogException(ex);
             return false;
         }
     }
@@ -68,8 +69,9 @@ public static class OllamaHelper
             var response = await client.GetAsync(OllamaUrl, ct);
             return response.IsSuccessStatusCode;
         }
-        catch
+        catch (Exception ex)
         {
+            DiagnosticLogger.LogException(ex);
             return false;
         }
     }
@@ -105,8 +107,9 @@ public static class OllamaHelper
 
             return false;
         }
-        catch
+        catch (Exception ex)
         {
+            DiagnosticLogger.LogException(ex);
             return false;
         }
     }

@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using FieldCure.AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Web.WebView2.Core;
@@ -283,9 +284,9 @@ internal class WebViewChatRenderer
                 CopyToClipboard(html);
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore malformed messages
+            DiagnosticLogger.LogException(ex);
         }
     }
 

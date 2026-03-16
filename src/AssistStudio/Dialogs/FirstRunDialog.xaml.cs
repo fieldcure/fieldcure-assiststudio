@@ -1,4 +1,5 @@
-﻿using FieldCure.AssistStudio.Helpers;
+﻿using AssistStudio.Modules.Helpers;
+using FieldCure.AssistStudio.Helpers;
 using FieldCure.AssistStudio.Providers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -102,6 +103,7 @@ public sealed partial class FirstRunDialog : ContentDialog
         }
         catch (Exception ex)
         {
+            LoggingService.LogException(ex);
             DownloadStatus.Text = $"Error: {ex.Message}";
         }
         finally
@@ -190,9 +192,9 @@ public sealed partial class FirstRunDialog : ContentDialog
                     return;
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Continue to recommendation
+                LoggingService.LogException(ex);
             }
 
             // Recommend a model based on hardware
