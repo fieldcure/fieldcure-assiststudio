@@ -113,19 +113,23 @@ public sealed partial class ModelsPage : Page
     #region API Key Management
 
     /// <summary>
-    /// Loads API keys from the password vault and sets the UI state for each provider card.
+    /// Loads API keys from the already-loaded presets and sets the UI state for each provider card.
+    /// Avoids redundant PasswordVault calls since keys were loaded during AppSettings.LoadPresets().
     /// </summary>
     private void LoadApiKeys()
     {
-        var claudeKey = PasswordVaultHelper.LoadApiKey("Claude");
-        var openAIKey = PasswordVaultHelper.LoadApiKey("OpenAI");
-        var geminiKey = PasswordVaultHelper.LoadApiKey("Gemini");
-        var groqKey = PasswordVaultHelper.LoadApiKey("Groq");
+        var keys = _settings?.Presets.ToDictionary(p => p.ProviderType, p => p.ApiKey)
+                   ?? new Dictionary<string, string>();
 
-        SetKeyState(claudeKey, ClaudeKeyInputPanel, ClaudeKeyDisplayPanel, ClaudeMaskedKeyText, ClaudeStatusText, ClaudeModelCombo);
-        SetKeyState(openAIKey, OpenAIKeyInputPanel, OpenAIKeyDisplayPanel, OpenAIMaskedKeyText, OpenAIStatusText, OpenAIModelCombo);
-        SetKeyState(geminiKey, GeminiKeyInputPanel, GeminiKeyDisplayPanel, GeminiMaskedKeyText, GeminiStatusText, GeminiModelCombo);
-        SetKeyState(groqKey, GroqKeyInputPanel, GroqKeyDisplayPanel, GroqMaskedKeyText, GroqStatusText, GroqModelCombo);
+        keys.TryGetValue("Claude", out var claudeKey);
+        keys.TryGetValue("OpenAI", out var openAIKey);
+        keys.TryGetValue("Gemini", out var geminiKey);
+        keys.TryGetValue("Groq", out var groqKey);
+
+        SetKeyState(claudeKey ?? "", ClaudeKeyInputPanel, ClaudeKeyDisplayPanel, ClaudeMaskedKeyText, ClaudeStatusText, ClaudeModelCombo);
+        SetKeyState(openAIKey ?? "", OpenAIKeyInputPanel, OpenAIKeyDisplayPanel, OpenAIMaskedKeyText, OpenAIStatusText, OpenAIModelCombo);
+        SetKeyState(geminiKey ?? "", GeminiKeyInputPanel, GeminiKeyDisplayPanel, GeminiMaskedKeyText, GeminiStatusText, GeminiModelCombo);
+        SetKeyState(groqKey ?? "", GroqKeyInputPanel, GroqKeyDisplayPanel, GroqMaskedKeyText, GroqStatusText, GroqModelCombo);
     }
 
     /// <summary>
@@ -310,24 +314,25 @@ public sealed partial class ModelsPage : Page
     /// </summary>
     private async Task RefreshAllModelCachesAsync()
     {
-        // Fire-and-forget refresh for each provider with a valid key
+        if (_settings is null) return;
+
+        // Reuse API keys from already-loaded presets to avoid redundant vault calls
+        var keys = _settings.Presets.ToDictionary(p => p.ProviderType, p => p.ApiKey);
         var tasks = new List<Task>();
 
-        var claudeKey = PasswordVaultHelper.LoadApiKey("Claude");
-        if (!string.IsNullOrEmpty(claudeKey))
-            tasks.Add(FetchAndCacheModelsAsync("Claude", claudeKey, ClaudeModelCombo));
+        var combos = new Dictionary<string, ComboBox>
+        {
+            ["Claude"] = ClaudeModelCombo,
+            ["OpenAI"] = OpenAIModelCombo,
+            ["Gemini"] = GeminiModelCombo,
+            ["Groq"] = GroqModelCombo,
+        };
 
-        var openAIKey = PasswordVaultHelper.LoadApiKey("OpenAI");
-        if (!string.IsNullOrEmpty(openAIKey))
-            tasks.Add(FetchAndCacheModelsAsync("OpenAI", openAIKey, OpenAIModelCombo));
-
-        var geminiKey = PasswordVaultHelper.LoadApiKey("Gemini");
-        if (!string.IsNullOrEmpty(geminiKey))
-            tasks.Add(FetchAndCacheModelsAsync("Gemini", geminiKey, GeminiModelCombo));
-
-        var groqKey = PasswordVaultHelper.LoadApiKey("Groq");
-        if (!string.IsNullOrEmpty(groqKey))
-            tasks.Add(FetchAndCacheModelsAsync("Groq", groqKey, GroqModelCombo));
+        foreach (var (provider, combo) in combos)
+        {
+            if (keys.TryGetValue(provider, out var key) && !string.IsNullOrEmpty(key))
+                tasks.Add(FetchAndCacheModelsAsync(provider, key, combo));
+        }
 
         await Task.WhenAll(tasks);
     }
@@ -431,12 +436,13 @@ public sealed partial class ModelsPage : Page
     {
         if (_settings is null) return;
 
+        // Cloud providers — reuse API keys already loaded in presets to avoid redundant vault calls
+        var existingKeys = _settings.Presets.ToDictionary(p => p.ProviderType, p => p.ApiKey);
         _settings.Presets.Clear();
 
-        // Cloud providers
         foreach (var provider in new[] { "Claude", "OpenAI", "Gemini", "Groq" })
         {
-            var key = PasswordVaultHelper.LoadApiKey(provider);
+            existingKeys.TryGetValue(provider, out var key);
             if (string.IsNullOrEmpty(key)) continue;
 
             var modelCombo = provider switch

@@ -442,6 +442,11 @@ public sealed class ChatPanel : Control
     /// </summary>
     public event EventHandler<string>? TitleEditRequested;
 
+    /// <summary>
+    /// Occurs when a keyboard shortcut is pressed inside the WebView2 that should be handled by the host.
+    /// </summary>
+    public event EventHandler<string>? KeyboardShortcutPressed;
+
     #endregion
 
     #region Constructors
@@ -457,6 +462,7 @@ public sealed class ChatPanel : Control
         _renderer.RetryRequested += OnRetryRequested;
         _renderer.EditRequested += OnEditRequested;
         _renderer.SummarizeRequested += OnSummarizeRequested;
+        _renderer.KeyboardShortcutPressed += (_, shortcut) => KeyboardShortcutPressed?.Invoke(this, shortcut);
     }
 
     #endregion

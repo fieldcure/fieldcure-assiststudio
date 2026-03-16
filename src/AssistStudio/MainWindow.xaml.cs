@@ -84,7 +84,17 @@ public sealed partial class MainWindow : Window
         // Apply saved theme on first activation
         Activated += OnFirstActivated;
 
-        // Create initial tab
+        // Forward keyboard shortcuts from WebView2 (separate HWND, can't use XAML accelerators)
+        ViewModel.Tabs.CollectionChanged += (_, e) =>
+        {
+            if (e.NewItems is not null)
+            {
+                foreach (ChatTabViewModel tab in e.NewItems)
+                    tab.ChatPanel.KeyboardShortcutPressed += OnWebViewShortcut;
+            }
+        };
+
+        // Create initial tab (after CollectionChanged subscription so the first tab is wired)
         ViewModel.AddTab();
 
         // Title bar layout
@@ -99,6 +109,7 @@ public sealed partial class MainWindow : Window
         RegisterAccelerator(VirtualKeyModifiers.Control, VirtualKey.O, OnMenuLoadConversation);
         RegisterAccelerator(VirtualKeyModifiers.Control, VirtualKey.S, OnMenuSaveConversation);
         RegisterAccelerator(VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, VirtualKey.S, OnMenuSaveAsConversation);
+        RegisterAccelerator(VirtualKeyModifiers.None, VirtualKey.F1, OnMenuSettings);
     }
 
     #endregion
@@ -113,6 +124,22 @@ public sealed partial class MainWindow : Window
         var accel = new KeyboardAccelerator { Modifiers = modifiers, Key = key };
         accel.Invoked += (_, args) => { handler(this, new RoutedEventArgs()); args.Handled = true; };
         RootSplitView.KeyboardAccelerators.Add(accel);
+    }
+
+    /// <summary>
+    /// Handles keyboard shortcuts forwarded from WebView2 (which runs in a separate HWND).
+    /// </summary>
+    private void OnWebViewShortcut(object? sender, string shortcut)
+    {
+        switch (shortcut)
+        {
+            case "Ctrl+S":
+                OnMenuSaveConversation(this, new RoutedEventArgs());
+                break;
+            case "Ctrl+Shift+S":
+                OnMenuSaveAsConversation(this, new RoutedEventArgs());
+                break;
+        }
     }
 
     #endregion

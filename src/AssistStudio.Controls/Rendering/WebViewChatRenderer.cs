@@ -62,6 +62,12 @@ internal class WebViewChatRenderer
     /// </summary>
     public event EventHandler<string>? SummarizeRequested;
 
+    /// <summary>
+    /// Occurs when a keyboard shortcut is pressed inside the WebView2 that should be handled by the app.
+    /// The string parameter is the shortcut name (e.g., "Ctrl+S", "Ctrl+Shift+S").
+    /// </summary>
+    public event EventHandler<string>? KeyboardShortcutPressed;
+
     #endregion
 
     #region Public Methods
@@ -77,6 +83,10 @@ internal class WebViewChatRenderer
 
         _webView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
 
+        // Browser accelerator keys (Ctrl+S, Ctrl+P, etc.) are kept enabled so that
+        // keydown events reach our JS listener, which forwards them via postMessage.
+        // The JS handler calls preventDefault() to suppress browser-default behavior.
+
         var html = LoadEmbeddedResource("chat.html");
 
         _navigationTcs = new TaskCompletionSource();
@@ -87,6 +97,21 @@ internal class WebViewChatRenderer
 
         // Inject vendor JS libraries after page load
         await InjectVendorScriptsAsync();
+
+        // Forward Ctrl+key shortcuts from WebView2 to the host app via postMessage,
+        // since WebView2 runs in a separate HWND and key events don't bubble to XAML.
+        await _webView.ExecuteScriptAsync("""
+            document.addEventListener('keydown', function(e) {
+                if (e.ctrlKey && !e.altKey) {
+                    const key = e.key.toLowerCase();
+                    if (key === 's') {
+                        e.preventDefault();
+                        const shortcut = e.shiftKey ? 'Ctrl+Shift+S' : 'Ctrl+S';
+                        window.chrome.webview.postMessage('shortcut:' + shortcut);
+                    }
+                }
+            });
+            """).AsTask();
     }
 
     /// <summary>
@@ -246,6 +271,11 @@ internal class WebViewChatRenderer
             {
                 var messageId = message["summarize:".Length..];
                 SummarizeRequested?.Invoke(this, messageId);
+            }
+            else if (message?.StartsWith("shortcut:") == true)
+            {
+                var shortcut = message["shortcut:".Length..];
+                KeyboardShortcutPressed?.Invoke(this, shortcut);
             }
             else if (message?.StartsWith("debugCopy:") == true)
             {
