@@ -558,6 +558,7 @@ public sealed partial class InputContainer : Control
     {
         if (!e.DataView.Contains(StandardDataFormats.StorageItems)) return;
 
+        e.Handled = true;
         var items = await e.DataView.GetStorageItemsAsync();
         await AddFilesAsync(items);
     }
