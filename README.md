@@ -94,9 +94,9 @@ That's it — you have a fully functional AI chat with streaming, Markdown rende
 
 | Provider | Streaming | Vision | Documents | Tool Calling | API Key Required |
 |----------|:---------:|:------:|:---------:|:------------:|:----------------:|
-| **Claude** (Anthropic) | Yes | Yes | Yes | — | Yes |
+| **Claude** (Anthropic) | Yes | Yes | Yes | Yes | Yes |
 | **OpenAI** (+ compatible endpoints) | Yes | Yes | Yes | Yes | Yes |
-| **Gemini** (Google) | Yes | Yes | Yes | — | Yes |
+| **Gemini** (Google) | Yes | Yes | Yes | Yes | Yes |
 | **Ollama** (local) | Yes | Yes | Yes | Yes | No |
 
 > OpenAI provider works with any OpenAI-compatible API (Groq, Azure OpenAI, etc.) by setting a custom `baseUrl`.
