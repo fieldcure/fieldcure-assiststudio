@@ -335,6 +335,22 @@
   <data name="Models_RemoveKey.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Remove Key</value>
   </data>
+  <!-- PDF Handling -->
+  <data name="Models_PdfHandling.Text" xml:space="preserve">
+    <value>PDF Handling</value>
+  </data>
+  <data name="Models_PdfAuto" xml:space="preserve">
+    <value>Auto</value>
+  </data>
+  <data name="Models_PdfNative" xml:space="preserve">
+    <value>Native PDF</value>
+  </data>
+  <data name="Models_PdfPageAsImage" xml:space="preserve">
+    <value>Page as Image</value>
+  </data>
+  <data name="Models_PdfTextExtraction" xml:space="preserve">
+    <value>Text Extraction</value>
+  </data>
   <!-- Model Selection Dialog -->
   <data name="ModelDialog.Title" xml:space="preserve">
     <value>Ollama Models</value>

@@ -22,4 +22,24 @@ public static class AttachmentProcessor
         }
         return sb.ToString();
     }
+
+    /// <summary>
+    /// Renders each page of a PDF document to a PNG image byte array.
+    /// </summary>
+    /// <param name="data">The raw PDF file bytes.</param>
+    /// <param name="dpi">Render resolution in dots per inch. Default is 150.</param>
+    /// <returns>A list of PNG byte arrays, one per page.</returns>
+    public static IReadOnlyList<byte[]> RenderPdfPages(byte[] data, int dpi = 150)
+    {
+        var pages = new List<byte[]>();
+        var pageCount = PDFtoImage.Conversion.GetPageCount(data);
+        var options = new PDFtoImage.RenderOptions(Dpi: dpi);
+        for (var i = 0; i < pageCount; i++)
+        {
+            using var ms = new MemoryStream();
+            PDFtoImage.Conversion.SavePng(ms, data, i, options: options);
+            pages.Add(ms.ToArray());
+        }
+        return pages;
+    }
 }

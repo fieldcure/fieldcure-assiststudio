@@ -335,6 +335,22 @@
   <data name="Models_RemoveKey.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>키 삭제</value>
   </data>
+  <!-- PDF Handling -->
+  <data name="Models_PdfHandling.Text" xml:space="preserve">
+    <value>PDF 처리</value>
+  </data>
+  <data name="Models_PdfAuto" xml:space="preserve">
+    <value>자동</value>
+  </data>
+  <data name="Models_PdfNative" xml:space="preserve">
+    <value>네이티브 PDF</value>
+  </data>
+  <data name="Models_PdfPageAsImage" xml:space="preserve">
+    <value>이미지 변환</value>
+  </data>
+  <data name="Models_PdfTextExtraction" xml:space="preserve">
+    <value>텍스트 추출</value>
+  </data>
   <!-- Model Selection Dialog -->
   <data name="ModelDialog.Title" xml:space="preserve">
     <value>Ollama 모델</value>

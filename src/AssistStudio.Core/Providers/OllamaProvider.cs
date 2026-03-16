@@ -45,7 +45,7 @@ public partial class OllamaProvider : IAiProvider, IDisposable
     public string? LastRawResponse { get; private set; }
 
     /// <inheritdoc/>
-    public PdfCapability PdfCapability => PdfCapability.TextExtraction;
+    public PdfCapability PdfCapability { get; }
 
     #endregion
 
@@ -54,28 +54,32 @@ public partial class OllamaProvider : IAiProvider, IDisposable
     /// <summary>
     /// Initializes a new <see cref="OllamaProvider"/> with an internally managed <see cref="HttpClient"/>.
     /// </summary>
-    public OllamaProvider(string model = "llama3.1", string baseUrl = "http://localhost:11434")
-        : this(new HttpClient(), model, baseUrl, ownsHttpClient: true)
+    public OllamaProvider(string model = "llama3.1", string baseUrl = "http://localhost:11434",
+        PdfCapability pdfCapability = PdfCapability.TextExtraction)
+        : this(new HttpClient(), model, baseUrl, ownsHttpClient: true, pdfCapability)
     {
     }
 
     /// <summary>
     /// Initializes a new <see cref="OllamaProvider"/> with an externally managed <see cref="HttpClient"/>.
     /// </summary>
-    public OllamaProvider(HttpClient httpClient, string model = "llama3.1")
-        : this(httpClient, model, "http://localhost:11434", ownsHttpClient: false)
+    public OllamaProvider(HttpClient httpClient, string model = "llama3.1",
+        PdfCapability pdfCapability = PdfCapability.TextExtraction)
+        : this(httpClient, model, "http://localhost:11434", ownsHttpClient: false, pdfCapability)
     {
     }
 
     /// <summary>
     /// Internal constructor that captures all dependencies.
     /// </summary>
-    private OllamaProvider(HttpClient httpClient, string model, string baseUrl, bool ownsHttpClient)
+    private OllamaProvider(HttpClient httpClient, string model, string baseUrl, bool ownsHttpClient,
+        PdfCapability pdfCapability)
     {
         _httpClient = httpClient;
         _ownsHttpClient = ownsHttpClient;
         _baseUrl = baseUrl.TrimEnd('/');
         ModelId = model;
+        PdfCapability = pdfCapability;
     }
 
     #endregion
@@ -271,11 +275,20 @@ public partial class OllamaProvider : IAiProvider, IDisposable
                 textContent += $"\n\n[File: {att.FileName}]\n{fileText}";
             }
 
-            // Document attachments: text extraction fallback (Ollama has no native PDF support)
+            // Document attachments: PageAsImage renders PDF pages into vision input
             foreach (var att in documentAttachments)
             {
-                var pdfText = Helpers.AttachmentProcessor.ExtractTextFromPdf(att.Data);
-                textContent += $"\n\n[File: {att.FileName}]\n{pdfText}";
+                if (PdfCapability == PdfCapability.PageAsImage)
+                {
+                    var pages = Helpers.AttachmentProcessor.RenderPdfPages(att.Data);
+                    foreach (var page in pages)
+                        imageAttachments.Add(new ChatAttachment(att.FileName, AttachmentType.Image, page, "image/png"));
+                }
+                else
+                {
+                    var pdfText = Helpers.AttachmentProcessor.ExtractTextFromPdf(att.Data);
+                    textContent += $"\n\n[File: {att.FileName}]\n{pdfText}";
+                }
             }
 
             var msgObj = new JsonObject

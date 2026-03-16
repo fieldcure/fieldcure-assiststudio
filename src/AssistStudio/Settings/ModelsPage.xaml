@@ -86,6 +86,12 @@
                                   PlaceholderText="Not available"
                                   SelectionChanged="OnCloudModelChanged" />
                     </StackPanel>
+                    <StackPanel Spacing="4">
+                        <TextBlock x:Uid="Models_PdfHandling" Text="PDF Handling" FontSize="12" Opacity="0.7" />
+                        <ComboBox x:Name="ClaudePdfCombo"
+                                  HorizontalAlignment="Stretch"
+                                  SelectionChanged="OnPdfHandlingChanged" />
+                    </StackPanel>
                 </StackPanel>
 
                 <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
@@ -135,6 +141,12 @@
                                   IsEnabled="False"
                                   PlaceholderText="Not available"
                                   SelectionChanged="OnCloudModelChanged" />
+                    </StackPanel>
+                    <StackPanel Spacing="4">
+                        <TextBlock x:Uid="Models_PdfHandling" Text="PDF Handling" FontSize="12" Opacity="0.7" />
+                        <ComboBox x:Name="OpenAIPdfCombo"
+                                  HorizontalAlignment="Stretch"
+                                  SelectionChanged="OnPdfHandlingChanged" />
                     </StackPanel>
                 </StackPanel>
 
@@ -186,6 +198,12 @@
                                   PlaceholderText="Not available"
                                   SelectionChanged="OnCloudModelChanged" />
                     </StackPanel>
+                    <StackPanel Spacing="4">
+                        <TextBlock x:Uid="Models_PdfHandling" Text="PDF Handling" FontSize="12" Opacity="0.7" />
+                        <ComboBox x:Name="GeminiPdfCombo"
+                                  HorizontalAlignment="Stretch"
+                                  SelectionChanged="OnPdfHandlingChanged" />
+                    </StackPanel>
                 </StackPanel>
 
                 <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
@@ -235,6 +253,12 @@
                                   IsEnabled="False"
                                   PlaceholderText="Not available"
                                   SelectionChanged="OnCloudModelChanged" />
+                    </StackPanel>
+                    <StackPanel Spacing="4">
+                        <TextBlock x:Uid="Models_PdfHandling" Text="PDF Handling" FontSize="12" Opacity="0.7" />
+                        <ComboBox x:Name="GroqPdfCombo"
+                                  HorizontalAlignment="Stretch"
+                                  SelectionChanged="OnPdfHandlingChanged" />
                     </StackPanel>
                 </StackPanel>
 
@@ -302,6 +326,12 @@
                                   IsEnabled="False"
                                   PlaceholderText="Not available"
                                   SelectionChanged="OnOllamaModelChanged" />
+                    </StackPanel>
+                    <StackPanel Spacing="4">
+                        <TextBlock x:Uid="Models_PdfHandling" Text="PDF Handling" FontSize="12" Opacity="0.7" />
+                        <ComboBox x:Name="OllamaPdfCombo"
+                                  HorizontalAlignment="Stretch"
+                                  SelectionChanged="OnPdfHandlingChanged" />
                     </StackPanel>
                 </StackPanel>
 

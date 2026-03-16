@@ -335,6 +335,22 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
                             }
                         });
                     }
+                    else if (_pdfCapability == PdfCapability.PageAsImage)
+                    {
+                        var pages = Helpers.AttachmentProcessor.RenderPdfPages(att.Data);
+                        foreach (var page in pages)
+                        {
+                            var imgUrl = $"data:image/png;base64,{Convert.ToBase64String(page)}";
+                            contentParts.Add(new JsonObject
+                            {
+                                ["type"] = "image_url",
+                                ["image_url"] = new JsonObject
+                                {
+                                    ["url"] = imgUrl
+                                }
+                            });
+                        }
+                    }
                     else
                     {
                         var pdfText = Helpers.AttachmentProcessor.ExtractTextFromPdf(att.Data);

@@ -85,6 +85,11 @@ public partial class ProviderPreset : INotifyPropertyChanged
     public bool StreamingEnabled { get; set; } = true;
 
     /// <summary>
+    /// How this preset handles PDF document attachments. Default is Auto (provider determines).
+    /// </summary>
+    public PdfCapability PdfCapability { get; set; } = PdfCapability.Auto;
+
+    /// <summary>
     /// Whether this provider type requires an API key.
     /// </summary>
     [JsonIgnore]

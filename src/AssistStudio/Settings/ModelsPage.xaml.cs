@@ -280,6 +280,8 @@ public sealed partial class ModelsPage : Page
             PopulateComboFromCacheOrFallback("OpenAI", OpenAIModelCombo, FallbackOpenAIModels);
             PopulateComboFromCacheOrFallback("Gemini", GeminiModelCombo, FallbackGeminiModels);
             PopulateComboFromCacheOrFallback("Groq", GroqModelCombo, FallbackGroqModels);
+
+            PopulatePdfCombos();
         }
         finally
         {
@@ -288,6 +290,45 @@ public sealed partial class ModelsPage : Page
 
         // Background refresh for providers that have API keys
         _ = RefreshAllModelCachesAsync();
+    }
+
+    /// <summary>
+    /// PDF handling option items used in the PDF combo boxes.
+    /// </summary>
+    private static readonly (PdfCapability Value, string LabelKey)[] PdfOptions =
+    [
+        (PdfCapability.Auto, "Models_PdfAuto"),
+        (PdfCapability.NativePdf, "Models_PdfNative"),
+        (PdfCapability.PageAsImage, "Models_PdfPageAsImage"),
+        (PdfCapability.TextExtraction, "Models_PdfTextExtraction"),
+    ];
+
+    /// <summary>
+    /// Populates all PDF handling combo boxes and selects the saved value from presets.
+    /// </summary>
+    private void PopulatePdfCombos()
+    {
+        var presets = _settings?.Presets.ToDictionary(p => p.ProviderType) ?? [];
+
+        var combos = new (string Provider, ComboBox Combo)[]
+        {
+            ("Claude", ClaudePdfCombo),
+            ("OpenAI", OpenAIPdfCombo),
+            ("Gemini", GeminiPdfCombo),
+            ("Groq", GroqPdfCombo),
+            ("Ollama", OllamaPdfCombo),
+        };
+
+        foreach (var (provider, combo) in combos)
+        {
+            combo.Items.Clear();
+            foreach (var (_, labelKey) in PdfOptions)
+                combo.Items.Add(L(labelKey));
+
+            var saved = presets.TryGetValue(provider, out var p) ? p.PdfCapability : PdfCapability.Auto;
+            var idx = Array.FindIndex(PdfOptions, o => o.Value == saved);
+            combo.SelectedIndex = idx >= 0 ? idx : 0;
+        }
     }
 
     /// <summary>
@@ -460,13 +501,13 @@ public sealed partial class ModelsPage : Page
             var key = PasswordVaultHelper.LoadApiKey(provider);
             if (string.IsNullOrEmpty(key)) continue;
 
-            var modelCombo = provider switch
+            var (modelCombo, pdfCombo) = provider switch
             {
-                "Claude" => ClaudeModelCombo,
-                "OpenAI" => OpenAIModelCombo,
-                "Gemini" => GeminiModelCombo,
-                "Groq" => GroqModelCombo,
-                _ => null
+                "Claude" => (ClaudeModelCombo, ClaudePdfCombo),
+                "OpenAI" => (OpenAIModelCombo, OpenAIPdfCombo),
+                "Gemini" => (GeminiModelCombo, GeminiPdfCombo),
+                "Groq" => (GroqModelCombo, GroqPdfCombo),
+                _ => ((ComboBox?)null, (ComboBox?)null)
             };
 
             var modelId = modelCombo?.SelectedItem as string ?? "";
@@ -480,7 +521,8 @@ public sealed partial class ModelsPage : Page
                 Name = ProviderToDisplayName(provider),
                 ProviderType = provider,
                 ModelId = modelId,
-                ApiKey = key
+                ApiKey = key,
+                PdfCapability = pdfCombo is not null ? GetPdfCapabilityFromCombo(pdfCombo) : PdfCapability.Auto
             };
 
             if (provider == "Groq")
@@ -500,7 +542,8 @@ public sealed partial class ModelsPage : Page
         {
             Name = "Ollama",
             ProviderType = "Ollama",
-            ModelId = ollamaModel
+            ModelId = ollamaModel,
+            PdfCapability = GetPdfCapabilityFromCombo(OllamaPdfCombo)
         });
 
         // Mock
@@ -535,6 +578,24 @@ public sealed partial class ModelsPage : Page
 
         AppSettings.SetDefaultModel(provider, model);
         SyncPresetsFromUI();
+    }
+
+    /// <summary>
+    /// Handles PDF handling combo box selection changes for any provider.
+    /// </summary>
+    private void OnPdfHandlingChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isPopulating) return;
+        SyncPresetsFromUI();
+    }
+
+    /// <summary>
+    /// Resolves the selected <see cref="PdfCapability"/> from a PDF combo box.
+    /// </summary>
+    private static PdfCapability GetPdfCapabilityFromCombo(ComboBox combo)
+    {
+        var idx = combo.SelectedIndex;
+        return idx >= 0 && idx < PdfOptions.Length ? PdfOptions[idx].Value : PdfCapability.Auto;
     }
 
     /// <summary>

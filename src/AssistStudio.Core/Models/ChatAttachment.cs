@@ -20,11 +20,17 @@ public enum AttachmentType
 /// </summary>
 public enum PdfCapability
 {
+    /// <summary>Automatically determined by the provider type.</summary>
+    Auto,
+
     /// <summary>PDF is text-extracted client-side and sent as plain text.</summary>
     TextExtraction,
 
     /// <summary>PDF raw bytes are sent natively to the provider API.</summary>
-    NativePdf
+    NativePdf,
+
+    /// <summary>PDF pages are rendered as images and sent via vision input.</summary>
+    PageAsImage
 }
 
 /// <summary>

@@ -23,6 +23,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Win32.Registry" Version="5.*" />
     <PackageReference Include="PdfPig" Version="0.1.*" />
+    <PackageReference Include="PDFtoImage" Version="5.2.0" />
     <PackageReference Include="System.Management" Version="9.*" />
   </ItemGroup>
 

@@ -16,6 +16,7 @@ public static class ProviderFactory
     {
         var apiKey = preset.ApiKey;
         var model = preset.ModelId;
+        var pdfCap = ResolvePdfCapability(preset);
 
         return preset.ProviderType switch
         {
@@ -23,11 +24,11 @@ public static class ProviderFactory
                 ? new ClaudeProvider(apiKey)
                 : new ClaudeProvider(apiKey, model),
             "OpenAI" => string.IsNullOrEmpty(model)
-                ? new OpenAiProvider(apiKey)
-                : new OpenAiProvider(apiKey, model),
+                ? new OpenAiProvider(apiKey, pdfCapability: pdfCap)
+                : new OpenAiProvider(apiKey, model, pdfCapability: pdfCap),
             "Ollama" => string.IsNullOrEmpty(model)
-                ? new OllamaProvider()
-                : new OllamaProvider(model),
+                ? new OllamaProvider(pdfCapability: pdfCap)
+                : new OllamaProvider(model, pdfCapability: pdfCap),
             "Gemini" => string.IsNullOrEmpty(model)
                 ? new GeminiProvider(apiKey)
                 : new GeminiProvider(apiKey, model),
@@ -36,8 +37,24 @@ public static class ProviderFactory
                 string.IsNullOrEmpty(model) ? "llama-3.3-70b-versatile" : model,
                 "https://api.groq.com/openai/v1",
                 "Groq",
-                PdfCapability.TextExtraction),
+                pdfCap),
             _ => new MockProvider()
+        };
+    }
+
+    /// <summary>
+    /// Resolves the effective <see cref="PdfCapability"/> for a preset,
+    /// applying provider-type defaults when set to <see cref="PdfCapability.Auto"/>.
+    /// </summary>
+    private static PdfCapability ResolvePdfCapability(ProviderPreset preset)
+    {
+        if (preset.PdfCapability != PdfCapability.Auto)
+            return preset.PdfCapability;
+
+        return preset.ProviderType switch
+        {
+            "Claude" or "OpenAI" or "Gemini" => PdfCapability.NativePdf,
+            _ => PdfCapability.TextExtraction
         };
     }
 
