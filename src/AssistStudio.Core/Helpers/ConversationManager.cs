@@ -110,11 +110,7 @@ public static class ConversationManager
         if (!Directory.Exists(_conversationsFolder))
             return [];
 
-        var astxFiles = Directory.GetFiles(_conversationsFolder, "*" + FileExtension);
-        var jsonFiles = Directory.GetFiles(_conversationsFolder, "*.json");
-
-        return astxFiles.Concat(jsonFiles)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+        return Directory.GetFiles(_conversationsFolder, "*" + FileExtension)
             .Select(f => new ConversationFileInfo
             {
                 FilePath = f,
@@ -134,8 +130,7 @@ public static class ConversationManager
         EnsureInitialized();
         if (!Directory.Exists(_conversationsFolder)) return;
 
-        var files = Directory.GetFiles(_conversationsFolder, "*" + FileExtension)
-            .Concat(Directory.GetFiles(_conversationsFolder, "*.json"));
+        var files = Directory.GetFiles(_conversationsFolder, "*" + FileExtension);
 
         foreach (var file in files)
         {
