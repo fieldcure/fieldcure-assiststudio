@@ -94,12 +94,23 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Loads a saved conversation into a new tab with restored messages and metadata.
+    /// Loads a saved conversation into a tab. If the conversation is already open in an
+    /// existing tab, switches to that tab. If the currently selected tab is empty (new and
+    /// unused), reuses it instead of creating a new one.
     /// </summary>
     /// <returns>The tab view model containing the loaded conversation.</returns>
     public ChatTabViewModel LoadConversation(ConversationData data, string? filePath = null)
     {
-        _tabCounter++;
+        // If this file is already open in a tab, just switch to it
+        if (filePath is not null)
+        {
+            var existing = FindTabByFilePath(filePath);
+            if (existing is not null)
+            {
+                SelectedTab = existing;
+                return existing;
+            }
+        }
 
         // Find matching preset or use default
         ProviderPreset? preset = null;
@@ -117,13 +128,40 @@ public partial class MainViewModel : ObservableObject
         }
         preset ??= GetDefaultPreset();
 
-        var vm = new ChatTabViewModel(
-            preset,
-            GetActivePromptText(),
-            GetCurrentTheme(),
-            presets,
-            _profiles,
-            GetActiveProfile());
+        // Reuse the current tab if it is empty (no messages, not dirty, never saved)
+        var reuseTab = SelectedTab is not null && IsTabEmpty(SelectedTab);
+
+        ChatTabViewModel vm;
+        if (reuseTab)
+        {
+            // Dispose the empty tab and replace it at the same index
+            var idx = Tabs.IndexOf(SelectedTab!);
+            var oldTab = SelectedTab!;
+            oldTab.Dispose();
+
+            vm = new ChatTabViewModel(
+                preset,
+                GetActivePromptText(),
+                GetCurrentTheme(),
+                presets,
+                _profiles,
+                GetActiveProfile());
+
+            Tabs[idx] = vm;
+        }
+        else
+        {
+            _tabCounter++;
+            vm = new ChatTabViewModel(
+                preset,
+                GetActivePromptText(),
+                GetCurrentTheme(),
+                presets,
+                _profiles,
+                GetActiveProfile());
+
+            Tabs.Add(vm);
+        }
 
         // Restore messages
         foreach (var msg in data.Messages)
@@ -135,7 +173,6 @@ public partial class MainViewModel : ObservableObject
         vm.HasBeenSaved = true;
         vm.FilePath = filePath;
 
-        Tabs.Add(vm);
         SelectedTab = vm;
         return vm;
     }
@@ -249,6 +286,32 @@ public partial class MainViewModel : ObservableObject
     #endregion
 
     #region Private Methods
+
+    /// <summary>
+    /// Finds an already-open tab whose <see cref="ChatTabViewModel.FilePath"/> matches
+    /// the given path (case-insensitive on Windows).
+    /// </summary>
+    private ChatTabViewModel? FindTabByFilePath(string filePath)
+    {
+        foreach (var tab in Tabs)
+        {
+            if (tab.FilePath is not null &&
+                string.Equals(tab.FilePath, filePath, StringComparison.OrdinalIgnoreCase))
+            {
+                return tab;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Returns <c>true</c> if the tab has no messages, is not dirty, and has never been saved —
+    /// i.e., it is a freshly created, unused tab.
+    /// </summary>
+    private static bool IsTabEmpty(ChatTabViewModel tab)
+    {
+        return tab.GetMessages().Count == 0 && !tab.IsDirty && !tab.HasBeenSaved;
+    }
 
     /// <summary>
     /// Gets the default provider preset based on the active profile's preferred provider type.
