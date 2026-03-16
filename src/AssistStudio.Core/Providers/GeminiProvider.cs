@@ -114,15 +114,39 @@ public partial class GeminiProvider : IAiProvider, IDisposable
         IsTruncated = firstCandidate.TryGetProperty("finishReason", out var frEl) &&
                       frEl.GetString() == "MAX_TOKENS";
 
-        var content = firstCandidate
-            .GetProperty("content")
-            .GetProperty("parts")[0]
-            .GetProperty("text")
-            .GetString() ?? "";
+        // Parse parts — may contain text and/or functionCall
+        string? textContent = null;
+        var toolCalls = new List<ToolCall>();
+
+        if (firstCandidate.TryGetProperty("content", out var contentEl) &&
+            contentEl.TryGetProperty("parts", out var partsEl))
+        {
+            foreach (var part in partsEl.EnumerateArray())
+            {
+                if (part.TryGetProperty("text", out var textEl))
+                {
+                    textContent = textEl.GetString();
+                }
+                else if (part.TryGetProperty("functionCall", out var fc))
+                {
+                    var funcName = fc.GetProperty("name").GetString()!;
+                    toolCalls.Add(new ToolCall
+                    {
+                        // Gemini has no tool call IDs; use function name so
+                        // ToolCallId in the result message carries the name
+                        // needed by functionResponse.
+                        Id = funcName,
+                        FunctionName = funcName,
+                        Arguments = fc.GetProperty("args").GetRawText()
+                    });
+                }
+            }
+        }
 
         return new AiResponse
         {
-            Content = content,
+            Content = textContent,
+            ToolCalls = toolCalls,
             Usage = tokenUsage,
             IsTruncated = IsTruncated
         };
@@ -250,8 +274,30 @@ public partial class GeminiProvider : IAiProvider, IDisposable
                 continue;
             }
 
-            // Skip tool messages until Gemini tool calling is implemented
-            if (msg.Role == ChatRole.Tool) continue;
+            // Tool result messages use functionResponse
+            if (msg.Role == ChatRole.Tool)
+            {
+                JsonNode? responseNode;
+                try { responseNode = JsonNode.Parse(msg.Content); }
+                catch { responseNode = new JsonObject { ["result"] = msg.Content }; }
+
+                contents.Add(new JsonObject
+                {
+                    ["role"] = "function",
+                    ["parts"] = new JsonArray
+                    {
+                        new JsonObject
+                        {
+                            ["functionResponse"] = new JsonObject
+                            {
+                                ["name"] = msg.ToolCallId ?? "unknown",
+                                ["response"] = responseNode
+                            }
+                        }
+                    }
+                });
+                continue;
+            }
 
             var role = msg.Role == ChatRole.User ? "user" : "model";
             var parts = new JsonArray();
@@ -305,6 +351,22 @@ public partial class GeminiProvider : IAiProvider, IDisposable
                 parts.Add(new JsonObject { ["text"] = textContent });
             }
 
+            // Assistant messages with tool calls need functionCall parts
+            if (msg.Role == ChatRole.Assistant && msg.ToolCalls is { Count: > 0 })
+            {
+                foreach (var tc in msg.ToolCalls)
+                {
+                    parts.Add(new JsonObject
+                    {
+                        ["functionCall"] = new JsonObject
+                        {
+                            ["name"] = tc.FunctionName,
+                            ["args"] = JsonNode.Parse(tc.Arguments)
+                        }
+                    });
+                }
+            }
+
             contents.Add(new JsonObject
             {
                 ["role"] = role,
@@ -330,6 +392,25 @@ public partial class GeminiProvider : IAiProvider, IDisposable
                 {
                     new JsonObject { ["text"] = systemText }
                 }
+            };
+        }
+
+        // Add tool definitions when available
+        if (request.Tools is { Count: > 0 })
+        {
+            var functionDeclarations = new JsonArray();
+            foreach (var tool in request.Tools)
+            {
+                functionDeclarations.Add(new JsonObject
+                {
+                    ["name"] = tool.Name,
+                    ["description"] = tool.Description,
+                    ["parameters"] = JsonNode.Parse(tool.ParameterSchema)
+                });
+            }
+            body["tools"] = new JsonArray
+            {
+                new JsonObject { ["functionDeclarations"] = functionDeclarations }
             };
         }
 

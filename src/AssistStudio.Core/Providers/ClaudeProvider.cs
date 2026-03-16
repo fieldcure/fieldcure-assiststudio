@@ -115,14 +115,35 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
         IsTruncated = doc.RootElement.TryGetProperty("stop_reason", out var sr) &&
                       sr.GetString() == "max_tokens";
 
-        var content = doc.RootElement
-            .GetProperty("content")[0]
-            .GetProperty("text")
-            .GetString() ?? "";
+        // Parse content blocks — may contain text and/or tool_use
+        string? textContent = null;
+        var toolCalls = new List<ToolCall>();
+
+        if (doc.RootElement.TryGetProperty("content", out var contentArr))
+        {
+            foreach (var block in contentArr.EnumerateArray())
+            {
+                var blockType = block.GetProperty("type").GetString();
+                if (blockType == "text")
+                {
+                    textContent = block.GetProperty("text").GetString();
+                }
+                else if (blockType == "tool_use")
+                {
+                    toolCalls.Add(new ToolCall
+                    {
+                        Id = block.GetProperty("id").GetString()!,
+                        FunctionName = block.GetProperty("name").GetString()!,
+                        Arguments = block.GetProperty("input").GetRawText()
+                    });
+                }
+            }
+        }
 
         return new AiResponse
         {
-            Content = content,
+            Content = textContent,
+            ToolCalls = toolCalls,
             Usage = tokenUsage,
             IsTruncated = IsTruncated
         };
@@ -256,8 +277,24 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
                 continue;
             }
 
-            // Skip tool messages until Claude tool calling is implemented
-            if (msg.Role == ChatRole.Tool) continue;
+            // Tool result messages become user messages with tool_result content blocks
+            if (msg.Role == ChatRole.Tool)
+            {
+                messages.Add(new JsonObject
+                {
+                    ["role"] = "user",
+                    ["content"] = new JsonArray
+                    {
+                        new JsonObject
+                        {
+                            ["type"] = "tool_result",
+                            ["tool_use_id"] = msg.ToolCallId,
+                            ["content"] = msg.Content
+                        }
+                    }
+                });
+                continue;
+            }
 
             var role = msg.Role == ChatRole.User ? "user" : "assistant";
             var imageAttachments = msg.Attachments
@@ -337,11 +374,42 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
                     textContent += $"\n\n[File: {att.FileName}]\n{fileText}";
                 }
 
-                messages.Add(new JsonObject
+                // Assistant messages with tool calls need content blocks
+                if (msg.Role == ChatRole.Assistant && msg.ToolCalls is { Count: > 0 })
                 {
-                    ["role"] = role,
-                    ["content"] = textContent
-                });
+                    var contentBlocks = new JsonArray();
+                    if (!string.IsNullOrEmpty(textContent))
+                    {
+                        contentBlocks.Add(new JsonObject
+                        {
+                            ["type"] = "text",
+                            ["text"] = textContent
+                        });
+                    }
+                    foreach (var tc in msg.ToolCalls)
+                    {
+                        contentBlocks.Add(new JsonObject
+                        {
+                            ["type"] = "tool_use",
+                            ["id"] = tc.Id,
+                            ["name"] = tc.FunctionName,
+                            ["input"] = JsonNode.Parse(tc.Arguments)
+                        });
+                    }
+                    messages.Add(new JsonObject
+                    {
+                        ["role"] = "assistant",
+                        ["content"] = contentBlocks
+                    });
+                }
+                else
+                {
+                    messages.Add(new JsonObject
+                    {
+                        ["role"] = role,
+                        ["content"] = textContent
+                    });
+                }
             }
         }
 
@@ -357,6 +425,22 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
         if (systemPrompt is not null)
         {
             body["system"] = systemPrompt;
+        }
+
+        // Add tool definitions when available
+        if (request.Tools is { Count: > 0 })
+        {
+            var tools = new JsonArray();
+            foreach (var tool in request.Tools)
+            {
+                tools.Add(new JsonObject
+                {
+                    ["name"] = tool.Name,
+                    ["description"] = tool.Description,
+                    ["input_schema"] = JsonNode.Parse(tool.ParameterSchema)
+                });
+            }
+            body["tools"] = tools;
         }
 
         return body.ToJsonString();
