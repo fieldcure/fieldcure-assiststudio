@@ -120,14 +120,32 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
         IsTruncated = firstChoice.TryGetProperty("finish_reason", out var fr) &&
                       fr.GetString() == "length";
 
-        var content = firstChoice
-            .GetProperty("message")
-            .GetProperty("content")
-            .GetString() ?? "";
+        var message = firstChoice.GetProperty("message");
+        var content = message.TryGetProperty("content", out var contentEl) &&
+                      contentEl.ValueKind != JsonValueKind.Null
+            ? contentEl.GetString()
+            : null;
+
+        // Parse tool calls from the response
+        var toolCalls = new List<ToolCall>();
+        if (message.TryGetProperty("tool_calls", out var toolCallsEl))
+        {
+            foreach (var tc in toolCallsEl.EnumerateArray())
+            {
+                var function = tc.GetProperty("function");
+                toolCalls.Add(new ToolCall
+                {
+                    Id = tc.GetProperty("id").GetString()!,
+                    FunctionName = function.GetProperty("name").GetString()!,
+                    Arguments = function.GetProperty("arguments").GetString()!
+                });
+            }
+        }
 
         return new AiResponse
         {
             Content = content,
+            ToolCalls = toolCalls,
             Usage = tokenUsage,
             IsTruncated = IsTruncated
         };
@@ -345,6 +363,16 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
                     ["content"] = contentParts
                 });
             }
+            else if (msg.Role == ChatRole.Tool)
+            {
+                // Tool result message requires tool_call_id
+                messages.Add(new JsonObject
+                {
+                    ["role"] = "tool",
+                    ["tool_call_id"] = msg.ToolCallId,
+                    ["content"] = msg.Content
+                });
+            }
             else
             {
                 // Text-only message (possibly with text file attachments)
@@ -355,11 +383,33 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
                     textContent += $"\n\n[File: {att.FileName}]\n{fileText}";
                 }
 
-                messages.Add(new JsonObject
+                var msgObj = new JsonObject
                 {
                     ["role"] = role,
                     ["content"] = textContent
-                });
+                };
+
+                // Include tool_calls on assistant messages that initiated tool calls
+                if (msg.Role == ChatRole.Assistant && msg.ToolCalls is { Count: > 0 })
+                {
+                    var toolCallsArr = new JsonArray();
+                    foreach (var tc in msg.ToolCalls)
+                    {
+                        toolCallsArr.Add(new JsonObject
+                        {
+                            ["id"] = tc.Id,
+                            ["type"] = "function",
+                            ["function"] = new JsonObject
+                            {
+                                ["name"] = tc.FunctionName,
+                                ["arguments"] = tc.Arguments
+                            }
+                        });
+                    }
+                    msgObj["tool_calls"] = toolCallsArr;
+                }
+
+                messages.Add(msgObj);
             }
         }
 
@@ -375,6 +425,26 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
         if (stream)
         {
             body["stream_options"] = new JsonObject { ["include_usage"] = true };
+        }
+
+        // Add tool definitions when available
+        if (request.Tools is { Count: > 0 })
+        {
+            var tools = new JsonArray();
+            foreach (var tool in request.Tools)
+            {
+                tools.Add(new JsonObject
+                {
+                    ["type"] = "function",
+                    ["function"] = new JsonObject
+                    {
+                        ["name"] = tool.Name,
+                        ["description"] = tool.Description,
+                        ["parameters"] = JsonNode.Parse(tool.ParameterSchema)
+                    }
+                });
+            }
+            body["tools"] = tools;
         }
 
         return body.ToJsonString();
