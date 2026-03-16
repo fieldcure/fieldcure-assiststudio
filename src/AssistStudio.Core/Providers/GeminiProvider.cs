@@ -117,10 +117,16 @@ public partial class GeminiProvider : IAiProvider, IDisposable
         // Parse parts — may contain text and/or functionCall
         string? textContent = null;
         var toolCalls = new List<ToolCall>();
+        int fcIndex = 0;
 
         if (firstCandidate.TryGetProperty("content", out var contentEl) &&
             contentEl.TryGetProperty("parts", out var partsEl))
         {
+            // Count functionCall parts to decide if suffix is needed
+            int fcCount = 0;
+            foreach (var p in partsEl.EnumerateArray())
+                if (p.TryGetProperty("functionCall", out _)) fcCount++;
+
             foreach (var part in partsEl.EnumerateArray())
             {
                 if (part.TryGetProperty("text", out var textEl))
@@ -134,11 +140,13 @@ public partial class GeminiProvider : IAiProvider, IDisposable
                     {
                         // Gemini has no tool call IDs; use function name so
                         // ToolCallId in the result message carries the name
-                        // needed by functionResponse.
-                        Id = funcName,
+                        // needed by functionResponse. Add index suffix for
+                        // uniqueness when multiple calls exist.
+                        Id = fcCount > 1 ? $"{funcName}_{fcIndex}" : funcName,
                         FunctionName = funcName,
                         Arguments = fc.GetProperty("args").GetRawText()
                     });
+                    fcIndex++;
                 }
             }
         }
@@ -281,6 +289,14 @@ public partial class GeminiProvider : IAiProvider, IDisposable
                 try { responseNode = JsonNode.Parse(msg.Content); }
                 catch { responseNode = new JsonObject { ["result"] = msg.Content }; }
 
+                // Strip index suffix (e.g. "scan_directory_0" → "scan_directory")
+                var toolCallId = msg.ToolCallId ?? "unknown";
+                var lastUnderscore = toolCallId.LastIndexOf('_');
+                var funcName = lastUnderscore > 0 &&
+                               int.TryParse(toolCallId[(lastUnderscore + 1)..], out _)
+                    ? toolCallId[..lastUnderscore]
+                    : toolCallId;
+
                 contents.Add(new JsonObject
                 {
                     ["role"] = "function",
@@ -290,7 +306,7 @@ public partial class GeminiProvider : IAiProvider, IDisposable
                         {
                             ["functionResponse"] = new JsonObject
                             {
-                                ["name"] = msg.ToolCallId ?? "unknown",
+                                ["name"] = funcName,
                                 ["response"] = responseNode
                             }
                         }
