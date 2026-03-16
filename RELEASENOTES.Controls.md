@@ -1,4 +1,12 @@
-# Release Notes — FieldCure.AssistStudio.Controls.WinUI
+﻿# Release Notes — FieldCure.AssistStudio.Controls.WinUI
+
+## [0.2.0] - 2026-03-16
+
+### Fixed
+- Duplicate file attachment on drag-and-drop (event bubbling from InputContainer to ChatPanel)
+- Consecutive tool results merged into single user message for Claude compatibility
+
+---
 
 ## [0.1.0] - 2026-03-15
 

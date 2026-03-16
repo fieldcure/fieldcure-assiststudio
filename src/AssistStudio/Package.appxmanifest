@@ -10,7 +10,7 @@
   <Identity
     Name="eb7d0593-4bf7-4104-9990-3e1260bb6004"
     Publisher="CN=diluculo"
-    Version="0.1.0.0" />
+    Version="0.2.0.0" />
 
   <mp:PhoneIdentity PhoneProductId="eb7d0593-4bf7-4104-9990-3e1260bb6004" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 

@@ -1,4 +1,13 @@
-# Release Notes — AssistStudio App
+﻿# Release Notes — AssistStudio App
+
+## [0.2.0] - 2026-03-16
+
+### Added
+- PDF Handling setting per provider (Auto / Native PDF / Page as Image / Text Extraction)
+- `DisplayName` shown for tools in Profile settings (instead of snake_case)
+- Tool calling warning localized in Profile Tools section
+
+---
 
 ## [0.1.0] - 2026-03-15
 

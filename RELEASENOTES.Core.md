@@ -1,4 +1,20 @@
-# Release Notes — FieldCure.AssistStudio.Core
+﻿# Release Notes — FieldCure.AssistStudio.Core
+
+## [0.2.0] - 2026-03-16
+
+### Added
+- Tool calling support for `ClaudeProvider` and `GeminiProvider`
+- `PdfCapability` enum with `Auto`, `TextExtraction`, `NativePdf`, `PageAsImage` options
+- `PdfCapability` property on `ProviderPreset` for per-preset PDF handling
+- `AttachmentProcessor.RenderPdfPages()` for PDF-to-image conversion (via PDFtoImage)
+- `PageAsImage` PDF handling in `OpenAiProvider` and `OllamaProvider` for vision models
+- `DisplayName` default interface member on `IAssistTool` for human-readable UI labels
+- `ProviderFactory` auto-resolves `PdfCapability.Auto` based on provider type
+
+### Fixed
+- Gemini tool call ID uniqueness for parallel calls
+
+---
 
 ## [0.1.0] - 2026-03-15
 
