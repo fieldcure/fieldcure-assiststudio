@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -83,6 +84,8 @@ internal class WebViewChatRenderer
         await _webView.EnsureCoreWebView2Async();
 
         _webView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
+        _webView.CoreWebView2.NavigationStarting += OnNavigationStarting;
+        _webView.CoreWebView2.NewWindowRequested += OnNewWindowRequested;
 
         // Browser accelerator keys (Ctrl+S, Ctrl+P, etc.) are kept enabled so that
         // keydown events reach our JS listener, which forwards them via postMessage.
@@ -229,6 +232,36 @@ internal class WebViewChatRenderer
     }
 
     /// <summary>
+    /// Intercepts navigation attempts and opens external URLs in the default browser.
+    /// Allows only the initial about:blank and NavigateToString loads.
+    /// </summary>
+    private void OnNavigationStarting(CoreWebView2 sender, CoreWebView2NavigationStartingEventArgs args)
+    {
+        var uri = args.Uri;
+
+        // Allow internal navigations (about:blank, data:, NavigateToString content)
+        if (string.IsNullOrEmpty(uri) ||
+            uri.StartsWith("about:", StringComparison.OrdinalIgnoreCase) ||
+            uri.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        // Block navigation inside WebView2 and open in default browser
+        args.Cancel = true;
+        OpenInDefaultBrowser(uri);
+    }
+
+    /// <summary>
+    /// Intercepts target="_blank" links and opens them in the default browser.
+    /// </summary>
+    private void OnNewWindowRequested(CoreWebView2 sender, CoreWebView2NewWindowRequestedEventArgs args)
+    {
+        args.Handled = true;
+        OpenInDefaultBrowser(args.Uri);
+    }
+
+    /// <summary>
     /// Handles incoming web messages from the chat HTML and routes them to the appropriate events.
     /// </summary>
     private void OnWebMessageReceived(CoreWebView2 sender, CoreWebView2WebMessageReceivedEventArgs args)
@@ -293,6 +326,21 @@ internal class WebViewChatRenderer
     #endregion
 
     #region Private Methods
+
+    /// <summary>
+    /// Opens the specified URL in the user's default web browser.
+    /// </summary>
+    private static void OpenInDefaultBrowser(string url)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            DiagnosticLogger.LogException(ex);
+        }
+    }
 
     /// <summary>
     /// Injects vendor JavaScript libraries (marked.js, highlight.js, KaTeX) into the WebView2.
