@@ -277,22 +277,37 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
                 continue;
             }
 
-            // Tool result messages become user messages with tool_result content blocks
+            // Tool result messages become user messages with tool_result content blocks.
+            // Consecutive tool results are merged into a single user message
+            // (Claude requires all tool_results for parallel calls in one message).
             if (msg.Role == ChatRole.Tool)
             {
-                messages.Add(new JsonObject
+                var toolResultBlock = new JsonObject
                 {
-                    ["role"] = "user",
-                    ["content"] = new JsonArray
+                    ["type"] = "tool_result",
+                    ["tool_use_id"] = msg.ToolCallId,
+                    ["content"] = msg.Content
+                };
+
+                // Merge into previous user message if it contains tool_result blocks
+                if (messages.Count > 0 &&
+                    messages[^1] is JsonObject lastMsg &&
+                    lastMsg["role"]?.GetValue<string>() == "user" &&
+                    lastMsg["content"] is JsonArray contentArr &&
+                    contentArr.Count > 0 &&
+                    contentArr[0] is JsonObject firstBlock &&
+                    firstBlock["type"]?.GetValue<string>() == "tool_result")
+                {
+                    contentArr.Add(toolResultBlock);
+                }
+                else
+                {
+                    messages.Add(new JsonObject
                     {
-                        new JsonObject
-                        {
-                            ["type"] = "tool_result",
-                            ["tool_use_id"] = msg.ToolCallId,
-                            ["content"] = msg.Content
-                        }
-                    }
-                });
+                        ["role"] = "user",
+                        ["content"] = new JsonArray { toolResultBlock }
+                    });
+                }
                 continue;
             }
 
