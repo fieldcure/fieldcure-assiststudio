@@ -269,12 +269,13 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
         var messages = new JsonArray();
 
         // OpenAI includes system messages in the messages array
-        if (request.SystemPrompt is not null)
+        var systemPrompt = PromptBuilder.Build(request.SystemPrompt, request.WorkspaceText, request.ContextChunks);
+        if (systemPrompt is not null)
         {
             messages.Add(new JsonObject
             {
                 ["role"] = "system",
-                ["content"] = request.SystemPrompt
+                ["content"] = systemPrompt
             });
         }
 

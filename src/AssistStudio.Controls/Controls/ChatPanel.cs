@@ -327,6 +327,18 @@ public sealed class ChatPanel : Control
     public IReadOnlyList<IAssistTool> RegisteredTools { get; set; } = [];
 
     /// <summary>
+    /// Optional workspace context provider. When set, the current workspace state
+    /// is automatically injected into every AI request.
+    /// </summary>
+    public IWorkspaceContext? WorkspaceContext { get; set; }
+
+    /// <summary>
+    /// Optional RAG context provider. When set, relevant context chunks are retrieved
+    /// for the user's query and passed to the AI provider.
+    /// </summary>
+    public IContextProvider? ContextProvider { get; set; }
+
+    /// <summary>
     /// Maximum number of consecutive tool call rounds before forcing a text response. Default is 10.
     /// </summary>
     public int MaxToolCallRounds { get; set; } = 10;
@@ -728,7 +740,7 @@ public sealed class ChatPanel : Control
             else
             {
                 // Standard streaming mode
-                var request = CreateRequest(_messages.ToList());
+                var request = await CreateRequestAsync(_messages.ToList());
 
                 await foreach (var token in Provider.StreamAsync(request, ct))
                 {
@@ -808,7 +820,7 @@ public sealed class ChatPanel : Control
 
         try
         {
-            var request = CreateRequest(_messages.ToList());
+            var request = await CreateRequestAsync(_messages.ToList());
 
             var continuationText = "";
             await foreach (var token in Provider.StreamAsync(request, ct))
@@ -1126,7 +1138,7 @@ public sealed class ChatPanel : Control
 
         try
         {
-            var request = CreateRequest(_messages.ToList());
+            var request = await CreateRequestAsync(_messages.ToList());
 
             await foreach (var token in Provider.StreamAsync(request, ct))
             {
@@ -1354,7 +1366,7 @@ public sealed class ChatPanel : Control
     private async Task ExecuteWithToolCallingAsync(ChatMessage assistantMessage, ChatMessage userMessage, CancellationToken ct)
     {
         var executor = new ToolCallExecutor(RegisteredTools);
-        var request = CreateRequest(_messages.ToList());
+        var request = await CreateRequestAsync(_messages.ToList());
 
         var response = await Provider!.CompleteAsync(request, ct);
         var round = 0;
@@ -1399,7 +1411,7 @@ public sealed class ChatPanel : Control
             }
 
             // Re-send with tool results
-            request = CreateRequest(_messages.ToList());
+            request = await CreateRequestAsync(_messages.ToList());
             response = await Provider.CompleteAsync(request, ct);
         }
 
@@ -1412,15 +1424,27 @@ public sealed class ChatPanel : Control
     }
 
     /// <summary>
-    /// Builds an <see cref="AiRequest"/> from the current messages and selected preset settings.
+    /// Builds an <see cref="AiRequest"/> from the current messages, selected preset settings,
+    /// and optional workspace/RAG context.
     /// </summary>
-    private AiRequest CreateRequest(IReadOnlyList<ChatMessage> messages, string? systemPrompt = null)
+    private async Task<AiRequest> CreateRequestAsync(IReadOnlyList<ChatMessage> messages, string? systemPrompt = null)
     {
+        var workspaceText = WorkspaceContext is not null
+            ? await WorkspaceContext.GetContextAsync()
+            : null;
+
+        var lastUserMsg = messages.LastOrDefault(m => m.Role == ChatRole.User)?.Content;
+        var chunks = ContextProvider is not null && lastUserMsg is not null
+            ? await ContextProvider.RetrieveAsync(lastUserMsg)
+            : null;
+
         var preset = SelectedPreset;
         return new AiRequest
         {
             Messages = messages,
             SystemPrompt = systemPrompt ?? SystemPrompt,
+            WorkspaceText = workspaceText,
+            ContextChunks = chunks is { Count: > 0 } ? chunks : null,
             Temperature = preset?.Temperature ?? 0.7,
             MaxTokens = preset?.MaxTokens ?? 4096,
             Tools = RegisteredTools.Count > 0 ? RegisteredTools : null

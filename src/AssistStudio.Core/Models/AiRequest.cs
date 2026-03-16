@@ -22,5 +22,11 @@ public partial class AiRequest
     /// <summary>Optional list of tools available for the AI model to invoke.</summary>
     public IReadOnlyList<IAssistTool>? Tools { get; init; }
 
+    /// <summary>Retrieved context chunks for RAG injection into the system prompt.</summary>
+    public IReadOnlyList<ContextChunk>? ContextChunks { get; init; }
+
+    /// <summary>Current workspace state text from <see cref="IWorkspaceContext"/>.</summary>
+    public string? WorkspaceText { get; init; }
+
     #endregion
 }
