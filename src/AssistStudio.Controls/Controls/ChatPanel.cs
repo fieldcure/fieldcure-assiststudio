@@ -502,6 +502,7 @@ public sealed class ChatPanel : Control
             _inputArea.PresetChanged -= OnInputPresetChanged;
             _inputArea.ProfileChanged -= OnInputProfileChanged;
             _inputArea.StopRequested -= OnStopRequested;
+            _inputArea.SummarizeRequested -= OnInputSummarizeRequested;
         }
         if (_rootGrid is not null)
         {
@@ -536,6 +537,7 @@ public sealed class ChatPanel : Control
             _inputArea.PresetChanged += OnInputPresetChanged;
             _inputArea.ProfileChanged += OnInputProfileChanged;
             _inputArea.StopRequested += OnStopRequested;
+            _inputArea.SummarizeRequested += OnInputSummarizeRequested;
 
             // Push current values (may have been set before template was applied)
             if (AvailablePresets is { } presets)
@@ -624,6 +626,7 @@ public sealed class ChatPanel : Control
             if (_emptyStatePanel is not null)
                 _emptyStatePanel.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
         }
+        UpdateSummarizeButtonState();
     }
 
     /// <summary>
@@ -775,6 +778,7 @@ public sealed class ChatPanel : Control
             assistantMessage.IsStreaming = false;
             if (_inputArea is not null)
                 _inputArea.IsInputEnabled = true;
+            UpdateSummarizeButtonState();
         }
     }
 
@@ -858,6 +862,7 @@ public sealed class ChatPanel : Control
             assistantMessage.IsStreaming = false;
             if (_inputArea is not null)
                 _inputArea.IsInputEnabled = true;
+            UpdateSummarizeButtonState();
         }
     }
 
@@ -975,6 +980,7 @@ public sealed class ChatPanel : Control
             summaryMessage.IsStreaming = false;
             if (_inputArea is not null)
                 _inputArea.IsInputEnabled = true;
+            UpdateSummarizeButtonState();
         }
     }
 
@@ -993,6 +999,78 @@ public sealed class ChatPanel : Control
     private void OnStopRequested(object? sender, EventArgs e)
     {
         _streamingCts?.Cancel();
+    }
+
+    /// <summary>
+    /// Handles the summarize button click from the input area to trigger conversation summarization.
+    /// Shows the summary as a streamed assistant message and replaces older messages internally.
+    /// </summary>
+    private async void OnInputSummarizeRequested(object? sender, EventArgs e)
+    {
+        if (Provider is null || _messages.Count <= RecentTurnsToKeep) return;
+
+        var turnsToKeep = Math.Min(RecentTurnsToKeep, _messages.Count);
+        var oldMessages = _messages.Take(_messages.Count - turnsToKeep).ToList();
+        if (oldMessages.Count == 0) return;
+
+        var historyText = string.Join("\n",
+            oldMessages.Select(m => $"{m.Role}: {m.Content}"));
+
+        var summaryRequest = new AiRequest
+        {
+            Messages =
+            [
+                new ChatMessage(ChatRole.User,
+                    "Summarize the following conversation concisely, preserving key context and decisions:\n\n" +
+                    historyText)
+            ],
+            SystemPrompt = "You are a helpful assistant that creates concise conversation summaries."
+        };
+
+        var summaryMessage = new ChatMessage(ChatRole.Assistant)
+        {
+            IsStreaming = true,
+            ProviderName = Provider.ProviderName,
+            ProviderModelId = Provider.ModelId
+        };
+        _messages.Add(summaryMessage);
+        await _renderer.BeginAssistantMessageAsync(summaryMessage.Id, Provider.ProviderName, Provider.ModelId);
+
+        if (_inputArea is not null)
+            _inputArea.IsInputEnabled = false;
+        _streamingCts?.Cancel();
+        _streamingCts = new CancellationTokenSource();
+        var ct = _streamingCts.Token;
+
+        try
+        {
+            await foreach (var token in Provider.StreamAsync(summaryRequest, ct))
+            {
+                summaryMessage.Content += token;
+                await _renderer.AppendTokenAsync(summaryMessage.Id, token);
+            }
+            await _renderer.FinalizeMessageAsync(summaryMessage.Id, summaryMessage.Content, Provider.IsTruncated);
+
+            // Replace old messages with a summary system message (internal only)
+            for (var i = 0; i < oldMessages.Count; i++)
+                _messages.RemoveAt(0);
+            _messages.Insert(0, new ChatMessage(ChatRole.System,
+                $"[Previous conversation summary]\n{summaryMessage.Content}"));
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            DiagnosticLogger.LogException(ex);
+            summaryMessage.Content += $"\n\n[Error: {ex.Message}]";
+            await _renderer.FinalizeMessageAsync(summaryMessage.Id, summaryMessage.Content);
+        }
+        finally
+        {
+            summaryMessage.IsStreaming = false;
+            if (_inputArea is not null)
+                _inputArea.IsInputEnabled = true;
+            UpdateSummarizeButtonState();
+        }
     }
 
     /// <summary>
@@ -1047,6 +1125,15 @@ public sealed class ChatPanel : Control
     #endregion
 
     #region Private Methods
+
+    /// <summary>
+    /// Updates the summarize button enabled state based on the current message count.
+    /// </summary>
+    private void UpdateSummarizeButtonState()
+    {
+        if (_inputArea is not null)
+            _inputArea.IsSummarizeEnabled = _messages.Count > RecentTurnsToKeep;
+    }
 
     /// <summary>
     /// Transitions the layout from the empty state panel to the active chat layout.
@@ -1169,6 +1256,7 @@ public sealed class ChatPanel : Control
             assistantMessage.IsStreaming = false;
             if (_inputArea is not null)
                 _inputArea.IsInputEnabled = true;
+            UpdateSummarizeButtonState();
         }
     }
 

@@ -54,6 +54,11 @@ public sealed partial class InputContainer : Control
         DependencyProperty.Register(nameof(IsInputEnabled), typeof(bool), typeof(InputContainer),
             new PropertyMetadata(true, OnIsInputEnabledChanged));
 
+    /// <summary>Identifies the <see cref="IsSummarizeEnabled"/> dependency property.</summary>
+    public static readonly DependencyProperty IsSummarizeEnabledProperty =
+        DependencyProperty.Register(nameof(IsSummarizeEnabled), typeof(bool), typeof(InputContainer),
+            new PropertyMetadata(false, OnIsSummarizeEnabledChanged));
+
     /// <summary>Identifies the <see cref="AvailablePresets"/> dependency property.</summary>
     public static readonly DependencyProperty AvailablePresetsProperty =
         DependencyProperty.Register(nameof(AvailablePresets), typeof(IList), typeof(InputContainer),
@@ -175,6 +180,15 @@ public sealed partial class InputContainer : Control
     {
         get => (bool)GetValue(IsInputEnabledProperty);
         set => SetValue(IsInputEnabledProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets whether the summarize button is enabled.
+    /// </summary>
+    public bool IsSummarizeEnabled
+    {
+        get => (bool)GetValue(IsSummarizeEnabledProperty);
+        set => SetValue(IsSummarizeEnabledProperty, value);
     }
 
     /// <summary>
@@ -314,11 +328,17 @@ public sealed partial class InputContainer : Control
             var loader = new Windows.ApplicationModel.Resources.ResourceLoader(
                 "AssistStudio.Controls/Resources");
             SetTooltip(_attachButton, loader.GetString("InputContainer_AttachTooltip"));
-            SetTooltip(_summarizeButton, loader.GetString("InputContainer_SummarizeTooltip"));
             SetTooltip(_stopButton, loader.GetString("InputContainer_StopTooltip"));
             SetTooltip(_sendButton, loader.GetString("InputContainer_SendTooltip"));
         }
         catch { /* Resource not found — tooltips will be empty */ }
+
+        // Apply initial summarize button state and tooltip
+        if (_summarizeButton is not null)
+        {
+            ApplySummarizeVisualState(IsSummarizeEnabled && IsInputEnabled);
+            UpdateSummarizeTooltip(IsSummarizeEnabled);
+        }
 
         // Update Send button when attachments change
         if (_previewBar is not null)
@@ -449,6 +469,7 @@ public sealed partial class InputContainer : Control
     /// </summary>
     private void SummarizeButton_Click(object sender, RoutedEventArgs e)
     {
+        if (!IsSummarizeEnabled || !IsInputEnabled) return;
         SummarizeRequested?.Invoke(this, EventArgs.Empty);
     }
 
@@ -593,7 +614,7 @@ public sealed partial class InputContainer : Control
             if (self._attachButton is not null)
                 self._attachButton.IsEnabled = enabled;
             if (self._summarizeButton is not null)
-                self._summarizeButton.IsEnabled = enabled;
+                self.ApplySummarizeVisualState(enabled && self.IsSummarizeEnabled);
             // Toggle Send ↔ Stop button
             if (self._sendButton is not null)
                 self._sendButton.Visibility = enabled
@@ -603,6 +624,19 @@ public sealed partial class InputContainer : Control
                 self._stopButton.Visibility = enabled
                     ? Microsoft.UI.Xaml.Visibility.Collapsed
                     : Microsoft.UI.Xaml.Visibility.Visible;
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="IsSummarizeEnabled"/> changes to update button state and tooltip.
+    /// </summary>
+    private static void OnIsSummarizeEnabledChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is InputContainer self && self._summarizeButton is not null)
+        {
+            var canSummarize = (bool)e.NewValue;
+            self.ApplySummarizeVisualState(canSummarize && self.IsInputEnabled);
+            self.UpdateSummarizeTooltip(canSummarize);
         }
     }
 
@@ -685,6 +719,34 @@ public sealed partial class InputContainer : Control
         if (button is null || string.IsNullOrEmpty(text)) return;
         var tooltip = new ToolTip { Content = text, Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse };
         ToolTipService.SetToolTip(button, tooltip);
+    }
+
+    /// <summary>
+    /// Applies a visual disabled/enabled state to the summarize button without changing IsEnabled,
+    /// so that the tooltip remains visible even when the button appears disabled.
+    /// </summary>
+    private void ApplySummarizeVisualState(bool enabled)
+    {
+        if (_summarizeButton is null) return;
+        _summarizeButton.Opacity = enabled ? 1.0 : 0.4;
+    }
+
+    /// <summary>
+    /// Updates the summarize button tooltip based on whether summarization is available.
+    /// </summary>
+    private void UpdateSummarizeTooltip(bool canSummarize)
+    {
+        if (_summarizeButton is null) return;
+        try
+        {
+            var loader = new Windows.ApplicationModel.Resources.ResourceLoader(
+                "AssistStudio.Controls/Resources");
+            var text = canSummarize
+                ? loader.GetString("InputContainer_SummarizeTooltip")
+                : loader.GetString("InputContainer_SummarizeDisabledTooltip");
+            SetTooltip(_summarizeButton, text);
+        }
+        catch { /* Resource not found */ }
     }
 
     /// <summary>

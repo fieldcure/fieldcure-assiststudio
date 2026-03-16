@@ -99,6 +99,9 @@
   <data name="InputContainer_SummarizeTooltip" xml:space="preserve">
     <value>Summarize conversation</value>
   </data>
+  <data name="InputContainer_SummarizeDisabledTooltip" xml:space="preserve">
+    <value>Not enough conversation to summarize</value>
+  </data>
   <data name="InputContainer_StopTooltip" xml:space="preserve">
     <value>Stop generating</value>
   </data>

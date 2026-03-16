@@ -99,6 +99,9 @@
   <data name="InputContainer_SummarizeTooltip" xml:space="preserve">
     <value>대화 요약</value>
   </data>
+  <data name="InputContainer_SummarizeDisabledTooltip" xml:space="preserve">
+    <value>대화가 충분하지 않아 요약할 수 없습니다</value>
+  </data>
   <data name="InputContainer_StopTooltip" xml:space="preserve">
     <value>생성 중지</value>
   </data>
