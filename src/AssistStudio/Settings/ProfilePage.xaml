@@ -116,6 +116,10 @@
                     <StackPanel Spacing="4">
                         <TextBlock x:Uid="Profile_Tools" Text="Tools"
                                    Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <TextBlock Text="Not all models support tool calling. Please verify that the selected model supports it."
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                                   TextWrapping="Wrap" />
                         <StackPanel x:Name="ToolsPanel" Spacing="4" />
                     </StackPanel>
                 </StackPanel>

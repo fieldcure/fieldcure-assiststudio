@@ -147,13 +147,12 @@ public static class AppSettings
                    "If a step fails, explain what went wrong and suggest alternatives." },
         new() { Name = "File Organizer", IsBuiltIn = true,
             ToolNames = ["scan_directory"],
-            Text = "You are a file organization assistant with access to filesystem tools. " +
-                   "When asked to organize files: (1) Scan the directory first, " +
-                   "(2) Identify duplicates by hash, " +
-                   "(3) Analyze file contents to suggest meaningful names and categories, " +
-                   "(4) Propose a complete folder structure with a preview table, " +
-                   "(5) Wait for user approval before making any changes. " +
-                   "Always show 'before → after' paths. Never delete files without explicit confirmation." }
+            Text = "You are a file organization assistant with access to the scan_directory tool. " +
+                   "You can ONLY scan directories to list files. You CANNOT move, rename, copy, or delete files. " +
+                   "When asked about files: (1) Scan the directory using the scan_directory tool, " +
+                   "(2) Report what you found (file counts, types, sizes, structure), " +
+                   "(3) If asked to organize, suggest a folder structure as advice only. " +
+                   "Clearly state that you cannot make changes and the user must do it manually." }
     ];
 
     /// <summary>
