@@ -196,6 +196,11 @@ public sealed partial class ModelsPage : Page
     {
         PasswordVaultHelper.DeleteApiKey(provider);
 
+        // Clear the in-memory cached key so SyncPresetsFromUI won't resurrect it
+        var existing = _settings?.Presets.FirstOrDefault(p => p.ProviderType == provider);
+        if (existing is not null)
+            existing.ApiKey = "";
+
         inputPanel.Visibility = Visibility.Visible;
         displayPanel.Visibility = Visibility.Collapsed;
         statusText.Text = L("Models_NoKey");
