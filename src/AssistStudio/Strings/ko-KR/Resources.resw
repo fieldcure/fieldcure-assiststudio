@@ -204,6 +204,9 @@
   <data name="Profile_Tools.Text" xml:space="preserve">
     <value>도구</value>
   </data>
+  <data name="Profile_ToolsWarning.Text" xml:space="preserve">
+    <value>일부 모델은 도구 호출을 지원하지 않습니다. 선택한 모델이 지원하는지 확인해 주세요.</value>
+  </data>
   <!-- Utility AI Page -->
   <data name="Nav_UtilityAI.Content" xml:space="preserve">
     <value>유틸리티 AI</value>
