@@ -451,13 +451,12 @@ public sealed partial class ModelsPage : Page
     {
         if (_settings is null) return;
 
-        // Cloud providers — reuse API keys already loaded in presets to avoid redundant vault calls
-        var existingKeys = _settings.Presets.ToDictionary(p => p.ProviderType, p => p.ApiKey);
+        // Cloud providers — read API keys from vault to ensure consistency after add/remove
         _settings.Presets.Clear();
 
         foreach (var provider in new[] { "Claude", "OpenAI", "Gemini", "Groq" })
         {
-            existingKeys.TryGetValue(provider, out var key);
+            var key = PasswordVaultHelper.LoadApiKey(provider);
             if (string.IsNullOrEmpty(key)) continue;
 
             var modelCombo = provider switch

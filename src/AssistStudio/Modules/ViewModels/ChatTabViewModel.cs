@@ -219,12 +219,14 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         // Force DP change callback by passing a new list instance
         ChatPanel.AvailablePresets = new System.Collections.ArrayList(presets);
 
+        bool found = false;
         if (currentName is not null)
         {
             foreach (ProviderPreset p in presets)
             {
                 if (p.Name == currentName)
                 {
+                    found = true;
                     ChatPanel.SelectedPreset = p;
 
                     // Recreate provider if connection-relevant fields changed
@@ -236,6 +238,22 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                     }
                     break;
                 }
+            }
+        }
+
+        // Fallback: current preset was deleted — select the first available or clear
+        if (!found)
+        {
+            if (presets.Count > 0)
+            {
+                var first = (ProviderPreset)presets[0]!;
+                ChatPanel.SelectedPreset = first;
+                OnPresetChanged(this, first);
+            }
+            else
+            {
+                CurrentPreset = null;
+                ChatPanel.SelectedPreset = null;
             }
         }
     }

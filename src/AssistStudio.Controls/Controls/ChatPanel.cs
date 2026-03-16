@@ -144,7 +144,9 @@ public sealed class ChatPanel : Control
     /// </summary>
     private static void OnSelectedPresetChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is ChatPanel panel && e.NewValue is ProviderPreset preset)
+        if (d is not ChatPanel panel) return;
+
+        if (e.NewValue is ProviderPreset preset)
         {
             if (panel._inputArea is not null)
                 panel._inputArea.SelectedPreset = preset;
@@ -152,6 +154,13 @@ public sealed class ChatPanel : Control
                 ? preset.Name
                 : $"{preset.Name}/{preset.ModelId}";
             panel.UpdatePlaceholderWithProvider(label);
+        }
+        else
+        {
+            // Preset cleared (all providers removed)
+            if (panel._inputArea is not null)
+                panel._inputArea.SelectedPreset = null;
+            panel.UpdatePlaceholderWithProvider(null);
         }
     }
 
@@ -1157,8 +1166,20 @@ public sealed class ChatPanel : Control
     /// <summary>
     /// Updates the input area placeholder text to include the provider name.
     /// </summary>
-    private void UpdatePlaceholderWithProvider(string providerName)
+    private void UpdatePlaceholderWithProvider(string? providerName)
     {
+        if (string.IsNullOrEmpty(providerName))
+        {
+            try
+            {
+                var loader = new Windows.ApplicationModel.Resources.ResourceLoader("AssistStudio.Controls/Resources");
+                var fallback = loader.GetString("InputContainer_Placeholder");
+                Placeholder = !string.IsNullOrEmpty(fallback) ? fallback : "Type a message...";
+            }
+            catch { Placeholder = "Type a message..."; }
+            return;
+        }
+
         try
         {
             var loader = new Windows.ApplicationModel.Resources.ResourceLoader("AssistStudio.Controls/Resources");

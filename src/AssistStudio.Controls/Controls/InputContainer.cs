@@ -626,10 +626,21 @@ public sealed partial class InputContainer : Control
     /// </summary>
     private static void OnSelectedPresetChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is InputContainer self && e.NewValue is ProviderPreset preset)
+        if (d is not InputContainer self || !self.IsLoaded) return;
+
+        if (e.NewValue is ProviderPreset preset)
         {
-            if (!self.IsLoaded) return; // Will be set during pending populate
             self.SelectPresetInCombo(preset);
+        }
+        else
+        {
+            // Preset cleared — deselect ComboBox
+            if (self._presetComboBox is not null)
+            {
+                self._suppressPresetChanged = true;
+                self._presetComboBox.SelectedItem = null;
+                self._suppressPresetChanged = false;
+            }
         }
     }
 
