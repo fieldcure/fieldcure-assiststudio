@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.ObjectModel;
 using FieldCure.AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;

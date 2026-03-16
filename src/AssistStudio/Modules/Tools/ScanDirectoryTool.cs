@@ -42,20 +42,34 @@ public class ScanDirectoryTool : IAssistTool
         if (!Directory.Exists(path))
             return Task.FromResult(JsonSerializer.Serialize(new { error = $"Directory not found: {path}" }));
 
-        var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-        var files = Directory.GetFiles(path, "*", searchOption)
-            .Select(f =>
+        var enumOptions = new EnumerationOptions
+        {
+            RecurseSubdirectories = recursive,
+            IgnoreInaccessible = true,
+            AttributesToSkip = FileAttributes.ReparsePoint
+        };
+
+        var files = new List<object>();
+        try
+        {
+            foreach (var info in new DirectoryInfo(path).EnumerateFiles("*", enumOptions))
             {
-                var info = new FileInfo(f);
-                return new
+                try
                 {
-                    name = info.Name,
-                    path = info.FullName,
-                    size = info.Length,
-                    modified = info.LastWriteTimeUtc.ToString("yyyy-MM-dd HH:mm:ss")
-                };
-            })
-            .ToList();
+                    files.Add(new
+                    {
+                        name = info.Name,
+                        path = info.FullName,
+                        size = info.Length,
+                        modified = info.LastWriteTimeUtc.ToString("yyyy-MM-dd HH:mm:ss")
+                    });
+                }
+                catch (UnauthorizedAccessException) { }
+                catch (IOException) { }
+            }
+        }
+        catch (UnauthorizedAccessException) { }
+        catch (IOException) { }
 
         var result = new { count = files.Count, files };
         return Task.FromResult(JsonSerializer.Serialize(result));
