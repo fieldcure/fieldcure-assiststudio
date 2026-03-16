@@ -609,8 +609,7 @@ public sealed partial class InputContainer : Control
         if (d is InputContainer self)
         {
             var enabled = (bool)e.NewValue;
-            if (self._messageTextBox is not null)
-                self._messageTextBox.IsEnabled = enabled;
+            // Keep TextBox enabled during streaming so the user can continue typing
             if (self._attachButton is not null)
                 self._attachButton.IsEnabled = enabled;
             if (self._summarizeButton is not null)
@@ -754,6 +753,8 @@ public sealed partial class InputContainer : Control
     /// </summary>
     private void TrySend()
     {
+        if (!IsInputEnabled) return;
+
         var text = _messageTextBox?.Text?.Trim() ?? "";
         var attachments = _previewBar?.Attachments.ToList() ?? [];
 
@@ -764,6 +765,7 @@ public sealed partial class InputContainer : Control
         _previewBar?.Clear();
 
         MessageSent?.Invoke(this, new MessageSentEventArgs(text, attachments));
+        _messageTextBox?.Focus(FocusState.Programmatic);
     }
 
     /// <summary>

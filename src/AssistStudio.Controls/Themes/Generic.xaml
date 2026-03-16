@@ -179,7 +179,7 @@
                                 <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
                             </StackPanel>
 
-                            <WebView2 x:Name="PART_ChatWebView" Grid.Row="1" DefaultBackgroundColor="Transparent" />
+                            <WebView2 x:Name="PART_ChatWebView" Grid.Row="1" DefaultBackgroundColor="Transparent" IsTabStop="False" />
                         </Grid>
                     </Grid>
                 </ControlTemplate>
