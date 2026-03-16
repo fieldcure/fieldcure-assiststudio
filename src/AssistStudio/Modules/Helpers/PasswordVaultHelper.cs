@@ -41,6 +41,24 @@ internal static class PasswordVaultHelper
     }
 
     /// <summary>
+    /// Checks whether an API key exists for the specified preset name without retrieving the password.
+    /// Uses FindAllByResource which avoids the heavier Retrieve call.
+    /// </summary>
+    public static bool HasApiKey(string presetName)
+    {
+        try
+        {
+            var vault = new PasswordVault();
+            var results = vault.FindAllByResource(ResourceName);
+            return results.Any(c => c.UserName == presetName);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Loads the API key for the specified preset name from the credential store.
     /// </summary>
     public static string LoadApiKey(string presetName)
