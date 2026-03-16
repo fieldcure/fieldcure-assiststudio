@@ -14,6 +14,9 @@ public class ScanDirectoryTool : IAssistTool
     public string Name => "scan_directory";
 
     /// <inheritdoc/>
+    public string DisplayName => "Scan Directory";
+
+    /// <inheritdoc/>
     public string Description => "Scans a directory and returns a list of files with name, size (bytes), and last modified date.";
 
     /// <inheritdoc/>

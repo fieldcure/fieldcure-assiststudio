@@ -395,7 +395,7 @@ public sealed partial class ProfilePage : Page
         {
             var cb = new CheckBox
             {
-                Content = tool.Name,
+                Content = tool.DisplayName,
                 Tag = tool.Name,
                 IsChecked = profile.ToolNames.Contains(tool.Name),
             };

@@ -10,6 +10,9 @@ public interface IAssistTool
     /// <summary>The tool name sent to the AI model (e.g. "scan_directory").</summary>
     string Name { get; }
 
+    /// <summary>A human-readable display name shown in the UI (e.g. "Scan Directory").</summary>
+    string DisplayName => Name;
+
     /// <summary>A description for the AI model to decide when to use this tool.</summary>
     string Description { get; }
 
