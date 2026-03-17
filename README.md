@@ -1,4 +1,4 @@
-﻿# FieldLab AssistStudio
+﻿# FieldCure AssistStudio
 
 **AI Chat Controls for WinUI 3 — Bring Your Own Key, pick any provider.**
 
