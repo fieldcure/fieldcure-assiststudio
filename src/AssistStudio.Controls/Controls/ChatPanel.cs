@@ -290,6 +290,16 @@ public sealed class ChatPanel : Control
     /// </summary>
     private WebView2? _chatWebView;
 
+    /// <summary>
+    /// The panel shown in place of InputContainer when a tool requires user confirmation.
+    /// </summary>
+    private ToolApprovalPanel? _approvalPanel;
+
+    /// <summary>
+    /// Completion source for awaiting user approval/rejection of a tool call.
+    /// </summary>
+    private TaskCompletionSource<bool>? _approvalTcs;
+
     #endregion
 
     #region Public Properties
@@ -504,6 +514,11 @@ public sealed class ChatPanel : Control
             _inputArea.StopRequested -= OnStopRequested;
             _inputArea.SummarizeRequested -= OnInputSummarizeRequested;
         }
+        if (_approvalPanel is not null)
+        {
+            _approvalPanel.Approved -= OnToolApproved;
+            _approvalPanel.Rejected -= OnToolRejected;
+        }
         if (_rootGrid is not null)
         {
             _rootGrid.DragOver -= OnDragOver;
@@ -525,6 +540,14 @@ public sealed class ChatPanel : Control
         _titleEditButton = GetTemplateChild("PART_TitleEditButton") as Button;
         _titleRefreshButton = GetTemplateChild("PART_TitleRefreshButton") as Button;
         _chatWebView = GetTemplateChild("PART_ChatWebView") as WebView2;
+        _approvalPanel = GetTemplateChild("PART_ToolApprovalPanel") as ToolApprovalPanel;
+
+        // Wire approval panel events
+        if (_approvalPanel is not null)
+        {
+            _approvalPanel.Approved += OnToolApproved;
+            _approvalPanel.Rejected += OnToolRejected;
+        }
 
         // Set initial background to match CSS --bg-primary (before WebView2 loads)
         if (_rootGrid is not null)
@@ -1454,6 +1477,31 @@ public sealed class ChatPanel : Control
     private async Task ExecuteWithToolCallingAsync(ChatMessage assistantMessage, ChatMessage userMessage, CancellationToken ct)
     {
         var executor = new ToolCallExecutor(RegisteredTools);
+
+        if (_approvalPanel is not null && _inputArea is not null)
+        {
+            executor.ConfirmationHandler = async (toolName, arguments) =>
+            {
+                // Show approval panel, hide input
+                _approvalPanel.ToolName = toolName;
+                _approvalPanel.ToolDisplayName = GetLocalizedToolName(toolName);
+                _approvalPanel.Arguments = arguments;
+                _approvalPanel.IsExpanded = false;
+                _inputArea.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+                _approvalPanel.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+
+                // Wait for user decision
+                _approvalTcs = new TaskCompletionSource<bool>();
+                var approved = await _approvalTcs.Task;
+
+                // Restore input
+                _approvalPanel.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+                _inputArea.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+
+                return approved;
+            };
+        }
+
         var request = await CreateRequestAsync(_messages.ToList());
 
         var response = await Provider!.CompleteAsync(request, ct);
@@ -1509,6 +1557,36 @@ public sealed class ChatPanel : Control
         await _renderer.AppendTokenAsync(assistantMessage.Id, finalText);
         await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content,
             response.IsTruncated, response.Usage?.TotalTokens ?? 0);
+    }
+
+    /// <summary>
+    /// Handles the Approved event from the ToolApprovalPanel.
+    /// </summary>
+    private void OnToolApproved(object? sender, EventArgs e) => _approvalTcs?.TrySetResult(true);
+
+    /// <summary>
+    /// Handles the Rejected event from the ToolApprovalPanel.
+    /// </summary>
+    private void OnToolRejected(object? sender, EventArgs e) => _approvalTcs?.TrySetResult(false);
+
+    /// <summary>
+    /// Returns a localized display name for a tool, falling back to the tool name.
+    /// </summary>
+    private string GetLocalizedToolName(string toolName)
+    {
+        var tool = RegisteredTools.FirstOrDefault(t => t.Name == toolName);
+        if (tool is null) return toolName;
+
+        try
+        {
+            var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
+            var localized = loader.GetString($"Tool_{toolName}");
+            return string.IsNullOrEmpty(localized) ? tool.DisplayName : localized;
+        }
+        catch
+        {
+            return tool.DisplayName;
+        }
     }
 
     /// <summary>

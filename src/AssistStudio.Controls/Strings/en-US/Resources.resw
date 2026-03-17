@@ -108,4 +108,19 @@
   <data name="InputContainer_SendTooltip" xml:space="preserve">
     <value>Send message</value>
   </data>
+  <data name="ToolApproval_Approve" xml:space="preserve">
+    <value>Allow</value>
+  </data>
+  <data name="ToolApproval_Reject" xml:space="preserve">
+    <value>Reject</value>
+  </data>
+  <data name="ToolApproval_Prompt" xml:space="preserve">
+    <value>Allow {0} to execute?</value>
+  </data>
+  <data name="ToolApproval_ExpandTooltip" xml:space="preserve">
+    <value>Show details</value>
+  </data>
+  <data name="ToolApproval_CollapseTooltip" xml:space="preserve">
+    <value>Hide details</value>
+  </data>
 </root>

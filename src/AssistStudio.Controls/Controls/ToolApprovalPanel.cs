@@ -1,0 +1,200 @@
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+
+namespace FieldCure.AssistStudio.Controls;
+
+/// <summary>
+/// An inline panel that replaces the InputContainer when a tool requires user confirmation.
+/// Displays the tool name, arguments preview, and Allow/Reject buttons.
+/// </summary>
+public sealed class ToolApprovalPanel : Control
+{
+    #region Dependency Properties
+
+    /// <summary>The internal tool name (e.g. "write_file").</summary>
+    public static readonly DependencyProperty ToolNameProperty =
+        DependencyProperty.Register(nameof(ToolName), typeof(string), typeof(ToolApprovalPanel),
+            new PropertyMetadata(string.Empty));
+
+    /// <summary>The localized display name shown in the header (e.g. "파일 쓰기").</summary>
+    public static readonly DependencyProperty ToolDisplayNameProperty =
+        DependencyProperty.Register(nameof(ToolDisplayName), typeof(string), typeof(ToolApprovalPanel),
+            new PropertyMetadata(string.Empty));
+
+    /// <summary>The raw JSON arguments string shown in the preview area.</summary>
+    public static readonly DependencyProperty ArgumentsProperty =
+        DependencyProperty.Register(nameof(Arguments), typeof(string), typeof(ToolApprovalPanel),
+            new PropertyMetadata(string.Empty, OnArgumentsChanged));
+
+    /// <summary>Whether the arguments preview is expanded.</summary>
+    public static readonly DependencyProperty IsExpandedProperty =
+        DependencyProperty.Register(nameof(IsExpanded), typeof(bool), typeof(ToolApprovalPanel),
+            new PropertyMetadata(false, OnIsExpandedChanged));
+
+    public string ToolName
+    {
+        get => (string)GetValue(ToolNameProperty);
+        set => SetValue(ToolNameProperty, value);
+    }
+
+    public string ToolDisplayName
+    {
+        get => (string)GetValue(ToolDisplayNameProperty);
+        set => SetValue(ToolDisplayNameProperty, value);
+    }
+
+    public string Arguments
+    {
+        get => (string)GetValue(ArgumentsProperty);
+        set => SetValue(ArgumentsProperty, value);
+    }
+
+    public bool IsExpanded
+    {
+        get => (bool)GetValue(IsExpandedProperty);
+        set => SetValue(IsExpandedProperty, value);
+    }
+
+    #endregion
+
+    #region Events
+
+    /// <summary>Raised when the user clicks Allow.</summary>
+    public event EventHandler? Approved;
+
+    /// <summary>Raised when the user clicks Reject.</summary>
+    public event EventHandler? Rejected;
+
+    #endregion
+
+    #region Fields
+
+    private Button? _approveButton;
+    private Button? _rejectButton;
+    private Button? _expandButton;
+    private TextBlock? _argumentsText;
+    private TextBlock? _promptText;
+    private ScrollViewer? _argumentsContainer;
+    private FontIcon? _expandIcon;
+    private string _approveLabel = "Allow";
+    private string _rejectLabel = "Reject";
+    private string _promptTemplate = "Allow {0} to execute?";
+
+    #endregion
+
+    #region Constructor
+
+    public ToolApprovalPanel()
+    {
+        DefaultStyleKey = typeof(ToolApprovalPanel);
+    }
+
+    #endregion
+
+    #region Overrides
+
+    protected override void OnApplyTemplate()
+    {
+        base.OnApplyTemplate();
+
+        // Detach old handlers
+        if (_approveButton is not null) _approveButton.Click -= OnApproveClick;
+        if (_rejectButton is not null) _rejectButton.Click -= OnRejectClick;
+        if (_expandButton is not null) _expandButton.Click -= OnExpandClick;
+
+        // Get template parts
+        _approveButton = GetTemplateChild("PART_ApproveButton") as Button;
+        _rejectButton = GetTemplateChild("PART_RejectButton") as Button;
+        _expandButton = GetTemplateChild("PART_ExpandButton") as Button;
+        _argumentsText = GetTemplateChild("PART_ArgumentsText") as TextBlock;
+        _promptText = GetTemplateChild("PART_PromptText") as TextBlock;
+        _argumentsContainer = GetTemplateChild("PART_ArgumentsContainer") as ScrollViewer;
+        _expandIcon = GetTemplateChild("PART_ExpandIcon") as FontIcon;
+
+        // Attach handlers
+        if (_approveButton is not null) _approveButton.Click += OnApproveClick;
+        if (_rejectButton is not null) _rejectButton.Click += OnRejectClick;
+        if (_expandButton is not null) _expandButton.Click += OnExpandClick;
+
+        // Load localized strings
+        try
+        {
+            var loader = new Windows.ApplicationModel.Resources.ResourceLoader(
+                "AssistStudio.Controls/Resources");
+            _approveLabel = loader.GetString("ToolApproval_Approve");
+            _rejectLabel = loader.GetString("ToolApproval_Reject");
+            _promptTemplate = loader.GetString("ToolApproval_Prompt");
+        }
+        catch { /* Use defaults */ }
+
+        if (_approveButton is not null) _approveButton.Content = _approveLabel;
+        if (_rejectButton is not null) _rejectButton.Content = _rejectLabel;
+
+        // Sync current state
+        UpdatePromptText();
+        UpdateArgumentsVisibility();
+        UpdateArgumentsText();
+    }
+
+    #endregion
+
+    #region Private Methods
+
+    private void OnApproveClick(object sender, RoutedEventArgs e) => Approved?.Invoke(this, EventArgs.Empty);
+
+    private void OnRejectClick(object sender, RoutedEventArgs e) => Rejected?.Invoke(this, EventArgs.Empty);
+
+    private void OnExpandClick(object sender, RoutedEventArgs e) => IsExpanded = !IsExpanded;
+
+    private void UpdatePromptText()
+    {
+        if (_promptText is not null)
+            _promptText.Text = string.Format(_promptTemplate,
+                string.IsNullOrEmpty(ToolDisplayName) ? ToolName : ToolDisplayName);
+    }
+
+    private void UpdateArgumentsVisibility()
+    {
+        if (_argumentsContainer is not null)
+            _argumentsContainer.Visibility = IsExpanded ? Visibility.Visible : Visibility.Collapsed;
+        if (_expandIcon is not null)
+            _expandIcon.Glyph = IsExpanded ? "\uE70D" : "\uE70E"; // ChevronUp : ChevronRight
+    }
+
+    private void UpdateArgumentsText()
+    {
+        if (_argumentsText is not null)
+            _argumentsText.Text = FormatJson(Arguments);
+    }
+
+    private static string FormatJson(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return string.Empty;
+        try
+        {
+            var doc = System.Text.Json.JsonDocument.Parse(json);
+            return System.Text.Json.JsonSerializer.Serialize(doc, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+        }
+        catch
+        {
+            return json;
+        }
+    }
+
+    private static void OnArgumentsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ToolApprovalPanel panel)
+            panel.UpdateArgumentsText();
+    }
+
+    private static void OnIsExpandedChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ToolApprovalPanel panel)
+            panel.UpdateArgumentsVisibility();
+    }
+
+    #endregion
+}

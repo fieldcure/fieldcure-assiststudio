@@ -129,6 +129,87 @@
         </Setter>
     </Style>
 
+    <!-- ToolApprovalPanel -->
+    <Style TargetType="local:ToolApprovalPanel">
+        <Setter Property="Visibility" Value="Collapsed" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:ToolApprovalPanel">
+                    <Border MaxWidth="800"
+                            HorizontalAlignment="Stretch"
+                            Margin="12,0,12,12"
+                            Padding="16"
+                            CornerRadius="8"
+                            BorderThickness="1"
+                            BorderBrush="{ThemeResource SystemFillColorCautionBrush}"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            Translation="0,0,16">
+                        <Grid RowSpacing="8">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <!-- Row 0: Header -->
+                            <Grid Grid.Row="0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <FontIcon Glyph="&#xE90F;" FontSize="16"
+                                              Foreground="{ThemeResource SystemFillColorCautionBrush}" />
+                                    <TextBlock x:Name="PART_PromptText"
+                                               Style="{StaticResource BodyStrongTextBlockStyle}"
+                                               VerticalAlignment="Center" />
+                                </StackPanel>
+                                <Button x:Name="PART_ExpandButton"
+                                        Grid.Column="2"
+                                        Style="{StaticResource SubtleButtonStyle}"
+                                        Padding="6"
+                                        VerticalAlignment="Center">
+                                    <FontIcon x:Name="PART_ExpandIcon" Glyph="&#xE70E;" FontSize="12" />
+                                </Button>
+                            </Grid>
+
+                            <!-- Row 1: Arguments preview (collapsed by default) -->
+                            <ScrollViewer x:Name="PART_ArgumentsContainer"
+                                          Grid.Row="1"
+                                          Visibility="Collapsed"
+                                          MaxHeight="200"
+                                          HorizontalScrollBarVisibility="Auto"
+                                          VerticalScrollBarVisibility="Auto">
+                                <Border Background="{ThemeResource LayerOnMicaBaseAltFillColorDefaultBrush}"
+                                        CornerRadius="4" Padding="12">
+                                    <TextBlock x:Name="PART_ArgumentsText"
+                                               FontFamily="Consolas, Courier New, monospace"
+                                               FontSize="12"
+                                               TextWrapping="Wrap"
+                                               IsTextSelectionEnabled="True" />
+                                </Border>
+                            </ScrollViewer>
+
+                            <!-- Row 2: Action buttons -->
+                            <StackPanel Grid.Row="2" Orientation="Horizontal"
+                                        HorizontalAlignment="Right" Spacing="8">
+                                <Button x:Name="PART_RejectButton"
+                                        Style="{StaticResource SubtleButtonStyle}"
+                                        Padding="12,6"
+                                        Content="Reject" />
+                                <Button x:Name="PART_ApproveButton"
+                                        Style="{StaticResource AccentButtonStyle}"
+                                        Padding="16,6"
+                                        Content="Allow" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- ChatPanel -->
     <Style TargetType="local:ChatPanel">
         <Setter Property="Template">
@@ -180,6 +261,9 @@
                             </StackPanel>
 
                             <WebView2 x:Name="PART_ChatWebView" Grid.Row="1" DefaultBackgroundColor="Transparent" IsTabStop="False" />
+
+                            <!-- Tool approval panel (shown in place of InputContainer when confirmation needed) -->
+                            <local:ToolApprovalPanel x:Name="PART_ToolApprovalPanel" Grid.Row="2" />
                         </Grid>
                     </Grid>
                 </ControlTemplate>

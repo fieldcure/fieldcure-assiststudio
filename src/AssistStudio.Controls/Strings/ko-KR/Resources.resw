@@ -108,4 +108,19 @@
   <data name="InputContainer_SendTooltip" xml:space="preserve">
     <value>메시지 전송</value>
   </data>
+  <data name="ToolApproval_Approve" xml:space="preserve">
+    <value>허용</value>
+  </data>
+  <data name="ToolApproval_Reject" xml:space="preserve">
+    <value>거부</value>
+  </data>
+  <data name="ToolApproval_Prompt" xml:space="preserve">
+    <value>{0} 실행을 허용하시겠습니까?</value>
+  </data>
+  <data name="ToolApproval_ExpandTooltip" xml:space="preserve">
+    <value>상세 보기</value>
+  </data>
+  <data name="ToolApproval_CollapseTooltip" xml:space="preserve">
+    <value>상세 숨기기</value>
+  </data>
 </root>
