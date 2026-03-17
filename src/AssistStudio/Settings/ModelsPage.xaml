@@ -43,7 +43,8 @@
                                    Style="{StaticResource BodyStrongTextBlockStyle}"
                                    VerticalAlignment="Center" />
                         <TextBlock x:Name="ClaudeStatusText"
-                                   FontSize="12" Opacity="0.7"
+                                   FontSize="12"
+                                   Foreground="{ThemeResource SystemControlErrorTextForegroundBrush}"
                                    VerticalAlignment="Center" />
                     </StackPanel>
                     <!-- Input state (no key) -->
@@ -105,7 +106,8 @@
                                    Style="{StaticResource BodyStrongTextBlockStyle}"
                                    VerticalAlignment="Center" />
                         <TextBlock x:Name="OpenAIStatusText"
-                                   FontSize="12" Opacity="0.7"
+                                   FontSize="12"
+                                   Foreground="{ThemeResource SystemControlErrorTextForegroundBrush}"
                                    VerticalAlignment="Center" />
                     </StackPanel>
                     <Grid x:Name="OpenAIKeyInputPanel" ColumnSpacing="8">
@@ -163,7 +165,8 @@
                                    Style="{StaticResource BodyStrongTextBlockStyle}"
                                    VerticalAlignment="Center" />
                         <TextBlock x:Name="GeminiStatusText"
-                                   FontSize="12" Opacity="0.7"
+                                   FontSize="12"
+                                   Foreground="{ThemeResource SystemControlErrorTextForegroundBrush}"
                                    VerticalAlignment="Center" />
                     </StackPanel>
                     <Grid x:Name="GeminiKeyInputPanel" ColumnSpacing="8">
@@ -221,7 +224,8 @@
                                    Style="{StaticResource BodyStrongTextBlockStyle}"
                                    VerticalAlignment="Center" />
                         <TextBlock x:Name="GroqStatusText"
-                                   FontSize="12" Opacity="0.7"
+                                   FontSize="12"
+                                   Foreground="{ThemeResource SystemControlErrorTextForegroundBrush}"
                                    VerticalAlignment="Center" />
                     </StackPanel>
                     <Grid x:Name="GroqKeyInputPanel" ColumnSpacing="8">

@@ -153,7 +153,6 @@ public sealed partial class ModelsPage : Page
             inputPanel.Visibility = Visibility.Visible;
             displayPanel.Visibility = Visibility.Collapsed;
             statusText.Text = L("Models_NoKey");
-            statusText.Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["SystemControlErrorTextForegroundBrush"];
             modelCombo.IsEnabled = false;
             optionsPanel.Visibility = Visibility.Collapsed;
         }
@@ -206,7 +205,6 @@ public sealed partial class ModelsPage : Page
         inputPanel.Visibility = Visibility.Visible;
         displayPanel.Visibility = Visibility.Collapsed;
         statusText.Text = L("Models_NoKey");
-        statusText.Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["SystemControlErrorTextForegroundBrush"];
         modelCombo.IsEnabled = false;
         optionsPanel.Visibility = Visibility.Collapsed;
 
