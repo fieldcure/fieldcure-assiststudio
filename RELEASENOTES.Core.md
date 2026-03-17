@@ -1,5 +1,15 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Core
 
+## [0.5.0] - 2026-03-17
+
+### Added
+- Dedicated NuGet package README with Core-specific usage examples and API reference
+
+### Fixed
+- GitHub repository URL corrected (`fieldlab` → `fieldcure`)
+
+---
+
 ## [0.4.0] - 2026-03-17
 
 ### Added

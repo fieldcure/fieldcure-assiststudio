@@ -1,5 +1,12 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Controls.WinUI
 
+## [0.5.0] - 2026-03-17
+
+### Added
+- Dedicated NuGet package README with Controls-specific XAML examples and API reference
+
+---
+
 ## [0.4.0] - 2026-03-17
 
 ### Added
