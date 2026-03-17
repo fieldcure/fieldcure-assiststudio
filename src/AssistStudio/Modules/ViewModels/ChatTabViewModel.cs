@@ -195,16 +195,23 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     {
         ChatPanel.SystemPrompt = prompt;
         ChatPanel.AvailableProfiles = profiles;
-        ChatPanel.SelectedProfile = selectedProfile;
+
+        // Don't override profile on tabs that already have conversation history
+        if (ChatPanel.GetMessages().Count == 0)
+            ChatPanel.SelectedProfile = selectedProfile;
     }
 
     /// <summary>
     /// Updates the available profiles and selected profile on the chat panel.
+    /// Tabs with existing conversation history keep their current profile selection.
     /// </summary>
     public void ApplyProfiles(List<Profile> profiles, Profile? selectedProfile)
     {
         ChatPanel.AvailableProfiles = profiles;
-        ChatPanel.SelectedProfile = selectedProfile;
+
+        // Don't override profile on tabs that already have conversation history
+        if (ChatPanel.GetMessages().Count == 0)
+            ChatPanel.SelectedProfile = selectedProfile;
     }
 
     /// <summary>
