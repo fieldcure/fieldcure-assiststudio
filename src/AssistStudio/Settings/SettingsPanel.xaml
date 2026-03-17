@@ -24,12 +24,12 @@
             <NavigationView.MenuItems>
                 <NavigationViewItem x:Uid="Nav_Models" Content="Models" Tag="Models">
                     <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE8D4;" />
+                        <FontIcon Glyph="&#xE794;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
                 <NavigationViewItem x:Uid="Nav_Profile" Content="Profile" Tag="Profile">
                     <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE8BD;" />
+                        <FontIcon Glyph="&#xE716;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
                 <NavigationViewItem x:Uid="Nav_UtilityAI" Content="Utility AI" Tag="UtilityAI">

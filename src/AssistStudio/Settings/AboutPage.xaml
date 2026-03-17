@@ -67,7 +67,7 @@
                            Style="{StaticResource BodyStrongTextBlockStyle}" />
 
                 <HyperlinkButton x:Uid="About_GitHubRepo" Content="GitHub Repository"
-                                 NavigateUri="https://github.com/fieldcure/fieldlab-assiststudio"
+                                 NavigateUri="https://github.com/fieldcure/fieldcure-assiststudio"
                                  Padding="0" />
 
                 <!-- System Specification -->
