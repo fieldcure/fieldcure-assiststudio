@@ -7,48 +7,52 @@ namespace FieldCure.AssistStudio.Controls;
 /// An inline panel that replaces the InputContainer when a tool requires user confirmation.
 /// Displays the tool name, arguments preview, and Allow/Reject buttons.
 /// </summary>
-public sealed class ToolApprovalPanel : Control
+public sealed partial class ToolApprovalPanel : Control
 {
     #region Dependency Properties
 
-    /// <summary>The internal tool name (e.g. "write_file").</summary>
+    /// <summary>Identifies the <see cref="ToolName"/> dependency property.</summary>
     public static readonly DependencyProperty ToolNameProperty =
         DependencyProperty.Register(nameof(ToolName), typeof(string), typeof(ToolApprovalPanel),
             new PropertyMetadata(string.Empty));
 
-    /// <summary>The localized display name shown in the header (e.g. "파일 쓰기").</summary>
+    /// <summary>Identifies the <see cref="ToolDisplayName"/> dependency property.</summary>
     public static readonly DependencyProperty ToolDisplayNameProperty =
         DependencyProperty.Register(nameof(ToolDisplayName), typeof(string), typeof(ToolApprovalPanel),
             new PropertyMetadata(string.Empty));
 
-    /// <summary>The raw JSON arguments string shown in the preview area.</summary>
+    /// <summary>Identifies the <see cref="Arguments"/> dependency property.</summary>
     public static readonly DependencyProperty ArgumentsProperty =
         DependencyProperty.Register(nameof(Arguments), typeof(string), typeof(ToolApprovalPanel),
             new PropertyMetadata(string.Empty, OnArgumentsChanged));
 
-    /// <summary>Whether the arguments preview is expanded.</summary>
+    /// <summary>Identifies the <see cref="IsExpanded"/> dependency property.</summary>
     public static readonly DependencyProperty IsExpandedProperty =
         DependencyProperty.Register(nameof(IsExpanded), typeof(bool), typeof(ToolApprovalPanel),
             new PropertyMetadata(false, OnIsExpandedChanged));
 
+    /// <summary>Gets or sets the internal tool name (e.g. "write_file").</summary>
     public string ToolName
     {
         get => (string)GetValue(ToolNameProperty);
         set => SetValue(ToolNameProperty, value);
     }
 
+    /// <summary>Gets or sets the localized display name shown in the header.</summary>
     public string ToolDisplayName
     {
         get => (string)GetValue(ToolDisplayNameProperty);
         set => SetValue(ToolDisplayNameProperty, value);
     }
 
+    /// <summary>Gets or sets the raw JSON arguments string shown in the preview area.</summary>
     public string Arguments
     {
         get => (string)GetValue(ArgumentsProperty);
         set => SetValue(ArgumentsProperty, value);
     }
 
+    /// <summary>Gets or sets whether the arguments preview is expanded.</summary>
     public bool IsExpanded
     {
         get => (bool)GetValue(IsExpandedProperty);
@@ -84,6 +88,7 @@ public sealed class ToolApprovalPanel : Control
 
     #region Constructor
 
+    /// <summary>Initializes a new instance of the <see cref="ToolApprovalPanel"/> control.</summary>
     public ToolApprovalPanel()
     {
         DefaultStyleKey = typeof(ToolApprovalPanel);
@@ -93,6 +98,7 @@ public sealed class ToolApprovalPanel : Control
 
     #region Overrides
 
+    /// <inheritdoc/>
     protected override void OnApplyTemplate()
     {
         base.OnApplyTemplate();
@@ -140,12 +146,16 @@ public sealed class ToolApprovalPanel : Control
 
     #region Private Methods
 
+    /// <summary>Handles the Approve button click.</summary>
     private void OnApproveClick(object sender, RoutedEventArgs e) => Approved?.Invoke(this, EventArgs.Empty);
 
+    /// <summary>Handles the Reject button click.</summary>
     private void OnRejectClick(object sender, RoutedEventArgs e) => Rejected?.Invoke(this, EventArgs.Empty);
 
+    /// <summary>Toggles the arguments preview expansion.</summary>
     private void OnExpandClick(object sender, RoutedEventArgs e) => IsExpanded = !IsExpanded;
 
+    /// <summary>Updates the prompt text with the current tool display name.</summary>
     private void UpdatePromptText()
     {
         if (_promptText is not null)
@@ -153,6 +163,7 @@ public sealed class ToolApprovalPanel : Control
                 string.IsNullOrEmpty(ToolDisplayName) ? ToolName : ToolDisplayName);
     }
 
+    /// <summary>Shows or hides the arguments container based on <see cref="IsExpanded"/>.</summary>
     private void UpdateArgumentsVisibility()
     {
         if (_argumentsContainer is not null)
@@ -161,22 +172,26 @@ public sealed class ToolApprovalPanel : Control
             _expandIcon.Glyph = IsExpanded ? "\uE70D" : "\uE70E"; // ChevronUp : ChevronRight
     }
 
+    /// <summary>Updates the arguments text block with formatted JSON.</summary>
     private void UpdateArgumentsText()
     {
         if (_argumentsText is not null)
             _argumentsText.Text = FormatJson(Arguments);
     }
 
+    private static readonly System.Text.Json.JsonSerializerOptions s_indentedOptions = new()
+    {
+        WriteIndented = true
+    };
+
+    /// <summary>Pretty-prints a JSON string with indentation.</summary>
     private static string FormatJson(string json)
     {
         if (string.IsNullOrWhiteSpace(json)) return string.Empty;
         try
         {
             var doc = System.Text.Json.JsonDocument.Parse(json);
-            return System.Text.Json.JsonSerializer.Serialize(doc, new System.Text.Json.JsonSerializerOptions
-            {
-                WriteIndented = true
-            });
+            return System.Text.Json.JsonSerializer.Serialize(doc, s_indentedOptions);
         }
         catch
         {
@@ -184,12 +199,14 @@ public sealed class ToolApprovalPanel : Control
         }
     }
 
+    /// <summary>Callback when <see cref="Arguments"/> property changes.</summary>
     private static void OnArgumentsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is ToolApprovalPanel panel)
             panel.UpdateArgumentsText();
     }
 
+    /// <summary>Callback when <see cref="IsExpanded"/> property changes.</summary>
     private static void OnIsExpandedChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is ToolApprovalPanel panel)
