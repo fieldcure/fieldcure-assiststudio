@@ -581,7 +581,22 @@ public sealed class ChatPanel : Control
             _rootGrid.Drop += OnDrop;
         }
         if (_titleEditButton is not null)
+        {
             _titleEditButton.Click += OnTitleEditClick;
+            try
+            {
+                var loader = new Windows.ApplicationModel.Resources.ResourceLoader("AssistStudio.Controls/Resources");
+                var tooltip = loader.GetString("ChatPanel_EditTitleTooltip");
+                if (!string.IsNullOrEmpty(tooltip))
+                    ToolTipService.SetToolTip(_titleEditButton, tooltip);
+                else
+                    ToolTipService.SetToolTip(_titleEditButton, "Edit title");
+            }
+            catch
+            {
+                ToolTipService.SetToolTip(_titleEditButton, "Edit title");
+            }
+        }
         if (_titleRefreshButton is not null)
             _titleRefreshButton.Click += OnTitleRefreshClick;
 

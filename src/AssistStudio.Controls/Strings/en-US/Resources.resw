@@ -108,6 +108,9 @@
   <data name="InputContainer_SendTooltip" xml:space="preserve">
     <value>Send message</value>
   </data>
+  <data name="ChatPanel_EditTitleTooltip" xml:space="preserve">
+    <value>Edit title</value>
+  </data>
   <data name="ToolApproval_Approve" xml:space="preserve">
     <value>Allow</value>
   </data>
