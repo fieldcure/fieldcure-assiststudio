@@ -20,11 +20,11 @@ jobs:
             8.0.x
             9.0.x
 
-      - name: Restore dependencies
-        run: dotnet restore
+      - name: Restore
+        run: dotnet restore src/AssistStudio.Core/AssistStudio.Core.csproj
 
       - name: Build
-        run: dotnet build --no-restore
+        run: dotnet build src/AssistStudio.Core/AssistStudio.Core.csproj --no-restore
 
       - name: Test
-        run: dotnet test --no-build --verbosity normal
+        run: dotnet test src/AssistStudio.Core.Tests/AssistStudio.Core.Tests.csproj --verbosity normal
