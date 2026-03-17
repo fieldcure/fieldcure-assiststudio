@@ -587,14 +587,11 @@ public sealed class ChatPanel : Control
             {
                 var loader = new Windows.ApplicationModel.Resources.ResourceLoader("AssistStudio.Controls/Resources");
                 var tooltip = loader.GetString("ChatPanel_EditTitleTooltip");
-                if (!string.IsNullOrEmpty(tooltip))
-                    ToolTipService.SetToolTip(_titleEditButton, tooltip);
-                else
-                    ToolTipService.SetToolTip(_titleEditButton, "Edit title");
+                SetBottomRightToolTip(_titleEditButton, !string.IsNullOrEmpty(tooltip) ? tooltip : "Edit title");
             }
             catch
             {
-                ToolTipService.SetToolTip(_titleEditButton, "Edit title");
+                SetBottomRightToolTip(_titleEditButton, "Edit title");
             }
         }
         if (_titleRefreshButton is not null)
@@ -1165,6 +1162,18 @@ public sealed class ChatPanel : Control
     #region Private Methods
 
     /// <summary>
+    /// Sets a tooltip with <see cref="PlacementMode.BottomEdgeAlignedRight"/> on the specified element.
+    /// </summary>
+    private static void SetBottomRightToolTip(FrameworkElement element, string text)
+    {
+        ToolTipService.SetToolTip(element, new ToolTip
+        {
+            Content = text,
+            Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
+        });
+    }
+
+    /// <summary>
     /// Updates the summarize button enabled state based on the current message count.
     /// </summary>
     private void UpdateSummarizeButtonState()
@@ -1344,7 +1353,7 @@ public sealed class ChatPanel : Control
             var format = loader.GetString("Chat_RegenerateTitle");
             if (!string.IsNullOrEmpty(format) && !string.IsNullOrEmpty(providerName) && _titleRefreshButton is not null)
             {
-                ToolTipService.SetToolTip(_titleRefreshButton, string.Format(format, providerName));
+                SetBottomRightToolTip(_titleRefreshButton, string.Format(format, providerName));
                 return;
             }
         }
@@ -1352,7 +1361,7 @@ public sealed class ChatPanel : Control
 
         if (_titleRefreshButton is not null)
         {
-            ToolTipService.SetToolTip(_titleRefreshButton,
+            SetBottomRightToolTip(_titleRefreshButton,
                 string.IsNullOrEmpty(providerName)
                     ? "Regenerate title"
                     : $"Regenerate title with {providerName}");

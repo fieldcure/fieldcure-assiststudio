@@ -7,6 +7,7 @@
     xmlns:fv="using:FieldCure.AssistStudio.Controls"
     xmlns:vm="using:AssistStudio.Modules.ViewModels"
     xmlns:settings="using:AssistStudio.Settings"
+    xmlns:views="using:AssistStudio.Modules.Views"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
@@ -43,8 +44,9 @@
                 <TabView.TabItemTemplate>
                     <DataTemplate x:DataType="vm:ChatTabViewModel">
                         <TabViewItem Header="{x:Bind TabHeader, Mode=OneWay}"
-                                     Content="{x:Bind ChatPanel}"
-                                     IconSource="{x:Bind TabIconSource, Mode=OneWay}" />
+                                     IconSource="{x:Bind TabIconSource, Mode=OneWay}">
+                            <views:ChatTabView ViewModel="{x:Bind}" />
+                        </TabViewItem>
                     </DataTemplate>
                 </TabView.TabItemTemplate>
 

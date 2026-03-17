@@ -1,4 +1,4 @@
-﻿using AssistStudio.Modules.Helpers;
+using AssistStudio.Modules.Helpers;
 using AssistStudio.Modules.Tools;
 using CommunityToolkit.Mvvm.ComponentModel;
 using FieldCure.AssistStudio.Controls;
@@ -11,12 +11,12 @@ using System.Collections;
 namespace AssistStudio.Modules.ViewModels;
 
 /// <summary>
-/// View model for a single conversation tab, managing the chat panel, provider preset,
-/// dirty state, and file association.
+/// View model for a single conversation tab, managing provider state,
+/// observable properties for ChatPanel binding, dirty state, and file association.
 /// </summary>
 public partial class ChatTabViewModel : ObservableObject, IDisposable
 {
-    #region Observable Fields
+    #region Observable Fields — Tab
 
     /// <summary>
     /// The display title for this conversation tab.
@@ -40,12 +40,71 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 
     #endregion
 
-    #region Properties
+    #region Observable Fields — ChatPanel bindings
 
     /// <summary>
-    /// Gets the chat panel control that hosts the conversation UI and provider interaction.
+    /// The AI provider for this conversation.
     /// </summary>
-    public ChatPanel ChatPanel { get; }
+    [ObservableProperty] private IAiProvider? _provider;
+
+    /// <summary>
+    /// Optional utility AI provider for title generation and summarization.
+    /// </summary>
+    [ObservableProperty] private IAiProvider? _utilityProvider;
+
+    /// <summary>
+    /// The system prompt sent with AI requests.
+    /// </summary>
+    [ObservableProperty] private string _systemPrompt = string.Empty;
+
+    /// <summary>
+    /// The visual theme for the chat panel.
+    /// </summary>
+    [ObservableProperty] private ChatTheme _theme;
+
+    /// <summary>
+    /// Available provider presets shown in the InputContainer ComboBox.
+    /// </summary>
+    [ObservableProperty] private IList? _availablePresets;
+
+    /// <summary>
+    /// The currently selected provider preset.
+    /// </summary>
+    [ObservableProperty] private ProviderPreset? _selectedPreset;
+
+    /// <summary>
+    /// Available profiles with system prompts.
+    /// </summary>
+    [ObservableProperty] private IList<Profile>? _availableProfiles;
+
+    /// <summary>
+    /// The currently selected profile.
+    /// </summary>
+    [ObservableProperty] private Profile? _selectedProfile;
+
+    /// <summary>
+    /// Whether automatic title generation is enabled.
+    /// </summary>
+    [ObservableProperty] private bool _autoTitle;
+
+    /// <summary>
+    /// Whether automatic conversation summarization is enabled.
+    /// </summary>
+    [ObservableProperty] private bool _autoSummarize;
+
+    /// <summary>
+    /// Whether debug mode is enabled (shows debug UI in WebView2).
+    /// </summary>
+    [ObservableProperty] private bool _isDebugMode;
+
+    /// <summary>
+    /// Tools registered for the current profile.
+    /// </summary>
+    [ObservableProperty] private IReadOnlyList<IAssistTool> _registeredTools = [];
+
+    #endregion
+
+    #region Properties
 
     /// <summary>
     /// Gets the icon source for the tab, showing a dot indicator when dirty.
@@ -78,6 +137,25 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// </summary>
     public event Action<ChatTabViewModel, ProviderPreset>? PresetSwitched;
 
+    /// <summary>
+    /// Relayed from ChatPanel for keyboard shortcuts forwarded from WebView2.
+    /// </summary>
+    public event EventHandler<string>? KeyboardShortcutPressed;
+
+    #endregion
+
+    #region Fields
+
+    /// <summary>
+    /// Reference to the ChatPanel, set by <see cref="AttachPanel"/> after the View is created.
+    /// </summary>
+    private ChatPanel? _panel;
+
+    /// <summary>
+    /// Messages queued before the ChatPanel is available (during conversation loading).
+    /// </summary>
+    private readonly List<(ChatRole Role, string Content, string? ProviderName, string? ModelId)> _pendingMessages = [];
+
     #endregion
 
     #region Observable Property Changed Handlers
@@ -88,14 +166,6 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     partial void OnIsDirtyChanged(bool value)
     {
         OnPropertyChanged(nameof(TabIconSource));
-    }
-
-    /// <summary>
-    /// Propagates title changes to the underlying chat panel.
-    /// </summary>
-    partial void OnTitleChanged(string value)
-    {
-        ChatPanel.Title = value;
     }
 
     /// <summary>
@@ -131,38 +201,49 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         var prefix = loader.GetString("Tab_NewConversation");
         _tabHeader = tabNumber > 0 ? $"{prefix} {tabNumber}" : prefix;
 
-        var provider = ProviderFactory.Create(preset);
-
-        ChatPanel = new ChatPanel
-        {
-            Provider = provider,
-            UtilityProvider = ResolveUtilityProvider(availablePresets),
-            SystemPrompt = systemPrompt,
-            Theme = theme,
-            AvailablePresets = availablePresets,
-            SelectedPreset = preset,
-            AvailableProfiles = profiles,
-            SelectedProfile = selectedProfile,
-            HorizontalAlignment = Microsoft.UI.Xaml.HorizontalAlignment.Stretch,
-            VerticalAlignment = Microsoft.UI.Xaml.VerticalAlignment.Stretch,
-            AutoTitle = AppSettings.UtilityAutoTitle,
-            AutoSummarize = AppSettings.UtilityAutoSummary,
+        // Set observable fields — ChatTabView.xaml binds to these via x:Bind
+        _provider = ProviderFactory.Create(preset);
+        _utilityProvider = ResolveUtilityProvider(availablePresets);
+        _systemPrompt = systemPrompt;
+        _theme = theme;
+        _availablePresets = availablePresets;
+        _selectedPreset = preset;
+        _availableProfiles = profiles;
+        _selectedProfile = selectedProfile;
+        _autoTitle = AppSettings.UtilityAutoTitle;
+        _autoSummarize = AppSettings.UtilityAutoSummary;
 #if DEBUG
-            IsDebugMode = true,
+        _isDebugMode = true;
 #endif
-        };
 
         // Apply linked tools from active profile
         if (selectedProfile?.ToolNames.Count > 0)
         {
-            ChatPanel.RegisteredTools = ToolRegistry.Resolve(selectedProfile.ToolNames);
+            _registeredTools = ToolRegistry.Resolve(selectedProfile.ToolNames);
         }
+    }
 
-        ChatPanel.PresetChanged += OnPresetChanged;
-        ChatPanel.ProfileChanged += OnProfileChanged;
-        ChatPanel.TitleGenerated += OnTitleGenerated;
-        ChatPanel.MessageAdded += OnMessageAdded;
-        ChatPanel.TitleEditRequested += OnTitleEditRequested;
+    #endregion
+
+    #region Panel Attachment
+
+    /// <summary>
+    /// Called by <c>ChatTabView</c> after the ChatPanel is created and added to the visual tree.
+    /// Flushes any pending restored messages and wires the keyboard shortcut relay.
+    /// </summary>
+    public void AttachPanel(ChatPanel panel)
+    {
+        _panel = panel;
+
+        // Relay keyboard shortcut from WebView2 (separate HWND)
+        panel.KeyboardShortcutPressed += (s, e) => KeyboardShortcutPressed?.Invoke(s, e);
+
+        // Flush messages that were queued before the Panel existed (conversation loading)
+        foreach (var (role, content, providerName, modelId) in _pendingMessages)
+        {
+            panel.AddRestoredMessage(role, content, providerName, modelId);
+        }
+        _pendingMessages.Clear();
     }
 
     #endregion
@@ -171,34 +252,41 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// Adds a restored message to the chat panel during conversation loading.
+    /// If the panel is not yet attached, messages are queued.
     /// </summary>
     public void AddRestoredMessage(ChatRole role, string content, string? providerName, string? providerModelId)
     {
-        ChatPanel.AddRestoredMessage(role, content, providerName, providerModelId);
+        if (_panel is not null)
+            _panel.AddRestoredMessage(role, content, providerName, providerModelId);
+        else
+            _pendingMessages.Add((role, content, providerName, providerModelId));
     }
 
     /// <summary>
     /// Gets the list of chat messages in this conversation.
     /// </summary>
     /// <returns>A read-only list of chat messages.</returns>
-    public IReadOnlyList<ChatMessage> GetMessages() => ChatPanel.GetMessages();
+    public IReadOnlyList<ChatMessage> GetMessages()
+    {
+        return _panel?.GetMessages() ?? [];
+    }
 
     /// <summary>
     /// Applies a visual theme to the chat panel.
     /// </summary>
-    public void ApplyTheme(ChatTheme theme) => ChatPanel.Theme = theme;
+    public void ApplyTheme(ChatTheme theme) => Theme = theme;
 
     /// <summary>
     /// Updates the system prompt and profiles on the chat panel.
     /// </summary>
     public void ApplySystemPrompt(string prompt, List<Profile> profiles, Profile? selectedProfile)
     {
-        ChatPanel.SystemPrompt = prompt;
-        ChatPanel.AvailableProfiles = profiles;
+        SystemPrompt = prompt;
+        AvailableProfiles = profiles;
 
         // Don't override profile on tabs that already have conversation history
-        if (ChatPanel.GetMessages().Count == 0)
-            ChatPanel.SelectedProfile = selectedProfile;
+        if (GetMessages().Count == 0)
+            SelectedProfile = selectedProfile;
     }
 
     /// <summary>
@@ -207,11 +295,11 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// </summary>
     public void ApplyProfiles(List<Profile> profiles, Profile? selectedProfile)
     {
-        ChatPanel.AvailableProfiles = profiles;
+        AvailableProfiles = profiles;
 
         // Don't override profile on tabs that already have conversation history
-        if (ChatPanel.GetMessages().Count == 0)
-            ChatPanel.SelectedProfile = selectedProfile;
+        if (GetMessages().Count == 0)
+            SelectedProfile = selectedProfile;
     }
 
     /// <summary>
@@ -223,8 +311,9 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         var currentModelId = CurrentPreset?.ModelId;
         var currentApiKey = CurrentPreset?.ApiKey;
         var currentBaseUrl = CurrentPreset?.BaseUrl;
+
         // Force DP change callback by passing a new list instance
-        ChatPanel.AvailablePresets = new System.Collections.ArrayList(presets);
+        AvailablePresets = new System.Collections.ArrayList(presets);
 
         bool found = false;
         if (currentName is not null)
@@ -234,7 +323,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                 if (p.Name == currentName)
                 {
                     found = true;
-                    ChatPanel.SelectedPreset = p;
+                    SelectedPreset = p;
 
                     // Recreate provider if connection-relevant fields changed
                     if (p.ModelId != currentModelId ||
@@ -254,13 +343,13 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             if (presets.Count > 0)
             {
                 var first = (ProviderPreset)presets[0]!;
-                ChatPanel.SelectedPreset = first;
+                SelectedPreset = first;
                 OnPresetChanged(this, first);
             }
             else
             {
                 CurrentPreset = null;
-                ChatPanel.SelectedPreset = null;
+                SelectedPreset = null;
             }
         }
     }
@@ -270,17 +359,11 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     {
         GC.SuppressFinalize(this);
 
-        ChatPanel.PresetChanged -= OnPresetChanged;
-        ChatPanel.ProfileChanged -= OnProfileChanged;
-        ChatPanel.TitleGenerated -= OnTitleGenerated;
-        ChatPanel.MessageAdded -= OnMessageAdded;
-        ChatPanel.TitleEditRequested -= OnTitleEditRequested;
-
-        if (ChatPanel.UtilityProvider is IDisposable utilDisposable)
+        if (UtilityProvider is IDisposable utilDisposable)
         {
             utilDisposable.Dispose();
         }
-        if (ChatPanel.Provider is IDisposable disposable)
+        if (Provider is IDisposable disposable)
         {
             disposable.Dispose();
         }
@@ -288,21 +371,21 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 
     #endregion
 
-    #region Event Handlers
+    #region Event Handlers (called by ChatTabView)
 
     /// <summary>
     /// Handles provider preset changes by disposing the old provider and creating a new one.
     /// </summary>
-    private void OnPresetChanged(object? sender, ProviderPreset preset)
+    public void OnPresetChanged(object? sender, ProviderPreset preset)
     {
         // Dispose old provider
-        if (ChatPanel.Provider is IDisposable disposable)
+        if (Provider is IDisposable disposable)
         {
             disposable.Dispose();
         }
 
         // Create new provider — conversation history is preserved
-        ChatPanel.Provider = ProviderFactory.Create(preset);
+        Provider = ProviderFactory.Create(preset);
         CurrentPreset = preset;
         Title = preset.Name;
 
@@ -312,12 +395,12 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Handles profile changes by updating the system prompt and registered tools.
     /// </summary>
-    private void OnProfileChanged(object? sender, Profile profile)
+    public void OnProfileChanged(object? sender, Profile profile)
     {
-        ChatPanel.SystemPrompt = profile.Text;
+        SystemPrompt = profile.Text;
 
         // Auto-apply linked tools from profile
-        ChatPanel.RegisteredTools = profile.ToolNames.Count > 0
+        RegisteredTools = profile.ToolNames.Count > 0
             ? ToolRegistry.Resolve(profile.ToolNames)
             : [];
     }
@@ -325,7 +408,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Handles the auto-generated title from the utility AI and applies it to the tab.
     /// </summary>
-    private void OnTitleGenerated(object? sender, string title)
+    public void OnTitleGenerated(object? sender, string title)
     {
         Title = title;
     }
@@ -333,8 +416,10 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Handles the user requesting to edit the conversation title via a rename dialog.
     /// </summary>
-    private async void OnTitleEditRequested(object? sender, string currentTitle)
+    public async void OnTitleEditRequested(object? sender, string currentTitle)
     {
+        if (_panel is null) return;
+
         var input = new TextBox { Text = currentTitle, SelectionStart = currentTitle.Length };
         var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
         var dialog = new ContentDialog
@@ -344,8 +429,8 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             PrimaryButtonText = loader.GetString("Dialog_OK"),
             CloseButtonText = loader.GetString("Dialog_Cancel"),
             DefaultButton = ContentDialogButton.Primary,
-            XamlRoot = ChatPanel.XamlRoot,
-            RequestedTheme = ChatPanel.ActualTheme,
+            XamlRoot = _panel.XamlRoot,
+            RequestedTheme = _panel.ActualTheme,
         };
 
         var result = await dialog.ShowAsync();
@@ -358,7 +443,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Marks the conversation as dirty when a new message is added.
     /// </summary>
-    private void OnMessageAdded(object? sender, ChatMessage message)
+    public void OnMessageAdded(object? sender, ChatMessage message)
     {
         IsDirty = true;
     }

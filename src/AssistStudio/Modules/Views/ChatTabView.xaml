@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="AssistStudio.Modules.Views.ChatTabView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:FieldCure.AssistStudio.Controls"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    HorizontalAlignment="Stretch"
+    VerticalAlignment="Stretch"
+    HorizontalContentAlignment="Stretch"
+    VerticalContentAlignment="Stretch">
+
+    <controls:ChatPanel
+        x:Name="Panel"
+        HorizontalAlignment="Stretch"
+        VerticalAlignment="Stretch"
+        Provider="{x:Bind ViewModel.Provider, Mode=OneWay}"
+        UtilityProvider="{x:Bind ViewModel.UtilityProvider, Mode=OneWay}"
+        SystemPrompt="{x:Bind ViewModel.SystemPrompt, Mode=OneWay}"
+        Theme="{x:Bind ViewModel.Theme, Mode=OneWay}"
+        Title="{x:Bind ViewModel.Title, Mode=OneWay}"
+        AvailablePresets="{x:Bind ViewModel.AvailablePresets, Mode=OneWay}"
+        SelectedPreset="{x:Bind ViewModel.SelectedPreset, Mode=OneWay}"
+        AvailableProfiles="{x:Bind ViewModel.AvailableProfiles, Mode=OneWay}"
+        SelectedProfile="{x:Bind ViewModel.SelectedProfile, Mode=OneWay}"
+        AutoTitle="{x:Bind ViewModel.AutoTitle, Mode=OneWay}"
+        AutoSummarize="{x:Bind ViewModel.AutoSummarize, Mode=OneWay}"
+        IsDebugMode="{x:Bind ViewModel.IsDebugMode, Mode=OneWay}"
+        RegisteredTools="{x:Bind ViewModel.RegisteredTools, Mode=OneWay}" />
+
+</UserControl>

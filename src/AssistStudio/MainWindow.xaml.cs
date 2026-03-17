@@ -90,7 +90,7 @@ public sealed partial class MainWindow : Window
             if (e.NewItems is not null)
             {
                 foreach (ChatTabViewModel tab in e.NewItems)
-                    tab.ChatPanel.KeyboardShortcutPressed += OnWebViewShortcut;
+                    tab.KeyboardShortcutPressed += OnWebViewShortcut;
             }
         };
 
