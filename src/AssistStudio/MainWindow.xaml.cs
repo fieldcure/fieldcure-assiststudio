@@ -157,7 +157,11 @@ public sealed partial class MainWindow : Window
         if (AppSettings.IsFirstRun)
         {
             AppSettings.IsFirstRun = false;
-            var dialog = new FirstRunDialog { XamlRoot = Content.XamlRoot };
+            var dialog = new FirstRunDialog
+            {
+                XamlRoot = Content.XamlRoot,
+                RequestedTheme = (Content as FrameworkElement)?.ActualTheme ?? ElementTheme.Default,
+            };
             await dialog.ShowAsync();
         }
     }
@@ -484,6 +488,7 @@ public sealed partial class MainWindow : Window
                 CloseButtonText = loader.GetString("Dialog_Cancel"),
                 DefaultButton = ContentDialogButton.Primary,
                 XamlRoot = Content.XamlRoot,
+                RequestedTheme = (Content as FrameworkElement)?.ActualTheme ?? ElementTheme.Default,
             };
 
             var result = await dialog.ShowAsync();
@@ -538,6 +543,7 @@ public sealed partial class MainWindow : Window
             CloseButtonText = loader.GetString("Dialog_Cancel"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = Content.XamlRoot,
+            RequestedTheme = (Content as FrameworkElement)?.ActualTheme ?? ElementTheme.Default,
         };
 
         var result = await dialog.ShowAsync();

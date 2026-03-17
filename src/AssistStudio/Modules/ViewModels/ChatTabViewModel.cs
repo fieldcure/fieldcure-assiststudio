@@ -338,6 +338,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             CloseButtonText = loader.GetString("Dialog_Cancel"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = ChatPanel.XamlRoot,
+            RequestedTheme = ChatPanel.ActualTheme,
         };
 
         var result = await dialog.ShowAsync();

@@ -138,6 +138,7 @@ public sealed partial class ProfilePage : Page
             CloseButtonText = loader.GetString("Dialog_Cancel"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = XamlRoot,
+            RequestedTheme = ActualTheme,
         };
 
         var result = await dialog.ShowAsync();

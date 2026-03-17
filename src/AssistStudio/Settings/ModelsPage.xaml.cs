@@ -787,7 +787,8 @@ public sealed partial class ModelsPage : Page
         using var manager = new OllamaModelManager();
         var dialog = new ModelSelectionDialog(manager)
         {
-            XamlRoot = XamlRoot
+            XamlRoot = XamlRoot,
+            RequestedTheme = ActualTheme,
         };
         await dialog.ShowAsync();
 
