@@ -28,9 +28,16 @@
 
 ## Screenshots
 
-| Empty State | Tool Approval |
-|:-----------:|:-------------:|
-| ![Empty state](docs/empty-state.png) | ![Tool approval panel](docs/tool-approval.png) |
+<table>
+  <tr>
+    <th align="center">Empty State</th>
+    <th align="center">Tool Approval</th>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/empty-state.png" width="400" alt="Empty state" /></td>
+    <td align="center"><img src="docs/tool-approval.png" width="400" alt="Tool approval panel" /></td>
+  </tr>
+</table>
 
 ---
 
@@ -107,7 +114,7 @@ That's it — you have a fully functional AI chat with streaming, Markdown rende
 | **Claude** (Anthropic) | Yes | Yes | Yes | Yes | Yes |
 | **OpenAI** (+ compatible endpoints) | Yes | Yes | Yes | Yes | Yes |
 | **Gemini** (Google) | Yes | Yes | Yes | Yes | Yes |
-| **Ollama** (local) | Yes | Yes | Yes | Yes | No |
+| **Ollama** (local) | Yes | Model-dependent | Model-dependent | Model-dependent | No |
 
 > OpenAI provider works with any OpenAI-compatible API (Groq, Azure OpenAI, etc.) by setting a custom `baseUrl`.
 
