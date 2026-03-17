@@ -1,4 +1,4 @@
-# FieldLab AssistStudio
+﻿# FieldLab AssistStudio
 
 **AI Chat Controls for WinUI 3 — Bring Your Own Key, pick any provider.**
 
@@ -42,12 +42,12 @@
 │  WinUI 3 desktop app — showcases all controls   │
 ├─────────────────────────────────────────────────┤
 │  AssistStudio.Controls        ← NuGet package   │
-│  ChatPanel · InputContainer · ToolApprovalPanel  │
-│  WebView2 rendering · Themes · Localization      │
+│  ChatPanel · InputContainer · ToolApprovalPanel │
+│  WebView2 rendering · Themes · Localization     │
 ├─────────────────────────────────────────────────┤
 │  AssistStudio.Core            ← NuGet package   │
-│  IAiProvider · IAssistTool · Models · Helpers    │
-│  Claude │ OpenAI │ Gemini │ Ollama providers     │
+│  IAiProvider · IAssistTool · Models · Helpers   │
+│  Claude │ OpenAI │ Gemini │ Ollama providers    │
 └─────────────────────────────────────────────────┘
 ```
 
