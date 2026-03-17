@@ -57,9 +57,11 @@ The main control. Provides message list (WebView2), input area, streaming, attac
                   SelectedPreset="{x:Bind ViewModel.CurrentPreset, Mode=TwoWay}" />
 ```
 
-**Dependency Properties:** `Provider`, `SystemPrompt`, `Theme`, `Placeholder`, `AvailablePresets`, `SelectedPreset`, `AvailableProfiles`, `SelectedProfile`, `MessageFontSize`, `ShowTitleBar`
+**Dependency Properties:** `Provider`, `SystemPrompt`, `Theme`, `Title`, `Placeholder`, `AvailablePresets`, `SelectedPreset`, `AvailableProfiles`, `SelectedProfile`, `IsDebugMode`
 
-**Events:** `MessageSent`, `PresetChanged`, `FilesDropped`, `TitleBarRequested`
+**Properties:** `UtilityProvider`, `AutoTitle`, `AutoSummarize`, `RegisteredTools`
+
+**Events:** `PresetChanged`, `ProfileChanged`, `MessageAdded`, `TitleGenerated`, `TitleEditRequested`, `KeyboardShortcutPressed`
 
 ### InputContainer
 
