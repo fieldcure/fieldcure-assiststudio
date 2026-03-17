@@ -7,6 +7,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![.NET](https://img.shields.io/badge/.NET-8.0%2B-purple)](https://dotnet.microsoft.com/)
 
+![Chat conversation with Markdown and syntax highlighting](docs/chat-conversation.png)
+
 ---
 
 ## Features
@@ -16,11 +18,19 @@
 - **Streaming** — Real-time token-by-token responses via `IAsyncEnumerable<string>`.
 - **Vision & Documents** — Attach images (PNG, JPG, WebP, …), PDFs, and DOCX files to any conversation.
 - **Token Tracking** — Input/output token counts exposed after every request.
-- **Re-templatable WinUI 3 Controls** — `ChatPanel`, `InputContainer`, and `AttachmentPreviewBar` are `TemplatedControl`s with no app dependency. Override `Generic.xaml` to fully customize the UI.
+- **Re-templatable WinUI 3 Controls** — `ChatPanel`, `InputContainer`, `AttachmentPreviewBar`, and `ToolApprovalPanel` are `TemplatedControl`s with no app dependency. Override `Generic.xaml` to fully customize the UI.
 - **Profiles & Presets** — Save provider configurations as presets; switch system prompts with profiles.
 - **Conversation Persistence** — Save and load conversations in `.astx` (JSON) format.
 - **Localization** — Built-in en-US and ko-KR resource strings.
-- **Tool / Function Calling** — Define tools with `IAssistTool` and let providers invoke them (OpenAI, Ollama).
+- **Tool / Function Calling** — Define tools with `IAssistTool` and let providers invoke them. Tools that require confirmation show an inline `ToolApprovalPanel` for user approval before execution.
+
+---
+
+## Screenshots
+
+| Empty State | Tool Approval |
+|:-----------:|:-------------:|
+| ![Empty state](docs/empty-state.png) | ![Tool approval panel](docs/tool-approval.png) |
 
 ---
 
@@ -32,19 +42,19 @@
 │  WinUI 3 desktop app — showcases all controls   │
 ├─────────────────────────────────────────────────┤
 │  AssistStudio.Controls        ← NuGet package   │
-│  ChatPanel · InputContainer · AttachmentPreview  │
+│  ChatPanel · InputContainer · ToolApprovalPanel  │
 │  WebView2 rendering · Themes · Localization      │
 ├─────────────────────────────────────────────────┤
 │  AssistStudio.Core            ← NuGet package   │
-│  IAiProvider · Models · Helpers                  │
+│  IAiProvider · IAssistTool · Models · Helpers    │
 │  Claude │ OpenAI │ Gemini │ Ollama providers     │
 └─────────────────────────────────────────────────┘
 ```
 
 | Project | NuGet Package | TFM | Key Types |
 |---------|--------------|-----|-----------|
-| **AssistStudio.Core** | `FieldCure.AssistStudio.Core` | `net8.0` | `IAiProvider`, `AiRequest`, `AiResponse`, `ChatMessage`, `TokenUsage`, `ProviderPreset`, `Profile`, `ConversationManager` |
-| **AssistStudio.Controls** | `FieldCure.AssistStudio.Controls.WinUI` | `net8.0-windows10.0.19041.0`<br>`net9.0-windows10.0.19041.0` | `ChatPanel`, `InputContainer`, `AttachmentPreviewBar`, `WebViewChatRenderer`, `ChatTheme` |
+| **AssistStudio.Core** | `FieldCure.AssistStudio.Core` | `net8.0` | `IAiProvider`, `IAssistTool`, `AiRequest`, `AiResponse`, `ChatMessage`, `TokenUsage`, `ProviderPreset`, `Profile`, `ConversationManager` |
+| **AssistStudio.Controls** | `FieldCure.AssistStudio.Controls.WinUI` | `net8.0-windows10.0.19041.0`<br>`net9.0-windows10.0.19041.0` | `ChatPanel`, `InputContainer`, `AttachmentPreviewBar`, `ToolApprovalPanel`, `WebViewChatRenderer`, `ChatTheme` |
 | **AssistStudio** | *(demo app, not published)* | `net9.0-windows10.0.19041.0` | Reference implementation with settings, dialogs, and `PasswordVaultHelper` |
 
 > **Core is platform-agnostic** (`net8.0`). It has no Windows-specific dependencies — you can reference it from a console app, a server, or any .NET project.
@@ -179,6 +189,10 @@ The chat input area — text box, attach button, preset/profile selectors. Used 
 
 Horizontal scrollable bar showing thumbnails of attached files before sending.
 
+### ToolApprovalPanel
+
+Inline confirmation panel shown when a tool with `RequiresConfirmation = true` is invoked. Displays the tool name, an expandable JSON arguments preview, and Allow/Reject buttons. Replaces `InputContainer` during confirmation and restores it after.
+
 ### Re-templating
 
 Override the default template in your app's resources:
@@ -210,15 +224,14 @@ var preset = new ProviderPreset
 
 ### Profiles
 
-Profiles pair a system prompt with optional provider/model preferences:
+Profiles pair a system prompt with optional provider/model preferences and tool selections:
 
 ```csharp
 var profile = new Profile
 {
-    Name = "Code Reviewer",
-    Text = "You are a senior code reviewer. Be concise and focus on correctness.",
-    PreferredProviderType = "OpenAI",
-    PreferredModelId = "gpt-4o"
+    Name = "Task Planner",
+    Text = "You are a task planner that breaks down complex requests into steps and executes them using available tools.",
+    ToolNames = ["search_files", "read_file", "write_file", "run_command"]
 };
 ```
 
