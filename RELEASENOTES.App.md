@@ -1,5 +1,24 @@
 ﻿# Release Notes — AssistStudio App
 
+## [0.6.0] - 2026-03-17
+
+### Added
+- `ChatTabView` UserControl for declarative tab content layout (MVVM pattern)
+- Title edit button tooltip (localized en-US / ko-KR)
+
+### Changed
+- `ChatTabViewModel` exposes observable properties instead of directly creating `ChatPanel`
+- Tab `DataTemplate` now uses `ChatTabView` with `x:Bind` instead of raw `ChatPanel` reference
+- Profile changes in Settings no longer override profile on tabs with active conversations
+- Title bar button tooltips use `PlacementMode.Mouse` for better positioning
+
+### Fixed
+- App crash on profile switch in packaged/installed builds (`0xc000027b`)
+- `ContentDialog` always rendering in light theme regardless of app theme
+- IL Trimming breaking `System.Text.Json` reflection in Release builds
+
+---
+
 ## [0.5.0] - 2026-03-17
 
 ### Added

@@ -1,5 +1,15 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Core
 
+## [0.6.0] - 2026-03-17
+
+### Added
+- `AppJsonContext` and `IndentedJsonContext` source-generated JSON serializer contexts for trim-safe serialization
+
+### Changed
+- `ConversationManager` uses `IndentedJsonContext.Default.ConversationData` instead of reflection-based `JsonSerializerOptions`
+
+---
+
 ## [0.5.0] - 2026-03-17
 
 ### Added

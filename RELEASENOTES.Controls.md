@@ -1,5 +1,19 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Controls.WinUI
 
+## [0.6.0] - 2026-03-17
+
+### Added
+- Title edit button tooltip with localized resource strings (`ChatPanel_EditTitleTooltip`)
+- `SetBottomRightToolTip` helper for consistent tooltip placement on title bar buttons
+
+### Changed
+- Title bar button tooltips use `PlacementMode.Mouse` instead of default top placement
+
+### Fixed
+- Missing `SubtleButtonStyle` causing crash in packaged builds
+
+---
+
 ## [0.5.0] - 2026-03-17
 
 ### Added
