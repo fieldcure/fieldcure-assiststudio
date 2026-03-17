@@ -128,16 +128,16 @@ public sealed partial class ModelsPage : Page
         keys.TryGetValue("Gemini", out var geminiKey);
         keys.TryGetValue("Groq", out var groqKey);
 
-        SetKeyState(claudeKey ?? "", ClaudeKeyInputPanel, ClaudeKeyDisplayPanel, ClaudeMaskedKeyText, ClaudeStatusText, ClaudeModelCombo);
-        SetKeyState(openAIKey ?? "", OpenAIKeyInputPanel, OpenAIKeyDisplayPanel, OpenAIMaskedKeyText, OpenAIStatusText, OpenAIModelCombo);
-        SetKeyState(geminiKey ?? "", GeminiKeyInputPanel, GeminiKeyDisplayPanel, GeminiMaskedKeyText, GeminiStatusText, GeminiModelCombo);
-        SetKeyState(groqKey ?? "", GroqKeyInputPanel, GroqKeyDisplayPanel, GroqMaskedKeyText, GroqStatusText, GroqModelCombo);
+        SetKeyState(claudeKey ?? "", ClaudeKeyInputPanel, ClaudeKeyDisplayPanel, ClaudeMaskedKeyText, ClaudeStatusText, ClaudeModelCombo, ClaudeOptionsPanel);
+        SetKeyState(openAIKey ?? "", OpenAIKeyInputPanel, OpenAIKeyDisplayPanel, OpenAIMaskedKeyText, OpenAIStatusText, OpenAIModelCombo, OpenAIOptionsPanel);
+        SetKeyState(geminiKey ?? "", GeminiKeyInputPanel, GeminiKeyDisplayPanel, GeminiMaskedKeyText, GeminiStatusText, GeminiModelCombo, GeminiOptionsPanel);
+        SetKeyState(groqKey ?? "", GroqKeyInputPanel, GroqKeyDisplayPanel, GroqMaskedKeyText, GroqStatusText, GroqModelCombo, GroqOptionsPanel);
     }
 
     /// <summary>
     /// Configures the visual state of a provider card based on whether an API key is present.
     /// </summary>
-    private static void SetKeyState(string key, Grid inputPanel, Grid displayPanel, TextBlock maskedText, TextBlock statusText, ComboBox modelCombo)
+    private static void SetKeyState(string key, Grid inputPanel, Grid displayPanel, TextBlock maskedText, TextBlock statusText, ComboBox modelCombo, StackPanel optionsPanel)
     {
         if (!string.IsNullOrEmpty(key))
         {
@@ -146,15 +146,16 @@ public sealed partial class ModelsPage : Page
             maskedText.Text = MaskKey(key);
             statusText.Text = "";
             modelCombo.IsEnabled = true;
+            optionsPanel.Visibility = Visibility.Visible;
         }
         else
         {
             inputPanel.Visibility = Visibility.Visible;
             displayPanel.Visibility = Visibility.Collapsed;
             statusText.Text = L("Models_NoKey");
-            statusText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
-                Microsoft.UI.Colors.OrangeRed);
+            statusText.Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["SystemControlErrorTextForegroundBrush"];
             modelCombo.IsEnabled = false;
+            optionsPanel.Visibility = Visibility.Collapsed;
         }
     }
 
@@ -171,7 +172,7 @@ public sealed partial class ModelsPage : Page
     /// <summary>
     /// Saves an API key for the specified provider, updates the UI state, and triggers a model cache refresh.
     /// </summary>
-    private void AddProviderKey(string provider, PasswordBox keyBox, Grid inputPanel, Grid displayPanel, TextBlock maskedText, TextBlock statusText, ComboBox modelCombo)
+    private void AddProviderKey(string provider, PasswordBox keyBox, Grid inputPanel, Grid displayPanel, TextBlock maskedText, TextBlock statusText, ComboBox modelCombo, StackPanel optionsPanel)
     {
         var key = keyBox.Password?.Trim();
         if (string.IsNullOrEmpty(key)) return;
@@ -184,6 +185,7 @@ public sealed partial class ModelsPage : Page
         maskedText.Text = MaskKey(key);
         statusText.Text = "";
         modelCombo.IsEnabled = true;
+        optionsPanel.Visibility = Visibility.Visible;
 
         _ = FetchAndCacheModelsAsync(provider, key, modelCombo);
         SyncPresetsFromUI();
@@ -192,7 +194,7 @@ public sealed partial class ModelsPage : Page
     /// <summary>
     /// Removes the API key for the specified provider and resets the provider card UI.
     /// </summary>
-    private void RemoveProviderKey(string provider, Grid inputPanel, Grid displayPanel, TextBlock statusText, ComboBox modelCombo)
+    private void RemoveProviderKey(string provider, Grid inputPanel, Grid displayPanel, TextBlock statusText, ComboBox modelCombo, StackPanel optionsPanel)
     {
         PasswordVaultHelper.DeleteApiKey(provider);
 
@@ -204,9 +206,9 @@ public sealed partial class ModelsPage : Page
         inputPanel.Visibility = Visibility.Visible;
         displayPanel.Visibility = Visibility.Collapsed;
         statusText.Text = L("Models_NoKey");
-        statusText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
-            Microsoft.UI.Colors.OrangeRed);
+        statusText.Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["SystemControlErrorTextForegroundBrush"];
         modelCombo.IsEnabled = false;
+        optionsPanel.Visibility = Visibility.Collapsed;
 
         SyncPresetsFromUI();
     }
@@ -219,49 +221,49 @@ public sealed partial class ModelsPage : Page
     /// Handles adding the Claude API key.
     /// </summary>
     private void OnAddClaudeKey(object sender, RoutedEventArgs e) =>
-        AddProviderKey("Claude", ClaudeApiKeyBox, ClaudeKeyInputPanel, ClaudeKeyDisplayPanel, ClaudeMaskedKeyText, ClaudeStatusText, ClaudeModelCombo);
+        AddProviderKey("Claude", ClaudeApiKeyBox, ClaudeKeyInputPanel, ClaudeKeyDisplayPanel, ClaudeMaskedKeyText, ClaudeStatusText, ClaudeModelCombo, ClaudeOptionsPanel);
 
     /// <summary>
     /// Handles adding the OpenAI API key.
     /// </summary>
     private void OnAddOpenAIKey(object sender, RoutedEventArgs e) =>
-        AddProviderKey("OpenAI", OpenAIApiKeyBox, OpenAIKeyInputPanel, OpenAIKeyDisplayPanel, OpenAIMaskedKeyText, OpenAIStatusText, OpenAIModelCombo);
+        AddProviderKey("OpenAI", OpenAIApiKeyBox, OpenAIKeyInputPanel, OpenAIKeyDisplayPanel, OpenAIMaskedKeyText, OpenAIStatusText, OpenAIModelCombo, OpenAIOptionsPanel);
 
     /// <summary>
     /// Handles adding the Gemini API key.
     /// </summary>
     private void OnAddGeminiKey(object sender, RoutedEventArgs e) =>
-        AddProviderKey("Gemini", GeminiApiKeyBox, GeminiKeyInputPanel, GeminiKeyDisplayPanel, GeminiMaskedKeyText, GeminiStatusText, GeminiModelCombo);
+        AddProviderKey("Gemini", GeminiApiKeyBox, GeminiKeyInputPanel, GeminiKeyDisplayPanel, GeminiMaskedKeyText, GeminiStatusText, GeminiModelCombo, GeminiOptionsPanel);
 
     /// <summary>
     /// Handles adding the Groq API key.
     /// </summary>
     private void OnAddGroqKey(object sender, RoutedEventArgs e) =>
-        AddProviderKey("Groq", GroqApiKeyBox, GroqKeyInputPanel, GroqKeyDisplayPanel, GroqMaskedKeyText, GroqStatusText, GroqModelCombo);
+        AddProviderKey("Groq", GroqApiKeyBox, GroqKeyInputPanel, GroqKeyDisplayPanel, GroqMaskedKeyText, GroqStatusText, GroqModelCombo, GroqOptionsPanel);
 
     /// <summary>
     /// Handles removing the Claude API key.
     /// </summary>
     private void OnRemoveClaudeKey(object sender, RoutedEventArgs e) =>
-        RemoveProviderKey("Claude", ClaudeKeyInputPanel, ClaudeKeyDisplayPanel, ClaudeStatusText, ClaudeModelCombo);
+        RemoveProviderKey("Claude", ClaudeKeyInputPanel, ClaudeKeyDisplayPanel, ClaudeStatusText, ClaudeModelCombo, ClaudeOptionsPanel);
 
     /// <summary>
     /// Handles removing the OpenAI API key.
     /// </summary>
     private void OnRemoveOpenAIKey(object sender, RoutedEventArgs e) =>
-        RemoveProviderKey("OpenAI", OpenAIKeyInputPanel, OpenAIKeyDisplayPanel, OpenAIStatusText, OpenAIModelCombo);
+        RemoveProviderKey("OpenAI", OpenAIKeyInputPanel, OpenAIKeyDisplayPanel, OpenAIStatusText, OpenAIModelCombo, OpenAIOptionsPanel);
 
     /// <summary>
     /// Handles removing the Gemini API key.
     /// </summary>
     private void OnRemoveGeminiKey(object sender, RoutedEventArgs e) =>
-        RemoveProviderKey("Gemini", GeminiKeyInputPanel, GeminiKeyDisplayPanel, GeminiStatusText, GeminiModelCombo);
+        RemoveProviderKey("Gemini", GeminiKeyInputPanel, GeminiKeyDisplayPanel, GeminiStatusText, GeminiModelCombo, GeminiOptionsPanel);
 
     /// <summary>
     /// Handles removing the Groq API key.
     /// </summary>
     private void OnRemoveGroqKey(object sender, RoutedEventArgs e) =>
-        RemoveProviderKey("Groq", GroqKeyInputPanel, GroqKeyDisplayPanel, GroqStatusText, GroqModelCombo);
+        RemoveProviderKey("Groq", GroqKeyInputPanel, GroqKeyDisplayPanel, GroqStatusText, GroqModelCombo, GroqOptionsPanel);
 
     #endregion
 

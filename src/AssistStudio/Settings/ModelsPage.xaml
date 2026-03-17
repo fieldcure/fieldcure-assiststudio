@@ -77,20 +77,22 @@
                                       Glyph="&#xE74D;" FontSize="14" />
                         </Button>
                     </Grid>
-                    <StackPanel Spacing="4">
-                        <TextBlock x:Uid="Models_DefaultModel" Text="Default Model" FontSize="12" Opacity="0.7" />
-                        <ComboBox x:Name="ClaudeModelCombo"
-                                  x:Uid="Models_ModelNotAvailable"
-                                  HorizontalAlignment="Stretch"
-                                  IsEnabled="False"
-                                  PlaceholderText="Not available"
-                                  SelectionChanged="OnCloudModelChanged" />
-                    </StackPanel>
-                    <StackPanel Spacing="4">
-                        <TextBlock x:Uid="Models_PdfHandling" Text="PDF Handling" FontSize="12" Opacity="0.7" />
-                        <ComboBox x:Name="ClaudePdfCombo"
-                                  HorizontalAlignment="Stretch"
-                                  SelectionChanged="OnPdfHandlingChanged" />
+                    <StackPanel x:Name="ClaudeOptionsPanel" Spacing="8" Visibility="Collapsed">
+                        <StackPanel Spacing="4">
+                            <TextBlock x:Uid="Models_DefaultModel" Text="Default Model" FontSize="12" Opacity="0.7" />
+                            <ComboBox x:Name="ClaudeModelCombo"
+                                      x:Uid="Models_ModelNotAvailable"
+                                      HorizontalAlignment="Stretch"
+                                      IsEnabled="False"
+                                      PlaceholderText="Not available"
+                                      SelectionChanged="OnCloudModelChanged" />
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock x:Uid="Models_PdfHandling" Text="PDF Handling" FontSize="12" Opacity="0.7" />
+                            <ComboBox x:Name="ClaudePdfCombo"
+                                      HorizontalAlignment="Stretch"
+                                      SelectionChanged="OnPdfHandlingChanged" />
+                        </StackPanel>
                     </StackPanel>
                 </StackPanel>
 
@@ -134,19 +136,21 @@
                                       Glyph="&#xE74D;" FontSize="14" />
                         </Button>
                     </Grid>
-                    <StackPanel Spacing="4">
-                        <TextBlock x:Uid="Models_DefaultModel" Text="Default Model" FontSize="12" Opacity="0.7" />
-                        <ComboBox x:Name="OpenAIModelCombo"
-                                  HorizontalAlignment="Stretch"
-                                  IsEnabled="False"
-                                  PlaceholderText="Not available"
-                                  SelectionChanged="OnCloudModelChanged" />
-                    </StackPanel>
-                    <StackPanel Spacing="4">
-                        <TextBlock x:Uid="Models_PdfHandling" Text="PDF Handling" FontSize="12" Opacity="0.7" />
-                        <ComboBox x:Name="OpenAIPdfCombo"
-                                  HorizontalAlignment="Stretch"
-                                  SelectionChanged="OnPdfHandlingChanged" />
+                    <StackPanel x:Name="OpenAIOptionsPanel" Spacing="8" Visibility="Collapsed">
+                        <StackPanel Spacing="4">
+                            <TextBlock x:Uid="Models_DefaultModel" Text="Default Model" FontSize="12" Opacity="0.7" />
+                            <ComboBox x:Name="OpenAIModelCombo"
+                                      HorizontalAlignment="Stretch"
+                                      IsEnabled="False"
+                                      PlaceholderText="Not available"
+                                      SelectionChanged="OnCloudModelChanged" />
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock x:Uid="Models_PdfHandling" Text="PDF Handling" FontSize="12" Opacity="0.7" />
+                            <ComboBox x:Name="OpenAIPdfCombo"
+                                      HorizontalAlignment="Stretch"
+                                      SelectionChanged="OnPdfHandlingChanged" />
+                        </StackPanel>
                     </StackPanel>
                 </StackPanel>
 
@@ -190,19 +194,21 @@
                                       Glyph="&#xE74D;" FontSize="14" />
                         </Button>
                     </Grid>
-                    <StackPanel Spacing="4">
-                        <TextBlock x:Uid="Models_DefaultModel" Text="Default Model" FontSize="12" Opacity="0.7" />
-                        <ComboBox x:Name="GeminiModelCombo"
-                                  HorizontalAlignment="Stretch"
-                                  IsEnabled="False"
-                                  PlaceholderText="Not available"
-                                  SelectionChanged="OnCloudModelChanged" />
-                    </StackPanel>
-                    <StackPanel Spacing="4">
-                        <TextBlock x:Uid="Models_PdfHandling" Text="PDF Handling" FontSize="12" Opacity="0.7" />
-                        <ComboBox x:Name="GeminiPdfCombo"
-                                  HorizontalAlignment="Stretch"
-                                  SelectionChanged="OnPdfHandlingChanged" />
+                    <StackPanel x:Name="GeminiOptionsPanel" Spacing="8" Visibility="Collapsed">
+                        <StackPanel Spacing="4">
+                            <TextBlock x:Uid="Models_DefaultModel" Text="Default Model" FontSize="12" Opacity="0.7" />
+                            <ComboBox x:Name="GeminiModelCombo"
+                                      HorizontalAlignment="Stretch"
+                                      IsEnabled="False"
+                                      PlaceholderText="Not available"
+                                      SelectionChanged="OnCloudModelChanged" />
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock x:Uid="Models_PdfHandling" Text="PDF Handling" FontSize="12" Opacity="0.7" />
+                            <ComboBox x:Name="GeminiPdfCombo"
+                                      HorizontalAlignment="Stretch"
+                                      SelectionChanged="OnPdfHandlingChanged" />
+                        </StackPanel>
                     </StackPanel>
                 </StackPanel>
 
@@ -246,19 +252,21 @@
                                       Glyph="&#xE74D;" FontSize="14" />
                         </Button>
                     </Grid>
-                    <StackPanel Spacing="4">
-                        <TextBlock x:Uid="Models_DefaultModel" Text="Default Model" FontSize="12" Opacity="0.7" />
-                        <ComboBox x:Name="GroqModelCombo"
-                                  HorizontalAlignment="Stretch"
-                                  IsEnabled="False"
-                                  PlaceholderText="Not available"
-                                  SelectionChanged="OnCloudModelChanged" />
-                    </StackPanel>
-                    <StackPanel Spacing="4">
-                        <TextBlock x:Uid="Models_PdfHandling" Text="PDF Handling" FontSize="12" Opacity="0.7" />
-                        <ComboBox x:Name="GroqPdfCombo"
-                                  HorizontalAlignment="Stretch"
-                                  SelectionChanged="OnPdfHandlingChanged" />
+                    <StackPanel x:Name="GroqOptionsPanel" Spacing="8" Visibility="Collapsed">
+                        <StackPanel Spacing="4">
+                            <TextBlock x:Uid="Models_DefaultModel" Text="Default Model" FontSize="12" Opacity="0.7" />
+                            <ComboBox x:Name="GroqModelCombo"
+                                      HorizontalAlignment="Stretch"
+                                      IsEnabled="False"
+                                      PlaceholderText="Not available"
+                                      SelectionChanged="OnCloudModelChanged" />
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock x:Uid="Models_PdfHandling" Text="PDF Handling" FontSize="12" Opacity="0.7" />
+                            <ComboBox x:Name="GroqPdfCombo"
+                                      HorizontalAlignment="Stretch"
+                                      SelectionChanged="OnPdfHandlingChanged" />
+                        </StackPanel>
                     </StackPanel>
                 </StackPanel>
 
