@@ -16,9 +16,9 @@ public partial class App : Application
     #region Fields
 
     /// <summary>
-    /// The main application window instance.
+    /// Gets the main application window instance.
     /// </summary>
-    private MainWindow? _window;
+    public MainWindow? MainWindow { get; private set; }
 
     #endregion
 
@@ -46,10 +46,10 @@ public partial class App : Application
         DiagnosticLogger.OnException = ex => LoggingService.LogException(ex);
         DiagnosticLogger.OnWarning = msg => LoggingService.LogWarning(msg);
 
-        _window = new MainWindow();
+        MainWindow = new MainWindow();
 
-        FieldCure.AssistStudio.Controls.WindowHelper.TrackWindow(_window);
-        _window.Activate();
+        FieldCure.AssistStudio.Controls.WindowHelper.TrackWindow(MainWindow);
+        MainWindow.Activate();
 
         // Handle file activation on cold start
         var activatedArgs = AppInstance.GetCurrent().GetActivatedEventArgs();
@@ -57,7 +57,7 @@ public partial class App : Application
             activatedArgs.Data is IFileActivatedEventArgs fileArgs &&
             fileArgs.Files.Count > 0)
         {
-            _window.OpenFileFromActivation(fileArgs.Files[0].Path);
+            MainWindow.OpenFileFromActivation(fileArgs.Files[0].Path);
         }
 
         // Listen for redirected activations (app already running)
@@ -78,10 +78,10 @@ public partial class App : Application
             fileArgs.Files.Count > 0)
         {
             var filePath = fileArgs.Files[0].Path;
-            _window?.DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Normal, () =>
+            MainWindow?.DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Normal, () =>
             {
-                _window?.OpenFileFromActivation(filePath);
-                _window?.Activate(); // Bring to front
+                MainWindow?.OpenFileFromActivation(filePath);
+                MainWindow?.Activate(); // Bring to front
             });
         }
     }

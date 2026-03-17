@@ -55,7 +55,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         {
             Glyph = "\uE915",
             FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Segoe Fluent Icons"),
-            Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"],
+            Foreground = ThemeHelper.GetBrush("StatusAccentForegroundBrush"),
         }
         : null;
 

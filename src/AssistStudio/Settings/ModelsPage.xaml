@@ -289,7 +289,8 @@
                                    Style="{StaticResource BodyStrongTextBlockStyle}"
                                    VerticalAlignment="Center" />
                         <TextBlock x:Name="OllamaStatusText"
-                                   FontSize="12" Opacity="0.7"
+                                   FontSize="12"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                    VerticalAlignment="Center" />
                         <ProgressRing x:Name="OllamaSpinner" IsActive="False"
                                       Width="16" Height="16" Visibility="Collapsed" />

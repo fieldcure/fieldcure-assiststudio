@@ -642,8 +642,7 @@ public sealed partial class ModelsPage : Page
         OllamaSpinner.Visibility = Visibility.Visible;
         OllamaSpinner.IsActive = true;
         OllamaStatusText.Text = L("Models_Checking");
-        OllamaStatusText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
-            Microsoft.UI.Colors.Gray);
+        OllamaStatusText.ClearValue(TextBlock.ForegroundProperty);
         StartOllamaButton.Visibility = Visibility.Collapsed;
         OllamaInstallPanel.Visibility = Visibility.Collapsed;
         BrowseModelsButton.Visibility = Visibility.Collapsed;
@@ -654,22 +653,20 @@ public sealed partial class ModelsPage : Page
             if (isRunning)
             {
                 OllamaStatusText.Text = L("Models_Running");
-                OllamaStatusText.Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"];
+                OllamaStatusText.Foreground = ThemeHelper.GetBrush("StatusAccentForegroundBrush");
                 BrowseModelsButton.Visibility = Visibility.Visible;
                 await LoadOllamaModelsAsync();
             }
             else if (OllamaHelper.IsOllamaInstalled())
             {
                 OllamaStatusText.Text = L("Models_InstalledNotRunning");
-                OllamaStatusText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
-                    Microsoft.UI.Colors.Orange);
+                OllamaStatusText.Foreground = ThemeHelper.GetBrush("StatusErrorForegroundBrush");
                 StartOllamaButton.Visibility = Visibility.Visible;
             }
             else
             {
                 OllamaStatusText.Text = L("Models_NotInstalled");
-                OllamaStatusText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
-                    Microsoft.UI.Colors.OrangeRed);
+                OllamaStatusText.Foreground = ThemeHelper.GetBrush("StatusErrorForegroundBrush");
                 OllamaInstallPanel.Visibility = Visibility.Visible;
             }
         }
@@ -677,8 +674,7 @@ public sealed partial class ModelsPage : Page
         {
             LoggingService.LogException(ex);
             OllamaStatusText.Text = L("Models_Error");
-            OllamaStatusText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
-                Microsoft.UI.Colors.OrangeRed);
+            OllamaStatusText.Foreground = ThemeHelper.GetBrush("StatusErrorForegroundBrush");
         }
         finally
         {
@@ -766,16 +762,14 @@ public sealed partial class ModelsPage : Page
             else
             {
                 OllamaStatusText.Text = L("Models_FailedToStart");
-                OllamaStatusText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
-                    Microsoft.UI.Colors.OrangeRed);
+                OllamaStatusText.Foreground = ThemeHelper.GetBrush("StatusErrorForegroundBrush");
             }
         }
         catch (Exception ex)
         {
             LoggingService.LogException(ex);
             OllamaStatusText.Text = L("Models_ErrorStarting");
-            OllamaStatusText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
-                Microsoft.UI.Colors.OrangeRed);
+            OllamaStatusText.Foreground = ThemeHelper.GetBrush("StatusErrorForegroundBrush");
         }
         finally
         {
