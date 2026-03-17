@@ -1,5 +1,15 @@
 ﻿# Release Notes — AssistStudio App
 
+## [0.3.0] - 2026-03-17
+
+### Added
+- ToolApprovalPanel for tool execution confirmation before running
+- Summarize button on InputContainer
+- External links in chat now open in default browser
+- TextBox stays focused during streaming (prevents WebView2 focus steal)
+
+---
+
 ## [0.2.0] - 2026-03-16
 
 ### Added

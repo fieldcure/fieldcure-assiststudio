@@ -1,5 +1,13 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Core
 
+## [0.3.0] - 2026-03-17
+
+### Added
+- Generic file and command tools for agentic workflows (`ReadFileTool`, `WriteFileTool`, `RunCommandTool`, etc.)
+- `broadFileSystemAccess` support for tool file operations
+
+---
+
 ## [0.2.0] - 2026-03-16
 
 ### Added

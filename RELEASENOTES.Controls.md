@@ -1,5 +1,17 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Controls.WinUI
 
+## [0.3.0] - 2026-03-17
+
+### Added
+- `ToolApprovalPanel` templated control for tool execution confirmation UI
+- Summarize button wired from `InputContainer` to `ChatPanel`
+- External link navigation redirected to default browser from WebView2
+
+### Fixed
+- WebView2 stealing focus from TextBox during streaming response
+
+---
+
 ## [0.2.0] - 2026-03-16
 
 ### Fixed
