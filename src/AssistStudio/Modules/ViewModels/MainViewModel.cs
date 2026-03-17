@@ -63,7 +63,10 @@ public partial class MainViewModel : ObservableObject
         _profiles = AppSettings.LoadProfiles();
 
         // Register available tools
-        ToolRegistry.Register(new ScanDirectoryTool());
+        ToolRegistry.Register(new ReadFileTool());
+        ToolRegistry.Register(new WriteFileTool());
+        ToolRegistry.Register(new SearchFilesTool());
+        ToolRegistry.Register(new RunCommandTool());
     }
 
     #endregion

@@ -1,31 +1,32 @@
-﻿using FieldCure.AssistStudio.Models;
+using FieldCure.AssistStudio.Models;
 using System.Text.Json;
 
 namespace AssistStudio.Modules.Tools;
 
 /// <summary>
-/// A demo tool that scans a directory and returns a list of files with name, size, and modified date.
+/// Searches a directory for files matching a glob pattern and returns file metadata.
 /// </summary>
-public class ScanDirectoryTool : IAssistTool
+public class SearchFilesTool : IAssistTool
 {
     #region IAssistTool Implementation
 
     /// <inheritdoc/>
-    public string Name => "scan_directory";
+    public string Name => "search_files";
 
     /// <inheritdoc/>
-    public string DisplayName => "Scan Directory";
+    public string DisplayName => "Search Files";
 
     /// <inheritdoc/>
-    public string Description => "Scans a directory and returns a list of files with name, size (bytes), and last modified date.";
+    public string Description => "Searches a directory for files matching a glob pattern and returns a list with name, path, size, and last modified date.";
 
     /// <inheritdoc/>
     public string ParameterSchema => """
         {
           "type": "object",
           "properties": {
-            "path": { "type": "string", "description": "Directory path to scan" },
-            "recursive": { "type": "boolean", "description": "Whether to scan subdirectories recursively", "default": false }
+            "path": { "type": "string", "description": "Directory path to search" },
+            "pattern": { "type": "string", "description": "Glob pattern to match files (default: *)", "default": "*" },
+            "recursive": { "type": "boolean", "description": "Whether to search subdirectories recursively", "default": false }
           },
           "required": ["path"]
         }
@@ -39,6 +40,10 @@ public class ScanDirectoryTool : IAssistTool
     {
         var path = parameters.GetProperty("path").GetString()
             ?? throw new ArgumentException("Missing required parameter: path");
+
+        var pattern = parameters.TryGetProperty("pattern", out var patEl)
+            ? patEl.GetString() ?? "*"
+            : "*";
 
         var recursive = parameters.TryGetProperty("recursive", out var recEl) && recEl.GetBoolean();
 
@@ -55,7 +60,7 @@ public class ScanDirectoryTool : IAssistTool
         var files = new List<object>();
         try
         {
-            foreach (var info in new DirectoryInfo(path).EnumerateFiles("*", enumOptions))
+            foreach (var info in new DirectoryInfo(path).EnumerateFiles(pattern, enumOptions))
             {
                 try
                 {

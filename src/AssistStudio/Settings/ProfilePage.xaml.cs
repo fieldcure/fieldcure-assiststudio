@@ -390,12 +390,14 @@ public sealed partial class ProfilePage : Page
     {
         ToolsPanel.Children.Clear();
         var tools = ToolRegistry.All;
+        var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
 
         foreach (var tool in tools)
         {
+            var localizedName = loader.GetString($"Tool_{tool.Name}");
             var cb = new CheckBox
             {
-                Content = tool.DisplayName,
+                Content = string.IsNullOrEmpty(localizedName) ? tool.DisplayName : localizedName,
                 Tag = tool.Name,
                 IsChecked = profile.ToolNames.Contains(tool.Name),
             };
@@ -408,7 +410,7 @@ public sealed partial class ProfilePage : Page
         {
             ToolsPanel.Children.Add(new TextBlock
             {
-                Text = "No tools registered.",
+                Text = loader.GetString("Profile_NoToolsRegistered"),
                 Opacity = 0.5,
                 FontSize = 12,
             });

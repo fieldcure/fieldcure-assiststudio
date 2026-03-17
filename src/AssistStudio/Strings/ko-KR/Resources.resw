@@ -382,4 +382,20 @@
   <data name="Tab_NewConversation" xml:space="preserve">
     <value>새 대화</value>
   </data>
+  <!-- Tool Display Names -->
+  <data name="Tool_read_file" xml:space="preserve">
+    <value>파일 읽기</value>
+  </data>
+  <data name="Tool_write_file" xml:space="preserve">
+    <value>파일 쓰기</value>
+  </data>
+  <data name="Tool_search_files" xml:space="preserve">
+    <value>파일 검색</value>
+  </data>
+  <data name="Tool_run_command" xml:space="preserve">
+    <value>명령 실행</value>
+  </data>
+  <data name="Profile_NoToolsRegistered" xml:space="preserve">
+    <value>등록된 도구가 없습니다.</value>
+  </data>
 </root>

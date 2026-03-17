@@ -382,4 +382,20 @@
   <data name="Tab_NewConversation" xml:space="preserve">
     <value>Untitled</value>
   </data>
+  <!-- Tool Display Names -->
+  <data name="Tool_read_file" xml:space="preserve">
+    <value>Read File</value>
+  </data>
+  <data name="Tool_write_file" xml:space="preserve">
+    <value>Write File</value>
+  </data>
+  <data name="Tool_search_files" xml:space="preserve">
+    <value>Search Files</value>
+  </data>
+  <data name="Tool_run_command" xml:space="preserve">
+    <value>Run Command</value>
+  </data>
+  <data name="Profile_NoToolsRegistered" xml:space="preserve">
+    <value>No tools registered.</value>
+  </data>
 </root>
