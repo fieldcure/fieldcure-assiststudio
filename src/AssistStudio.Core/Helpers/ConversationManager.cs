@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using FieldCure.AssistStudio.Models;
 
 namespace FieldCure.AssistStudio.Helpers;
@@ -21,12 +22,9 @@ public static class ConversationManager
     /// <summary>The folder path where conversations are stored.</summary>
     private static string _conversationsFolder = "";
 
-    /// <summary>Shared JSON serializer options for conversation serialization.</summary>
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        Converters = { new JsonStringEnumConverter() },
-    };
+    /// <summary>Shared JSON type info for indented conversation serialization.</summary>
+    private static readonly JsonTypeInfo<ConversationData> ConversationTypeInfo =
+        IndentedJsonContext.Default.ConversationData;
 
     #endregion
 
@@ -86,7 +84,7 @@ public static class ConversationManager
             }).ToList(),
         };
 
-        var json = JsonSerializer.Serialize(data, JsonOptions);
+        var json = JsonSerializer.Serialize(data, ConversationTypeInfo);
         await AtomicWriteAsync(filePath, json);
     }
 
@@ -98,7 +96,7 @@ public static class ConversationManager
         if (!File.Exists(filePath)) return null;
 
         var json = await File.ReadAllTextAsync(filePath);
-        return JsonSerializer.Deserialize<ConversationData>(json, JsonOptions);
+        return JsonSerializer.Deserialize(json, ConversationTypeInfo);
     }
 
     /// <summary>

@@ -6,6 +6,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:local="using:AssistStudio.Settings"
+    xmlns:models="using:FieldCure.AssistStudio.Models"
     mc:Ignorable="d"
     NavigationCacheMode="Enabled">
 
@@ -60,16 +61,16 @@
                               SelectionChanged="OnProfileSelectionChanged"
                               MaxHeight="200">
                         <ListView.ItemTemplate>
-                            <DataTemplate>
+                            <DataTemplate x:DataType="models:Profile">
                                 <Grid Padding="4,2" ColumnSpacing="8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                                    <TextBlock Text="{x:Bind Name}" VerticalAlignment="Center" />
                                     <Button Grid.Column="1" Padding="4"
                                             x:Uid="Profile_DeleteProfile"
-                                            Visibility="{Binding IsBuiltIn, Converter={StaticResource InverseBoolToVisibility}}"
+                                            Visibility="{x:Bind IsBuiltIn, Converter={StaticResource InverseBoolToVisibility}}"
                                             Click="OnDeleteProfileClicked"
                                             ToolTipService.ToolTip="Delete"
                                             Style="{StaticResource SubtleButtonStyle}">

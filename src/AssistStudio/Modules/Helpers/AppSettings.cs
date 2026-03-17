@@ -1,4 +1,5 @@
-﻿using FieldCure.AssistStudio.Models;
+﻿using FieldCure.AssistStudio.Helpers;
+using FieldCure.AssistStudio.Models;
 using System.Collections.ObjectModel;
 using System.Text.Json;
 using Windows.Storage;
@@ -99,12 +100,12 @@ public static class AppSettings
         {
             var json = Settings.Values["RecentFilePaths"] as string;
             if (string.IsNullOrEmpty(json)) return [];
-            try { return JsonSerializer.Deserialize<List<string>>(json) ?? []; }
+            try { return JsonSerializer.Deserialize(json, AppJsonContext.Default.ListString) ?? []; }
             catch { return []; }
         }
         set
         {
-            var json = JsonSerializer.Serialize(value);
+            var json = JsonSerializer.Serialize(value, AppJsonContext.Default.ListString);
             Settings.Values["RecentFilePaths"] = json;
         }
     }
@@ -201,7 +202,7 @@ public static class AppSettings
         {
             try
             {
-                var custom = JsonSerializer.Deserialize<List<Profile>>(json) ?? [];
+                var custom = JsonSerializer.Deserialize(json, AppJsonContext.Default.ListProfile) ?? [];
                 result.AddRange(custom);
             }
             catch { /* ignore corrupt data */ }
@@ -216,7 +217,7 @@ public static class AppSettings
     public static void SaveCustomProfiles(IEnumerable<Profile> allProfiles)
     {
         var custom = allProfiles.Where(p => !p.IsBuiltIn).ToList();
-        var json = JsonSerializer.Serialize(custom);
+        var json = JsonSerializer.Serialize(custom, AppJsonContext.Default.ListProfile);
         Settings.Values["CustomProfiles"] = json;
     }
 
@@ -247,7 +248,7 @@ public static class AppSettings
     /// </summary>
     public static void SetCachedModels(string provider, List<string> modelIds)
     {
-        var json = JsonSerializer.Serialize(modelIds);
+        var json = JsonSerializer.Serialize(modelIds, AppJsonContext.Default.ListString);
         Settings.Values[$"CachedModels_{provider}"] = json;
         Settings.Values[$"CachedModels_{provider}_At"] = DateTimeOffset.UtcNow.Ticks;
     }
@@ -270,7 +271,7 @@ public static class AppSettings
 
         try
         {
-            return JsonSerializer.Deserialize<List<string>>(json);
+            return JsonSerializer.Deserialize(json, AppJsonContext.Default.ListString);
         }
         catch
         {
@@ -296,7 +297,8 @@ public static class AppSettings
             }
         }
 
-        var json = JsonSerializer.Serialize(presets);
+        var list = presets as List<ProviderPreset> ?? [.. presets];
+        var json = JsonSerializer.Serialize(list, AppJsonContext.Default.ListProviderPreset);
         Settings.Values["ProviderPresets"] = json;
     }
 
@@ -312,7 +314,7 @@ public static class AppSettings
         {
             try
             {
-                var list = JsonSerializer.Deserialize<List<ProviderPreset>>(json);
+                var list = JsonSerializer.Deserialize(json, AppJsonContext.Default.ListProviderPreset);
                 if (list is { Count: > 0 })
                 {
                     foreach (var p in list)
