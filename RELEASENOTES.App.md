@@ -1,5 +1,12 @@
 ﻿# Release Notes — AssistStudio App
 
+## [0.4.0] - 2026-03-17
+
+### Added
+- NuGet publish automation (`publish-nuget.ps1` script)
+
+---
+
 ## [0.3.0] - 2026-03-17
 
 ### Added

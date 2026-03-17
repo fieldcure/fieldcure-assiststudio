@@ -1,5 +1,14 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Controls.WinUI
 
+## [0.4.0] - 2026-03-17
+
+### Added
+- NuGet package metadata (Company, Copyright, Icon, README, Repository URL, Tags)
+- Release notes auto-inclusion in NuGet package
+- `publish-nuget.ps1` script for pack → sign → push workflow
+
+---
+
 ## [0.3.0] - 2026-03-17
 
 ### Added
