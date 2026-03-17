@@ -17,8 +17,21 @@
     <PackageId>FieldCure.AssistStudio.Controls.WinUI</PackageId>
     <Description>AI Chat UI Controls for WinUI 3. Supports Claude, OpenAI, Gemini, Ollama and more.</Description>
     <Authors>Jong Hyun Kim</Authors>
+    <Company>Fieldcure Co., Ltd.</Company>
+    <Copyright>Copyright (c) 2026 Fieldcure Co., Ltd.</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/fieldcure/fieldlab-assiststudio</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>ai;chat;winui;winui3;controls;claude;openai;gemini;ollama;webview2</PackageTags>
+    <PackageReleaseNotes>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)\..\..\RELEASENOTES.Controls.md'))</PackageReleaseNotes>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="icon.png" Pack="true" PackagePath="" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.*" />

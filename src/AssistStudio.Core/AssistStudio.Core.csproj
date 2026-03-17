@@ -13,8 +13,21 @@
     <PackageId>FieldCure.AssistStudio.Core</PackageId>
     <Description>AI provider client library for Claude, OpenAI, Gemini, and Ollama. Core models, providers, and helpers.</Description>
     <Authors>Jong Hyun Kim</Authors>
+    <Company>Fieldcure Co., Ltd.</Company>
+    <Copyright>Copyright (c) 2026 Fieldcure Co., Ltd.</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/fieldcure/fieldlab-assiststudio</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>ai;claude;openai;gemini;ollama;llm;provider;streaming</PackageTags>
+    <PackageReleaseNotes>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)\..\..\RELEASENOTES.Core.md'))</PackageReleaseNotes>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="icon.png" Pack="true" PackagePath="" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
 
   <ItemGroup>
     <InternalsVisibleTo Include="AssistStudio.Core.Tests" />
