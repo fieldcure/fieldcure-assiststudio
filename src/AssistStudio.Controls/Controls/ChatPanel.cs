@@ -1275,9 +1275,10 @@ public sealed class ChatPanel : Control
 
                 _messages.Add(new ChatMessage(ChatRole.Tool, toolResult) { ToolCallId = call.Id });
 
-                var toolStatus = $"[Tool: {call.FunctionName}]\n";
-                assistantMessage.Content += toolStatus;
-                await _renderer.AppendTokenAsync(assistantMessage.Id, toolStatus);
+                var toolDisplayName = RegisteredTools
+                    .FirstOrDefault(t => t.Name == call.FunctionName)?.DisplayName ?? call.FunctionName;
+                assistantMessage.Content += $"[Tool: {call.FunctionName}]\n";
+                await _renderer.AppendToolBlockAsync(assistantMessage.Id, toolDisplayName);
             }
         } while (true);
 

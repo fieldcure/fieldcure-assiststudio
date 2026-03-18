@@ -184,6 +184,15 @@ internal class WebViewChatRenderer
     }
 
     /// <summary>
+    /// Appends a styled tool call block to an assistant message.
+    /// </summary>
+    public Task AppendToolBlockAsync(string id, string toolName)
+    {
+        var script = $"window.fluentChat.appendToolBlock({Js(id)}, {Js(toolName)})";
+        return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
+    /// <summary>
     /// Finalizes an assistant message with the full markdown content, truncation status, and token count.
     /// </summary>
     public Task FinalizeMessageAsync(string id, string fullMarkdown, bool truncated = false, int tokenCount = 0)

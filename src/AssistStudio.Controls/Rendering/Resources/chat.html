@@ -177,6 +177,22 @@
         max-height: none;
     }
 
+    /* ===== Tool Call Block ===== */
+    .tool-block {
+        border-left: 3px solid var(--border-color);
+        margin-bottom: 8px;
+        padding-left: 10px;
+    }
+    .tool-header {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 2px 0;
+        user-select: none;
+        font-size: 11px;
+        color: var(--timestamp-color);
+    }
+
     /* ===== Markdown Content Styles ===== */
     .message-bubble.rendered h1,
     .message-bubble.rendered h2,
@@ -893,6 +909,26 @@
             }
         },
 
+        appendToolBlock: function(id, toolName) {
+            var msg = document.getElementById('msg-' + id);
+            if (!msg) return;
+            var bubble = msg.querySelector('.message-bubble');
+            if (!bubble) return;
+            var block = document.createElement('div');
+            block.className = 'tool-block';
+            var header = document.createElement('div');
+            header.className = 'tool-header';
+            header.textContent = '\uD83D\uDD27 Used ' + toolName;
+            block.appendChild(header);
+            var contentSpan = bubble.querySelector('.content');
+            if (contentSpan) {
+                bubble.insertBefore(block, contentSpan);
+            } else {
+                bubble.appendChild(block);
+            }
+            doScroll('instant');
+        },
+
         finalizeMessage: function(id, fullText, truncated, tokenCount) {
             var msg = document.getElementById('msg-' + id);
             if (!msg) return;
@@ -900,9 +936,15 @@
             if (bubble) {
                 bubble.classList.remove('streaming');
                 bubble.classList.add('rendered');
-                // Preserve thinking block if present
+                // Preserve thinking and tool blocks before markdown re-render
                 var thinkingBlock = bubble.querySelector('.thinking-block');
-                bubble.innerHTML = renderMarkdown(fullText);
+                var toolBlocks = Array.from(bubble.querySelectorAll('.tool-block'));
+                // Strip [Tool: ...] markers from content before markdown rendering
+                var cleanText = fullText.replace(/\[Tool:\s*[^\]]*\]\n?/g, '');
+                bubble.innerHTML = renderMarkdown(cleanText);
+                toolBlocks.reverse().forEach(function(tb) {
+                    bubble.insertBefore(tb, bubble.firstChild);
+                });
                 if (thinkingBlock) {
                     bubble.insertBefore(thinkingBlock, bubble.firstChild);
                 }
