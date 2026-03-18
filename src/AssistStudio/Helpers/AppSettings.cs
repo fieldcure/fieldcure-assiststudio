@@ -49,15 +49,6 @@ public static class AppSettings
     private static ApplicationDataContainer Settings => ApplicationData.Current.LocalSettings;
 
     /// <summary>
-    /// Gets or sets whether this is the first time the application has been launched.
-    /// </summary>
-    public static bool IsFirstRun
-    {
-        get => Settings.Values["IsFirstRun"] is not false;
-        set => Settings.Values["IsFirstRun"] = value;
-    }
-
-    /// <summary>
     /// Gets or sets the application theme name ("Light", "Dark", or "System").
     /// </summary>
     public static string Theme

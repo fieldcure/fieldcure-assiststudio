@@ -1,5 +1,4 @@
-﻿using AssistStudio.Dialogs;
-using AssistStudio.Helpers;
+﻿using AssistStudio.Helpers;
 using AssistStudio.Modules.ViewModels;
 using FieldCure.AssistStudio.Helpers;
 using Microsoft.UI;
@@ -154,23 +153,12 @@ public sealed partial class MainWindow : Window
     #region First Activation and Theme
 
     /// <summary>
-    /// Handles the first window activation to apply the saved theme and show the first-run dialog if needed.
+    /// Handles the first window activation to apply the saved theme.
     /// </summary>
-    private async void OnFirstActivated(object sender, WindowActivatedEventArgs args)
+    private void OnFirstActivated(object sender, WindowActivatedEventArgs args)
     {
         Activated -= OnFirstActivated;
         ApplyAppTheme(AppSettings.Theme);
-
-        if (AppSettings.IsFirstRun)
-        {
-            AppSettings.IsFirstRun = false;
-            var dialog = new FirstRunDialog
-            {
-                XamlRoot = Content.XamlRoot,
-                RequestedTheme = (Content as FrameworkElement)?.ActualTheme ?? ElementTheme.Default,
-            };
-            await dialog.ShowAsync();
-        }
     }
 
     /// <summary>
