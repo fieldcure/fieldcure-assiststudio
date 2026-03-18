@@ -436,6 +436,9 @@
   <data name="Models_OllamaServerUrl.Text" xml:space="preserve">
     <value>서버 URL</value>
   </data>
+  <data name="Models_OllamaLocalhost.Text" xml:space="preserve">
+    <value>로컬호스트로 초기화</value>
+  </data>
   <data name="Models_OllamaTestConnection.Content" xml:space="preserve">
     <value>테스트</value>
   </data>

@@ -436,6 +436,9 @@
   <data name="Models_OllamaServerUrl.Text" xml:space="preserve">
     <value>Server URL</value>
   </data>
+  <data name="Models_OllamaLocalhost.Text" xml:space="preserve">
+    <value>Reset to localhost</value>
+  </data>
   <data name="Models_OllamaTestConnection.Content" xml:space="preserve">
     <value>Test</value>
   </data>

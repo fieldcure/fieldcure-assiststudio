@@ -391,7 +391,19 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBox x:Name="OllamaUrlBox"
                                              PlaceholderText="http://localhost:11434"
-                                             LostFocus="OnOllamaUrlChanged" />
+                                             LostFocus="OnOllamaUrlChanged">
+                                        <TextBox.ContextFlyout>
+                                            <MenuFlyout>
+                                                <MenuFlyoutItem x:Uid="Models_OllamaLocalhost"
+                                                                Text="Reset to localhost"
+                                                                Click="OnOllamaLocalhost">
+                                                    <MenuFlyoutItem.Icon>
+                                                        <FontIcon Glyph="&#xE10F;" />
+                                                    </MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                            </MenuFlyout>
+                                        </TextBox.ContextFlyout>
+                                    </TextBox>
                                     <Button x:Name="OllamaTestButton"
                                             Grid.Column="1"
                                             x:Uid="Models_OllamaTestConnection"

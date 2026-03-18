@@ -1005,6 +1005,22 @@ public sealed partial class ModelsPage : Page
     }
 
     /// <summary>
+    /// Resets the Ollama URL to localhost default.
+    /// </summary>
+    private void OnOllamaLocalhost(object sender, RoutedEventArgs e)
+    {
+        OllamaUrlBox.Text = "http://localhost:11434";
+        AppSettings.SetOllamaBaseUrl(null);
+
+        var preset = FindPreset("Ollama");
+        if (preset is not null)
+            preset.BaseUrl = null;
+        PersistPresets();
+
+        _ = CheckOllamaStatusAsync();
+    }
+
+    /// <summary>
     /// Tests connectivity to the Ollama server URL entered by the user.
     /// </summary>
     private async void OnTestOllamaUrl(object sender, RoutedEventArgs e)
