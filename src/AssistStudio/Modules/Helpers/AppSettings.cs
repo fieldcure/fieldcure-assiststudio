@@ -47,39 +47,39 @@ public static class AppSettings
     }
 
     /// <summary>
-    /// Gets or sets the utility AI source mode ("Current" or "Specific").
+    /// Gets or sets the app tasks model source mode ("Current" or "Specific").
     /// </summary>
-    public static string UtilityAISource
+    public static string AppTasksSource
     {
-        get => Settings.Values["UtilityAISource"] as string ?? "Current";
-        set => Settings.Values["UtilityAISource"] = value;
+        get => Settings.Values["AppTasksSource"] as string ?? "Current";
+        set => Settings.Values["AppTasksSource"] = value;
     }
 
     /// <summary>
-    /// Gets or sets the name of the preset used for utility AI operations when source is "Specific".
+    /// Gets or sets the name of the preset used for app tasks when source is "Specific".
     /// </summary>
-    public static string UtilityAIPreset
+    public static string AppTasksPreset
     {
-        get => Settings.Values["UtilityAIPreset"] as string ?? "";
-        set => Settings.Values["UtilityAIPreset"] = value;
+        get => Settings.Values["AppTasksPreset"] as string ?? "";
+        set => Settings.Values["AppTasksPreset"] = value;
     }
 
     /// <summary>
     /// Gets or sets whether automatic conversation title generation is enabled.
     /// </summary>
-    public static bool UtilityAutoTitle
+    public static bool AppAutoTitle
     {
-        get => Settings.Values["UtilityAutoTitle"] is not false;
-        set => Settings.Values["UtilityAutoTitle"] = value;
+        get => Settings.Values["AppAutoTitle"] is not false;
+        set => Settings.Values["AppAutoTitle"] = value;
     }
 
     /// <summary>
     /// Gets or sets whether automatic conversation summarization is enabled.
     /// </summary>
-    public static bool UtilityAutoSummary
+    public static bool AppAutoSummary
     {
-        get => Settings.Values["UtilityAutoSummary"] is not false;
-        set => Settings.Values["UtilityAutoSummary"] = value;
+        get => Settings.Values["AppAutoSummary"] is not false;
+        set => Settings.Values["AppAutoSummary"] = value;
     }
 
     /// <summary>

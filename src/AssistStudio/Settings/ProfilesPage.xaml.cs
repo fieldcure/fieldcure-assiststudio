@@ -1,4 +1,4 @@
-﻿using AssistStudio.Modules.Helpers;
+using AssistStudio.Modules.Helpers;
 using AssistStudio.Modules.Tools;
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml;
@@ -12,7 +12,7 @@ namespace AssistStudio.Settings;
 /// Settings page for managing profiles, allowing users to create, edit,
 /// delete, and select profiles that define the AI assistant's behavior.
 /// </summary>
-public sealed partial class ProfilePage : Page
+public sealed partial class ProfilesPage : Page
 {
     #region Fields
 
@@ -36,9 +36,9 @@ public sealed partial class ProfilePage : Page
     #region Constructors
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ProfilePage"/> class.
+    /// Initializes a new instance of the <see cref="ProfilesPage"/> class.
     /// </summary>
-    public ProfilePage()
+    public ProfilesPage()
     {
         InitializeComponent();
     }
@@ -132,7 +132,7 @@ public sealed partial class ProfilePage : Page
         var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
         var dialog = new ContentDialog
         {
-            Title = loader.GetString("Profile_NewProfileDialog"),
+            Title = loader.GetString("Profiles_NewProfileDialog"),
             Content = input,
             PrimaryButtonText = loader.GetString("Dialog_OK"),
             CloseButtonText = loader.GetString("Dialog_Cancel"),
@@ -291,11 +291,11 @@ public sealed partial class ProfilePage : Page
 
     /// <summary>
     /// Provider type key to display name mappings.
-    /// Index 0 is the "(None)" entry with null key.
+    /// Index 0 is the "Any provider" entry with null key.
     /// </summary>
     private static readonly KeyValuePair<string?, string>[] ProviderDisplayNames =
     [
-        new(null, "(None)"),
+        new(null, "Any provider"),
         new("Claude", "Anthropic Claude"),
         new("OpenAI", "OpenAI"),
         new("Gemini", "Google Gemini"),
@@ -306,13 +306,20 @@ public sealed partial class ProfilePage : Page
 
     /// <summary>
     /// Populates the provider combo box with available provider types.
+    /// The first item uses a localized "Any provider" label from resources.
     /// </summary>
     private void PopulateProviderCombo()
     {
         ProviderCombo.Items.Clear();
-        foreach (var kvp in ProviderDisplayNames)
+        var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
+        var anyProviderLabel = loader.GetString("Profiles_AnyProvider");
+
+        for (var i = 0; i < ProviderDisplayNames.Length; i++)
         {
-            ProviderCombo.Items.Add(kvp.Value);
+            var label = i == 0 && !string.IsNullOrEmpty(anyProviderLabel)
+                ? anyProviderLabel
+                : ProviderDisplayNames[i].Value;
+            ProviderCombo.Items.Add(label);
         }
     }
 
@@ -411,7 +418,7 @@ public sealed partial class ProfilePage : Page
         {
             ToolsPanel.Children.Add(new TextBlock
             {
-                Text = loader.GetString("Profile_NoToolsRegistered"),
+                Text = loader.GetString("Profiles_NoToolsRegistered"),
                 Opacity = 0.5,
                 FontSize = 12,
             });

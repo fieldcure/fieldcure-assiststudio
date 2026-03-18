@@ -108,8 +108,8 @@
   <data name="Nav_Personalization.Content" xml:space="preserve">
     <value>Personalization</value>
   </data>
-  <data name="Nav_Profile.Content" xml:space="preserve">
-    <value>Profile</value>
+  <data name="Nav_Profiles.Content" xml:space="preserve">
+    <value>Profiles</value>
   </data>
   <data name="Nav_Advanced.Content" xml:space="preserve">
     <value>Advanced</value>
@@ -122,16 +122,16 @@
     <value>Models</value>
   </data>
   <data name="Models_CloudSection.Text" xml:space="preserve">
-    <value>Cloud Inference (SaaS)</value>
+    <value>Cloud models</value>
   </data>
   <data name="Models_ApiKeyStorageInfo.Text" xml:space="preserve">
-    <value>API keys are securely encrypted and stored on Windows.</value>
+    <value>API keys are encrypted and stored securely on this device.</value>
   </data>
   <data name="Models_LocalSection.Text" xml:space="preserve">
-    <value>Local Inference (On-Device)</value>
+    <value>Local models</value>
   </data>
   <data name="Models_DefaultModel.Text" xml:space="preserve">
-    <value>Default Model</value>
+    <value>Default model</value>
   </data>
   <data name="Models_ApiKeyBox.PlaceholderText" xml:space="preserve">
     <value>API Key</value>
@@ -146,7 +146,7 @@
     <value>Download Ollama</value>
   </data>
   <data name="Models_BrowsePullModels.Content" xml:space="preserve">
-    <value>Browse &amp; Pull Models</value>
+    <value>Browse models</value>
   </data>
   <!-- Personalization Page -->
   <data name="Personalization_Title.Text" xml:space="preserve">
@@ -164,79 +164,82 @@
   <data name="Personalization_Dark.Content" xml:space="preserve">
     <value>Dark</value>
   </data>
-  <!-- Profile Page -->
-  <data name="Profile_Title.Text" xml:space="preserve">
-    <value>Profile</value>
-  </data>
-  <data name="Profile_Description.Text" xml:space="preserve">
-    <value>Configure profiles with system prompts and preferences.</value>
-  </data>
-  <data name="Profile_Placeholder.PlaceholderText" xml:space="preserve">
-    <value>Enter system prompt...</value>
-  </data>
-  <data name="Profile_Profiles.Text" xml:space="preserve">
+  <!-- Profiles Page -->
+  <data name="Profiles_Title.Text" xml:space="preserve">
     <value>Profiles</value>
   </data>
-  <data name="Profile_AddProfile.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+  <data name="Profiles_Description.Text" xml:space="preserve">
+    <value>Create profiles with different instructions, model preferences, and tool permissions.</value>
+  </data>
+  <data name="Profiles_Instructions.PlaceholderText" xml:space="preserve">
+    <value>Enter instructions...</value>
+  </data>
+  <data name="Profiles_List.Text" xml:space="preserve">
+    <value>Profiles</value>
+  </data>
+  <data name="Profiles_AddProfile.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Add profile</value>
   </data>
-  <data name="Profile_DeleteProfile.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+  <data name="Profiles_DeleteProfile.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Delete</value>
   </data>
-  <data name="Profile_ProfileName.Header" xml:space="preserve">
+  <data name="Profiles_ProfileName.Header" xml:space="preserve">
     <value>Name</value>
   </data>
-  <data name="Profile_ProfileName.PlaceholderText" xml:space="preserve">
+  <data name="Profiles_ProfileName.PlaceholderText" xml:space="preserve">
     <value>Profile name</value>
   </data>
-  <data name="Profile_Placeholder.Header" xml:space="preserve">
-    <value>System Prompt</value>
+  <data name="Profiles_Instructions.Header" xml:space="preserve">
+    <value>Instructions</value>
   </data>
-  <data name="Profile_NewProfileDialog" xml:space="preserve">
+  <data name="Profiles_NewProfileDialog" xml:space="preserve">
     <value>New Profile</value>
   </data>
-  <data name="Profile_PreferredProvider.Header" xml:space="preserve">
-    <value>Preferred Provider</value>
+  <data name="Profiles_PreferredProvider.Header" xml:space="preserve">
+    <value>Preferred provider</value>
   </data>
-  <data name="Profile_PreferredModel.Header" xml:space="preserve">
-    <value>Preferred Model</value>
+  <data name="Profiles_PreferredModel.Header" xml:space="preserve">
+    <value>Preferred model</value>
   </data>
-  <data name="Profile_Tools.Text" xml:space="preserve">
+  <data name="Profiles_Tools.Text" xml:space="preserve">
     <value>Tools</value>
   </data>
-  <data name="Profile_ToolsWarning.Text" xml:space="preserve">
-    <value>Not all models support tool calling. Please verify that the selected model supports it.</value>
+  <data name="Profiles_ToolsWarning.Text" xml:space="preserve">
+    <value>Tool support depends on the selected model.</value>
   </data>
-  <!-- Utility AI Page -->
-  <data name="Nav_UtilityAI.Content" xml:space="preserve">
-    <value>Utility AI</value>
+  <data name="Profiles_AnyProvider" xml:space="preserve">
+    <value>Any provider</value>
   </data>
-  <data name="UtilityAI_Title.Text" xml:space="preserve">
-    <value>Utility AI</value>
+  <!-- App Tasks Page -->
+  <data name="Nav_AppTasks.Content" xml:space="preserve">
+    <value>App Tasks</value>
   </data>
-  <data name="UtilityAI_Description.Text" xml:space="preserve">
-    <value>Configure the AI model used for automatic tasks like title generation and conversation summary.</value>
+  <data name="AppTasks_Title.Text" xml:space="preserve">
+    <value>App Tasks</value>
   </data>
-  <data name="UtilityAI_ModelSource.Text" xml:space="preserve">
-    <value>Model Source</value>
+  <data name="AppTasks_Description.Text" xml:space="preserve">
+    <value>Choose which model the app uses for background tasks such as title generation and conversation summaries.</value>
   </data>
-  <data name="UtilityAI_UseCurrent.Content" xml:space="preserve">
-    <value>Use current chat model</value>
+  <data name="AppTasks_ModelSource.Text" xml:space="preserve">
+    <value>Model source</value>
   </data>
-  <data name="UtilityAI_UseSpecific.Content" xml:space="preserve">
-    <value>Use specific preset</value>
+  <data name="AppTasks_UseCurrent.Content" xml:space="preserve">
+    <value>Use the current chat model</value>
   </data>
-  <data name="UtilityAI_Preset.Header" xml:space="preserve">
-    <value>Preset</value>
+  <data name="AppTasks_UseSpecific.Content" xml:space="preserve">
+    <value>Use a specific provider</value>
   </data>
-  <data name="UtilityAI_AutoTasks.Text" xml:space="preserve">
-    <value>Automatic Tasks</value>
+  <data name="AppTasks_Provider.Header" xml:space="preserve">
+    <value>Provider</value>
   </data>
-  <data name="UtilityAI_AutoTitle.Header" xml:space="preserve">
-    <value>Auto-generate conversation title</value>
+  <data name="AppTasks_AutoTasks.Text" xml:space="preserve">
+    <value>Automatic tasks</value>
   </data>
-  <data name="UtilityAI_AutoSummary.Header" xml:space="preserve">
-    <value>Auto-summarize long conversations</value>
+  <data name="AppTasks_AutoTitle.Header" xml:space="preserve">
+    <value>Generate conversation titles automatically</value>
+  </data>
+  <data name="AppTasks_AutoSummary.Header" xml:space="preserve">
+    <value>Summarize long conversations automatically</value>
   </data>
   <!-- Advanced Page -->
   <data name="Advanced_Title.Text" xml:space="preserve">
@@ -337,7 +340,7 @@
   </data>
   <!-- PDF Handling -->
   <data name="Models_PdfHandling.Text" xml:space="preserve">
-    <value>PDF Handling</value>
+    <value>PDF handling</value>
   </data>
   <data name="Models_PdfAuto" xml:space="preserve">
     <value>Auto</value>
@@ -395,7 +398,7 @@
   <data name="Tool_run_command" xml:space="preserve">
     <value>Run Command</value>
   </data>
-  <data name="Profile_NoToolsRegistered" xml:space="preserve">
+  <data name="Profiles_NoToolsRegistered" xml:space="preserve">
     <value>No tools registered.</value>
   </data>
   <!-- CollapsibleSection -->
@@ -405,12 +408,21 @@
   <data name="CollapsibleSection_ExpandTooltip" xml:space="preserve">
     <value>Expand section</value>
   </data>
-  <!-- Extended Thinking -->
+  <!-- Extended Reasoning -->
   <data name="Models_ThinkingNotSupported" xml:space="preserve">
-    <value>This model does not support Extended Thinking.</value>
+    <value>This model does not support extended reasoning.</value>
   </data>
   <data name="Models_ThinkingAlwaysOn" xml:space="preserve">
-    <value>This model always has Thinking enabled.</value>
+    <value>This model always has reasoning enabled.</value>
+  </data>
+  <data name="Models_ThinkingOverride.Header" xml:space="preserve">
+    <value>Reasoning mode</value>
+  </data>
+  <data name="Models_ExtendedThinking.Header" xml:space="preserve">
+    <value>Extended reasoning</value>
+  </data>
+  <data name="Models_ThinkingBudget.Header" xml:space="preserve">
+    <value>Reasoning budget (tokens)</value>
   </data>
   <data name="Models_ThinkingOverrideAuto" xml:space="preserve">
     <value>Auto</value>

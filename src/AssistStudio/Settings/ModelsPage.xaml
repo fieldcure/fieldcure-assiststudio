@@ -30,10 +30,10 @@
                 <!-- ============================== -->
                 <!-- Cloud Inference (SaaS) Section -->
                 <!-- ============================== -->
-                <TextBlock x:Uid="Models_CloudSection" Text="Cloud Inference (SaaS)"
+                <TextBlock x:Uid="Models_CloudSection" Text="Cloud models"
                            Style="{StaticResource SubtitleTextBlockStyle}" />
                 <TextBlock x:Uid="Models_ApiKeyStorageInfo"
-                           Text="API keys are encrypted and stored in Windows Credential Locker."
+                           Text="API keys are encrypted and stored securely on this device."
                            FontSize="12" Opacity="0.6"
                            TextWrapping="Wrap" Margin="0,-16,0,0" />
 
@@ -76,7 +76,7 @@
                             </Grid>
                             <StackPanel x:Name="ClaudeOptionsPanel" Spacing="8" Visibility="Collapsed">
                                 <StackPanel Spacing="4">
-                                    <TextBlock x:Uid="Models_DefaultModel" Text="Default Model" FontSize="12" Opacity="0.7" />
+                                    <TextBlock x:Uid="Models_DefaultModel" Text="Default model" FontSize="12" Opacity="0.7" />
                                     <ComboBox x:Name="ClaudeModelCombo"
                                               x:Uid="Models_ModelNotAvailable"
                                               HorizontalAlignment="Stretch"
@@ -85,21 +85,24 @@
                                               SelectionChanged="OnCloudModelChanged" />
                                 </StackPanel>
                                 <StackPanel Spacing="4">
-                                    <TextBlock x:Uid="Models_PdfHandling" Text="PDF Handling" FontSize="12" Opacity="0.7" />
+                                    <TextBlock x:Uid="Models_PdfHandling" Text="PDF handling" FontSize="12" Opacity="0.7" />
                                     <ComboBox x:Name="ClaudePdfCombo"
                                               HorizontalAlignment="Stretch"
                                               SelectionChanged="OnPdfHandlingChanged" />
                                 </StackPanel>
                                 <StackPanel Spacing="4">
                                     <ComboBox x:Name="ClaudeThinkingOverrideCombo"
-                                              Header="Thinking Override"
+                                              x:Uid="Models_ThinkingOverride"
+                                              Header="Reasoning mode"
                                               HorizontalAlignment="Stretch"
                                               SelectionChanged="OnThinkingOverrideChanged" />
                                     <ToggleSwitch x:Name="ClaudeThinkingToggle"
-                                                  Header="Extended Thinking"
+                                                  x:Uid="Models_ExtendedThinking"
+                                                  Header="Extended reasoning"
                                                   Toggled="OnThinkingToggled" />
                                     <NumberBox x:Name="ClaudeThinkingBudget"
-                                               Header="Thinking Budget (tokens)"
+                                               x:Uid="Models_ThinkingBudget"
+                                               Header="Reasoning budget (tokens)"
                                                Value="4096" Minimum="1024" Maximum="128000"
                                                SpinButtonPlacementMode="Inline"
                                                SmallChange="1024" LargeChange="4096"
@@ -151,7 +154,7 @@
                             </Grid>
                             <StackPanel x:Name="OpenAIOptionsPanel" Spacing="8" Visibility="Collapsed">
                                 <StackPanel Spacing="4">
-                                    <TextBlock x:Uid="Models_DefaultModel" Text="Default Model" FontSize="12" Opacity="0.7" />
+                                    <TextBlock x:Uid="Models_DefaultModel" Text="Default model" FontSize="12" Opacity="0.7" />
                                     <ComboBox x:Name="OpenAIModelCombo"
                                               HorizontalAlignment="Stretch"
                                               IsEnabled="False"
@@ -159,21 +162,24 @@
                                               SelectionChanged="OnCloudModelChanged" />
                                 </StackPanel>
                                 <StackPanel Spacing="4">
-                                    <TextBlock x:Uid="Models_PdfHandling" Text="PDF Handling" FontSize="12" Opacity="0.7" />
+                                    <TextBlock x:Uid="Models_PdfHandling" Text="PDF handling" FontSize="12" Opacity="0.7" />
                                     <ComboBox x:Name="OpenAIPdfCombo"
                                               HorizontalAlignment="Stretch"
                                               SelectionChanged="OnPdfHandlingChanged" />
                                 </StackPanel>
                                 <StackPanel Spacing="4">
                                     <ComboBox x:Name="OpenAIThinkingOverrideCombo"
-                                              Header="Thinking Override"
+                                              x:Uid="Models_ThinkingOverride"
+                                              Header="Reasoning mode"
                                               HorizontalAlignment="Stretch"
                                               SelectionChanged="OnThinkingOverrideChanged" />
                                     <ToggleSwitch x:Name="OpenAIThinkingToggle"
-                                                  Header="Extended Thinking"
+                                                  x:Uid="Models_ExtendedThinking"
+                                                  Header="Extended reasoning"
                                                   Toggled="OnThinkingToggled" />
                                     <NumberBox x:Name="OpenAIThinkingBudget"
-                                               Header="Thinking Budget (tokens)"
+                                               x:Uid="Models_ThinkingBudget"
+                                               Header="Reasoning budget (tokens)"
                                                Value="4096" Minimum="1024" Maximum="128000"
                                                SpinButtonPlacementMode="Inline"
                                                SmallChange="1024" LargeChange="4096"
@@ -225,7 +231,7 @@
                             </Grid>
                             <StackPanel x:Name="GeminiOptionsPanel" Spacing="8" Visibility="Collapsed">
                                 <StackPanel Spacing="4">
-                                    <TextBlock x:Uid="Models_DefaultModel" Text="Default Model" FontSize="12" Opacity="0.7" />
+                                    <TextBlock x:Uid="Models_DefaultModel" Text="Default model" FontSize="12" Opacity="0.7" />
                                     <ComboBox x:Name="GeminiModelCombo"
                                               HorizontalAlignment="Stretch"
                                               IsEnabled="False"
@@ -233,21 +239,24 @@
                                               SelectionChanged="OnCloudModelChanged" />
                                 </StackPanel>
                                 <StackPanel Spacing="4">
-                                    <TextBlock x:Uid="Models_PdfHandling" Text="PDF Handling" FontSize="12" Opacity="0.7" />
+                                    <TextBlock x:Uid="Models_PdfHandling" Text="PDF handling" FontSize="12" Opacity="0.7" />
                                     <ComboBox x:Name="GeminiPdfCombo"
                                               HorizontalAlignment="Stretch"
                                               SelectionChanged="OnPdfHandlingChanged" />
                                 </StackPanel>
                                 <StackPanel Spacing="4">
                                     <ComboBox x:Name="GeminiThinkingOverrideCombo"
-                                              Header="Thinking Override"
+                                              x:Uid="Models_ThinkingOverride"
+                                              Header="Reasoning mode"
                                               HorizontalAlignment="Stretch"
                                               SelectionChanged="OnThinkingOverrideChanged" />
                                     <ToggleSwitch x:Name="GeminiThinkingToggle"
-                                                  Header="Extended Thinking"
+                                                  x:Uid="Models_ExtendedThinking"
+                                                  Header="Extended reasoning"
                                                   Toggled="OnThinkingToggled" />
                                     <NumberBox x:Name="GeminiThinkingBudget"
-                                               Header="Thinking Budget (tokens)"
+                                               x:Uid="Models_ThinkingBudget"
+                                               Header="Reasoning budget (tokens)"
                                                Value="4096" Minimum="1024" Maximum="128000"
                                                SpinButtonPlacementMode="Inline"
                                                SmallChange="1024" LargeChange="4096"
@@ -299,7 +308,7 @@
                             </Grid>
                             <StackPanel x:Name="GroqOptionsPanel" Spacing="8" Visibility="Collapsed">
                                 <StackPanel Spacing="4">
-                                    <TextBlock x:Uid="Models_DefaultModel" Text="Default Model" FontSize="12" Opacity="0.7" />
+                                    <TextBlock x:Uid="Models_DefaultModel" Text="Default model" FontSize="12" Opacity="0.7" />
                                     <ComboBox x:Name="GroqModelCombo"
                                               HorizontalAlignment="Stretch"
                                               IsEnabled="False"
@@ -307,21 +316,24 @@
                                               SelectionChanged="OnCloudModelChanged" />
                                 </StackPanel>
                                 <StackPanel Spacing="4">
-                                    <TextBlock x:Uid="Models_PdfHandling" Text="PDF Handling" FontSize="12" Opacity="0.7" />
+                                    <TextBlock x:Uid="Models_PdfHandling" Text="PDF handling" FontSize="12" Opacity="0.7" />
                                     <ComboBox x:Name="GroqPdfCombo"
                                               HorizontalAlignment="Stretch"
                                               SelectionChanged="OnPdfHandlingChanged" />
                                 </StackPanel>
                                 <StackPanel Spacing="4">
                                     <ComboBox x:Name="GroqThinkingOverrideCombo"
-                                              Header="Thinking Override"
+                                              x:Uid="Models_ThinkingOverride"
+                                              Header="Reasoning mode"
                                               HorizontalAlignment="Stretch"
                                               SelectionChanged="OnThinkingOverrideChanged" />
                                     <ToggleSwitch x:Name="GroqThinkingToggle"
-                                                  Header="Extended Thinking"
+                                                  x:Uid="Models_ExtendedThinking"
+                                                  Header="Extended reasoning"
                                                   Toggled="OnThinkingToggled" />
                                     <NumberBox x:Name="GroqThinkingBudget"
-                                               Header="Thinking Budget (tokens)"
+                                               x:Uid="Models_ThinkingBudget"
+                                               Header="Reasoning budget (tokens)"
                                                Value="4096" Minimum="1024" Maximum="128000"
                                                SpinButtonPlacementMode="Inline"
                                                SmallChange="1024" LargeChange="4096"
@@ -342,7 +354,7 @@
                 <!-- ============================== -->
                 <Rectangle Height="2" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="0,8" />
 
-                <TextBlock x:Uid="Models_LocalSection" Text="Local Inference (On-Device)"
+                <TextBlock x:Uid="Models_LocalSection" Text="Local models"
                            Style="{StaticResource SubtitleTextBlockStyle}" />
 
                 <!-- Ollama -->
@@ -405,7 +417,7 @@
                             <!-- Browse models -->
                             <Button x:Name="BrowseModelsButton"
                                     x:Uid="Models_BrowsePullModels"
-                                    Content="Browse &amp; Pull Models" Click="OnBrowseOllamaModels"
+                                    Content="Browse models" Click="OnBrowseOllamaModels"
                                     Visibility="Collapsed" />
 
                             <!-- Download Progress -->
@@ -416,7 +428,7 @@
                             </StackPanel>
 
                             <StackPanel Spacing="4">
-                                <TextBlock x:Uid="Models_DefaultModel" Text="Default Model" FontSize="12" Opacity="0.7" />
+                                <TextBlock x:Uid="Models_DefaultModel" Text="Default model" FontSize="12" Opacity="0.7" />
                                 <ComboBox x:Name="OllamaModelCombo"
                                           HorizontalAlignment="Stretch"
                                           IsEnabled="False"
@@ -424,7 +436,7 @@
                                           SelectionChanged="OnOllamaModelChanged" />
                             </StackPanel>
                             <StackPanel Spacing="4">
-                                <TextBlock x:Uid="Models_PdfHandling" Text="PDF Handling" FontSize="12" Opacity="0.7" />
+                                <TextBlock x:Uid="Models_PdfHandling" Text="PDF handling" FontSize="12" Opacity="0.7" />
                                 <ComboBox x:Name="OllamaPdfCombo"
                                           HorizontalAlignment="Stretch"
                                           SelectionChanged="OnPdfHandlingChanged" />

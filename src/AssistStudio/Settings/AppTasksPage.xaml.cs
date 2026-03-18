@@ -6,10 +6,10 @@ using Microsoft.UI.Xaml.Navigation;
 namespace AssistStudio.Settings;
 
 /// <summary>
-/// Settings page for configuring utility AI behavior, including the model source,
+/// Settings page for configuring app tasks behavior, including the model source,
 /// auto-title generation, and auto-summarization toggles.
 /// </summary>
-public sealed partial class UtilityAIPage : Page
+public sealed partial class AppTasksPage : Page
 {
     #region Fields
 
@@ -28,9 +28,9 @@ public sealed partial class UtilityAIPage : Page
     #region Constructors
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="UtilityAIPage"/> class.
+    /// Initializes a new instance of the <see cref="AppTasksPage"/> class.
     /// </summary>
-    public UtilityAIPage()
+    public AppTasksPage()
     {
         InitializeComponent();
     }
@@ -52,7 +52,7 @@ public sealed partial class UtilityAIPage : Page
         _suppressEvents = true;
 
         // Load model source
-        var source = AppSettings.UtilityAISource;
+        var source = AppSettings.AppTasksSource;
         for (var i = 0; i < ModelSourceRadio.Items.Count; i++)
         {
             if (ModelSourceRadio.Items[i] is RadioButton rb && rb.Tag as string == source)
@@ -68,8 +68,8 @@ public sealed partial class UtilityAIPage : Page
         PopulatePresetCombo();
 
         // Load toggles
-        AutoTitleToggle.IsOn = AppSettings.UtilityAutoTitle;
-        AutoSummaryToggle.IsOn = AppSettings.UtilityAutoSummary;
+        AutoTitleToggle.IsOn = AppSettings.AppAutoTitle;
+        AutoSummaryToggle.IsOn = AppSettings.AppAutoSummary;
 
         _suppressEvents = false;
     }
@@ -86,7 +86,7 @@ public sealed partial class UtilityAIPage : Page
         PresetCombo.Items.Clear();
         if (_settings is null) return;
 
-        var selectedName = AppSettings.UtilityAIPreset;
+        var selectedName = AppSettings.AppTasksPreset;
         var selectedIndex = -1;
 
         for (var i = 0; i < _settings.Presets.Count; i++)
@@ -122,13 +122,13 @@ public sealed partial class UtilityAIPage : Page
 
         if (ModelSourceRadio.SelectedItem is RadioButton rb && rb.Tag is string tag)
         {
-            AppSettings.UtilityAISource = tag;
+            AppSettings.AppTasksSource = tag;
             PresetCombo.Visibility = tag == "Specific" ? Visibility.Visible : Visibility.Collapsed;
         }
     }
 
     /// <summary>
-    /// Handles preset combo box selection changes to persist the chosen utility AI preset.
+    /// Handles preset combo box selection changes to persist the chosen app tasks preset.
     /// </summary>
     private void OnPresetSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -136,7 +136,7 @@ public sealed partial class UtilityAIPage : Page
 
         if (PresetCombo.SelectedItem is string name)
         {
-            AppSettings.UtilityAIPreset = name;
+            AppSettings.AppTasksPreset = name;
         }
     }
 
@@ -146,7 +146,7 @@ public sealed partial class UtilityAIPage : Page
     private void OnAutoTitleToggled(object sender, RoutedEventArgs e)
     {
         if (_suppressEvents) return;
-        AppSettings.UtilityAutoTitle = AutoTitleToggle.IsOn;
+        AppSettings.AppAutoTitle = AutoTitleToggle.IsOn;
     }
 
     /// <summary>
@@ -155,7 +155,7 @@ public sealed partial class UtilityAIPage : Page
     private void OnAutoSummaryToggled(object sender, RoutedEventArgs e)
     {
         if (_suppressEvents) return;
-        AppSettings.UtilityAutoSummary = AutoSummaryToggle.IsOn;
+        AppSettings.AppAutoSummary = AutoSummaryToggle.IsOn;
     }
 
     #endregion

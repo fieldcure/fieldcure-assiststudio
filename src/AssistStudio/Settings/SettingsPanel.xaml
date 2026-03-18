@@ -22,17 +22,17 @@
                         ItemInvoked="OnItemInvoked">
 
             <NavigationView.MenuItems>
+                <NavigationViewItem x:Uid="Nav_Profiles" Content="Profiles" Tag="Profiles" IsSelected="True">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE716;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
                 <NavigationViewItem x:Uid="Nav_Models" Content="Models" Tag="Models">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE794;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem x:Uid="Nav_Profile" Content="Profile" Tag="Profile">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE716;" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
-                <NavigationViewItem x:Uid="Nav_UtilityAI" Content="Utility AI" Tag="UtilityAI">
+                <NavigationViewItem x:Uid="Nav_AppTasks" Content="App Tasks" Tag="AppTasks">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE99A;" />
                     </NavigationViewItem.Icon>

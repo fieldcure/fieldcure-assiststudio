@@ -17,7 +17,7 @@
         HorizontalAlignment="Stretch"
         VerticalAlignment="Stretch"
         Provider="{x:Bind ViewModel.Provider, Mode=OneWay}"
-        UtilityProvider="{x:Bind ViewModel.UtilityProvider, Mode=OneWay}"
+        UtilityProvider="{x:Bind ViewModel.AppTasksProvider, Mode=OneWay}"
         SystemPrompt="{x:Bind ViewModel.SystemPrompt, Mode=OneWay}"
         Theme="{x:Bind ViewModel.Theme, Mode=OneWay}"
         Title="{x:Bind ViewModel.Title, Mode=OneWay}"

@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -152,13 +152,13 @@ public partial class GeminiProvider : IAiProvider, IDisposable
         // Parse parts — may contain text and/or functionCall
         string? textContent = null;
         var toolCalls = new List<ToolCall>();
-        int fcIndex = 0;
+        var fcIndex = 0;
 
         if (firstCandidate.TryGetProperty("content", out var contentEl) &&
             contentEl.TryGetProperty("parts", out var partsEl))
         {
             // Count functionCall parts to decide if suffix is needed
-            int fcCount = 0;
+            var fcCount = 0;
             foreach (var p in partsEl.EnumerateArray())
                 if (p.TryGetProperty("functionCall", out _)) fcCount++;
 
@@ -238,9 +238,9 @@ public partial class GeminiProvider : IAiProvider, IDisposable
                 if (candidate.TryGetProperty("content", out var content) &&
                     content.TryGetProperty("parts", out var parts))
                 {
-                    int fcIndex = 0;
+                    var fcIndex = 0;
                     // Count functionCall parts for ID suffix logic
-                    int fcCount = 0;
+                    var fcCount = 0;
                     foreach (var p in parts.EnumerateArray())
                         if (p.TryGetProperty("functionCall", out _)) fcCount++;
 
@@ -325,7 +325,7 @@ public partial class GeminiProvider : IAiProvider, IDisposable
     private string BuildRequestBody(AiRequest request)
     {
         var contents = new JsonArray();
-        string? systemText = PromptBuilder.Build(request.SystemPrompt, request.WorkspaceText, request.ContextChunks);
+        var systemText = PromptBuilder.Build(request.SystemPrompt, request.WorkspaceText, request.ContextChunks);
 
         foreach (var msg in request.Messages)
         {

@@ -48,9 +48,9 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     [ObservableProperty] private IAiProvider? _provider;
 
     /// <summary>
-    /// Optional utility AI provider for title generation and summarization.
+    /// Optional app tasks provider for title generation and summarization.
     /// </summary>
-    [ObservableProperty] private IAiProvider? _utilityProvider;
+    [ObservableProperty] private IAiProvider? _appTasksProvider;
 
     /// <summary>
     /// The system prompt sent with AI requests.
@@ -203,15 +203,15 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 
         // Set observable fields — ChatTabView.xaml binds to these via x:Bind
         _provider = ProviderFactory.Create(preset);
-        _utilityProvider = ResolveUtilityProvider(availablePresets);
+        _appTasksProvider = ResolveAppTasksProvider(availablePresets);
         _systemPrompt = systemPrompt;
         _theme = theme;
         _availablePresets = availablePresets;
         _selectedPreset = preset;
         _availableProfiles = profiles;
         _selectedProfile = selectedProfile;
-        _autoTitle = AppSettings.UtilityAutoTitle;
-        _autoSummarize = AppSettings.UtilityAutoSummary;
+        _autoTitle = AppSettings.AppAutoTitle;
+        _autoSummarize = AppSettings.AppAutoSummary;
 #if DEBUG
         _isDebugMode = true;
 #endif
@@ -359,7 +359,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     {
         GC.SuppressFinalize(this);
 
-        if (UtilityProvider is IDisposable utilDisposable)
+        if (AppTasksProvider is IDisposable utilDisposable)
         {
             utilDisposable.Dispose();
         }
@@ -453,15 +453,15 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     #region Private Methods
 
     /// <summary>
-    /// Resolves the utility AI provider based on the user's settings, returning <c>null</c>
+    /// Resolves the app tasks provider based on the user's settings, returning <c>null</c>
     /// if the source is not set to "Specific" or no matching preset is found.
     /// </summary>
-    /// <returns>The utility AI provider, or <c>null</c> if not configured.</returns>
-    private static IAiProvider? ResolveUtilityProvider(IList availablePresets)
+    /// <returns>The app tasks provider, or <c>null</c> if not configured.</returns>
+    private static IAiProvider? ResolveAppTasksProvider(IList availablePresets)
     {
-        if (AppSettings.UtilityAISource != "Specific") return null;
+        if (AppSettings.AppTasksSource != "Specific") return null;
 
-        var presetName = AppSettings.UtilityAIPreset;
+        var presetName = AppSettings.AppTasksPreset;
         if (string.IsNullOrEmpty(presetName)) return null;
 
         foreach (ProviderPreset p in availablePresets)

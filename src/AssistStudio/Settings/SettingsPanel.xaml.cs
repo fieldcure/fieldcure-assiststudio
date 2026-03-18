@@ -1,4 +1,4 @@
-using AssistStudio.Modules.Helpers;
+﻿using AssistStudio.Modules.Helpers;
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -38,6 +38,11 @@ public sealed partial class SettingsPanel : Page
         get => _presets;
         set => _presets = value;
     }
+
+    /// <summary>
+    /// Gets whether the initial navigation has already been performed.
+    /// </summary>
+    internal bool IsInitialNavigationDone => _initialNavigationDone;
 
     #endregion
 
@@ -101,12 +106,7 @@ public sealed partial class SettingsPanel : Page
         if (_initialNavigationDone) return;
         _initialNavigationDone = true;
 
-        NavigateTo("Models");
-
-        if (NavView.MenuItems.Count > 0)
-        {
-            NavView.SelectedItem = NavView.MenuItems[0];
-        }
+        NavigateTo("Profiles");
     }
 
     /// <summary>
@@ -131,10 +131,10 @@ public sealed partial class SettingsPanel : Page
     {
         var pageType = tag switch
         {
+            "Profiles" => typeof(ProfilesPage),
             "Models" => typeof(ModelsPage),
+            "AppTasks" => typeof(AppTasksPage),
             "Personalization" => typeof(PersonalizationPage),
-            "Profile" => typeof(ProfilePage),
-            "UtilityAI" => typeof(UtilityAIPage),
             "Advanced" => typeof(AdvancedPage),
             "About" => typeof(AboutPage),
             _ => typeof(ModelsPage),

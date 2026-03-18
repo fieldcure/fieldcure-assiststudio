@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Page
-    x:Class="AssistStudio.Settings.ProfilePage"
+    x:Class="AssistStudio.Settings.ProfilesPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -24,15 +24,15 @@
         <Grid Grid.Row="0" Padding="20,14,20,14"
               BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
               BorderThickness="0,0,0,1">
-            <TextBlock x:Uid="Profile_Title" Text="Profile"
+            <TextBlock x:Uid="Profiles_Title" Text="Profiles"
                        Style="{StaticResource TitleTextBlockStyle}" />
         </Grid>
 
         <!-- Content -->
         <ScrollViewer Grid.Row="1" Padding="20,16">
-            <StackPanel Spacing="16" MaxWidth="600" HorizontalAlignment="Left">
+            <StackPanel Spacing="16">
 
-                <TextBlock x:Uid="Profile_Description" Text="Configure profiles with system prompts and preferences."
+                <TextBlock x:Uid="Profiles_Description" Text="Create profiles with different instructions, model preferences, and tool permissions."
                            Style="{StaticResource CaptionTextBlockStyle}"
                            TextWrapping="Wrap"
                            Opacity="0.7" />
@@ -44,11 +44,11 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock x:Uid="Profile_Profiles" Text="Profiles"
+                        <TextBlock x:Uid="Profiles_List" Text="Profiles"
                                    Style="{StaticResource BodyStrongTextBlockStyle}"
                                    VerticalAlignment="Center" />
                         <Button x:Name="AddProfileButton" Grid.Column="1"
-                                x:Uid="Profile_AddProfile"
+                                x:Uid="Profiles_AddProfile"
                                 Click="OnAddProfileClicked"
                                 ToolTipService.ToolTip="Add profile"
                                 Padding="6">
@@ -69,7 +69,7 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="{x:Bind Name}" VerticalAlignment="Center" />
                                     <Button Grid.Column="1" Padding="4"
-                                            x:Uid="Profile_DeleteProfile"
+                                            x:Uid="Profiles_DeleteProfile"
                                             Visibility="{x:Bind IsBuiltIn, Converter={StaticResource InverseBoolToVisibility}}"
                                             Click="OnDeleteProfileClicked"
                                             ToolTipService.ToolTip="Delete"
@@ -85,14 +85,14 @@
                 <!-- Editor -->
                 <StackPanel Spacing="8">
                     <TextBox x:Name="ProfileNameBox"
-                             x:Uid="Profile_ProfileName"
+                             x:Uid="Profiles_ProfileName"
                              Header="Name"
                              PlaceholderText="Profile name"
                              TextChanged="OnEditorChanged" />
                     <TextBox x:Name="SystemPromptBox"
-                             x:Uid="Profile_Placeholder"
-                             Header="System Prompt"
-                             PlaceholderText="Enter system prompt..."
+                             x:Uid="Profiles_Instructions"
+                             Header="Instructions"
+                             PlaceholderText="Enter instructions..."
                              AcceptsReturn="True"
                              TextWrapping="Wrap"
                              MinHeight="200"
@@ -100,24 +100,24 @@
 
                     <!-- Preferred Provider -->
                     <ComboBox x:Name="ProviderCombo"
-                              x:Uid="Profile_PreferredProvider"
-                              Header="Preferred Provider"
+                              x:Uid="Profiles_PreferredProvider"
+                              Header="Preferred provider"
                               HorizontalAlignment="Stretch"
                               SelectionChanged="OnProviderChanged" />
 
                     <!-- Preferred Model -->
                     <ComboBox x:Name="ModelCombo"
-                              x:Uid="Profile_PreferredModel"
-                              Header="Preferred Model"
+                              x:Uid="Profiles_PreferredModel"
+                              Header="Preferred model"
                               HorizontalAlignment="Stretch"
                               IsEnabled="False"
                               SelectionChanged="OnModelChanged" />
 
                     <!-- Tools -->
                     <StackPanel Spacing="4">
-                        <TextBlock x:Uid="Profile_Tools" Text="Tools"
+                        <TextBlock x:Uid="Profiles_Tools" Text="Tools"
                                    Style="{StaticResource BodyStrongTextBlockStyle}" />
-                        <TextBlock x:Uid="Profile_ToolsWarning"
+                        <TextBlock x:Uid="Profiles_ToolsWarning"
                                    Style="{StaticResource CaptionTextBlockStyle}"
                                    Foreground="{ThemeResource SystemFillColorCautionBrush}"
                                    TextWrapping="Wrap" />

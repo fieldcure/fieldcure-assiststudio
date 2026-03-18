@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -336,7 +336,7 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
     private string BuildRequestBody(AiRequest request, bool stream)
     {
         var messages = new JsonArray();
-        string? systemPrompt = PromptBuilder.Build(request.SystemPrompt, request.WorkspaceText, request.ContextChunks);
+        var systemPrompt = PromptBuilder.Build(request.SystemPrompt, request.WorkspaceText, request.ContextChunks);
 
         foreach (var msg in request.Messages)
         {

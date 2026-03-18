@@ -450,10 +450,16 @@ public sealed partial class MainWindow : Window
     private void OnMenuSettings(object sender, RoutedEventArgs e)
     {
         RootSplitView.IsPaneOpen = !RootSplitView.IsPaneOpen;
-        if (RootSplitView.IsPaneOpen)
+        if (RootSplitView.IsPaneOpen && !SettingsPane.IsInitialNavigationDone)
         {
-            SettingsPane.EnsureInitialNavigation();
+            RootSplitView.PaneOpened += OnSettingsPaneFirstOpened;
         }
+    }
+
+    private void OnSettingsPaneFirstOpened(SplitView sender, object args)
+    {
+        RootSplitView.PaneOpened -= OnSettingsPaneFirstOpened;
+        SettingsPane.EnsureInitialNavigation();
     }
 
     #endregion
