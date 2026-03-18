@@ -65,6 +65,7 @@ public partial class OllamaModelManager : IModelManager, IDisposable
     private OllamaModelManager(HttpClient httpClient, string baseUrl, bool ownsHttpClient)
     {
         _httpClient = httpClient;
+        _httpClient.Timeout = System.Threading.Timeout.InfiniteTimeSpan;
         _baseUrl = baseUrl.TrimEnd('/');
         _ownsHttpClient = ownsHttpClient;
     }

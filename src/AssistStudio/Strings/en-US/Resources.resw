@@ -330,7 +330,7 @@
     <value>may be slow</value>
   </data>
   <data name="Models_PullingModel" xml:space="preserve">
-    <value>Pulling {0}...</value>
+    <value>Downloading {0}...</value>
   </data>
   <data name="Models_AddKeyButton.Content" xml:space="preserve">
     <value>Add</value>

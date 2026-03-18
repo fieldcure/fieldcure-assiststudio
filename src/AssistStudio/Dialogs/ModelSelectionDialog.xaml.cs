@@ -76,7 +76,15 @@ public sealed partial class ModelSelectionDialog : ContentDialog
 
             LocalModelsList.ItemsSource = items;
             NoLocalModelsText.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-            localIds = [.. localModels.Select(m => m.Id)];
+            // Include both full name (e.g. "llava:latest") and base name ("llava")
+            // so Available list correctly filters out already-downloaded models.
+            foreach (var m in localModels)
+            {
+                localIds.Add(m.Id);
+                var colonIdx = m.Id.IndexOf(':');
+                if (colonIdx > 0)
+                    localIds.Add(m.Id[..colonIdx]);
+            }
         }
         catch (Exception ex)
         {

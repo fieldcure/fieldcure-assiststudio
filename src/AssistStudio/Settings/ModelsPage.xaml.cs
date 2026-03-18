@@ -26,6 +26,12 @@ public sealed partial class ModelsPage : Page
     private ObservableCollection<ProviderPreset> _presets = [];
     private bool _isPopulating;
 
+    /// <summary>Cancels the active pull progress tracking when the page is navigated away.</summary>
+    private CancellationTokenSource? _pullCts;
+
+    /// <summary>Model names queued for download, shared across page instances.</summary>
+    private static readonly List<string> _pendingPulls = [];
+
     #endregion
 
     #region Constants
@@ -90,6 +96,20 @@ public sealed partial class ModelsPage : Page
 
         // Auto-check Ollama status
         _ = CheckOllamaStatusAsync();
+
+        // Resume progress tracking if downloads were started before navigating away
+        if (_pendingPulls.Count > 0)
+        {
+            _ = ResumePullTrackingAsync();
+        }
+    }
+
+    /// <inheritdoc/>
+    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    {
+        base.OnNavigatedFrom(e);
+        _pullCts?.Cancel();
+        _pullCts = null;
     }
 
     #endregion
@@ -1249,20 +1269,48 @@ public sealed partial class ModelsPage : Page
     }
 
     /// <summary>
-    /// Downloads one or more Ollama models sequentially, showing progress in the UI.
+    /// Kicks off model downloads and tracks progress. If the page is navigated away,
+    /// tracking stops but Ollama continues downloading server-side.
+    /// Re-entering the page resumes progress display automatically.
     /// </summary>
     private async Task PullModelsAsync(List<string> modelNames)
     {
+        // Register pending pulls (static, survives page re-creation)
+        foreach (var name in modelNames)
+        {
+            if (!_pendingPulls.Contains(name))
+                _pendingPulls.Add(name);
+        }
+
+        await TrackPullProgressAsync();
+    }
+
+    /// <summary>
+    /// Resumes progress tracking for downloads that were started before the page was navigated away.
+    /// </summary>
+    private Task ResumePullTrackingAsync() => TrackPullProgressAsync();
+
+    /// <summary>
+    /// Tracks download progress for all models in <see cref="_pendingPulls"/> sequentially.
+    /// Cancellation via <see cref="_pullCts"/> stops only the tracking — Ollama continues server-side.
+    /// </summary>
+    private async Task TrackPullProgressAsync()
+    {
+        _pullCts?.Cancel();
+        _pullCts = new CancellationTokenSource();
+        var ct = _pullCts.Token;
+
         PullProgressPanel.Visibility = Visibility.Visible;
         BrowseModelsButton.IsEnabled = false;
 
         var baseUrl = GetOllamaBaseUrlFromUI() ?? "http://localhost:11434";
         using var manager = new OllamaModelManager(baseUrl);
 
-        for (var i = 0; i < modelNames.Count; i++)
+        while (_pendingPulls.Count > 0)
         {
-            var modelName = modelNames[i];
-            var prefix = modelNames.Count > 1 ? $"[{i + 1}/{modelNames.Count}] " : "";
+            var modelName = _pendingPulls[0];
+            var remaining = _pendingPulls.Count;
+            var prefix = remaining > 1 ? $"[1/{remaining}] " : "";
 
             PullProgressStatus.Text = $"{prefix}{string.Format(L("Models_PullingModel"), modelName)}";
             PullProgressBar.IsIndeterminate = true;
@@ -1272,6 +1320,7 @@ public sealed partial class ModelsPage : Page
             {
                 DispatcherQueue.TryEnqueue(() =>
                 {
+                    if (ct.IsCancellationRequested) return;
                     var pct = p.Percent * 100;
                     if (pct > 0)
                     {
@@ -1293,19 +1342,33 @@ public sealed partial class ModelsPage : Page
 
             try
             {
-                await manager.DownloadModelAsync(modelName, progress);
+                // Ollama /api/pull joins an existing download if one is already in progress
+                LoggingService.LogInfo($"[Pull] Starting download: {modelName}");
+                await manager.DownloadModelAsync(modelName, progress, ct);
+                LoggingService.LogInfo($"[Pull] Completed: {modelName}");
+                _pendingPulls.Remove(modelName);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                // Page navigated away — Ollama continues downloading server-side
+                LoggingService.LogInfo($"[Pull] Tracking stopped (page navigated away): {modelName}");
+                break;
             }
             catch (Exception ex)
             {
-                LoggingService.LogException(ex);
+                LoggingService.LogError($"[Pull] Failed: {modelName} — {ex.Message}");
+                _pendingPulls.Remove(modelName);
                 PullProgressStatus.Text = $"{prefix}Error: {ex.Message}";
-                await Task.Delay(2000);
+                try { await Task.Delay(2000, ct); } catch (OperationCanceledException) { break; }
             }
         }
 
-        PullProgressBar.IsIndeterminate = false;
-        PullProgressPanel.Visibility = Visibility.Collapsed;
-        BrowseModelsButton.IsEnabled = true;
+        if (!ct.IsCancellationRequested)
+        {
+            PullProgressBar.IsIndeterminate = false;
+            PullProgressPanel.Visibility = Visibility.Collapsed;
+            BrowseModelsButton.IsEnabled = true;
+        }
     }
 
     #endregion
