@@ -398,6 +398,13 @@
   <data name="Profile_NoToolsRegistered" xml:space="preserve">
     <value>등록된 도구가 없습니다.</value>
   </data>
+  <!-- CollapsibleSection -->
+  <data name="CollapsibleSection_CollapseTooltip" xml:space="preserve">
+    <value>섹션 접기</value>
+  </data>
+  <data name="CollapsibleSection_ExpandTooltip" xml:space="preserve">
+    <value>섹션 펼치기</value>
+  </data>
   <!-- Extended Thinking -->
   <data name="Models_ThinkingNotSupported" xml:space="preserve">
     <value>이 모델은 Extended Thinking을 지원하지 않습니다.</value>

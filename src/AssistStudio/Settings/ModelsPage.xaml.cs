@@ -1,5 +1,6 @@
 ﻿using AssistStudio.Dialogs;
 using AssistStudio.Modules.Helpers;
+using FieldCure.AssistStudio.Controls;
 using FieldCure.AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
 using FieldCure.AssistStudio.Providers;
@@ -80,6 +81,8 @@ public sealed partial class ModelsPage : Page
 
         LoadApiKeys();
         PopulateModelCombos();
+        UpdateAllSubHeaders();
+        UpdateExpandedState();
 
         // Note: SyncPresetsFromUI is NOT called here — presets are already loaded by
         // AppSettings.LoadPresets() at startup. Sync only happens when the user changes
@@ -110,6 +113,108 @@ public sealed partial class ModelsPage : Page
         }
     }
 
+    /// <summary>
+    /// Builds a sub-header string from model ID and status, joined by a middle dot separator.
+    /// </summary>
+    private static string BuildSubHeader(string? modelId, string? status)
+    {
+        var parts = new List<string>(2);
+        if (!string.IsNullOrEmpty(modelId)) parts.Add(modelId);
+        if (!string.IsNullOrEmpty(status)) parts.Add(status);
+        return string.Join(" \u00B7 ", parts);
+    }
+
+    /// <summary>
+    /// Updates the sub-header of a cloud provider section with current model and key status.
+    /// </summary>
+    private static void UpdateProviderSubHeader(CollapsibleSection section, ComboBox modelCombo, bool hasKey)
+    {
+        var model = modelCombo.SelectedItem as string ?? "";
+        var status = hasKey ? "\u2713" : L("Models_NoKey");
+        section.SubHeader = BuildSubHeader(model, status);
+    }
+
+    /// <summary>
+    /// Updates the Ollama section sub-header with current model and status text.
+    /// </summary>
+    private void UpdateOllamaSubHeader()
+    {
+        var display = OllamaModelCombo.SelectedItem as string ?? "";
+        var model = StripFitSuffix(display);
+        var status = OllamaStatusText.Text;
+        OllamaSection.SubHeader = BuildSubHeader(
+            string.IsNullOrEmpty(model) ? null : model,
+            string.IsNullOrEmpty(status) ? null : status);
+    }
+
+    /// <summary>
+    /// Updates sub-headers for all provider sections based on current UI state.
+    /// </summary>
+    private void UpdateAllSubHeaders()
+    {
+        var keys = _settings?.Presets.ToDictionary(p => p.ProviderType, p => p.ApiKey)
+                   ?? new Dictionary<string, string>();
+
+        var sections = new (string Provider, CollapsibleSection Section, ComboBox Combo)[]
+        {
+            ("Claude", ClaudeSection, ClaudeModelCombo),
+            ("OpenAI", OpenAISection, OpenAIModelCombo),
+            ("Gemini", GeminiSection, GeminiModelCombo),
+            ("Groq", GroqSection, GroqModelCombo),
+        };
+
+        foreach (var (provider, section, combo) in sections)
+        {
+            keys.TryGetValue(provider, out var key);
+            UpdateProviderSubHeader(section, combo, !string.IsNullOrEmpty(key));
+        }
+
+        UpdateOllamaSubHeader();
+    }
+
+    /// <summary>
+    /// Sets the initial expanded state: if only one provider has a key, expand that section.
+    /// </summary>
+    private void UpdateExpandedState()
+    {
+        var keys = _settings?.Presets.ToDictionary(p => p.ProviderType, p => p.ApiKey)
+                   ?? new Dictionary<string, string>();
+
+        var sections = new (string Provider, CollapsibleSection Section)[]
+        {
+            ("Claude", ClaudeSection),
+            ("OpenAI", OpenAISection),
+            ("Gemini", GeminiSection),
+            ("Groq", GroqSection),
+        };
+
+        var registeredSections = sections
+            .Where(s => keys.TryGetValue(s.Provider, out var k) && !string.IsNullOrEmpty(k))
+            .Select(s => s.Section)
+            .ToList();
+
+        // Ollama is counted separately — it's always present, just not always running
+        // We'll handle Ollama expansion after CheckOllamaStatusAsync
+
+        if (registeredSections.Count == 1 && !keys.Any(k => k.Key == "Ollama" && !string.IsNullOrEmpty(k.Value)))
+        {
+            registeredSections[0].IsExpanded = true;
+        }
+    }
+
+    /// <summary>
+    /// Returns the CollapsibleSection for the given provider type.
+    /// </summary>
+    private CollapsibleSection? GetSectionForProvider(string provider) => provider switch
+    {
+        "Claude" => ClaudeSection,
+        "OpenAI" => OpenAISection,
+        "Gemini" => GeminiSection,
+        "Groq" => GroqSection,
+        "Ollama" => OllamaSection,
+        _ => null
+    };
+
     #endregion
 
     #region API Key Management
@@ -128,23 +233,22 @@ public sealed partial class ModelsPage : Page
         keys.TryGetValue("Gemini", out var geminiKey);
         keys.TryGetValue("Groq", out var groqKey);
 
-        SetKeyState(claudeKey ?? "", ClaudeKeyInputPanel, ClaudeKeyDisplayPanel, ClaudeMaskedKeyText, ClaudeStatusText, ClaudeModelCombo, ClaudeOptionsPanel);
-        SetKeyState(openAIKey ?? "", OpenAIKeyInputPanel, OpenAIKeyDisplayPanel, OpenAIMaskedKeyText, OpenAIStatusText, OpenAIModelCombo, OpenAIOptionsPanel);
-        SetKeyState(geminiKey ?? "", GeminiKeyInputPanel, GeminiKeyDisplayPanel, GeminiMaskedKeyText, GeminiStatusText, GeminiModelCombo, GeminiOptionsPanel);
-        SetKeyState(groqKey ?? "", GroqKeyInputPanel, GroqKeyDisplayPanel, GroqMaskedKeyText, GroqStatusText, GroqModelCombo, GroqOptionsPanel);
+        SetKeyState(claudeKey ?? "", ClaudeKeyInputPanel, ClaudeKeyDisplayPanel, ClaudeMaskedKeyText, ClaudeModelCombo, ClaudeOptionsPanel);
+        SetKeyState(openAIKey ?? "", OpenAIKeyInputPanel, OpenAIKeyDisplayPanel, OpenAIMaskedKeyText, OpenAIModelCombo, OpenAIOptionsPanel);
+        SetKeyState(geminiKey ?? "", GeminiKeyInputPanel, GeminiKeyDisplayPanel, GeminiMaskedKeyText, GeminiModelCombo, GeminiOptionsPanel);
+        SetKeyState(groqKey ?? "", GroqKeyInputPanel, GroqKeyDisplayPanel, GroqMaskedKeyText, GroqModelCombo, GroqOptionsPanel);
     }
 
     /// <summary>
     /// Configures the visual state of a provider card based on whether an API key is present.
     /// </summary>
-    private static void SetKeyState(string key, Grid inputPanel, Grid displayPanel, TextBlock maskedText, TextBlock statusText, ComboBox modelCombo, StackPanel optionsPanel)
+    private static void SetKeyState(string key, Grid inputPanel, Grid displayPanel, TextBlock maskedText, ComboBox modelCombo, StackPanel optionsPanel)
     {
         if (!string.IsNullOrEmpty(key))
         {
             inputPanel.Visibility = Visibility.Collapsed;
             displayPanel.Visibility = Visibility.Visible;
             maskedText.Text = MaskKey(key);
-            statusText.Text = "";
             modelCombo.IsEnabled = true;
             optionsPanel.Visibility = Visibility.Visible;
         }
@@ -152,7 +256,6 @@ public sealed partial class ModelsPage : Page
         {
             inputPanel.Visibility = Visibility.Visible;
             displayPanel.Visibility = Visibility.Collapsed;
-            statusText.Text = L("Models_NoKey");
             modelCombo.IsEnabled = false;
             optionsPanel.Visibility = Visibility.Collapsed;
         }
@@ -171,7 +274,7 @@ public sealed partial class ModelsPage : Page
     /// <summary>
     /// Saves an API key for the specified provider, updates the UI state, and triggers a model cache refresh.
     /// </summary>
-    private void AddProviderKey(string provider, PasswordBox keyBox, Grid inputPanel, Grid displayPanel, TextBlock maskedText, TextBlock statusText, ComboBox modelCombo, StackPanel optionsPanel)
+    private void AddProviderKey(string provider, PasswordBox keyBox, Grid inputPanel, Grid displayPanel, TextBlock maskedText, ComboBox modelCombo, StackPanel optionsPanel, CollapsibleSection section)
     {
         var key = keyBox.Password?.Trim();
         if (string.IsNullOrEmpty(key)) return;
@@ -182,10 +285,10 @@ public sealed partial class ModelsPage : Page
         inputPanel.Visibility = Visibility.Collapsed;
         displayPanel.Visibility = Visibility.Visible;
         maskedText.Text = MaskKey(key);
-        statusText.Text = "";
         modelCombo.IsEnabled = true;
         optionsPanel.Visibility = Visibility.Visible;
 
+        UpdateProviderSubHeader(section, modelCombo, hasKey: true);
         _ = FetchAndCacheModelsAsync(provider, key, modelCombo);
         SyncPresetsFromUI();
     }
@@ -193,7 +296,7 @@ public sealed partial class ModelsPage : Page
     /// <summary>
     /// Removes the API key for the specified provider and resets the provider card UI.
     /// </summary>
-    private void RemoveProviderKey(string provider, Grid inputPanel, Grid displayPanel, TextBlock statusText, ComboBox modelCombo, StackPanel optionsPanel)
+    private void RemoveProviderKey(string provider, Grid inputPanel, Grid displayPanel, ComboBox modelCombo, StackPanel optionsPanel, CollapsibleSection section)
     {
         PasswordVaultHelper.DeleteApiKey(provider);
 
@@ -204,10 +307,10 @@ public sealed partial class ModelsPage : Page
 
         inputPanel.Visibility = Visibility.Visible;
         displayPanel.Visibility = Visibility.Collapsed;
-        statusText.Text = L("Models_NoKey");
         modelCombo.IsEnabled = false;
         optionsPanel.Visibility = Visibility.Collapsed;
 
+        UpdateProviderSubHeader(section, modelCombo, hasKey: false);
         SyncPresetsFromUI();
     }
 
@@ -219,49 +322,49 @@ public sealed partial class ModelsPage : Page
     /// Handles adding the Claude API key.
     /// </summary>
     private void OnAddClaudeKey(object sender, RoutedEventArgs e) =>
-        AddProviderKey("Claude", ClaudeApiKeyBox, ClaudeKeyInputPanel, ClaudeKeyDisplayPanel, ClaudeMaskedKeyText, ClaudeStatusText, ClaudeModelCombo, ClaudeOptionsPanel);
+        AddProviderKey("Claude", ClaudeApiKeyBox, ClaudeKeyInputPanel, ClaudeKeyDisplayPanel, ClaudeMaskedKeyText, ClaudeModelCombo, ClaudeOptionsPanel, ClaudeSection);
 
     /// <summary>
     /// Handles adding the OpenAI API key.
     /// </summary>
     private void OnAddOpenAIKey(object sender, RoutedEventArgs e) =>
-        AddProviderKey("OpenAI", OpenAIApiKeyBox, OpenAIKeyInputPanel, OpenAIKeyDisplayPanel, OpenAIMaskedKeyText, OpenAIStatusText, OpenAIModelCombo, OpenAIOptionsPanel);
+        AddProviderKey("OpenAI", OpenAIApiKeyBox, OpenAIKeyInputPanel, OpenAIKeyDisplayPanel, OpenAIMaskedKeyText, OpenAIModelCombo, OpenAIOptionsPanel, OpenAISection);
 
     /// <summary>
     /// Handles adding the Gemini API key.
     /// </summary>
     private void OnAddGeminiKey(object sender, RoutedEventArgs e) =>
-        AddProviderKey("Gemini", GeminiApiKeyBox, GeminiKeyInputPanel, GeminiKeyDisplayPanel, GeminiMaskedKeyText, GeminiStatusText, GeminiModelCombo, GeminiOptionsPanel);
+        AddProviderKey("Gemini", GeminiApiKeyBox, GeminiKeyInputPanel, GeminiKeyDisplayPanel, GeminiMaskedKeyText, GeminiModelCombo, GeminiOptionsPanel, GeminiSection);
 
     /// <summary>
     /// Handles adding the Groq API key.
     /// </summary>
     private void OnAddGroqKey(object sender, RoutedEventArgs e) =>
-        AddProviderKey("Groq", GroqApiKeyBox, GroqKeyInputPanel, GroqKeyDisplayPanel, GroqMaskedKeyText, GroqStatusText, GroqModelCombo, GroqOptionsPanel);
+        AddProviderKey("Groq", GroqApiKeyBox, GroqKeyInputPanel, GroqKeyDisplayPanel, GroqMaskedKeyText, GroqModelCombo, GroqOptionsPanel, GroqSection);
 
     /// <summary>
     /// Handles removing the Claude API key.
     /// </summary>
     private void OnRemoveClaudeKey(object sender, RoutedEventArgs e) =>
-        RemoveProviderKey("Claude", ClaudeKeyInputPanel, ClaudeKeyDisplayPanel, ClaudeStatusText, ClaudeModelCombo, ClaudeOptionsPanel);
+        RemoveProviderKey("Claude", ClaudeKeyInputPanel, ClaudeKeyDisplayPanel, ClaudeModelCombo, ClaudeOptionsPanel, ClaudeSection);
 
     /// <summary>
     /// Handles removing the OpenAI API key.
     /// </summary>
     private void OnRemoveOpenAIKey(object sender, RoutedEventArgs e) =>
-        RemoveProviderKey("OpenAI", OpenAIKeyInputPanel, OpenAIKeyDisplayPanel, OpenAIStatusText, OpenAIModelCombo, OpenAIOptionsPanel);
+        RemoveProviderKey("OpenAI", OpenAIKeyInputPanel, OpenAIKeyDisplayPanel, OpenAIModelCombo, OpenAIOptionsPanel, OpenAISection);
 
     /// <summary>
     /// Handles removing the Gemini API key.
     /// </summary>
     private void OnRemoveGeminiKey(object sender, RoutedEventArgs e) =>
-        RemoveProviderKey("Gemini", GeminiKeyInputPanel, GeminiKeyDisplayPanel, GeminiStatusText, GeminiModelCombo, GeminiOptionsPanel);
+        RemoveProviderKey("Gemini", GeminiKeyInputPanel, GeminiKeyDisplayPanel, GeminiModelCombo, GeminiOptionsPanel, GeminiSection);
 
     /// <summary>
     /// Handles removing the Groq API key.
     /// </summary>
     private void OnRemoveGroqKey(object sender, RoutedEventArgs e) =>
-        RemoveProviderKey("Groq", GroqKeyInputPanel, GroqKeyDisplayPanel, GroqStatusText, GroqModelCombo, GroqOptionsPanel);
+        RemoveProviderKey("Groq", GroqKeyInputPanel, GroqKeyDisplayPanel, GroqModelCombo, GroqOptionsPanel, GroqSection);
 
     #endregion
 
@@ -729,6 +832,11 @@ public sealed partial class ModelsPage : Page
         if (overrideCombo is not null && toggle is not null && budgetBox is not null && hint is not null)
             UpdateThinkingState(provider, combo, overrideCombo, toggle, budgetBox, hint);
 
+        // Update sub-header to reflect new model selection
+        var section = GetSectionForProvider(provider);
+        if (section is not null)
+            UpdateProviderSubHeader(section, combo, hasKey: true);
+
         AppSettings.SetDefaultModel(provider, model);
         SyncPresetsFromUI();
     }
@@ -816,6 +924,7 @@ public sealed partial class ModelsPage : Page
             // Strip fit-kind suffix before saving
             var model = StripFitSuffix(display);
             AppSettings.SetDefaultModel("Ollama", model);
+            UpdateOllamaSubHeader();
             SyncPresetsFromUI();
         }
     }
@@ -888,6 +997,7 @@ public sealed partial class ModelsPage : Page
         {
             OllamaSpinner.IsActive = false;
             OllamaSpinner.Visibility = Visibility.Collapsed;
+            UpdateOllamaSubHeader();
         }
     }
 

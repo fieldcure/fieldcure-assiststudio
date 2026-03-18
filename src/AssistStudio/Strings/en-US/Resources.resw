@@ -398,6 +398,13 @@
   <data name="Profile_NoToolsRegistered" xml:space="preserve">
     <value>No tools registered.</value>
   </data>
+  <!-- CollapsibleSection -->
+  <data name="CollapsibleSection_CollapseTooltip" xml:space="preserve">
+    <value>Collapse section</value>
+  </data>
+  <data name="CollapsibleSection_ExpandTooltip" xml:space="preserve">
+    <value>Expand section</value>
+  </data>
   <!-- Extended Thinking -->
   <data name="Models_ThinkingNotSupported" xml:space="preserve">
     <value>This model does not support Extended Thinking.</value>
