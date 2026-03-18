@@ -115,8 +115,9 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
         IsTruncated = doc.RootElement.TryGetProperty("stop_reason", out var sr) &&
                       sr.GetString() == "max_tokens";
 
-        // Parse content blocks — may contain text and/or tool_use
+        // Parse content blocks — may contain text, tool_use, and/or thinking
         string? textContent = null;
+        string? thinkingContent = null;
         var toolCalls = new List<ToolCall>();
 
         if (doc.RootElement.TryGetProperty("content", out var contentArr))
@@ -137,12 +138,17 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
                         Arguments = block.GetProperty("input").GetRawText()
                     });
                 }
+                else if (blockType == "thinking")
+                {
+                    thinkingContent = block.GetProperty("thinking").GetString();
+                }
             }
         }
 
         return new AiResponse
         {
             Content = textContent,
+            ThinkingContent = thinkingContent,
             ToolCalls = toolCalls,
             Usage = tokenUsage,
             IsTruncated = IsTruncated
@@ -160,22 +166,60 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
         int inputTokens = 0, outputTokens = 0;
         IsTruncated = false;
         var responseSb = new StringBuilder();
+        var blockToolCallIds = new Dictionary<int, string>();
+        var thinkingBlocks = new HashSet<int>();
 
         await foreach (var sse in SseReader.ReadEventsAsync(stream, ct))
         {
             responseSb.AppendLine($"event: {sse.EventType}");
             responseSb.AppendLine($"data: {sse.Data}");
             responseSb.AppendLine();
-            if (sse.EventType == "content_block_delta")
+            if (sse.EventType == "content_block_start")
             {
                 using var doc = JsonDocument.Parse(sse.Data);
-                var text = doc.RootElement
-                    .GetProperty("delta")
-                    .GetProperty("text")
-                    .GetString();
+                var root = doc.RootElement;
+                var index = root.GetProperty("index").GetInt32();
+                var contentBlock = root.GetProperty("content_block");
+                var blockType = contentBlock.GetProperty("type").GetString();
 
-                if (!string.IsNullOrEmpty(text))
-                    yield return new StreamEvent.TextDelta(text);
+                if (blockType == "tool_use")
+                {
+                    var id = contentBlock.GetProperty("id").GetString()!;
+                    var name = contentBlock.GetProperty("name").GetString()!;
+                    blockToolCallIds[index] = id;
+                    yield return new StreamEvent.ToolCallStart(id, name);
+                }
+                else if (blockType == "thinking")
+                {
+                    thinkingBlocks.Add(index);
+                }
+            }
+            else if (sse.EventType == "content_block_delta")
+            {
+                using var doc = JsonDocument.Parse(sse.Data);
+                var root = doc.RootElement;
+                var index = root.GetProperty("index").GetInt32();
+                var delta = root.GetProperty("delta");
+                var deltaType = delta.GetProperty("type").GetString();
+
+                if (deltaType == "text_delta")
+                {
+                    var text = delta.GetProperty("text").GetString();
+                    if (!string.IsNullOrEmpty(text))
+                        yield return new StreamEvent.TextDelta(text);
+                }
+                else if (deltaType == "input_json_delta")
+                {
+                    var partialJson = delta.GetProperty("partial_json").GetString() ?? "";
+                    if (blockToolCallIds.TryGetValue(index, out var toolCallId))
+                        yield return new StreamEvent.ToolCallDelta(toolCallId, partialJson);
+                }
+                else if (deltaType == "thinking_delta")
+                {
+                    var thinking = delta.GetProperty("thinking").GetString();
+                    if (!string.IsNullOrEmpty(thinking))
+                        yield return new StreamEvent.ThinkingDelta(thinking);
+                }
             }
             else if (sse.EventType == "message_start")
             {

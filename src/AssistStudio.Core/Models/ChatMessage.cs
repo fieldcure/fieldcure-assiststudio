@@ -34,6 +34,9 @@ public partial class ChatMessage : INotifyPropertyChanged
     /// <summary>Backing field for <see cref="IsStreaming"/>.</summary>
     private bool _isStreaming;
 
+    /// <summary>Backing field for <see cref="ThinkingContent"/>.</summary>
+    private string? _thinkingContent;
+
     #endregion
 
     #region Constructors
@@ -99,6 +102,16 @@ public partial class ChatMessage : INotifyPropertyChanged
     /// The ID of the tool call this message is a result for. Only set for <see cref="ChatRole.Tool"/> messages.
     /// </summary>
     public string? ToolCallId { get; init; }
+
+    /// <summary>
+    /// Thinking/reasoning content from the AI model (e.g., Claude extended thinking).
+    /// Raises <see cref="PropertyChanged"/> when updated.
+    /// </summary>
+    public string? ThinkingContent
+    {
+        get => _thinkingContent;
+        set => SetField(ref _thinkingContent, value);
+    }
 
     #endregion
 

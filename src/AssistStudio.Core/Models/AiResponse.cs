@@ -19,6 +19,9 @@ public class AiResponse
     /// <summary>Whether the response was truncated due to max token limits.</summary>
     public bool IsTruncated { get; init; }
 
+    /// <summary>Thinking/reasoning content from the AI model, or <see langword="null"/> if not available.</summary>
+    public string? ThinkingContent { get; init; }
+
     /// <summary>Whether this response contains one or more tool calls.</summary>
     public bool HasToolCalls => ToolCalls.Count > 0;
 

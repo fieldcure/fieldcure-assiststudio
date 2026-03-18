@@ -161,6 +161,7 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
 
         IsTruncated = false;
         var responseSb = new StringBuilder();
+        var toolCallIds = new Dictionary<int, string>();
 
         await foreach (var sse in SseReader.ReadEventsAsync(stream, ct))
         {
@@ -206,6 +207,33 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
                 var text = contentEl.GetString();
                 if (!string.IsNullOrEmpty(text))
                     yield return new StreamEvent.TextDelta(text);
+            }
+
+            // Parse tool call chunks
+            if (delta.TryGetProperty("tool_calls", out var toolCallsEl))
+            {
+                foreach (var tc in toolCallsEl.EnumerateArray())
+                {
+                    var idx = tc.GetProperty("index").GetInt32();
+
+                    // First chunk for this index contains the id and function name
+                    if (tc.TryGetProperty("id", out var idEl))
+                    {
+                        var id = idEl.GetString()!;
+                        toolCallIds[idx] = id;
+                        var funcName = tc.GetProperty("function").GetProperty("name").GetString()!;
+                        yield return new StreamEvent.ToolCallStart(id, funcName);
+                    }
+
+                    // Subsequent chunks contain argument fragments
+                    if (tc.TryGetProperty("function", out var funcEl) &&
+                        funcEl.TryGetProperty("arguments", out var argsEl))
+                    {
+                        var argsChunk = argsEl.GetString();
+                        if (!string.IsNullOrEmpty(argsChunk) && toolCallIds.TryGetValue(idx, out var toolId))
+                            yield return new StreamEvent.ToolCallDelta(toolId, argsChunk);
+                    }
+                }
             }
         }
 

@@ -157,6 +157,33 @@ internal class WebViewChatRenderer
     }
 
     /// <summary>
+    /// Begins a collapsible thinking block inside an assistant message.
+    /// </summary>
+    public Task BeginThinkingBlockAsync(string id)
+    {
+        var script = $"window.fluentChat.beginThinkingBlock({Js(id)})";
+        return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
+    /// <summary>
+    /// Appends a token to the thinking block of an assistant message.
+    /// </summary>
+    public Task AppendThinkingTokenAsync(string id, string token)
+    {
+        var script = $"window.fluentChat.appendThinkingToken({Js(id)}, {Js(token)})";
+        return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
+    /// <summary>
+    /// Ends the thinking block and collapses it by default.
+    /// </summary>
+    public Task EndThinkingBlockAsync(string id)
+    {
+        var script = $"window.fluentChat.endThinkingBlock({Js(id)})";
+        return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
+    /// <summary>
     /// Finalizes an assistant message with the full markdown content, truncation status, and token count.
     /// </summary>
     public Task FinalizeMessageAsync(string id, string fullMarkdown, bool truncated = false, int tokenCount = 0)

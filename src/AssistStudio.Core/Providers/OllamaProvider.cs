@@ -179,12 +179,28 @@ public partial class OllamaProvider : IAiProvider, IDisposable
                 yield break;
             }
 
-            if (root.TryGetProperty("message", out var messageEl) &&
-                messageEl.TryGetProperty("content", out var contentEl))
+            if (root.TryGetProperty("message", out var messageEl))
             {
-                var text = contentEl.GetString();
-                if (!string.IsNullOrEmpty(text))
-                    yield return new StreamEvent.TextDelta(text);
+                if (messageEl.TryGetProperty("content", out var contentEl))
+                {
+                    var text = contentEl.GetString();
+                    if (!string.IsNullOrEmpty(text))
+                        yield return new StreamEvent.TextDelta(text);
+                }
+
+                // Parse tool calls (Ollama sends complete tool calls in a single chunk)
+                if (messageEl.TryGetProperty("tool_calls", out var toolCallsEl))
+                {
+                    foreach (var tc in toolCallsEl.EnumerateArray())
+                    {
+                        var function = tc.GetProperty("function");
+                        var id = Guid.NewGuid().ToString("N");
+                        var funcName = function.GetProperty("name").GetString()!;
+                        var argsJson = function.GetProperty("arguments").GetRawText();
+                        yield return new StreamEvent.ToolCallStart(id, funcName);
+                        yield return new StreamEvent.ToolCallDelta(id, argsJson);
+                    }
+                }
             }
         }
 

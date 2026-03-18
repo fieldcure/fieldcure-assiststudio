@@ -66,10 +66,10 @@ public class StreamAsyncTests
         sse.AppendLine("""data: {"type":"message_start","message":{"usage":{"input_tokens":25}}}""");
         sse.AppendLine();
         sse.AppendLine("event: content_block_delta");
-        sse.AppendLine("""data: {"type":"content_block_delta","delta":{"text":"Hello"}}""");
+        sse.AppendLine("""data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Hello"}}""");
         sse.AppendLine();
         sse.AppendLine("event: content_block_delta");
-        sse.AppendLine("""data: {"type":"content_block_delta","delta":{"text":" world"}}""");
+        sse.AppendLine("""data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":" world"}}""");
         sse.AppendLine();
         sse.AppendLine("event: message_delta");
         sse.AppendLine("""data: {"type":"message_delta","usage":{"output_tokens":10},"delta":{"stop_reason":"end_turn"}}""");
@@ -107,7 +107,7 @@ public class StreamAsyncTests
         sse.AppendLine("""data: {"type":"message_start","message":{"usage":{"input_tokens":10}}}""");
         sse.AppendLine();
         sse.AppendLine("event: content_block_delta");
-        sse.AppendLine("""data: {"type":"content_block_delta","delta":{"text":"partial"}}""");
+        sse.AppendLine("""data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"partial"}}""");
         sse.AppendLine();
         sse.AppendLine("event: message_delta");
         sse.AppendLine("""data: {"type":"message_delta","usage":{"output_tokens":4096},"delta":{"stop_reason":"max_tokens"}}""");
@@ -122,6 +122,96 @@ public class StreamAsyncTests
 
         var completed = events.OfType<StreamEvent.StreamCompleted>().Single();
         Assert.IsTrue(completed.IsTruncated);
+    }
+
+    [TestMethod]
+    public async Task Claude_StreamAsync_Thinking_YieldsThinkingDelta()
+    {
+        var sse = new StringBuilder();
+        sse.AppendLine("event: message_start");
+        sse.AppendLine("""data: {"type":"message_start","message":{"usage":{"input_tokens":30}}}""");
+        sse.AppendLine();
+        sse.AppendLine("event: content_block_start");
+        sse.AppendLine("""data: {"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":""}}""");
+        sse.AppendLine();
+        sse.AppendLine("event: content_block_delta");
+        sse.AppendLine("""data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"Let me reason"}}""");
+        sse.AppendLine();
+        sse.AppendLine("event: content_block_delta");
+        sse.AppendLine("""data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":" about this."}}""");
+        sse.AppendLine();
+        sse.AppendLine("event: content_block_start");
+        sse.AppendLine("""data: {"type":"content_block_start","index":1,"content_block":{"type":"text","text":""}}""");
+        sse.AppendLine();
+        sse.AppendLine("event: content_block_delta");
+        sse.AppendLine("""data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"The answer is 42."}}""");
+        sse.AppendLine();
+        sse.AppendLine("event: message_delta");
+        sse.AppendLine("""data: {"type":"message_delta","usage":{"output_tokens":20},"delta":{"stop_reason":"end_turn"}}""");
+        sse.AppendLine();
+        sse.AppendLine("event: message_stop");
+        sse.AppendLine("""data: {"type":"message_stop"}""");
+        sse.AppendLine();
+
+        using var http = CreateMockClient(sse.ToString());
+        var provider = new ClaudeProvider(http, "fake-key");
+        var events = await CollectEventsAsync(provider, SimpleRequest());
+
+        var thinkingDeltas = events.OfType<StreamEvent.ThinkingDelta>().ToList();
+        Assert.AreEqual(2, thinkingDeltas.Count);
+        Assert.AreEqual("Let me reason", thinkingDeltas[0].Text);
+        Assert.AreEqual(" about this.", thinkingDeltas[1].Text);
+
+        var textDeltas = events.OfType<StreamEvent.TextDelta>().ToList();
+        Assert.AreEqual(1, textDeltas.Count);
+        Assert.AreEqual("The answer is 42.", textDeltas[0].Text);
+    }
+
+    [TestMethod]
+    public async Task Claude_StreamAsync_ThinkingThenTextThenToolCall()
+    {
+        var sse = new StringBuilder();
+        sse.AppendLine("event: message_start");
+        sse.AppendLine("""data: {"type":"message_start","message":{"usage":{"input_tokens":40}}}""");
+        sse.AppendLine();
+        // Thinking block
+        sse.AppendLine("event: content_block_start");
+        sse.AppendLine("""data: {"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":""}}""");
+        sse.AppendLine();
+        sse.AppendLine("event: content_block_delta");
+        sse.AppendLine("""data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"I need to search."}}""");
+        sse.AppendLine();
+        // Text block
+        sse.AppendLine("event: content_block_start");
+        sse.AppendLine("""data: {"type":"content_block_start","index":1,"content_block":{"type":"text","text":""}}""");
+        sse.AppendLine();
+        sse.AppendLine("event: content_block_delta");
+        sse.AppendLine("""data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"Searching..."}}""");
+        sse.AppendLine();
+        // Tool use block
+        sse.AppendLine("event: content_block_start");
+        sse.AppendLine("""data: {"type":"content_block_start","index":2,"content_block":{"type":"tool_use","id":"toolu_99","name":"web_search"}}""");
+        sse.AppendLine();
+        sse.AppendLine("event: content_block_delta");
+        sse.AppendLine("""data: {"type":"content_block_delta","index":2,"delta":{"type":"input_json_delta","partial_json":"{\"q\":\"test\"}"}}""");
+        sse.AppendLine();
+        sse.AppendLine("event: message_delta");
+        sse.AppendLine("""data: {"type":"message_delta","usage":{"output_tokens":25},"delta":{"stop_reason":"tool_use"}}""");
+        sse.AppendLine();
+        sse.AppendLine("event: message_stop");
+        sse.AppendLine("""data: {"type":"message_stop"}""");
+        sse.AppendLine();
+
+        using var http = CreateMockClient(sse.ToString());
+        var provider = new ClaudeProvider(http, "fake-key");
+        var events = await CollectEventsAsync(provider, SimpleRequest());
+
+        Assert.AreEqual(1, events.OfType<StreamEvent.ThinkingDelta>().Count());
+        Assert.AreEqual(1, events.OfType<StreamEvent.TextDelta>().Count());
+        Assert.AreEqual(1, events.OfType<StreamEvent.ToolCallStart>().Count());
+        Assert.AreEqual(1, events.OfType<StreamEvent.ToolCallDelta>().Count());
+        Assert.AreEqual(1, events.OfType<StreamEvent.Usage>().Count());
+        Assert.AreEqual(1, events.OfType<StreamEvent.StreamCompleted>().Count());
     }
 
     #endregion
@@ -434,6 +524,188 @@ public class StreamAsyncTests
 
     #endregion
 
+    #region Streaming Tool Calls
+
+    [TestMethod]
+    public async Task Claude_StreamAsync_ToolCalls_YieldsToolCallStartAndDelta()
+    {
+        var sse = new StringBuilder();
+        sse.AppendLine("event: message_start");
+        sse.AppendLine("""data: {"type":"message_start","message":{"usage":{"input_tokens":30}}}""");
+        sse.AppendLine();
+        sse.AppendLine("event: content_block_start");
+        sse.AppendLine("""data: {"type":"content_block_start","index":0,"content_block":{"type":"tool_use","id":"toolu_01","name":"web_search"}}""");
+        sse.AppendLine();
+        sse.AppendLine("event: content_block_delta");
+        sse.AppendLine("""data: {"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":"{\"query\":"}}""");
+        sse.AppendLine();
+        sse.AppendLine("event: content_block_delta");
+        sse.AppendLine("""data: {"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":" \"weather\"}"}}""");
+        sse.AppendLine();
+        sse.AppendLine("event: message_delta");
+        sse.AppendLine("""data: {"type":"message_delta","usage":{"output_tokens":15},"delta":{"stop_reason":"tool_use"}}""");
+        sse.AppendLine();
+        sse.AppendLine("event: message_stop");
+        sse.AppendLine("""data: {"type":"message_stop"}""");
+        sse.AppendLine();
+
+        using var http = CreateMockClient(sse.ToString());
+        var provider = new ClaudeProvider(http, "fake-key");
+        var events = await CollectEventsAsync(provider, SimpleRequest());
+
+        var toolStart = events.OfType<StreamEvent.ToolCallStart>().Single();
+        Assert.AreEqual("toolu_01", toolStart.Id);
+        Assert.AreEqual("web_search", toolStart.FunctionName);
+
+        var deltas = events.OfType<StreamEvent.ToolCallDelta>().ToList();
+        Assert.AreEqual(2, deltas.Count);
+        Assert.IsTrue(deltas.All(d => d.Id == "toolu_01"));
+
+        var args = string.Concat(deltas.Select(d => d.ArgumentsChunk));
+        Assert.AreEqual("{\"query\": \"weather\"}", args);
+    }
+
+    [TestMethod]
+    public async Task Claude_StreamAsync_MixedTextAndToolCalls()
+    {
+        var sse = new StringBuilder();
+        sse.AppendLine("event: message_start");
+        sse.AppendLine("""data: {"type":"message_start","message":{"usage":{"input_tokens":20}}}""");
+        sse.AppendLine();
+        // Text block
+        sse.AppendLine("event: content_block_start");
+        sse.AppendLine("""data: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}""");
+        sse.AppendLine();
+        sse.AppendLine("event: content_block_delta");
+        sse.AppendLine("""data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Let me search."}}""");
+        sse.AppendLine();
+        // Tool use block
+        sse.AppendLine("event: content_block_start");
+        sse.AppendLine("""data: {"type":"content_block_start","index":1,"content_block":{"type":"tool_use","id":"toolu_02","name":"calculator"}}""");
+        sse.AppendLine();
+        sse.AppendLine("event: content_block_delta");
+        sse.AppendLine("""data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"{\"expr\":\"2+2\"}"}}""");
+        sse.AppendLine();
+        sse.AppendLine("event: message_delta");
+        sse.AppendLine("""data: {"type":"message_delta","usage":{"output_tokens":12},"delta":{"stop_reason":"tool_use"}}""");
+        sse.AppendLine();
+        sse.AppendLine("event: message_stop");
+        sse.AppendLine("""data: {"type":"message_stop"}""");
+        sse.AppendLine();
+
+        using var http = CreateMockClient(sse.ToString());
+        var provider = new ClaudeProvider(http, "fake-key");
+        var events = await CollectEventsAsync(provider, SimpleRequest());
+
+        // Should have text, tool start, tool delta, usage, completed
+        Assert.AreEqual(1, events.OfType<StreamEvent.TextDelta>().Count());
+        Assert.AreEqual("Let me search.", events.OfType<StreamEvent.TextDelta>().Single().Text);
+
+        var toolStart = events.OfType<StreamEvent.ToolCallStart>().Single();
+        Assert.AreEqual("calculator", toolStart.FunctionName);
+
+        Assert.AreEqual(1, events.OfType<StreamEvent.ToolCallDelta>().Count());
+    }
+
+    [TestMethod]
+    public async Task OpenAi_StreamAsync_ToolCalls_YieldsToolCallStartAndDelta()
+    {
+        var sse = new StringBuilder();
+        // First chunk: tool call start with id and function name
+        sse.AppendLine("data: " + """{"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_abc","type":"function","function":{"name":"get_weather","arguments":""}}]},"finish_reason":null}]}""");
+        sse.AppendLine();
+        // Argument chunks
+        sse.AppendLine("data: " + """{"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"city\":"}}]},"finish_reason":null}]}""");
+        sse.AppendLine();
+        sse.AppendLine("data: " + """{"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":" \"Seoul\"}"}}]},"finish_reason":"tool_calls"}]}""");
+        sse.AppendLine();
+        sse.AppendLine("data: [DONE]");
+        sse.AppendLine();
+
+        using var http = CreateMockClient(sse.ToString());
+        var provider = new OpenAiProvider(http, "fake-key");
+        var events = await CollectEventsAsync(provider, SimpleRequest());
+
+        var toolStart = events.OfType<StreamEvent.ToolCallStart>().Single();
+        Assert.AreEqual("call_abc", toolStart.Id);
+        Assert.AreEqual("get_weather", toolStart.FunctionName);
+
+        var deltas = events.OfType<StreamEvent.ToolCallDelta>().ToList();
+        Assert.AreEqual(2, deltas.Count);
+        var args = string.Concat(deltas.Select(d => d.ArgumentsChunk));
+        Assert.AreEqual("{\"city\": \"Seoul\"}", args);
+    }
+
+    [TestMethod]
+    public async Task OpenAi_StreamAsync_ParallelToolCalls()
+    {
+        var sse = new StringBuilder();
+        // Two tool calls interleaved by index
+        sse.AppendLine("data: " + """{"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_1","type":"function","function":{"name":"fn_a","arguments":""}},{"index":1,"id":"call_2","type":"function","function":{"name":"fn_b","arguments":""}}]},"finish_reason":null}]}""");
+        sse.AppendLine();
+        sse.AppendLine("data: " + """{"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"x\":1}"}},{"index":1,"function":{"arguments":"{\"y\":2}"}}]},"finish_reason":null}]}""");
+        sse.AppendLine();
+        sse.AppendLine("data: " + """{"choices":[{"delta":{},"finish_reason":"tool_calls"}]}""");
+        sse.AppendLine();
+        sse.AppendLine("data: [DONE]");
+        sse.AppendLine();
+
+        using var http = CreateMockClient(sse.ToString());
+        var provider = new OpenAiProvider(http, "fake-key");
+        var events = await CollectEventsAsync(provider, SimpleRequest());
+
+        var starts = events.OfType<StreamEvent.ToolCallStart>().ToList();
+        Assert.AreEqual(2, starts.Count);
+        Assert.AreEqual("fn_a", starts[0].FunctionName);
+        Assert.AreEqual("fn_b", starts[1].FunctionName);
+
+        var deltasA = events.OfType<StreamEvent.ToolCallDelta>().Where(d => d.Id == "call_1").ToList();
+        var deltasB = events.OfType<StreamEvent.ToolCallDelta>().Where(d => d.Id == "call_2").ToList();
+        Assert.AreEqual("{\"x\":1}", string.Concat(deltasA.Select(d => d.ArgumentsChunk)));
+        Assert.AreEqual("{\"y\":2}", string.Concat(deltasB.Select(d => d.ArgumentsChunk)));
+    }
+
+    [TestMethod]
+    public async Task Gemini_StreamAsync_FunctionCall_YieldsToolCallStartAndDelta()
+    {
+        var sse = new StringBuilder();
+        sse.AppendLine("data: " + """{"candidates":[{"content":{"parts":[{"functionCall":{"name":"search","args":{"query":"test"}}}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":10,"candidatesTokenCount":5}}""");
+        sse.AppendLine();
+
+        using var http = CreateMockClient(sse.ToString());
+        var provider = new GeminiProvider(http, "fake-key");
+        var events = await CollectEventsAsync(provider, SimpleRequest());
+
+        var toolStart = events.OfType<StreamEvent.ToolCallStart>().Single();
+        Assert.AreEqual("search", toolStart.Id); // Single call uses funcName as ID
+        Assert.AreEqual("search", toolStart.FunctionName);
+
+        var toolDelta = events.OfType<StreamEvent.ToolCallDelta>().Single();
+        Assert.AreEqual("search", toolDelta.Id);
+        Assert.AreEqual("""{"query":"test"}""", toolDelta.ArgumentsChunk);
+    }
+
+    [TestMethod]
+    public async Task Ollama_StreamAsync_ToolCalls_YieldsToolCallStartAndDelta()
+    {
+        var ndjson = new StringBuilder();
+        ndjson.AppendLine("""{"model":"llama3.1","message":{"role":"assistant","content":"","tool_calls":[{"function":{"name":"calc","arguments":{"expr":"1+1"}}}]},"done":false}""");
+        ndjson.AppendLine("""{"model":"llama3.1","done":true,"done_reason":"stop","prompt_eval_count":10,"eval_count":5}""");
+
+        using var http = CreateMockClient(ndjson.ToString(), "application/x-ndjson");
+        var provider = new OllamaProvider(http);
+        var events = await CollectEventsAsync(provider, SimpleRequest());
+
+        var toolStart = events.OfType<StreamEvent.ToolCallStart>().Single();
+        Assert.AreEqual("calc", toolStart.FunctionName);
+
+        var toolDelta = events.OfType<StreamEvent.ToolCallDelta>().Single();
+        Assert.AreEqual(toolStart.Id, toolDelta.Id);
+        Assert.IsTrue(toolDelta.ArgumentsChunk.Contains("\"expr\""));
+    }
+
+    #endregion
+
     #region Cross-Provider Contract
 
     [TestMethod]
@@ -445,7 +717,7 @@ public class StreamAsyncTests
         claudeSse.AppendLine("""data: {"type":"message_start","message":{"usage":{"input_tokens":5}}}""");
         claudeSse.AppendLine();
         claudeSse.AppendLine("event: content_block_delta");
-        claudeSse.AppendLine("""data: {"type":"content_block_delta","delta":{"text":"a"}}""");
+        claudeSse.AppendLine("""data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"a"}}""");
         claudeSse.AppendLine();
         claudeSse.AppendLine("event: message_delta");
         claudeSse.AppendLine("""data: {"type":"message_delta","usage":{"output_tokens":1},"delta":{"stop_reason":"end_turn"}}""");
@@ -502,10 +774,10 @@ public class StreamAsyncTests
         claudeSse.AppendLine("""data: {"type":"message_start","message":{"usage":{"input_tokens":5}}}""");
         claudeSse.AppendLine();
         claudeSse.AppendLine("event: content_block_delta");
-        claudeSse.AppendLine("""data: {"type":"content_block_delta","delta":{"text":"AB"}}""");
+        claudeSse.AppendLine("""data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"AB"}}""");
         claudeSse.AppendLine();
         claudeSse.AppendLine("event: content_block_delta");
-        claudeSse.AppendLine("""data: {"type":"content_block_delta","delta":{"text":"CD"}}""");
+        claudeSse.AppendLine("""data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"CD"}}""");
         claudeSse.AppendLine();
         claudeSse.AppendLine("event: message_delta");
         claudeSse.AppendLine("""data: {"type":"message_delta","usage":{"output_tokens":2},"delta":{"stop_reason":"end_turn"}}""");

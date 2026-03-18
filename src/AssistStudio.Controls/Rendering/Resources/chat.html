@@ -136,6 +136,50 @@
         font-weight: bold;
     }
 
+    /* ===== Thinking Block ===== */
+    .thinking-block {
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        margin-bottom: 8px;
+        overflow: hidden;
+    }
+    .thinking-header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        background: var(--code-bg);
+        cursor: pointer;
+        user-select: none;
+        font-size: 12px;
+        color: var(--timestamp-color);
+    }
+    .thinking-header:hover {
+        background: var(--code-header-bg);
+    }
+    .thinking-toggle {
+        transition: transform 0.2s;
+        font-size: 10px;
+    }
+    .thinking-block.collapsed .thinking-toggle {
+        transform: rotate(-90deg);
+    }
+    .thinking-block.collapsed .thinking-content {
+        display: none;
+    }
+    .thinking-content {
+        padding: 8px 10px;
+        font-size: 13px;
+        color: var(--blockquote-text);
+        white-space: pre-wrap;
+        max-height: 300px;
+        overflow-y: auto;
+        border-top: 1px solid var(--border-color);
+    }
+    .thinking-block.streaming .thinking-content {
+        max-height: none;
+    }
+
     /* ===== Markdown Content Styles ===== */
     .message-bubble.rendered h1,
     .message-bubble.rendered h2,
@@ -810,6 +854,48 @@
             doScroll('instant');
         },
 
+        beginThinkingBlock: function(id) {
+            var msg = document.getElementById('msg-' + id);
+            if (!msg) return;
+            var bubble = msg.querySelector('.message-bubble');
+            if (!bubble) return;
+            var block = document.createElement('div');
+            block.className = 'thinking-block streaming';
+            var header = document.createElement('div');
+            header.className = 'thinking-header';
+            header.innerHTML = '<span class="thinking-toggle">\u25BC</span><span>Thinking\u2026</span>';
+            header.addEventListener('click', function() {
+                block.classList.toggle('collapsed');
+            });
+            var content = document.createElement('div');
+            content.className = 'thinking-content';
+            block.appendChild(header);
+            block.appendChild(content);
+            // Insert at the top of the bubble, before any text content
+            bubble.insertBefore(block, bubble.firstChild);
+            doScroll('instant');
+        },
+
+        appendThinkingToken: function(id, token) {
+            var msg = document.getElementById('msg-' + id);
+            if (!msg) return;
+            var content = msg.querySelector('.thinking-content');
+            if (content) {
+                content.textContent += token;
+            }
+            doScroll('instant');
+        },
+
+        endThinkingBlock: function(id) {
+            var msg = document.getElementById('msg-' + id);
+            if (!msg) return;
+            var block = msg.querySelector('.thinking-block');
+            if (block) {
+                block.classList.remove('streaming');
+                block.classList.add('collapsed');
+            }
+        },
+
         finalizeMessage: function(id, fullText, truncated, tokenCount) {
             var msg = document.getElementById('msg-' + id);
             if (!msg) return;
@@ -817,7 +903,12 @@
             if (bubble) {
                 bubble.classList.remove('streaming');
                 bubble.classList.add('rendered');
+                // Preserve thinking block if present
+                var thinkingBlock = bubble.querySelector('.thinking-block');
                 bubble.innerHTML = renderMarkdown(fullText);
+                if (thinkingBlock) {
+                    bubble.insertBefore(thinkingBlock, bubble.firstChild);
+                }
                 addCopyButtons(bubble);
 
                 if (truncated) {

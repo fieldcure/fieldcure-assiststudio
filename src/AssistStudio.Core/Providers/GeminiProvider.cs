@@ -201,15 +201,31 @@ public partial class GeminiProvider : IAiProvider, IDisposable
                 }
 
                 if (candidate.TryGetProperty("content", out var content) &&
-                    content.TryGetProperty("parts", out var parts) &&
-                    parts.GetArrayLength() > 0)
+                    content.TryGetProperty("parts", out var parts))
                 {
-                    var part = parts[0];
-                    if (part.TryGetProperty("text", out var textEl))
+                    int fcIndex = 0;
+                    // Count functionCall parts for ID suffix logic
+                    int fcCount = 0;
+                    foreach (var p in parts.EnumerateArray())
+                        if (p.TryGetProperty("functionCall", out _)) fcCount++;
+
+                    foreach (var part in parts.EnumerateArray())
                     {
-                        var text = textEl.GetString();
-                        if (!string.IsNullOrEmpty(text))
-                            yield return new StreamEvent.TextDelta(text);
+                        if (part.TryGetProperty("text", out var textEl))
+                        {
+                            var text = textEl.GetString();
+                            if (!string.IsNullOrEmpty(text))
+                                yield return new StreamEvent.TextDelta(text);
+                        }
+                        else if (part.TryGetProperty("functionCall", out var fc))
+                        {
+                            var funcName = fc.GetProperty("name").GetString()!;
+                            var id = fcCount > 1 ? $"{funcName}_{fcIndex}" : funcName;
+                            var argsJson = fc.GetProperty("args").GetRawText();
+                            yield return new StreamEvent.ToolCallStart(id, funcName);
+                            yield return new StreamEvent.ToolCallDelta(id, argsJson);
+                            fcIndex++;
+                        }
                     }
                 }
             }

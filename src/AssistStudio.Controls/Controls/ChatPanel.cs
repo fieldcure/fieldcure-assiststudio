@@ -770,17 +770,10 @@ public sealed class ChatPanel : Control
 
         try
         {
-            if (RegisteredTools.Count > 0)
             {
-                // Tool calling mode: use CompleteAsync (non-streaming) to support tool calls
-                await ExecuteWithToolCallingAsync(assistantMessage, userMessage, ct);
-            }
-            else
-            {
-                // Standard streaming mode
-                var request = await CreateRequestAsync(_messages.ToList());
-                var result = await ConsumeStreamAsync(Provider.StreamAsync(request, ct), assistantMessage, ct);
-                await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content, result.IsTruncated, result.Usage?.TotalTokens ?? 0);
+                var result = await StreamAndExecuteAsync(assistantMessage, ct);
+                await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content,
+                    result.IsTruncated, result.Usage?.TotalTokens ?? 0);
             }
 
             if (IsDebugMode)
@@ -1140,25 +1133,45 @@ public sealed class ChatPanel : Control
 
     #region Private Methods
 
-    private record StreamResult(TokenUsage? Usage, bool IsTruncated);
+    private record StreamResult(TokenUsage? Usage, bool IsTruncated, IReadOnlyList<ToolCall>? ToolCalls = null)
+    {
+        public bool HasToolCalls => ToolCalls is { Count: > 0 };
+    }
 
     /// <summary>
     /// Consumes a stream of <see cref="StreamEvent"/> instances, appending text deltas to the message
-    /// and rendering them in the chat UI. Returns aggregated usage and truncation info.
+    /// and rendering them in the chat UI. Returns aggregated usage, truncation info, and any tool calls.
     /// </summary>
     private async Task<StreamResult> ConsumeStreamAsync(
         IAsyncEnumerable<StreamEvent> events, ChatMessage message, CancellationToken ct)
     {
         TokenUsage? usage = null;
         var isTruncated = false;
+        var toolAccumulator = new StreamToolCallAccumulator();
+        var thinkingBlockStarted = false;
 
         await foreach (var evt in events.WithCancellation(ct))
         {
             switch (evt)
             {
+                case StreamEvent.ThinkingDelta thinking:
+                    if (!thinkingBlockStarted)
+                    {
+                        await _renderer.BeginThinkingBlockAsync(message.Id);
+                        thinkingBlockStarted = true;
+                    }
+                    message.ThinkingContent = (message.ThinkingContent ?? "") + thinking.Text;
+                    await _renderer.AppendThinkingTokenAsync(message.Id, thinking.Text);
+                    break;
                 case StreamEvent.TextDelta delta:
                     message.Content += delta.Text;
                     await _renderer.AppendTokenAsync(message.Id, delta.Text);
+                    break;
+                case StreamEvent.ToolCallStart start:
+                    toolAccumulator.HandleStart(start);
+                    break;
+                case StreamEvent.ToolCallDelta delta:
+                    toolAccumulator.HandleDelta(delta);
                     break;
                 case StreamEvent.Usage u:
                     usage = u.TokenUsage;
@@ -1169,7 +1182,94 @@ public sealed class ChatPanel : Control
             }
         }
 
-        return new StreamResult(usage, isTruncated);
+        if (thinkingBlockStarted)
+            await _renderer.EndThinkingBlockAsync(message.Id);
+
+        var toolCalls = toolAccumulator.HasToolCalls ? toolAccumulator.Drain() : null;
+        return new StreamResult(usage, isTruncated, toolCalls);
+    }
+
+    /// <summary>
+    /// Streams an AI response and executes any tool calls, looping until the AI
+    /// produces a text-only response or max rounds are reached. Unifies the previously
+    /// separate streaming-only and tool-calling code paths.
+    /// </summary>
+    private async Task<StreamResult> StreamAndExecuteAsync(
+        ChatMessage assistantMessage, CancellationToken ct)
+    {
+        ToolCallExecutor? executor = null;
+        if (RegisteredTools.Count > 0)
+        {
+            executor = new ToolCallExecutor(RegisteredTools);
+            if (_approvalPanel is not null && _inputArea is not null)
+            {
+                executor.ConfirmationHandler = async (toolName, arguments) =>
+                {
+                    _approvalPanel.ToolName = toolName;
+                    _approvalPanel.ToolDisplayName = GetLocalizedToolName(toolName);
+                    _approvalPanel.Arguments = arguments;
+                    _approvalPanel.IsExpanded = false;
+                    _inputArea.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+                    _approvalPanel.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+
+                    _approvalTcs = new TaskCompletionSource<bool>();
+                    var approved = await _approvalTcs.Task;
+
+                    _approvalPanel.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+                    _inputArea.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+
+                    return approved;
+                };
+            }
+        }
+
+        StreamResult result;
+        var round = 0;
+
+        do
+        {
+            var request = await CreateRequestAsync(_messages.ToList());
+            result = await ConsumeStreamAsync(Provider!.StreamAsync(request, ct), assistantMessage, ct);
+
+            if (!result.HasToolCalls || executor is null)
+                break;
+
+            round++;
+            if (round > MaxToolCallRounds) break;
+
+            // Add the assistant's tool call message to history
+            var toolCallMsg = new ChatMessage(ChatRole.Assistant)
+            {
+                ToolCalls = result.ToolCalls,
+                Content = assistantMessage.Content,
+                ProviderName = Provider.ProviderName,
+                ProviderModelId = Provider.ModelId
+            };
+            _messages.Add(toolCallMsg);
+
+            // Execute each tool call and add results
+            foreach (var call in result.ToolCalls!)
+            {
+                string toolResult;
+                try
+                {
+                    toolResult = await executor.ExecuteAsync(call, ct);
+                }
+                catch (Exception ex)
+                {
+                    DiagnosticLogger.LogException(ex);
+                    toolResult = $"{{\"error\":\"{ex.Message}\"}}";
+                }
+
+                _messages.Add(new ChatMessage(ChatRole.Tool, toolResult) { ToolCallId = call.Id });
+
+                var toolStatus = $"[Tool: {call.FunctionName}]\n";
+                assistantMessage.Content += toolStatus;
+                await _renderer.AppendTokenAsync(assistantMessage.Id, toolStatus);
+            }
+        } while (true);
+
+        return result;
     }
 
     /// <summary>
@@ -1283,9 +1383,7 @@ public sealed class ChatPanel : Control
 
         try
         {
-            var request = await CreateRequestAsync(_messages.ToList());
-
-            var result = await ConsumeStreamAsync(Provider.StreamAsync(request, ct), assistantMessage, ct);
+            var result = await StreamAndExecuteAsync(assistantMessage, ct);
 
             await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content, result.IsTruncated, result.Usage?.TotalTokens ?? 0);
 
@@ -1499,95 +1597,6 @@ public sealed class ChatPanel : Control
             // Resource loading may fail if no .resw files are available (consumer app).
             // Defaults in chat.html will be used.
         }
-    }
-
-    /// <summary>
-    /// Executes a tool calling loop: sends CompleteAsync, processes tool calls, re-sends with results,
-    /// repeating until the AI returns a text-only response or max rounds are reached.
-    /// </summary>
-    private async Task ExecuteWithToolCallingAsync(ChatMessage assistantMessage, ChatMessage userMessage, CancellationToken ct)
-    {
-        var executor = new ToolCallExecutor(RegisteredTools);
-
-        if (_approvalPanel is not null && _inputArea is not null)
-        {
-            executor.ConfirmationHandler = async (toolName, arguments) =>
-            {
-                // Show approval panel, hide input
-                _approvalPanel.ToolName = toolName;
-                _approvalPanel.ToolDisplayName = GetLocalizedToolName(toolName);
-                _approvalPanel.Arguments = arguments;
-                _approvalPanel.IsExpanded = false;
-                _inputArea.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
-                _approvalPanel.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
-
-                // Wait for user decision
-                _approvalTcs = new TaskCompletionSource<bool>();
-                var approved = await _approvalTcs.Task;
-
-                // Restore input
-                _approvalPanel.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
-                _inputArea.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
-
-                return approved;
-            };
-        }
-
-        var request = await CreateRequestAsync(_messages.ToList());
-
-        var response = await Provider!.CompleteAsync(request, ct);
-        var round = 0;
-
-        while (response.HasToolCalls && round < MaxToolCallRounds)
-        {
-            round++;
-
-            // Add the assistant's tool call message to history (once per round)
-            var toolCallMsg = new ChatMessage(ChatRole.Assistant)
-            {
-                ToolCalls = response.ToolCalls,
-                ProviderName = Provider.ProviderName,
-                ProviderModelId = Provider.ModelId
-            };
-            if (!string.IsNullOrEmpty(response.Content))
-                toolCallMsg.Content = response.Content;
-            _messages.Add(toolCallMsg);
-
-            // Execute each tool call and add results
-            foreach (var call in response.ToolCalls)
-            {
-                string result;
-                try
-                {
-                    result = await executor.ExecuteAsync(call, ct);
-                }
-                catch (Exception ex)
-                {
-                    DiagnosticLogger.LogException(ex);
-                    result = $"{{\"error\":\"{ex.Message}\"}}";
-                }
-
-                // Add tool result message to history
-                var toolResultMsg = new ChatMessage(ChatRole.Tool, result) { ToolCallId = call.Id };
-                _messages.Add(toolResultMsg);
-
-                // Show tool activity in the UI
-                var toolStatus = $"[Tool: {call.FunctionName}]\n";
-                assistantMessage.Content += toolStatus;
-                await _renderer.AppendTokenAsync(assistantMessage.Id, toolStatus);
-            }
-
-            // Re-send with tool results
-            request = await CreateRequestAsync(_messages.ToList());
-            response = await Provider.CompleteAsync(request, ct);
-        }
-
-        // Display final text response
-        var finalText = response.Content ?? "";
-        assistantMessage.Content += finalText;
-        await _renderer.AppendTokenAsync(assistantMessage.Id, finalText);
-        await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content,
-            response.IsTruncated, response.Usage?.TotalTokens ?? 0);
     }
 
     /// <summary>
