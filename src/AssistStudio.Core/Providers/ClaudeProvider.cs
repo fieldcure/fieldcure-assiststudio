@@ -584,7 +584,14 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        if (_ownsHttpClient)
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>Releases managed resources when <paramref name="disposing"/> is <c>true</c>.</summary>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (disposing && _ownsHttpClient)
             _httpClient.Dispose();
     }
 
