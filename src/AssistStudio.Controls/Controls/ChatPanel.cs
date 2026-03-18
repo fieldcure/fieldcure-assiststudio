@@ -788,7 +788,10 @@ public sealed class ChatPanel : Control
                 await SummarizeHistoryAsync(ct);
             }
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content);
+        }
         catch (Exception ex)
         {
             DiagnosticLogger.LogException(ex);
@@ -865,7 +868,10 @@ public sealed class ChatPanel : Control
                     await _renderer.SetDebugDataAsync(origUserMsg.Id, Provider.LastRequestBody, assistantMessage.Id, Provider.LastRawResponse);
             }
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content);
+        }
         catch (Exception ex)
         {
             DiagnosticLogger.LogException(ex);
@@ -979,7 +985,10 @@ public sealed class ChatPanel : Control
             var result = await ConsumeStreamAsync(Provider.StreamAsync(summaryRequest, ct), summaryMessage, ct);
             await _renderer.FinalizeMessageAsync(summaryMessage.Id, summaryMessage.Content, result.IsTruncated);
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            await _renderer.FinalizeMessageAsync(summaryMessage.Id, summaryMessage.Content);
+        }
         catch (Exception ex)
         {
             DiagnosticLogger.LogException(ex);
@@ -1064,7 +1073,10 @@ public sealed class ChatPanel : Control
             _messages.Insert(0, new ChatMessage(ChatRole.System,
                 $"[Previous conversation summary]\n{summaryMessage.Content}"));
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            await _renderer.FinalizeMessageAsync(summaryMessage.Id, summaryMessage.Content);
+        }
         catch (Exception ex)
         {
             DiagnosticLogger.LogException(ex);
@@ -1396,7 +1408,10 @@ public sealed class ChatPanel : Control
                 await SummarizeHistoryAsync(ct);
             }
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content);
+        }
         catch (Exception ex)
         {
             DiagnosticLogger.LogException(ex);
