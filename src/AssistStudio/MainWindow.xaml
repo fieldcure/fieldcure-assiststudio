@@ -6,7 +6,6 @@
     xmlns:local="using:AssistStudio"
     xmlns:fv="using:FieldCure.AssistStudio.Controls"
     xmlns:vm="using:AssistStudio.Modules.ViewModels"
-    xmlns:settings="using:AssistStudio.Settings"
     xmlns:views="using:AssistStudio.Modules.Views"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -27,7 +26,7 @@
 
         <!-- Settings Pane -->
         <SplitView.Pane>
-            <settings:SettingsPanel x:Name="SettingsPane" />
+            <Frame x:Name="SettingsFrame" />
         </SplitView.Pane>
 
         <!-- Main Content: TabView -->

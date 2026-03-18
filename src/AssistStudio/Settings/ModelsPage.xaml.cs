@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using Microsoft.Windows.ApplicationModel.Resources;
+using System.Collections.ObjectModel;
 
 namespace AssistStudio.Settings;
 
@@ -20,9 +21,9 @@ public sealed partial class ModelsPage : Page
     #region Fields
 
     /// <summary>
-    /// Reference to the parent settings panel for syncing preset changes.
+    /// The collection of provider presets loaded from settings.
     /// </summary>
-    private SettingsPanel? _settings;
+    private ObservableCollection<ProviderPreset> _presets = [];
     private bool _isPopulating;
 
     #endregion
@@ -74,10 +75,7 @@ public sealed partial class ModelsPage : Page
     {
         base.OnNavigatedTo(e);
 
-        if (e.Parameter is SettingsPanel settings)
-        {
-            _settings = settings;
-        }
+        _presets = AppSettings.LoadPresets();
 
         LoadApiKeys();
         PopulateModelCombos();
@@ -155,7 +153,7 @@ public sealed partial class ModelsPage : Page
     /// </summary>
     private void UpdateAllSubHeaders()
     {
-        var keys = _settings?.Presets.ToDictionary(p => p.ProviderType, p => p.ApiKey)
+        var keys = _presets.ToDictionary(p => p.ProviderType, p => p.ApiKey)
                    ?? new Dictionary<string, string>();
 
         var sections = new (string Provider, CollapsibleSection Section, ComboBox Combo)[]
@@ -180,7 +178,7 @@ public sealed partial class ModelsPage : Page
     /// </summary>
     private void UpdateExpandedState()
     {
-        var keys = _settings?.Presets.ToDictionary(p => p.ProviderType, p => p.ApiKey)
+        var keys = _presets.ToDictionary(p => p.ProviderType, p => p.ApiKey)
                    ?? new Dictionary<string, string>();
 
         var sections = new (string Provider, CollapsibleSection Section)[]
@@ -228,7 +226,7 @@ public sealed partial class ModelsPage : Page
     /// </summary>
     private void LoadApiKeys()
     {
-        var keys = _settings?.Presets.ToDictionary(p => p.ProviderType, p => p.ApiKey)
+        var keys = _presets.ToDictionary(p => p.ProviderType, p => p.ApiKey)
                    ?? new Dictionary<string, string>();
 
         keys.TryGetValue("Claude", out var claudeKey);
@@ -304,7 +302,7 @@ public sealed partial class ModelsPage : Page
         PasswordVaultHelper.DeleteApiKey(provider);
 
         // Clear the in-memory cached key so SyncPresetsFromUI won't resurrect it
-        var existing = _settings?.Presets.FirstOrDefault(p => p.ProviderType == provider);
+        var existing = _presets.FirstOrDefault(p => p.ProviderType == provider);
         if (existing is not null)
             existing.ApiKey = "";
 
@@ -425,7 +423,7 @@ public sealed partial class ModelsPage : Page
     /// </summary>
     private void PopulatePdfCombos()
     {
-        var presets = _settings?.Presets.ToDictionary(p => p.ProviderType) ?? [];
+        var presets = _presets.ToDictionary(p => p.ProviderType) ?? [];
 
         var combos = new (string Provider, ComboBox Combo)[]
         {
@@ -454,7 +452,7 @@ public sealed partial class ModelsPage : Page
     /// </summary>
     private void PopulateThinkingToggles()
     {
-        var presets = _settings?.Presets.ToDictionary(p => p.ProviderType) ?? [];
+        var presets = _presets.ToDictionary(p => p.ProviderType) ?? [];
 
         var controls = new (string Provider, ToggleSwitch Toggle, NumberBox Budget, ComboBox OverrideCombo)[]
         {
@@ -612,10 +610,8 @@ public sealed partial class ModelsPage : Page
     /// </summary>
     private async Task RefreshAllModelCachesAsync()
     {
-        if (_settings is null) return;
-
         // Reuse API keys from already-loaded presets to avoid redundant vault calls
-        var keys = _settings.Presets.ToDictionary(p => p.ProviderType, p => p.ApiKey);
+        var keys = _presets.ToDictionary(p => p.ProviderType, p => p.ApiKey);
         var tasks = new List<Task>();
 
         var combos = new Dictionary<string, ComboBox>
@@ -733,10 +729,10 @@ public sealed partial class ModelsPage : Page
     /// </summary>
     private void SyncPresetsFromUI()
     {
-        if (_settings is null) return;
+        if (OllamaModelCombo is null) return;
 
         // Cloud providers — read API keys from vault to ensure consistency after add/remove
-        _settings.Presets.Clear();
+        _presets.Clear();
 
         foreach (var provider in new[] { "Claude", "OpenAI", "Gemini", "Groq" })
         {
@@ -775,7 +771,7 @@ public sealed partial class ModelsPage : Page
             if (provider == "Groq")
                 preset.BaseUrl = "https://api.groq.com/openai/v1";
 
-            _settings.Presets.Add(preset);
+            _presets.Add(preset);
         }
 
         // Ollama
@@ -786,7 +782,7 @@ public sealed partial class ModelsPage : Page
         else
             AppSettings.SetDefaultModel("Ollama", ollamaModel);
         var ollamaBaseUrl = GetOllamaBaseUrlFromUI();
-        _settings.Presets.Add(new ProviderPreset
+        _presets.Add(new ProviderPreset
         {
             Name = "Ollama",
             ProviderType = "Ollama",
@@ -796,13 +792,13 @@ public sealed partial class ModelsPage : Page
         });
 
         // Mock
-        _settings.Presets.Add(new ProviderPreset
+        _presets.Add(new ProviderPreset
         {
             Name = "Mock",
             ProviderType = "Mock"
         });
 
-        _settings.RaisePresetsChanged();
+        AppSettings.SavePresets(_presets);
     }
 
     /// <summary>

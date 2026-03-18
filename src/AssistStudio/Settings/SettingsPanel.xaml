@@ -19,10 +19,10 @@
                         IsSettingsVisible="False"
                         IsBackEnabled="False"
                         IsBackButtonVisible="Collapsed"
-                        ItemInvoked="OnItemInvoked">
+>
 
             <NavigationView.MenuItems>
-                <NavigationViewItem x:Uid="Nav_Profiles" Content="Profiles" Tag="Profiles" IsSelected="True">
+                <NavigationViewItem x:Uid="Nav_Profiles" Content="Profiles" Tag="Profiles">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE716;" />
                     </NavigationViewItem.Icon>

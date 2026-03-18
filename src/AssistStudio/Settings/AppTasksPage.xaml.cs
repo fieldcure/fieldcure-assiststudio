@@ -14,11 +14,6 @@ public sealed partial class AppTasksPage : Page
     #region Fields
 
     /// <summary>
-    /// Reference to the parent settings panel for accessing presets.
-    /// </summary>
-    private SettingsPanel? _settings;
-
-    /// <summary>
     /// Flag to suppress event handlers during programmatic UI updates.
     /// </summary>
     private bool _suppressEvents;
@@ -43,11 +38,6 @@ public sealed partial class AppTasksPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-
-        if (e.Parameter is SettingsPanel settings)
-        {
-            _settings = settings;
-        }
 
         _suppressEvents = true;
 
@@ -84,14 +74,14 @@ public sealed partial class AppTasksPage : Page
     private void PopulatePresetCombo()
     {
         PresetCombo.Items.Clear();
-        if (_settings is null) return;
 
+        var presets = AppSettings.LoadPresets();
         var selectedName = AppSettings.AppTasksPreset;
         var selectedIndex = -1;
 
-        for (var i = 0; i < _settings.Presets.Count; i++)
+        for (var i = 0; i < presets.Count; i++)
         {
-            var preset = _settings.Presets[i];
+            var preset = presets[i];
             PresetCombo.Items.Add(preset.Name);
             if (preset.Name == selectedName)
             {

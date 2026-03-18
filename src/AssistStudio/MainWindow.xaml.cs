@@ -65,18 +65,25 @@ public sealed partial class MainWindow : Window
         // Create ViewModel
         ViewModel = new MainViewModel
         {
-            GetPresets = () => SettingsPane.Presets,
+            GetPresets = AppSettings.LoadPresets,
         };
 
         // Wire settings events → ViewModel
-        SettingsPane.ThemeChanged += (_, theme) =>
+        AppSettings.ThemeChanged += (_, theme) =>
         {
             ApplyAppTheme(theme);
             ViewModel.ApplyThemeToAll(theme);
         };
-        SettingsPane.SystemPromptChanged += (_, prompt) => ViewModel.ApplySystemPromptToAll(prompt);
-        SettingsPane.PresetsChanged += (_, _) => ViewModel.RefreshPresetsOnAll();
-        SettingsPane.ProfilesChanged += (_, _) => ViewModel.RefreshProfilesOnAll();
+        AppSettings.SystemPromptChanged += (_, prompt) => ViewModel.ApplySystemPromptToAll(prompt);
+        AppSettings.PresetsChanged += (_, _) => ViewModel.RefreshPresetsOnAll();
+        AppSettings.ProfilesChanged += (_, _) => ViewModel.RefreshProfilesOnAll();
+
+        // Navigate to SettingsPanel when the pane opens
+        RootSplitView.PaneOpening += (_, _) =>
+        {
+            SettingsFrame.Navigate(typeof(Settings.SettingsPanel), null,
+                new Microsoft.UI.Xaml.Media.Animation.SuppressNavigationTransitionInfo());
+        };
 
         // Handle app close with unsaved changes check
         _appWindow!.Closing += OnAppWindowClosing;
@@ -450,16 +457,6 @@ public sealed partial class MainWindow : Window
     private void OnMenuSettings(object sender, RoutedEventArgs e)
     {
         RootSplitView.IsPaneOpen = !RootSplitView.IsPaneOpen;
-        if (RootSplitView.IsPaneOpen && !SettingsPane.IsInitialNavigationDone)
-        {
-            RootSplitView.PaneOpened += OnSettingsPaneFirstOpened;
-        }
-    }
-
-    private void OnSettingsPaneFirstOpened(SplitView sender, object args)
-    {
-        RootSplitView.PaneOpened -= OnSettingsPaneFirstOpened;
-        SettingsPane.EnsureInitialNavigation();
     }
 
     #endregion

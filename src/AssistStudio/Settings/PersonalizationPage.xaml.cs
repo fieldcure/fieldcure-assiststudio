@@ -9,15 +9,6 @@ namespace AssistStudio.Settings;
 /// </summary>
 public sealed partial class PersonalizationPage : Page
 {
-    #region Fields
-
-    /// <summary>
-    /// Reference to the parent settings panel for raising theme change events.
-    /// </summary>
-    private SettingsPanel? _settings;
-
-    #endregion
-
     #region Constructors
 
     /// <summary>
@@ -37,11 +28,6 @@ public sealed partial class PersonalizationPage : Page
     {
         base.OnNavigatedTo(e);
 
-        if (e.Parameter is SettingsPanel settings)
-        {
-            _settings = settings;
-        }
-
         // Load current theme
         var theme = AppSettings.Theme;
         for (var i = 0; i < ThemeRadioButtons.Items.Count; i++)
@@ -59,13 +45,13 @@ public sealed partial class PersonalizationPage : Page
     #region Event Handlers
 
     /// <summary>
-    /// Handles theme radio button selection changes and notifies the settings panel.
+    /// Handles theme radio button selection changes.
     /// </summary>
     private void OnThemeChanged(object sender, SelectionChangedEventArgs e)
     {
         if (ThemeRadioButtons.SelectedItem is RadioButton rb && rb.Tag is string theme)
         {
-            _settings?.RaiseThemeChanged(theme);
+            AppSettings.Theme = theme;
         }
     }
 

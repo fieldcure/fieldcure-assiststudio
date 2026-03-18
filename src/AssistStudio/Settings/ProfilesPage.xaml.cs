@@ -17,11 +17,6 @@ public sealed partial class ProfilesPage : Page
     #region Fields
 
     /// <summary>
-    /// Reference to the parent settings panel for raising change events.
-    /// </summary>
-    private SettingsPanel? _settings;
-
-    /// <summary>
     /// The list of all profiles (built-in and custom).
     /// </summary>
     private List<Profile> _profiles = [];
@@ -51,11 +46,6 @@ public sealed partial class ProfilesPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-
-        if (e.Parameter is SettingsPanel settings)
-        {
-            _settings = settings;
-        }
 
         _suppressEvents = true;
         _profiles = AppSettings.LoadProfiles();
@@ -284,8 +274,8 @@ public sealed partial class ProfilesPage : Page
         if (ProfileListView.SelectedItem is Profile selected)
         {
             AppSettings.ActiveProfile = selected.Name;
-            _settings?.RaiseSystemPromptChanged(selected.Text);
-            _settings?.RaiseProfilesChanged();
+            AppSettings.SystemPrompt = selected.Text;
+            AppSettings.NotifyProfilesChanged();
         }
     }
 
@@ -434,7 +424,7 @@ public sealed partial class ProfilesPage : Page
         {
             AppSettings.ActiveProfile = selected.Name;
             AppSettings.SystemPrompt = selected.Text;
-            _settings?.RaiseSystemPromptChanged(selected.Text);
+            AppSettings.SystemPrompt = selected.Text;
         }
     }
 

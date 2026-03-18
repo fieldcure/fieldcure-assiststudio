@@ -12,6 +12,35 @@ namespace AssistStudio.Modules.Helpers;
 /// </summary>
 public static class AppSettings
 {
+    #region Events
+
+    /// <summary>
+    /// Raised when the application theme changes.
+    /// </summary>
+    public static event EventHandler<string>? ThemeChanged;
+
+    /// <summary>
+    /// Raised when the system prompt text changes.
+    /// </summary>
+    public static event EventHandler<string>? SystemPromptChanged;
+
+    /// <summary>
+    /// Raised when provider presets are saved.
+    /// </summary>
+    public static event EventHandler? PresetsChanged;
+
+    /// <summary>
+    /// Raised when profiles are added, removed, or modified.
+    /// </summary>
+    public static event EventHandler? ProfilesChanged;
+
+    /// <summary>
+    /// Notifies subscribers that profiles have changed.
+    /// </summary>
+    public static void NotifyProfilesChanged() => ProfilesChanged?.Invoke(null, EventArgs.Empty);
+
+    #endregion
+
     #region Properties
 
     /// <summary>
@@ -34,7 +63,11 @@ public static class AppSettings
     public static string Theme
     {
         get => Settings.Values["Theme"] as string ?? "System";
-        set => Settings.Values["Theme"] = value;
+        set
+        {
+            Settings.Values["Theme"] = value;
+            ThemeChanged?.Invoke(null, value);
+        }
     }
 
     /// <summary>
@@ -43,7 +76,11 @@ public static class AppSettings
     public static string SystemPrompt
     {
         get => Settings.Values["SystemPrompt"] as string ?? "";
-        set => Settings.Values["SystemPrompt"] = value;
+        set
+        {
+            Settings.Values["SystemPrompt"] = value;
+            SystemPromptChanged?.Invoke(null, value);
+        }
     }
 
     /// <summary>
@@ -319,6 +356,8 @@ public static class AppSettings
         var list = presets as List<ProviderPreset> ?? [.. presets];
         var json = JsonSerializer.Serialize(list, AppJsonContext.Default.ListProviderPreset);
         Settings.Values["ProviderPresets"] = json;
+
+        PresetsChanged?.Invoke(null, EventArgs.Empty);
     }
 
     /// <summary>
