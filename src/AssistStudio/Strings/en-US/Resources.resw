@@ -374,13 +374,16 @@
     <value>Delete</value>
   </data>
   <data name="ModelDialog_Pull.Content" xml:space="preserve">
-    <value>Pull</value>
+    <value>Download</value>
   </data>
   <data name="ModelDialog_CustomModel.PlaceholderText" xml:space="preserve">
     <value>Custom model name</value>
   </data>
   <data name="ModelDialog_PullCustom.Content" xml:space="preserve">
-    <value>Pull</value>
+    <value>Download</value>
+  </data>
+  <data name="ModelDialog_Queued" xml:space="preserve">
+    <value>Queued</value>
   </data>
   <data name="Tab_NewConversation" xml:space="preserve">
     <value>Untitled</value>

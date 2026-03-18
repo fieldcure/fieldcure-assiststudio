@@ -66,7 +66,7 @@
                         <TextBlock Grid.Column="2" Text="{Binding EstimatedSize}" VerticalAlignment="Center"
                                    Opacity="0.6" FontSize="12" />
                         <Button Grid.Column="3" x:Uid="ModelDialog_Pull"
-                                Content="Pull" Tag="{Binding Name}"
+                                Content="Download" Tag="{Binding Name}"
                                 Click="OnPullModel" />
                     </Grid>
                 </DataTemplate>
@@ -78,7 +78,7 @@
             <TextBox x:Name="CustomModelBox"
                      x:Uid="ModelDialog_CustomModel"
                      PlaceholderText="Custom model name" Width="330" />
-            <Button x:Uid="ModelDialog_PullCustom" Content="Pull" Click="OnPullCustomModel" />
+            <Button x:Uid="ModelDialog_PullCustom" Content="Download" Click="OnPullCustomModel" />
         </StackPanel>
     </StackPanel>
 </ContentDialog>

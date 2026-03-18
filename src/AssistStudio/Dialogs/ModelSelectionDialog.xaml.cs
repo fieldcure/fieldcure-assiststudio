@@ -166,7 +166,7 @@ public sealed partial class ModelSelectionDialog : ContentDialog
         {
             ModelsToPull.Add(modelName);
             btn.IsEnabled = false;
-            btn.Content = "Queued";
+            btn.Content = new Windows.ApplicationModel.Resources.ResourceLoader().GetString("ModelDialog_Queued");
         }
     }
 
