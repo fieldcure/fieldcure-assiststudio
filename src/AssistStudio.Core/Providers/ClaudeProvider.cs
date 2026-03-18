@@ -476,7 +476,8 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
             }
         }
 
-        var thinkingBudget = request.ThinkingEnabled ? (request.ThinkingBudget ?? 4096) : 0;
+        // Claude API requires budget_tokens >= 1024
+        var thinkingBudget = request.ThinkingEnabled ? Math.Max(request.ThinkingBudget ?? 16384, 1024) : 0;
         // max_tokens must be greater than budget_tokens when thinking is enabled
         var maxTokens = request.ThinkingEnabled
             ? Math.Max(request.MaxTokens, thinkingBudget + request.MaxTokens)

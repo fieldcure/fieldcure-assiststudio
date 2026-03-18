@@ -464,17 +464,34 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
             }
         }
 
+        var isOSeries = ModelId.StartsWith("o", StringComparison.OrdinalIgnoreCase);
+
+        // o-series: max_completion_tokens covers BOTH reasoning + output tokens combined.
+        // When thinking is enabled, sum output + thinking budget so reasoning doesn't starve output.
+        // e.g. user sets output=4096, budget=16384 → max_completion_tokens=20480
+        var maxTokens = request.MaxTokens;
+        if (isOSeries && request.ThinkingEnabled)
+        {
+            var thinkingBudget = request.ThinkingBudget ?? 16384;
+            maxTokens = request.MaxTokens + thinkingBudget;
+        }
+
         var body = new JsonObject
         {
             ["model"] = ModelId,
-            ["max_tokens"] = request.MaxTokens,
-            ["temperature"] = request.Temperature,
+            [isOSeries ? "max_completion_tokens" : "max_tokens"] = maxTokens,
             ["messages"] = messages,
             ["stream"] = stream
         };
 
+        // o-series models do not support temperature parameter
+        if (!isOSeries)
+        {
+            body["temperature"] = request.Temperature;
+        }
+
         // Extended thinking: add reasoning_effort for o-series models
-        if (request.ThinkingEnabled && ModelId.StartsWith("o", StringComparison.OrdinalIgnoreCase))
+        if (request.ThinkingEnabled && isOSeries)
         {
             var effort = request.ThinkingBudget switch
             {
