@@ -419,6 +419,15 @@ public partial class GeminiProvider : IAiProvider, IDisposable
             }
         };
 
+        // Extended thinking support
+        if (request.ThinkingEnabled)
+        {
+            body["thinkingConfig"] = new JsonObject
+            {
+                ["thinkingBudget"] = request.ThinkingBudget ?? 4096
+            };
+        }
+
         if (systemText is not null)
         {
             body["systemInstruction"] = new JsonObject

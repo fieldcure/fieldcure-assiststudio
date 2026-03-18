@@ -94,6 +94,18 @@
                                       HorizontalAlignment="Stretch"
                                       SelectionChanged="OnPdfHandlingChanged" />
                         </StackPanel>
+                        <StackPanel Spacing="4">
+                            <ToggleSwitch x:Name="ClaudeThinkingToggle"
+                                          Header="Extended Thinking"
+                                          Toggled="OnThinkingToggled" />
+                            <NumberBox x:Name="ClaudeThinkingBudget"
+                                       Header="Thinking Budget (tokens)"
+                                       Value="4096" Minimum="1024" Maximum="128000"
+                                       SpinButtonPlacementMode="Inline"
+                                       SmallChange="1024" LargeChange="4096"
+                                       IsEnabled="False"
+                                       ValueChanged="OnThinkingBudgetChanged" />
+                        </StackPanel>
                     </StackPanel>
                 </StackPanel>
 
@@ -152,6 +164,18 @@
                             <ComboBox x:Name="OpenAIPdfCombo"
                                       HorizontalAlignment="Stretch"
                                       SelectionChanged="OnPdfHandlingChanged" />
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <ToggleSwitch x:Name="OpenAIThinkingToggle"
+                                          Header="Extended Thinking"
+                                          Toggled="OnThinkingToggled" />
+                            <NumberBox x:Name="OpenAIThinkingBudget"
+                                       Header="Thinking Budget (tokens)"
+                                       Value="4096" Minimum="1024" Maximum="128000"
+                                       SpinButtonPlacementMode="Inline"
+                                       SmallChange="1024" LargeChange="4096"
+                                       IsEnabled="False"
+                                       ValueChanged="OnThinkingBudgetChanged" />
                         </StackPanel>
                     </StackPanel>
                 </StackPanel>
@@ -212,6 +236,18 @@
                                       HorizontalAlignment="Stretch"
                                       SelectionChanged="OnPdfHandlingChanged" />
                         </StackPanel>
+                        <StackPanel Spacing="4">
+                            <ToggleSwitch x:Name="GeminiThinkingToggle"
+                                          Header="Extended Thinking"
+                                          Toggled="OnThinkingToggled" />
+                            <NumberBox x:Name="GeminiThinkingBudget"
+                                       Header="Thinking Budget (tokens)"
+                                       Value="4096" Minimum="1024" Maximum="128000"
+                                       SpinButtonPlacementMode="Inline"
+                                       SmallChange="1024" LargeChange="4096"
+                                       IsEnabled="False"
+                                       ValueChanged="OnThinkingBudgetChanged" />
+                        </StackPanel>
                     </StackPanel>
                 </StackPanel>
 
@@ -270,6 +306,18 @@
                             <ComboBox x:Name="GroqPdfCombo"
                                       HorizontalAlignment="Stretch"
                                       SelectionChanged="OnPdfHandlingChanged" />
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <ToggleSwitch x:Name="GroqThinkingToggle"
+                                          Header="Extended Thinking"
+                                          Toggled="OnThinkingToggled" />
+                            <NumberBox x:Name="GroqThinkingBudget"
+                                       Header="Thinking Budget (tokens)"
+                                       Value="4096" Minimum="1024" Maximum="128000"
+                                       SpinButtonPlacementMode="Inline"
+                                       SmallChange="1024" LargeChange="4096"
+                                       IsEnabled="False"
+                                       ValueChanged="OnThinkingBudgetChanged" />
                         </StackPanel>
                     </StackPanel>
                 </StackPanel>

@@ -282,6 +282,7 @@ public sealed partial class ModelsPage : Page
             PopulateComboFromCacheOrFallback("Groq", GroqModelCombo, FallbackGroqModels);
 
             PopulatePdfCombos();
+            PopulateThinkingToggles();
         }
         finally
         {
@@ -328,6 +329,38 @@ public sealed partial class ModelsPage : Page
             var saved = presets.TryGetValue(provider, out var p) ? p.PdfCapability : PdfCapability.Auto;
             var idx = Array.FindIndex(PdfOptions, o => o.Value == saved);
             combo.SelectedIndex = idx >= 0 ? idx : 0;
+        }
+    }
+
+    /// <summary>
+    /// Populates all Extended Thinking toggle switches and budget boxes from saved presets.
+    /// </summary>
+    private void PopulateThinkingToggles()
+    {
+        var presets = _settings?.Presets.ToDictionary(p => p.ProviderType) ?? [];
+
+        var controls = new (string Provider, ToggleSwitch Toggle, NumberBox Budget)[]
+        {
+            ("Claude", ClaudeThinkingToggle, ClaudeThinkingBudget),
+            ("OpenAI", OpenAIThinkingToggle, OpenAIThinkingBudget),
+            ("Gemini", GeminiThinkingToggle, GeminiThinkingBudget),
+            ("Groq", GroqThinkingToggle, GroqThinkingBudget),
+        };
+
+        foreach (var (provider, toggle, budget) in controls)
+        {
+            if (presets.TryGetValue(provider, out var p))
+            {
+                toggle.IsOn = p.ThinkingEnabled;
+                budget.Value = p.ThinkingBudget ?? 4096;
+                budget.IsEnabled = p.ThinkingEnabled;
+            }
+            else
+            {
+                toggle.IsOn = false;
+                budget.Value = 4096;
+                budget.IsEnabled = false;
+            }
         }
     }
 
@@ -501,13 +534,13 @@ public sealed partial class ModelsPage : Page
             var key = PasswordVaultHelper.LoadApiKey(provider);
             if (string.IsNullOrEmpty(key)) continue;
 
-            var (modelCombo, pdfCombo) = provider switch
+            var (modelCombo, pdfCombo, thinkingToggle, thinkingBudget) = provider switch
             {
-                "Claude" => (ClaudeModelCombo, ClaudePdfCombo),
-                "OpenAI" => (OpenAIModelCombo, OpenAIPdfCombo),
-                "Gemini" => (GeminiModelCombo, GeminiPdfCombo),
-                "Groq" => (GroqModelCombo, GroqPdfCombo),
-                _ => ((ComboBox?)null, (ComboBox?)null)
+                "Claude" => (ClaudeModelCombo, ClaudePdfCombo, ClaudeThinkingToggle, ClaudeThinkingBudget),
+                "OpenAI" => (OpenAIModelCombo, OpenAIPdfCombo, OpenAIThinkingToggle, OpenAIThinkingBudget),
+                "Gemini" => (GeminiModelCombo, GeminiPdfCombo, GeminiThinkingToggle, GeminiThinkingBudget),
+                "Groq" => (GroqModelCombo, GroqPdfCombo, GroqThinkingToggle, GroqThinkingBudget),
+                _ => ((ComboBox?)null, (ComboBox?)null, (ToggleSwitch?)null, (NumberBox?)null)
             };
 
             var modelId = modelCombo?.SelectedItem as string ?? "";
@@ -522,7 +555,11 @@ public sealed partial class ModelsPage : Page
                 ProviderType = provider,
                 ModelId = modelId,
                 ApiKey = key,
-                PdfCapability = pdfCombo is not null ? GetPdfCapabilityFromCombo(pdfCombo) : PdfCapability.Auto
+                PdfCapability = pdfCombo is not null ? GetPdfCapabilityFromCombo(pdfCombo) : PdfCapability.Auto,
+                ThinkingEnabled = thinkingToggle?.IsOn ?? false,
+                ThinkingBudget = thinkingToggle?.IsOn == true && thinkingBudget is not null && !double.IsNaN(thinkingBudget.Value)
+                    ? (int)thinkingBudget.Value
+                    : null
             };
 
             if (provider == "Groq")
@@ -584,6 +621,38 @@ public sealed partial class ModelsPage : Page
     /// Handles PDF handling combo box selection changes for any provider.
     /// </summary>
     private void OnPdfHandlingChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isPopulating) return;
+        SyncPresetsFromUI();
+    }
+
+    /// <summary>
+    /// Handles the Extended Thinking toggle switch for any provider.
+    /// Enables/disables the corresponding budget NumberBox and syncs presets.
+    /// </summary>
+    private void OnThinkingToggled(object sender, RoutedEventArgs e)
+    {
+        if (_isPopulating) return;
+        if (sender is ToggleSwitch toggle)
+        {
+            var budgetBox = toggle.Name switch
+            {
+                nameof(ClaudeThinkingToggle) => ClaudeThinkingBudget,
+                nameof(OpenAIThinkingToggle) => OpenAIThinkingBudget,
+                nameof(GeminiThinkingToggle) => GeminiThinkingBudget,
+                nameof(GroqThinkingToggle) => GroqThinkingBudget,
+                _ => (NumberBox?)null
+            };
+            if (budgetBox is not null)
+                budgetBox.IsEnabled = toggle.IsOn;
+        }
+        SyncPresetsFromUI();
+    }
+
+    /// <summary>
+    /// Handles thinking budget NumberBox value changes.
+    /// </summary>
+    private void OnThinkingBudgetChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
         if (_isPopulating) return;
         SyncPresetsFromUI();

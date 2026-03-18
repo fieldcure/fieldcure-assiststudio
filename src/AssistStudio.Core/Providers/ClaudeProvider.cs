@@ -476,14 +476,33 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
             }
         }
 
+        var thinkingBudget = request.ThinkingEnabled ? (request.ThinkingBudget ?? 4096) : 0;
+        // max_tokens must be greater than budget_tokens when thinking is enabled
+        var maxTokens = request.ThinkingEnabled
+            ? Math.Max(request.MaxTokens, thinkingBudget + request.MaxTokens)
+            : request.MaxTokens;
+
         var body = new JsonObject
         {
             ["model"] = ModelId,
-            ["max_tokens"] = request.MaxTokens,
-            ["temperature"] = request.Temperature,
+            ["max_tokens"] = maxTokens,
             ["messages"] = messages,
             ["stream"] = stream
         };
+
+        // Extended thinking: omit temperature (Claude requires it absent) and add thinking config
+        if (request.ThinkingEnabled)
+        {
+            body["thinking"] = new JsonObject
+            {
+                ["type"] = "enabled",
+                ["budget_tokens"] = thinkingBudget
+            };
+        }
+        else
+        {
+            body["temperature"] = request.Temperature;
+        }
 
         if (systemPrompt is not null)
         {

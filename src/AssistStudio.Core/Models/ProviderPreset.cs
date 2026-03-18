@@ -90,6 +90,17 @@ public partial class ProviderPreset : INotifyPropertyChanged
     public PdfCapability PdfCapability { get; set; } = PdfCapability.Auto;
 
     /// <summary>
+    /// Whether extended thinking/reasoning is enabled for this preset.
+    /// </summary>
+    public bool ThinkingEnabled { get; set; }
+
+    /// <summary>
+    /// Thinking budget in tokens. Null uses provider default (4096).
+    /// For providers that use effort levels (e.g., OpenAI o-series), mapped automatically.
+    /// </summary>
+    public int? ThinkingBudget { get; set; }
+
+    /// <summary>
     /// Whether this provider type requires an API key.
     /// </summary>
     [JsonIgnore]

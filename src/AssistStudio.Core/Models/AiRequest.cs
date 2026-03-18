@@ -28,5 +28,11 @@ public partial class AiRequest
     /// <summary>Current workspace state text from <see cref="IWorkspaceContext"/>.</summary>
     public string? WorkspaceText { get; init; }
 
+    /// <summary>Whether extended thinking/reasoning is enabled.</summary>
+    public bool ThinkingEnabled { get; init; }
+
+    /// <summary>Thinking budget in tokens. Null uses provider default.</summary>
+    public int? ThinkingBudget { get; init; }
+
     #endregion
 }

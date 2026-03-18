@@ -1668,7 +1668,9 @@ public sealed class ChatPanel : Control
             ContextChunks = chunks is { Count: > 0 } ? chunks : null,
             Temperature = preset?.Temperature ?? 0.7,
             MaxTokens = preset?.MaxTokens ?? 4096,
-            Tools = RegisteredTools.Count > 0 ? RegisteredTools : null
+            Tools = RegisteredTools.Count > 0 ? RegisteredTools : null,
+            ThinkingEnabled = preset?.ThinkingEnabled ?? false,
+            ThinkingBudget = preset?.ThinkingBudget
         };
     }
 

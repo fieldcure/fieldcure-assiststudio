@@ -473,6 +473,18 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
             ["stream"] = stream
         };
 
+        // Extended thinking: add reasoning_effort for o-series models
+        if (request.ThinkingEnabled && ModelId.StartsWith("o", StringComparison.OrdinalIgnoreCase))
+        {
+            var effort = request.ThinkingBudget switch
+            {
+                null or <= 4096 => "low",
+                <= 16384 => "medium",
+                _ => "high"
+            };
+            body["reasoning_effort"] = effort;
+        }
+
         if (stream)
         {
             body["stream_options"] = new JsonObject { ["include_usage"] = true };
