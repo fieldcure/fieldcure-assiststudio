@@ -36,7 +36,7 @@ public class SearchFilesTool : IAssistTool
     public bool RequiresConfirmation => false;
 
     /// <inheritdoc/>
-    public Task<string> ExecuteAsync(JsonElement parameters, CancellationToken ct = default)
+    public async Task<string> ExecuteAsync(JsonElement parameters, CancellationToken ct = default)
     {
         var path = parameters.GetProperty("path").GetString()
             ?? throw new ArgumentException("Missing required parameter: path");
@@ -48,7 +48,7 @@ public class SearchFilesTool : IAssistTool
         var recursive = parameters.TryGetProperty("recursive", out var recEl) && recEl.GetBoolean();
 
         if (!Directory.Exists(path))
-            return Task.FromResult(JsonSerializer.Serialize(new { error = $"Directory not found: {path}" }));
+            return JsonSerializer.Serialize(new { error = $"Directory not found: {path}" });
 
         var enumOptions = new EnumerationOptions
         {
@@ -57,30 +57,37 @@ public class SearchFilesTool : IAssistTool
             AttributesToSkip = FileAttributes.ReparsePoint
         };
 
-        var files = new List<object>();
-        try
+        // Run file enumeration on a thread-pool thread to avoid blocking the UI thread.
+        var files = await Task.Run(() =>
         {
-            foreach (var info in new DirectoryInfo(path).EnumerateFiles(pattern, enumOptions))
+            var results = new List<object>();
+            try
             {
-                try
+                foreach (var info in new DirectoryInfo(path).EnumerateFiles(pattern, enumOptions))
                 {
-                    files.Add(new
+                    ct.ThrowIfCancellationRequested();
+                    try
                     {
-                        name = info.Name,
-                        path = info.FullName,
-                        size = info.Length,
-                        modified = info.LastWriteTimeUtc.ToString("yyyy-MM-dd HH:mm:ss")
-                    });
+                        results.Add(new
+                        {
+                            name = info.Name,
+                            path = info.FullName,
+                            size = info.Length,
+                            modified = info.LastWriteTimeUtc.ToString("yyyy-MM-dd HH:mm:ss")
+                        });
+                    }
+                    catch (UnauthorizedAccessException) { }
+                    catch (IOException) { }
                 }
-                catch (UnauthorizedAccessException) { }
-                catch (IOException) { }
             }
-        }
-        catch (UnauthorizedAccessException) { }
-        catch (IOException) { }
+            catch (OperationCanceledException) { throw; }
+            catch (UnauthorizedAccessException) { }
+            catch (IOException) { }
+            return results;
+        }, ct);
 
         var result = new { count = files.Count, files };
-        return Task.FromResult(JsonSerializer.Serialize(result));
+        return JsonSerializer.Serialize(result);
     }
 
     #endregion
