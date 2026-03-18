@@ -530,7 +530,7 @@ public sealed partial class ModelsPage : Page
     /// Updates the Extended Thinking toggle, budget, and hint visibility based on
     /// the provider's thinking support heuristic and the user's override selection.
     /// </summary>
-    private void UpdateThinkingState(string provider, ComboBox modelCombo, ComboBox overrideCombo, ToggleSwitch toggle, NumberBox budget, TextBlock hint)
+    private static void UpdateThinkingState(string provider, ComboBox modelCombo, ComboBox overrideCombo, ToggleSwitch toggle, NumberBox budget, TextBlock hint)
     {
         var modelId = modelCombo.SelectedItem as string;
         var support = ThinkingCapability.GetSupport(provider, modelId);

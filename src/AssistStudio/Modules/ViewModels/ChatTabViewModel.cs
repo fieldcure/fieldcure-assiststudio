@@ -314,7 +314,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         // Force DP change callback by passing a new list instance
         AvailablePresets = new System.Collections.ArrayList(presets);
 
-        bool found = false;
+        var found = false;
         if (currentName is not null)
         {
             foreach (ProviderPreset p in presets)
@@ -375,7 +375,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Handles provider preset changes by disposing the old provider and creating a new one.
     /// </summary>
-    public void OnPresetChanged(object? sender, ProviderPreset preset)
+    public void OnPresetChanged(object? _sender, ProviderPreset preset)
     {
         // Dispose old provider
         if (Provider is IDisposable disposable)
@@ -394,7 +394,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Handles profile changes by updating the system prompt and registered tools.
     /// </summary>
-    public void OnProfileChanged(object? sender, Profile profile)
+    public void OnProfileChanged(object? _sender, Profile profile)
     {
         SystemPrompt = profile.Text;
 
@@ -407,7 +407,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Handles the auto-generated title from the utility AI and applies it to the tab.
     /// </summary>
-    public void OnTitleGenerated(object? sender, string title)
+    public void OnTitleGenerated(object? _sender, string title)
     {
         Title = title;
     }
@@ -415,7 +415,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Handles the user requesting to edit the conversation title via a rename dialog.
     /// </summary>
-    public async void OnTitleEditRequested(object? sender, string currentTitle)
+    public async void OnTitleEditRequested(object? _sender, string currentTitle)
     {
         if (_panel is null) return;
 
@@ -442,7 +442,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Marks the conversation as dirty when a new message is added.
     /// </summary>
-    public void OnMessageAdded(object? sender, ChatMessage message)
+    public void OnMessageAdded(object? _sender, ChatMessage _message)
     {
         IsDirty = true;
     }
