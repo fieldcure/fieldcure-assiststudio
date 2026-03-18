@@ -1,5 +1,5 @@
 ﻿using AssistStudio.Dialogs;
-using AssistStudio.Modules.Helpers;
+using AssistStudio.Helpers;
 using FieldCure.AssistStudio.Controls;
 using FieldCure.AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
@@ -154,7 +154,7 @@ public sealed partial class ModelsPage : Page
     private void UpdateAllSubHeaders()
     {
         var keys = _presets.ToDictionary(p => p.ProviderType, p => p.ApiKey)
-                   ?? new Dictionary<string, string>();
+                   ?? [];
 
         var sections = new (string Provider, CollapsibleSection Section, ComboBox Combo)[]
         {
@@ -179,7 +179,7 @@ public sealed partial class ModelsPage : Page
     private void UpdateExpandedState()
     {
         var keys = _presets.ToDictionary(p => p.ProviderType, p => p.ApiKey)
-                   ?? new Dictionary<string, string>();
+                   ?? [];
 
         var sections = new (string Provider, CollapsibleSection Section)[]
         {
@@ -227,7 +227,7 @@ public sealed partial class ModelsPage : Page
     private void LoadApiKeys()
     {
         var keys = _presets.ToDictionary(p => p.ProviderType, p => p.ApiKey)
-                   ?? new Dictionary<string, string>();
+                   ?? [];
 
         keys.TryGetValue("Claude", out var claudeKey);
         keys.TryGetValue("OpenAI", out var openAIKey);

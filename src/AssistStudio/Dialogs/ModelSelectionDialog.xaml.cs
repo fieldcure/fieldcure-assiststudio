@@ -1,4 +1,4 @@
-﻿using AssistStudio.Modules.Helpers;
+﻿using AssistStudio.Helpers;
 using FieldCure.AssistStudio.Helpers;
 using FieldCure.AssistStudio.Providers;
 using Microsoft.UI.Xaml;

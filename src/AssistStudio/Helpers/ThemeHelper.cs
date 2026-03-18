@@ -1,7 +1,7 @@
-using Microsoft.UI.Xaml;
+﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 
-namespace AssistStudio.Modules.Helpers;
+namespace AssistStudio.Helpers;
 
 /// <summary>
 /// Resolves theme-aware brushes from <see cref="Application.Current.Resources"/> ThemeDictionaries.

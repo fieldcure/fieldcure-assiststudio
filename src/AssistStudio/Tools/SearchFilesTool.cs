@@ -1,7 +1,7 @@
-using FieldCure.AssistStudio.Models;
+﻿using FieldCure.AssistStudio.Models;
 using System.Text.Json;
 
-namespace AssistStudio.Modules.Tools;
+namespace AssistStudio.Tools;
 
 /// <summary>
 /// Searches a directory for files matching a glob pattern and returns file metadata.

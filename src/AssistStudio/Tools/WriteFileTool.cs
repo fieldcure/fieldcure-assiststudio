@@ -1,7 +1,7 @@
-using FieldCure.AssistStudio.Models;
+﻿using FieldCure.AssistStudio.Models;
 using System.Text.Json;
 
-namespace AssistStudio.Modules.Tools;
+namespace AssistStudio.Tools;
 
 /// <summary>
 /// Writes content to a file at the specified path, with overwrite protection.

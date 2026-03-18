@@ -1,8 +1,8 @@
-using FieldCure.AssistStudio.Models;
+﻿using FieldCure.AssistStudio.Models;
 using System.Diagnostics;
 using System.Text.Json;
 
-namespace AssistStudio.Modules.Tools;
+namespace AssistStudio.Tools;
 
 /// <summary>
 /// Executes a shell command and returns stdout, stderr, and exit code.

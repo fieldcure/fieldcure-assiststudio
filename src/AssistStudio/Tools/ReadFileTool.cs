@@ -1,8 +1,8 @@
-using FieldCure.AssistStudio.Models;
+﻿using FieldCure.AssistStudio.Models;
 using System.Text;
 using System.Text.Json;
 
-namespace AssistStudio.Modules.Tools;
+namespace AssistStudio.Tools;
 
 /// <summary>
 /// Reads and returns the contents of a file at the specified path.

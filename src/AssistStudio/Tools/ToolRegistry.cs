@@ -1,6 +1,6 @@
 ﻿using FieldCure.AssistStudio.Models;
 
-namespace AssistStudio.Modules.Tools;
+namespace AssistStudio.Tools;
 
 /// <summary>
 /// Static registry that maps tool names to <see cref="IAssistTool"/> instances.

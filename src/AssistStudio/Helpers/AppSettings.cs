@@ -4,7 +4,7 @@ using System.Collections.ObjectModel;
 using System.Text.Json;
 using Windows.Storage;
 
-namespace AssistStudio.Modules.Helpers;
+namespace AssistStudio.Helpers;
 
 /// <summary>
 /// Centralized application settings backed by <see cref="ApplicationData.Current.LocalSettings"/>.

@@ -1,5 +1,5 @@
-﻿using AssistStudio.Modules.Helpers;
-using AssistStudio.Modules.Tools;
+﻿using AssistStudio.Helpers;
+using AssistStudio.Tools;
 using CommunityToolkit.Mvvm.ComponentModel;
 using FieldCure.AssistStudio.Controls;
 using FieldCure.AssistStudio.Helpers;

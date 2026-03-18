@@ -1,8 +1,8 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
 
-namespace AssistStudio.Modules.Helpers;
+namespace AssistStudio.Helpers;
 
 /// <summary>
 /// Provides centralized logging with asynchronous file writing, daily rotation, and retention management.
