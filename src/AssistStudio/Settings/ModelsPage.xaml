@@ -368,6 +368,25 @@
                                 </Button>
                             </StackPanel>
 
+                            <!-- Server URL -->
+                            <StackPanel Spacing="4">
+                                <TextBlock x:Uid="Models_OllamaServerUrl"
+                                           Text="Server URL" FontSize="12" Opacity="0.7" />
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="OllamaUrlBox"
+                                             PlaceholderText="http://localhost:11434"
+                                             LostFocus="OnOllamaUrlChanged" />
+                                    <Button x:Name="OllamaTestButton"
+                                            Grid.Column="1"
+                                            x:Uid="Models_OllamaTestConnection"
+                                            Content="Test" Click="OnTestOllamaUrl" />
+                                </Grid>
+                            </StackPanel>
+
                             <!-- Install guidance -->
                             <StackPanel x:Name="OllamaInstallPanel" Visibility="Collapsed" Spacing="2">
                                 <HyperlinkButton x:Uid="Models_DownloadOllama"

@@ -421,4 +421,28 @@
   <data name="Models_ThinkingOverrideForceOff" xml:space="preserve">
     <value>Force Off</value>
   </data>
+  <data name="Models_OllamaServerUrl.Text" xml:space="preserve">
+    <value>Server URL</value>
+  </data>
+  <data name="Models_OllamaTestConnection.Content" xml:space="preserve">
+    <value>Test</value>
+  </data>
+  <data name="Ollama_Error_ConnectionRefused" xml:space="preserve">
+    <value>Could not connect to Ollama server. Check that it is running.</value>
+  </data>
+  <data name="Ollama_Error_Timeout" xml:space="preserve">
+    <value>Connection timed out. The server may be unreachable.</value>
+  </data>
+  <data name="Ollama_Error_HostNotFound" xml:space="preserve">
+    <value>Host not found. Check the server address.</value>
+  </data>
+  <data name="Ollama_Error_NetworkUnreachable" xml:space="preserve">
+    <value>Network unreachable. Check your network connection.</value>
+  </data>
+  <data name="Ollama_Error_HttpError" xml:space="preserve">
+    <value>Server returned an error.</value>
+  </data>
+  <data name="Ollama_Error_Unknown" xml:space="preserve">
+    <value>An unexpected error occurred.</value>
+  </data>
 </root>

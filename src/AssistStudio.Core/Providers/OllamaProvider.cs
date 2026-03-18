@@ -2,7 +2,9 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using FieldCure.AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
+using static FieldCure.AssistStudio.Helpers.OllamaErrorHelper;
 
 namespace FieldCure.AssistStudio.Providers;
 
@@ -256,11 +258,14 @@ public partial class OllamaProvider : IAiProvider, IDisposable
     /// <inheritdoc/>
     public async Task<IReadOnlyList<AiModel>> ListModelsAsync(CancellationToken ct = default)
     {
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeoutCts.CancelAfter(TimeSpan.FromSeconds(10));
+
         using var req = new HttpRequestMessage(HttpMethod.Get, $"{_baseUrl}/api/tags");
-        var response = await _httpClient.SendAsync(req, ct);
+        var response = await _httpClient.SendAsync(req, timeoutCts.Token);
         response.EnsureSuccessStatusCode();
 
-        var json = await response.Content.ReadAsStringAsync(ct);
+        var json = await response.Content.ReadAsStringAsync(timeoutCts.Token);
         using var doc = JsonDocument.Parse(json);
 
         var models = new List<AiModel>();
@@ -278,17 +283,28 @@ public partial class OllamaProvider : IAiProvider, IDisposable
     {
         try
         {
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(5));
+
             using var req = new HttpRequestMessage(HttpMethod.Get, $"{_baseUrl}/api/tags");
-            var response = await _httpClient.SendAsync(req, ct);
+            var response = await _httpClient.SendAsync(req, timeoutCts.Token);
 
             if (response.IsSuccessStatusCode)
                 return new ConnectionInfo(true, null, null, null);
 
-            return new ConnectionInfo(false, null, null, $"HTTP {(int)response.StatusCode}");
+            return new ConnectionInfo(false, null, null,
+                OllamaErrorHelper.GetDefaultMessage(OllamaErrorCode.HttpError) + $" (HTTP {(int)response.StatusCode})");
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            return new ConnectionInfo(false, null, null,
+                OllamaErrorHelper.GetDefaultMessage(OllamaErrorCode.Timeout));
         }
         catch (Exception ex)
         {
-            return new ConnectionInfo(false, null, null, ex.Message);
+            var code = OllamaErrorHelper.Categorize(ex);
+            return new ConnectionInfo(false, null, null,
+                OllamaErrorHelper.GetDefaultMessage(code));
         }
     }
 

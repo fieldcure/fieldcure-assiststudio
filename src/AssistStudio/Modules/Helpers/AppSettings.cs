@@ -185,6 +185,25 @@ public static class AppSettings
         Settings.Values[$"DefaultModel_{provider}"] = modelId;
     }
 
+    /// <summary>
+    /// Gets the saved Ollama server base URL, or <c>null</c> for the default (localhost).
+    /// </summary>
+    public static string? GetOllamaBaseUrl()
+    {
+        return Settings.Values["OllamaBaseUrl"] as string;
+    }
+
+    /// <summary>
+    /// Sets the Ollama server base URL. Pass <c>null</c> to revert to default.
+    /// </summary>
+    public static void SetOllamaBaseUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            Settings.Values.Remove("OllamaBaseUrl");
+        else
+            Settings.Values["OllamaBaseUrl"] = url;
+    }
+
     #endregion
 
     #region Profile Methods
@@ -372,6 +391,7 @@ public static class AppSettings
             Name = "Ollama",
             ProviderType = "Ollama",
             ModelId = ollamaModel ?? "llama3.1",
+            BaseUrl = GetOllamaBaseUrl(),
         });
 
         // Mock

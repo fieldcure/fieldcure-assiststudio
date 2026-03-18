@@ -88,6 +88,9 @@ public sealed partial class ModelsPage : Page
         // AppSettings.LoadPresets() at startup. Sync only happens when the user changes
         // API keys or model selections (via OnCloudModelChanged / OnApiKeyChanged).
 
+        // Initialize Ollama URL from saved settings
+        OllamaUrlBox.Text = AppSettings.GetOllamaBaseUrl() ?? "http://localhost:11434";
+
         // Auto-check Ollama status
         _ = CheckOllamaStatusAsync();
     }
@@ -782,11 +785,13 @@ public sealed partial class ModelsPage : Page
             ollamaModel = AppSettings.GetDefaultModel("Ollama") ?? "";
         else
             AppSettings.SetDefaultModel("Ollama", ollamaModel);
+        var ollamaBaseUrl = GetOllamaBaseUrlFromUI();
         _settings.Presets.Add(new ProviderPreset
         {
             Name = "Ollama",
             ProviderType = "Ollama",
             ModelId = ollamaModel,
+            BaseUrl = ollamaBaseUrl,
             PdfCapability = GetPdfCapabilityFromCombo(OllamaPdfCombo)
         });
 
@@ -952,6 +957,47 @@ public sealed partial class ModelsPage : Page
     }
 
     /// <summary>
+    /// Handles the Ollama URL TextBox losing focus to save the URL and re-check status.
+    /// </summary>
+    private void OnOllamaUrlChanged(object sender, RoutedEventArgs e)
+    {
+        var url = GetOllamaBaseUrlFromUI();
+        AppSettings.SetOllamaBaseUrl(url);
+        SyncPresetsFromUI();
+    }
+
+    /// <summary>
+    /// Tests connectivity to the Ollama server URL entered by the user.
+    /// </summary>
+    private async void OnTestOllamaUrl(object sender, RoutedEventArgs e)
+    {
+        await CheckOllamaStatusAsync();
+    }
+
+    /// <summary>
+    /// Returns the Ollama base URL from the UI TextBox, or <c>null</c> if it is the default localhost.
+    /// </summary>
+    private string? GetOllamaBaseUrlFromUI()
+    {
+        var url = OllamaUrlBox.Text.Trim();
+        if (string.IsNullOrEmpty(url) || url == "http://localhost:11434")
+            return null;
+        return url;
+    }
+
+    /// <summary>
+    /// Determines whether the configured Ollama URL points to a remote (non-localhost) host.
+    /// </summary>
+    private bool IsOllamaRemote()
+    {
+        var url = OllamaUrlBox.Text.Trim();
+        if (string.IsNullOrEmpty(url)) return false;
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            return uri.Host != "localhost" && uri.Host != "127.0.0.1" && uri.Host != "::1";
+        return false;
+    }
+
+    /// <summary>
     /// Checks whether Ollama is installed and running, updating the UI status indicators accordingly.
     /// </summary>
     private async Task CheckOllamaStatusAsync()
@@ -966,25 +1012,51 @@ public sealed partial class ModelsPage : Page
 
         try
         {
-            var isRunning = await OllamaHelper.IsOllamaRunningAsync();
-            if (isRunning)
+            var isRemote = IsOllamaRemote();
+
+            if (isRemote)
             {
-                OllamaStatusText.Text = L("Models_Running");
-                OllamaStatusText.Foreground = ThemeHelper.GetBrush("StatusAccentForegroundBrush");
-                BrowseModelsButton.Visibility = Visibility.Visible;
-                await LoadOllamaModelsAsync();
-            }
-            else if (OllamaHelper.IsOllamaInstalled())
-            {
-                OllamaStatusText.Text = L("Models_InstalledNotRunning");
-                OllamaStatusText.Foreground = ThemeHelper.GetBrush("StatusErrorForegroundBrush");
-                StartOllamaButton.Visibility = Visibility.Visible;
+                // Remote host: use OllamaProvider.ValidateConnectionAsync with timeout
+                var baseUrl = OllamaUrlBox.Text.Trim();
+                using var provider = new OllamaProvider(baseUrl: baseUrl);
+                var result = await provider.ValidateConnectionAsync();
+
+                if (result.IsValid)
+                {
+                    OllamaStatusText.Text = L("Models_Running");
+                    OllamaStatusText.Foreground = ThemeHelper.GetBrush("StatusAccentForegroundBrush");
+                    BrowseModelsButton.Visibility = Visibility.Visible;
+                    await LoadOllamaModelsAsync();
+                }
+                else
+                {
+                    OllamaStatusText.Text = result.ErrorMessage ?? L("Models_Error");
+                    OllamaStatusText.Foreground = ThemeHelper.GetBrush("StatusErrorForegroundBrush");
+                }
             }
             else
             {
-                OllamaStatusText.Text = L("Models_NotInstalled");
-                OllamaStatusText.Foreground = ThemeHelper.GetBrush("StatusErrorForegroundBrush");
-                OllamaInstallPanel.Visibility = Visibility.Visible;
+                // Local host: use OllamaHelper for install/process detection
+                var isRunning = await OllamaHelper.IsOllamaRunningAsync();
+                if (isRunning)
+                {
+                    OllamaStatusText.Text = L("Models_Running");
+                    OllamaStatusText.Foreground = ThemeHelper.GetBrush("StatusAccentForegroundBrush");
+                    BrowseModelsButton.Visibility = Visibility.Visible;
+                    await LoadOllamaModelsAsync();
+                }
+                else if (OllamaHelper.IsOllamaInstalled())
+                {
+                    OllamaStatusText.Text = L("Models_InstalledNotRunning");
+                    OllamaStatusText.Foreground = ThemeHelper.GetBrush("StatusErrorForegroundBrush");
+                    StartOllamaButton.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    OllamaStatusText.Text = L("Models_NotInstalled");
+                    OllamaStatusText.Foreground = ThemeHelper.GetBrush("StatusErrorForegroundBrush");
+                    OllamaInstallPanel.Visibility = Visibility.Visible;
+                }
             }
         }
         catch (Exception ex)
@@ -1008,7 +1080,8 @@ public sealed partial class ModelsPage : Page
     {
         try
         {
-            using var manager = new OllamaModelManager();
+            var baseUrl = GetOllamaBaseUrlFromUI() ?? "http://localhost:11434";
+            using var manager = new OllamaModelManager(baseUrl);
             var allModels = await manager.ListLocalModelsAsync();
             var hw = await HardwareProbe.GetAsync();
 
@@ -1102,7 +1175,8 @@ public sealed partial class ModelsPage : Page
     /// </summary>
     private async void OnBrowseOllamaModels(object sender, RoutedEventArgs e)
     {
-        using var manager = new OllamaModelManager();
+        var baseUrl = GetOllamaBaseUrlFromUI() ?? "http://localhost:11434";
+        using var manager = new OllamaModelManager(baseUrl);
         var dialog = new ModelSelectionDialog(manager)
         {
             XamlRoot = XamlRoot,
@@ -1128,7 +1202,8 @@ public sealed partial class ModelsPage : Page
         PullProgressPanel.Visibility = Visibility.Visible;
         BrowseModelsButton.IsEnabled = false;
 
-        using var manager = new OllamaModelManager();
+        var baseUrl = GetOllamaBaseUrlFromUI() ?? "http://localhost:11434";
+        using var manager = new OllamaModelManager(baseUrl);
 
         for (var i = 0; i < modelNames.Count; i++)
         {
