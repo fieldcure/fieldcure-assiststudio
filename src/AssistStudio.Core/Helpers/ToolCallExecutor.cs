@@ -56,7 +56,10 @@ public class ToolCallExecutor
         }
 
         var args = JsonSerializer.Deserialize<JsonElement>(call.Arguments);
-        return await tool.ExecuteAsync(args, ct);
+
+        // Run tool execution on a thread pool thread to avoid blocking the UI thread.
+        // ConfirmationHandler (above) has already run on the caller's context.
+        return await Task.Run(() => tool.ExecuteAsync(args, ct), ct);
     }
 
     #endregion
