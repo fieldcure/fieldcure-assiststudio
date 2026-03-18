@@ -398,4 +398,20 @@
   <data name="Profile_NoToolsRegistered" xml:space="preserve">
     <value>No tools registered.</value>
   </data>
+  <!-- Extended Thinking -->
+  <data name="Models_ThinkingNotSupported" xml:space="preserve">
+    <value>This model does not support Extended Thinking.</value>
+  </data>
+  <data name="Models_ThinkingAlwaysOn" xml:space="preserve">
+    <value>This model always has Thinking enabled.</value>
+  </data>
+  <data name="Models_ThinkingOverrideAuto" xml:space="preserve">
+    <value>Auto</value>
+  </data>
+  <data name="Models_ThinkingOverrideForceOn" xml:space="preserve">
+    <value>Force On</value>
+  </data>
+  <data name="Models_ThinkingOverrideForceOff" xml:space="preserve">
+    <value>Force Off</value>
+  </data>
 </root>

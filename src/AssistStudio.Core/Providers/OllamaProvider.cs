@@ -84,6 +84,28 @@ public partial class OllamaProvider : IAiProvider, IDisposable
 
     #endregion
 
+    #region Thinking Support
+
+    /// <summary>
+    /// Determines thinking support for an Ollama model.
+    /// Known thinking models (deepseek-r1, qwq) are supported; others are not by default.
+    /// </summary>
+    /// <param name="modelId">The model identifier to check.</param>
+    /// <returns>The thinking support level for the model.</returns>
+    public static ThinkingSupport GetThinkingSupportFor(string? modelId)
+    {
+        if (string.IsNullOrEmpty(modelId)) return ThinkingSupport.NotSupported;
+        if (modelId.Contains("deepseek-r1", StringComparison.OrdinalIgnoreCase)
+            || modelId.StartsWith("qwq", StringComparison.OrdinalIgnoreCase))
+            return ThinkingSupport.Optional;
+        return ThinkingSupport.NotSupported;
+    }
+
+    /// <inheritdoc/>
+    public ThinkingSupport GetThinkingSupport(string modelId) => GetThinkingSupportFor(modelId);
+
+    #endregion
+
     #region IAiProvider Implementation
 
     /// <inheritdoc/>

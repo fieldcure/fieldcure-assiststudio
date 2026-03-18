@@ -46,5 +46,12 @@ public interface IAiProvider
     /// <summary>Validates the connection and credentials for this provider.</summary>
     Task<ConnectionInfo> ValidateConnectionAsync(CancellationToken ct = default);
 
+    /// <summary>
+    /// Returns the thinking support level for the specified model.
+    /// </summary>
+    /// <param name="modelId">The model identifier to check.</param>
+    /// <returns>The level of extended thinking support.</returns>
+    ThinkingSupport GetThinkingSupport(string modelId);
+
     #endregion
 }

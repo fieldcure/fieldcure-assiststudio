@@ -133,6 +133,20 @@ public class MockProvider : IAiProvider
 
     #endregion
 
+    #region Thinking Support
+
+    /// <summary>
+    /// Mock provider always reports thinking as optional for demo/testing purposes.
+    /// </summary>
+    /// <param name="modelId">The model identifier (ignored).</param>
+    /// <returns>Always <see cref="ThinkingSupport.Optional"/>.</returns>
+    public static ThinkingSupport GetThinkingSupportFor(string? modelId) => ThinkingSupport.Optional;
+
+    /// <inheritdoc/>
+    public ThinkingSupport GetThinkingSupport(string modelId) => GetThinkingSupportFor(modelId);
+
+    #endregion
+
     #region IAiProvider Implementation
 
     /// <inheritdoc/>

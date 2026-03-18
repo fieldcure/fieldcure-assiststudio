@@ -398,4 +398,20 @@
   <data name="Profile_NoToolsRegistered" xml:space="preserve">
     <value>등록된 도구가 없습니다.</value>
   </data>
+  <!-- Extended Thinking -->
+  <data name="Models_ThinkingNotSupported" xml:space="preserve">
+    <value>이 모델은 Extended Thinking을 지원하지 않습니다.</value>
+  </data>
+  <data name="Models_ThinkingAlwaysOn" xml:space="preserve">
+    <value>이 모델은 항상 Thinking이 활성화됩니다.</value>
+  </data>
+  <data name="Models_ThinkingOverrideAuto" xml:space="preserve">
+    <value>자동</value>
+  </data>
+  <data name="Models_ThinkingOverrideForceOn" xml:space="preserve">
+    <value>강제 활성화</value>
+  </data>
+  <data name="Models_ThinkingOverrideForceOff" xml:space="preserve">
+    <value>강제 비활성화</value>
+  </data>
 </root>

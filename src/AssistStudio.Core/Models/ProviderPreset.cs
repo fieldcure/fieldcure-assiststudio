@@ -95,10 +95,17 @@ public partial class ProviderPreset : INotifyPropertyChanged
     public bool ThinkingEnabled { get; set; }
 
     /// <summary>
-    /// Thinking budget in tokens. Null uses provider default (4096).
+    /// Thinking budget in tokens. Null uses provider default.
     /// For providers that use effort levels (e.g., OpenAI o-series), mapped automatically.
     /// </summary>
     public int? ThinkingBudget { get; set; }
+
+    /// <summary>
+    /// User override for thinking support detection.
+    /// Auto: use provider's heuristic. ForceOn: always treat as thinking-capable.
+    /// ForceOff: always treat as non-thinking.
+    /// </summary>
+    public ThinkingOverride ThinkingOverride { get; set; } = ThinkingOverride.Auto;
 
     /// <summary>
     /// Whether this provider type requires an API key.

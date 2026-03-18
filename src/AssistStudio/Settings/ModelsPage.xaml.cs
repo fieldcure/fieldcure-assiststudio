@@ -294,6 +294,16 @@ public sealed partial class ModelsPage : Page
     }
 
     /// <summary>
+    /// Thinking override option items used in the thinking override combo boxes.
+    /// </summary>
+    private static readonly (ThinkingOverride Value, string LabelKey)[] ThinkingOverrideOptions =
+    [
+        (ThinkingOverride.Auto, "Models_ThinkingOverrideAuto"),
+        (ThinkingOverride.ForceOn, "Models_ThinkingOverrideForceOn"),
+        (ThinkingOverride.ForceOff, "Models_ThinkingOverrideForceOff"),
+    ];
+
+    /// <summary>
     /// PDF handling option items used in the PDF combo boxes.
     /// </summary>
     private static readonly (PdfCapability Value, string LabelKey)[] PdfOptions =
@@ -333,34 +343,127 @@ public sealed partial class ModelsPage : Page
     }
 
     /// <summary>
-    /// Populates all Extended Thinking toggle switches and budget boxes from saved presets.
+    /// Populates all Extended Thinking toggle switches, budget boxes, and override combos
+    /// from saved presets, then applies model-based thinking capability checks.
     /// </summary>
     private void PopulateThinkingToggles()
     {
         var presets = _settings?.Presets.ToDictionary(p => p.ProviderType) ?? [];
 
-        var controls = new (string Provider, ToggleSwitch Toggle, NumberBox Budget)[]
+        var controls = new (string Provider, ToggleSwitch Toggle, NumberBox Budget, ComboBox OverrideCombo)[]
         {
-            ("Claude", ClaudeThinkingToggle, ClaudeThinkingBudget),
-            ("OpenAI", OpenAIThinkingToggle, OpenAIThinkingBudget),
-            ("Gemini", GeminiThinkingToggle, GeminiThinkingBudget),
-            ("Groq", GroqThinkingToggle, GroqThinkingBudget),
+            ("Claude", ClaudeThinkingToggle, ClaudeThinkingBudget, ClaudeThinkingOverrideCombo),
+            ("OpenAI", OpenAIThinkingToggle, OpenAIThinkingBudget, OpenAIThinkingOverrideCombo),
+            ("Gemini", GeminiThinkingToggle, GeminiThinkingBudget, GeminiThinkingOverrideCombo),
+            ("Groq", GroqThinkingToggle, GroqThinkingBudget, GroqThinkingOverrideCombo),
         };
 
-        foreach (var (provider, toggle, budget) in controls)
+        foreach (var (provider, toggle, budget, overrideCombo) in controls)
         {
+            // Populate override combo
+            overrideCombo.Items.Clear();
+            foreach (var (_, labelKey) in ThinkingOverrideOptions)
+                overrideCombo.Items.Add(L(labelKey));
+
             if (presets.TryGetValue(provider, out var p))
             {
                 toggle.IsOn = p.ThinkingEnabled;
                 budget.Value = p.ThinkingBudget ?? 4096;
                 budget.IsEnabled = p.ThinkingEnabled;
+
+                var overrideIdx = Array.FindIndex(ThinkingOverrideOptions, o => o.Value == p.ThinkingOverride);
+                overrideCombo.SelectedIndex = overrideIdx >= 0 ? overrideIdx : 0;
             }
             else
             {
                 toggle.IsOn = false;
                 budget.Value = 4096;
                 budget.IsEnabled = false;
+                overrideCombo.SelectedIndex = 0; // Auto
             }
+        }
+
+        // Apply thinking capability checks based on selected models and overrides
+        UpdateAllThinkingStates();
+    }
+
+    /// <summary>
+    /// Updates the thinking UI state for all cloud providers based on currently selected models and overrides.
+    /// </summary>
+    private void UpdateAllThinkingStates()
+    {
+        var entries = new (string Provider, ComboBox ModelCombo, ComboBox OverrideCombo, ToggleSwitch Toggle, NumberBox Budget, TextBlock Hint)[]
+        {
+            ("Claude", ClaudeModelCombo, ClaudeThinkingOverrideCombo, ClaudeThinkingToggle, ClaudeThinkingBudget, ClaudeThinkingHint),
+            ("OpenAI", OpenAIModelCombo, OpenAIThinkingOverrideCombo, OpenAIThinkingToggle, OpenAIThinkingBudget, OpenAIThinkingHint),
+            ("Gemini", GeminiModelCombo, GeminiThinkingOverrideCombo, GeminiThinkingToggle, GeminiThinkingBudget, GeminiThinkingHint),
+            ("Groq", GroqModelCombo, GroqThinkingOverrideCombo, GroqThinkingToggle, GroqThinkingBudget, GroqThinkingHint),
+        };
+
+        foreach (var (provider, modelCombo, overrideCombo, toggle, budget, hint) in entries)
+            UpdateThinkingState(provider, modelCombo, overrideCombo, toggle, budget, hint);
+    }
+
+    /// <summary>
+    /// Updates the Extended Thinking toggle, budget, and hint visibility based on
+    /// the provider's thinking support heuristic and the user's override selection.
+    /// </summary>
+    private void UpdateThinkingState(string provider, ComboBox modelCombo, ComboBox overrideCombo, ToggleSwitch toggle, NumberBox budget, TextBlock hint)
+    {
+        var modelId = modelCombo.SelectedItem as string;
+        var support = ThinkingCapability.GetSupport(provider, modelId);
+
+        // Resolve user override
+        var overrideIdx = overrideCombo.SelectedIndex;
+        var userOverride = overrideIdx >= 0 && overrideIdx < ThinkingOverrideOptions.Length
+            ? ThinkingOverrideOptions[overrideIdx].Value
+            : ThinkingOverride.Auto;
+
+        switch (userOverride)
+        {
+            case ThinkingOverride.ForceOn:
+                // User forces thinking on regardless of provider heuristic
+                toggle.IsOn = true;
+                toggle.IsEnabled = true;
+                budget.IsEnabled = true;
+                hint.Visibility = Visibility.Collapsed;
+                break;
+
+            case ThinkingOverride.ForceOff:
+                // User forces thinking off regardless of provider heuristic
+                toggle.IsOn = false;
+                toggle.IsEnabled = true;
+                budget.IsEnabled = false;
+                hint.Visibility = Visibility.Collapsed;
+                break;
+
+            default: // Auto
+                switch (support)
+                {
+                    case ThinkingSupport.NotSupported:
+                        toggle.IsEnabled = false;
+                        toggle.IsOn = false;
+                        budget.IsEnabled = false;
+                        hint.Text = L("Models_ThinkingNotSupported");
+                        hint.Visibility = Visibility.Visible;
+                        break;
+
+                    case ThinkingSupport.Required:
+                        toggle.IsOn = true;
+                        toggle.IsEnabled = false;
+                        budget.IsEnabled = true;
+                        hint.Text = L("Models_ThinkingAlwaysOn");
+                        hint.Visibility = Visibility.Visible;
+                        break;
+
+                    case ThinkingSupport.Optional:
+                    default:
+                        toggle.IsEnabled = true;
+                        budget.IsEnabled = toggle.IsOn;
+                        hint.Visibility = Visibility.Collapsed;
+                        break;
+                }
+                break;
         }
     }
 
@@ -534,13 +637,13 @@ public sealed partial class ModelsPage : Page
             var key = PasswordVaultHelper.LoadApiKey(provider);
             if (string.IsNullOrEmpty(key)) continue;
 
-            var (modelCombo, pdfCombo, thinkingToggle, thinkingBudget) = provider switch
+            var (modelCombo, pdfCombo, thinkingToggle, thinkingBudget, thinkingOverrideCombo) = provider switch
             {
-                "Claude" => (ClaudeModelCombo, ClaudePdfCombo, ClaudeThinkingToggle, ClaudeThinkingBudget),
-                "OpenAI" => (OpenAIModelCombo, OpenAIPdfCombo, OpenAIThinkingToggle, OpenAIThinkingBudget),
-                "Gemini" => (GeminiModelCombo, GeminiPdfCombo, GeminiThinkingToggle, GeminiThinkingBudget),
-                "Groq" => (GroqModelCombo, GroqPdfCombo, GroqThinkingToggle, GroqThinkingBudget),
-                _ => ((ComboBox?)null, (ComboBox?)null, (ToggleSwitch?)null, (NumberBox?)null)
+                "Claude" => (ClaudeModelCombo, ClaudePdfCombo, ClaudeThinkingToggle, ClaudeThinkingBudget, ClaudeThinkingOverrideCombo),
+                "OpenAI" => (OpenAIModelCombo, OpenAIPdfCombo, OpenAIThinkingToggle, OpenAIThinkingBudget, OpenAIThinkingOverrideCombo),
+                "Gemini" => (GeminiModelCombo, GeminiPdfCombo, GeminiThinkingToggle, GeminiThinkingBudget, GeminiThinkingOverrideCombo),
+                "Groq" => (GroqModelCombo, GroqPdfCombo, GroqThinkingToggle, GroqThinkingBudget, GroqThinkingOverrideCombo),
+                _ => ((ComboBox?)null, (ComboBox?)null, (ToggleSwitch?)null, (NumberBox?)null, (ComboBox?)null)
             };
 
             var modelId = modelCombo?.SelectedItem as string ?? "";
@@ -559,7 +662,8 @@ public sealed partial class ModelsPage : Page
                 ThinkingEnabled = thinkingToggle?.IsOn ?? false,
                 ThinkingBudget = thinkingToggle?.IsOn == true && thinkingBudget is not null && !double.IsNaN(thinkingBudget.Value)
                     ? (int)thinkingBudget.Value
-                    : null
+                    : null,
+                ThinkingOverride = GetThinkingOverrideFromCombo(thinkingOverrideCombo)
             };
 
             if (provider == "Groq")
@@ -613,6 +717,18 @@ public sealed partial class ModelsPage : Page
 
         if (provider is null) return;
 
+        // Update thinking UI state based on new model selection
+        var (overrideCombo, toggle, budgetBox, hint) = provider switch
+        {
+            "Claude" => ((ComboBox)ClaudeThinkingOverrideCombo, (ToggleSwitch)ClaudeThinkingToggle, (NumberBox)ClaudeThinkingBudget, (TextBlock)ClaudeThinkingHint),
+            "OpenAI" => (OpenAIThinkingOverrideCombo, OpenAIThinkingToggle, OpenAIThinkingBudget, OpenAIThinkingHint),
+            "Gemini" => (GeminiThinkingOverrideCombo, GeminiThinkingToggle, GeminiThinkingBudget, GeminiThinkingHint),
+            "Groq" => (GroqThinkingOverrideCombo, GroqThinkingToggle, GroqThinkingBudget, GroqThinkingHint),
+            _ => ((ComboBox?)null, (ToggleSwitch?)null, (NumberBox?)null, (TextBlock?)null)
+        };
+        if (overrideCombo is not null && toggle is not null && budgetBox is not null && hint is not null)
+            UpdateThinkingState(provider, combo, overrideCombo, toggle, budgetBox, hint);
+
         AppSettings.SetDefaultModel(provider, model);
         SyncPresetsFromUI();
     }
@@ -635,6 +751,8 @@ public sealed partial class ModelsPage : Page
         if (_isPopulating) return;
         if (sender is ToggleSwitch toggle)
         {
+            // Ignore programmatic toggle changes when the control is disabled
+            if (!toggle.IsEnabled) return;
             var budgetBox = toggle.Name switch
             {
                 nameof(ClaudeThinkingToggle) => ClaudeThinkingBudget,
@@ -646,6 +764,17 @@ public sealed partial class ModelsPage : Page
             if (budgetBox is not null)
                 budgetBox.IsEnabled = toggle.IsOn;
         }
+        SyncPresetsFromUI();
+    }
+
+    /// <summary>
+    /// Handles the Thinking Override combo box selection changes for any provider.
+    /// Updates the thinking UI state and syncs presets.
+    /// </summary>
+    private void OnThinkingOverrideChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isPopulating) return;
+        UpdateAllThinkingStates();
         SyncPresetsFromUI();
     }
 
@@ -665,6 +794,16 @@ public sealed partial class ModelsPage : Page
     {
         var idx = combo.SelectedIndex;
         return idx >= 0 && idx < PdfOptions.Length ? PdfOptions[idx].Value : PdfCapability.Auto;
+    }
+
+    /// <summary>
+    /// Resolves the selected <see cref="ThinkingOverride"/> from a thinking override combo box.
+    /// </summary>
+    private static ThinkingOverride GetThinkingOverrideFromCombo(ComboBox? combo)
+    {
+        if (combo is null) return ThinkingOverride.Auto;
+        var idx = combo.SelectedIndex;
+        return idx >= 0 && idx < ThinkingOverrideOptions.Length ? ThinkingOverrideOptions[idx].Value : ThinkingOverride.Auto;
     }
 
     /// <summary>

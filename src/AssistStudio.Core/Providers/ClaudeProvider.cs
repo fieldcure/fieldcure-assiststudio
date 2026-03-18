@@ -90,6 +90,28 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
 
     #endregion
 
+    #region Thinking Support
+
+    /// <summary>
+    /// Determines thinking support for a Claude model.
+    /// Models containing "sonnet" or "opus" support extended thinking; others (e.g., haiku) do not.
+    /// </summary>
+    /// <param name="modelId">The model identifier to check.</param>
+    /// <returns>The thinking support level for the model.</returns>
+    public static ThinkingSupport GetThinkingSupportFor(string? modelId)
+    {
+        if (string.IsNullOrEmpty(modelId)) return ThinkingSupport.NotSupported;
+        if (modelId.Contains("sonnet", StringComparison.OrdinalIgnoreCase)
+            || modelId.Contains("opus", StringComparison.OrdinalIgnoreCase))
+            return ThinkingSupport.Optional;
+        return ThinkingSupport.NotSupported;
+    }
+
+    /// <inheritdoc/>
+    public ThinkingSupport GetThinkingSupport(string modelId) => GetThinkingSupportFor(modelId);
+
+    #endregion
+
     #region IAiProvider Implementation
 
     /// <inheritdoc/>

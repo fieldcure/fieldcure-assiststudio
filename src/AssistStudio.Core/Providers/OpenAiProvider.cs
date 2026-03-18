@@ -94,6 +94,28 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
 
     #endregion
 
+    #region Thinking Support
+
+    /// <summary>
+    /// Determines thinking support for an OpenAI model.
+    /// O-series models (o1, o3, o4-mini, etc.) support extended thinking; GPT models do not.
+    /// </summary>
+    /// <param name="modelId">The model identifier to check.</param>
+    /// <returns>The thinking support level for the model.</returns>
+    public static ThinkingSupport GetThinkingSupportFor(string? modelId)
+    {
+        if (string.IsNullOrEmpty(modelId)) return ThinkingSupport.NotSupported;
+        // o-series: starts with 'o' followed by a digit (o1, o3, o4-mini, etc.)
+        if (modelId.Length >= 2 && modelId[0] is 'o' or 'O' && char.IsDigit(modelId[1]))
+            return ThinkingSupport.Optional;
+        return ThinkingSupport.NotSupported;
+    }
+
+    /// <inheritdoc/>
+    public ThinkingSupport GetThinkingSupport(string modelId) => GetThinkingSupportFor(modelId);
+
+    #endregion
+
     #region IAiProvider Implementation
 
     /// <inheritdoc/>

@@ -95,6 +95,10 @@
                                       SelectionChanged="OnPdfHandlingChanged" />
                         </StackPanel>
                         <StackPanel Spacing="4">
+                            <ComboBox x:Name="ClaudeThinkingOverrideCombo"
+                                      Header="Thinking Override"
+                                      HorizontalAlignment="Stretch"
+                                      SelectionChanged="OnThinkingOverrideChanged" />
                             <ToggleSwitch x:Name="ClaudeThinkingToggle"
                                           Header="Extended Thinking"
                                           Toggled="OnThinkingToggled" />
@@ -105,6 +109,10 @@
                                        SmallChange="1024" LargeChange="4096"
                                        IsEnabled="False"
                                        ValueChanged="OnThinkingBudgetChanged" />
+                            <TextBlock x:Name="ClaudeThinkingHint"
+                                       FontSize="12" Opacity="0.6"
+                                       TextWrapping="Wrap"
+                                       Visibility="Collapsed" />
                         </StackPanel>
                     </StackPanel>
                 </StackPanel>
@@ -166,6 +174,10 @@
                                       SelectionChanged="OnPdfHandlingChanged" />
                         </StackPanel>
                         <StackPanel Spacing="4">
+                            <ComboBox x:Name="OpenAIThinkingOverrideCombo"
+                                      Header="Thinking Override"
+                                      HorizontalAlignment="Stretch"
+                                      SelectionChanged="OnThinkingOverrideChanged" />
                             <ToggleSwitch x:Name="OpenAIThinkingToggle"
                                           Header="Extended Thinking"
                                           Toggled="OnThinkingToggled" />
@@ -176,6 +188,10 @@
                                        SmallChange="1024" LargeChange="4096"
                                        IsEnabled="False"
                                        ValueChanged="OnThinkingBudgetChanged" />
+                            <TextBlock x:Name="OpenAIThinkingHint"
+                                       FontSize="12" Opacity="0.6"
+                                       TextWrapping="Wrap"
+                                       Visibility="Collapsed" />
                         </StackPanel>
                     </StackPanel>
                 </StackPanel>
@@ -237,6 +253,10 @@
                                       SelectionChanged="OnPdfHandlingChanged" />
                         </StackPanel>
                         <StackPanel Spacing="4">
+                            <ComboBox x:Name="GeminiThinkingOverrideCombo"
+                                      Header="Thinking Override"
+                                      HorizontalAlignment="Stretch"
+                                      SelectionChanged="OnThinkingOverrideChanged" />
                             <ToggleSwitch x:Name="GeminiThinkingToggle"
                                           Header="Extended Thinking"
                                           Toggled="OnThinkingToggled" />
@@ -247,6 +267,10 @@
                                        SmallChange="1024" LargeChange="4096"
                                        IsEnabled="False"
                                        ValueChanged="OnThinkingBudgetChanged" />
+                            <TextBlock x:Name="GeminiThinkingHint"
+                                       FontSize="12" Opacity="0.6"
+                                       TextWrapping="Wrap"
+                                       Visibility="Collapsed" />
                         </StackPanel>
                     </StackPanel>
                 </StackPanel>
@@ -308,6 +332,10 @@
                                       SelectionChanged="OnPdfHandlingChanged" />
                         </StackPanel>
                         <StackPanel Spacing="4">
+                            <ComboBox x:Name="GroqThinkingOverrideCombo"
+                                      Header="Thinking Override"
+                                      HorizontalAlignment="Stretch"
+                                      SelectionChanged="OnThinkingOverrideChanged" />
                             <ToggleSwitch x:Name="GroqThinkingToggle"
                                           Header="Extended Thinking"
                                           Toggled="OnThinkingToggled" />
@@ -318,6 +346,10 @@
                                        SmallChange="1024" LargeChange="4096"
                                        IsEnabled="False"
                                        ValueChanged="OnThinkingBudgetChanged" />
+                            <TextBlock x:Name="GroqThinkingHint"
+                                       FontSize="12" Opacity="0.6"
+                                       TextWrapping="Wrap"
+                                       Visibility="Collapsed" />
                         </StackPanel>
                     </StackPanel>
                 </StackPanel>

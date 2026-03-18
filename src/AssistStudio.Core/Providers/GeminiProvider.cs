@@ -87,6 +87,41 @@ public partial class GeminiProvider : IAiProvider, IDisposable
 
     #endregion
 
+    #region Thinking Support
+
+    /// <summary>
+    /// Determines thinking support for a Gemini model.
+    /// Gemini 2.5+ supports thinking (thinkingBudget). Gemini 3+/3.1+ uses thinkingLevel.
+    /// Gemini 3 Pro / 3.1 Pro always requires thinking (cannot be disabled).
+    /// </summary>
+    /// <param name="modelId">The model identifier to check.</param>
+    /// <returns>The thinking support level for the model.</returns>
+    public static ThinkingSupport GetThinkingSupportFor(string? modelId)
+    {
+        if (string.IsNullOrEmpty(modelId)) return ThinkingSupport.NotSupported;
+
+        // gemini-3*/3.1* with "pro" → thinking is always on and cannot be disabled
+        if (modelId.StartsWith("gemini-3", StringComparison.OrdinalIgnoreCase)
+            && modelId.Contains("pro", StringComparison.OrdinalIgnoreCase))
+            return ThinkingSupport.Required;
+
+        // gemini-2.5* → optional (uses thinkingBudget token count)
+        if (modelId.StartsWith("gemini-2.5", StringComparison.OrdinalIgnoreCase))
+            return ThinkingSupport.Optional;
+
+        // gemini-3* (flash, etc.) → optional (uses thinkingLevel string)
+        // Note: gemini-3.1 starts with "gemini-3" so no separate branch needed
+        if (modelId.StartsWith("gemini-3", StringComparison.OrdinalIgnoreCase))
+            return ThinkingSupport.Optional;
+
+        return ThinkingSupport.NotSupported;
+    }
+
+    /// <inheritdoc/>
+    public ThinkingSupport GetThinkingSupport(string modelId) => GetThinkingSupportFor(modelId);
+
+    #endregion
+
     #region IAiProvider Implementation
 
     /// <inheritdoc/>
@@ -419,12 +454,56 @@ public partial class GeminiProvider : IAiProvider, IDisposable
             }
         };
 
-        // Extended thinking support
-        if (request.ThinkingEnabled)
+        // Extended thinking support — thinkingConfig goes inside generationConfig.
+        // Parameter format varies by model generation:
+        //   Gemini 2.5:      thinkingBudget (integer token count, 0 to disable)
+        //   Gemini 3+/3.1+:  thinkingLevel (string: minimal/low/medium/high, lowercase)
+        //                    Pro models: cannot disable thinking, minimal not supported
+        //                    Flash-Lite: defaults to minimal
+        var genConfig = (JsonObject)body["generationConfig"]!;
+        var thinkingSupport = GetThinkingSupportFor(ModelId);
+        if (thinkingSupport != ThinkingSupport.NotSupported
+            && (request.ThinkingEnabled || thinkingSupport == ThinkingSupport.Required))
         {
-            body["thinkingConfig"] = new JsonObject
+            var isGemini3 = ModelId.StartsWith("gemini-3", StringComparison.OrdinalIgnoreCase);
+            if (isGemini3)
             {
-                ["thinkingBudget"] = request.ThinkingBudget ?? 4096
+                // Gemini 3 thinkingLevel: minimal, low, medium, high (lowercase per API spec)
+                // Gemini 3 Pro/3.1 Pro: minimal not supported → fall back to low
+                var level = request.ThinkingBudget switch
+                {
+                    null or <= 1024 => "minimal",
+                    <= 4096 => "low",
+                    <= 16384 => "medium",
+                    _ => "high"
+                };
+
+                if (level == "minimal"
+                    && ModelId.Contains("pro", StringComparison.OrdinalIgnoreCase))
+                {
+                    level = "low";
+                }
+
+                genConfig["thinkingConfig"] = new JsonObject
+                {
+                    ["thinkingLevel"] = level
+                };
+            }
+            else
+            {
+                // Gemini 2.5: use token-based thinkingBudget
+                genConfig["thinkingConfig"] = new JsonObject
+                {
+                    ["thinkingBudget"] = request.ThinkingBudget ?? 16384
+                };
+            }
+        }
+        else if (ModelId.StartsWith("gemini-2.5", StringComparison.OrdinalIgnoreCase))
+        {
+            // Gemini 2.5: explicitly disable thinking with budget = 0
+            genConfig["thinkingConfig"] = new JsonObject
+            {
+                ["thinkingBudget"] = 0
             };
         }
 
