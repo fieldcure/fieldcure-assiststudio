@@ -8,7 +8,7 @@
 ## Features
 
 - **Multi-Provider** — Claude, OpenAI, Gemini, and Ollama built-in. Implement `IAiProvider` to add your own.
-- **Streaming** — Real-time token-by-token responses via `IAsyncEnumerable<string>`.
+- **Streaming** — Real-time structured event streaming via `IAsyncEnumerable<StreamEvent>`.
 - **Vision & Documents** — Attach images, PDFs, and DOCX files to conversations.
 - **Tool / Function Calling** — Define tools with `IAssistTool` for provider-invoked function calls.
 - **Token Tracking** — Input/output token counts exposed after every request.
@@ -35,9 +35,10 @@ var response = await provider.CompleteAsync(request);
 Console.WriteLine(response.Content);
 
 // Streaming
-await foreach (var token in provider.StreamAsync(request))
+await foreach (var evt in provider.StreamAsync(request))
 {
-    Console.Write(token);
+    if (evt is StreamEvent.TextDelta delta)
+        Console.Write(delta.Text);
 }
 ```
 

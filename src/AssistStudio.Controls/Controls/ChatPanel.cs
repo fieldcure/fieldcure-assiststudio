@@ -779,14 +779,8 @@ public sealed class ChatPanel : Control
             {
                 // Standard streaming mode
                 var request = await CreateRequestAsync(_messages.ToList());
-
-                await foreach (var token in Provider.StreamAsync(request, ct))
-                {
-                    assistantMessage.Content += token;
-                    await _renderer.AppendTokenAsync(assistantMessage.Id, token);
-                }
-
-                await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content, Provider.IsTruncated, Provider.LastUsage?.TotalTokens ?? 0);
+                var result = await ConsumeStreamAsync(Provider.StreamAsync(request, ct), assistantMessage, ct);
+                await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content, result.IsTruncated, result.Usage?.TotalTokens ?? 0);
             }
 
             if (IsDebugMode)
@@ -861,20 +855,13 @@ public sealed class ChatPanel : Control
         {
             var request = await CreateRequestAsync(_messages.ToList());
 
-            var continuationText = "";
-            await foreach (var token in Provider.StreamAsync(request, ct))
-            {
-                continuationText += token;
-                await _renderer.AppendTokenAsync(assistantMessage.Id, token);
-            }
-
-            // Append continuation to the original assistant message content
-            assistantMessage.Content += continuationText;
+            var priorLength = assistantMessage.Content.Length;
+            var result = await ConsumeStreamAsync(Provider.StreamAsync(request, ct), assistantMessage, ct);
 
             // Remove the continue user message from history -- replace with combined assistant content
             _messages.Remove(continueMessage);
 
-            await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content, Provider.IsTruncated, Provider.LastUsage?.TotalTokens ?? 0);
+            await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content, result.IsTruncated, result.Usage?.TotalTokens ?? 0);
 
             if (IsDebugMode)
             {
@@ -996,12 +983,8 @@ public sealed class ChatPanel : Control
 
         try
         {
-            await foreach (var token in Provider.StreamAsync(summaryRequest, ct))
-            {
-                summaryMessage.Content += token;
-                await _renderer.AppendTokenAsync(summaryMessage.Id, token);
-            }
-            await _renderer.FinalizeMessageAsync(summaryMessage.Id, summaryMessage.Content, Provider.IsTruncated);
+            var result = await ConsumeStreamAsync(Provider.StreamAsync(summaryRequest, ct), summaryMessage, ct);
+            await _renderer.FinalizeMessageAsync(summaryMessage.Id, summaryMessage.Content, result.IsTruncated);
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
@@ -1079,12 +1062,8 @@ public sealed class ChatPanel : Control
 
         try
         {
-            await foreach (var token in Provider.StreamAsync(summaryRequest, ct))
-            {
-                summaryMessage.Content += token;
-                await _renderer.AppendTokenAsync(summaryMessage.Id, token);
-            }
-            await _renderer.FinalizeMessageAsync(summaryMessage.Id, summaryMessage.Content, Provider.IsTruncated);
+            var result = await ConsumeStreamAsync(Provider.StreamAsync(summaryRequest, ct), summaryMessage, ct);
+            await _renderer.FinalizeMessageAsync(summaryMessage.Id, summaryMessage.Content, result.IsTruncated);
 
             // Replace old messages with a summary system message (internal only)
             for (var i = 0; i < oldMessages.Count; i++)
@@ -1160,6 +1139,38 @@ public sealed class ChatPanel : Control
     #endregion
 
     #region Private Methods
+
+    private record StreamResult(TokenUsage? Usage, bool IsTruncated);
+
+    /// <summary>
+    /// Consumes a stream of <see cref="StreamEvent"/> instances, appending text deltas to the message
+    /// and rendering them in the chat UI. Returns aggregated usage and truncation info.
+    /// </summary>
+    private async Task<StreamResult> ConsumeStreamAsync(
+        IAsyncEnumerable<StreamEvent> events, ChatMessage message, CancellationToken ct)
+    {
+        TokenUsage? usage = null;
+        var isTruncated = false;
+
+        await foreach (var evt in events.WithCancellation(ct))
+        {
+            switch (evt)
+            {
+                case StreamEvent.TextDelta delta:
+                    message.Content += delta.Text;
+                    await _renderer.AppendTokenAsync(message.Id, delta.Text);
+                    break;
+                case StreamEvent.Usage u:
+                    usage = u.TokenUsage;
+                    break;
+                case StreamEvent.StreamCompleted completed:
+                    isTruncated = completed.IsTruncated;
+                    break;
+            }
+        }
+
+        return new StreamResult(usage, isTruncated);
+    }
 
     /// <summary>
     /// Sets a tooltip with <see cref="Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse"/> placement on the specified element.
@@ -1274,18 +1285,14 @@ public sealed class ChatPanel : Control
         {
             var request = await CreateRequestAsync(_messages.ToList());
 
-            await foreach (var token in Provider.StreamAsync(request, ct))
-            {
-                assistantMessage.Content += token;
-                await _renderer.AppendTokenAsync(assistantMessage.Id, token);
-            }
+            var result = await ConsumeStreamAsync(Provider.StreamAsync(request, ct), assistantMessage, ct);
 
-            await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content, Provider.IsTruncated, Provider.LastUsage?.TotalTokens ?? 0);
+            await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content, result.IsTruncated, result.Usage?.TotalTokens ?? 0);
 
             if (IsDebugMode)
                 await _renderer.SetDebugDataAsync(userMessage.Id, Provider.LastRequestBody, assistantMessage.Id, Provider.LastRawResponse);
 
-            if (AutoSummarize && MaxInputTokens > 0 && Provider.LastUsage is { } usage &&
+            if (AutoSummarize && MaxInputTokens > 0 && result.Usage is { } usage &&
                 usage.InputTokens > MaxInputTokens)
             {
                 await SummarizeHistoryAsync(ct);

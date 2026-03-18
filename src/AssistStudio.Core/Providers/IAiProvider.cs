@@ -37,8 +37,8 @@ public interface IAiProvider
     /// <summary>Sends a chat completion request and returns a structured response that may contain text, tool calls, or both.</summary>
     Task<AiResponse> CompleteAsync(AiRequest request, CancellationToken ct = default);
 
-    /// <summary>Sends a chat completion request and streams response tokens as they arrive.</summary>
-    IAsyncEnumerable<string> StreamAsync(AiRequest request, CancellationToken ct = default);
+    /// <summary>Sends a chat completion request and streams response events as they arrive.</summary>
+    IAsyncEnumerable<StreamEvent> StreamAsync(AiRequest request, CancellationToken ct = default);
 
     /// <summary>Lists all models available from this provider.</summary>
     Task<IReadOnlyList<AiModel>> ListModelsAsync(CancellationToken ct = default);

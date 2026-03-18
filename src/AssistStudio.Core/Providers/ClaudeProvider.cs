@@ -150,7 +150,7 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
     }
 
     /// <inheritdoc/>
-    public async IAsyncEnumerable<string> StreamAsync(AiRequest request, [EnumeratorCancellation] CancellationToken ct = default)
+    public async IAsyncEnumerable<StreamEvent> StreamAsync(AiRequest request, [EnumeratorCancellation] CancellationToken ct = default)
     {
         var body = BuildRequestBody(request, stream: true);
         LastRequestBody = body;
@@ -175,7 +175,7 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
                     .GetString();
 
                 if (!string.IsNullOrEmpty(text))
-                    yield return text;
+                    yield return new StreamEvent.TextDelta(text);
             }
             else if (sse.EventType == "message_start")
             {
@@ -204,12 +204,16 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
             {
                 LastUsage = new TokenUsage(inputTokens, outputTokens);
                 LastRawResponse = responseSb.ToString();
+                yield return new StreamEvent.Usage(LastUsage);
+                yield return new StreamEvent.StreamCompleted(IsTruncated);
                 yield break;
             }
         }
 
         LastUsage = new TokenUsage(inputTokens, outputTokens);
         LastRawResponse = responseSb.ToString();
+        yield return new StreamEvent.Usage(LastUsage);
+        yield return new StreamEvent.StreamCompleted(IsTruncated);
     }
 
     /// <inheritdoc/>

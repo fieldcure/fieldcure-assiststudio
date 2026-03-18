@@ -4,7 +4,8 @@ using FieldCure.AssistStudio.Models;
 namespace FieldCure.AssistStudio.Providers;
 
 /// <summary>
-/// A mock AI provider that returns a static Markdown response, useful for UI testing and development.
+/// A mock AI provider that returns configurable responses, useful for UI testing and development.
+/// Supports simulating the full streaming pipeline: thinking, text, tool calls, and usage events.
 /// </summary>
 public class MockProvider : IAiProvider
 {
@@ -17,10 +18,10 @@ public class MockProvider : IAiProvider
     public string ModelId => "mock-markdown-1.0";
 
     /// <inheritdoc/>
-    public TokenUsage? LastUsage => null;
+    public TokenUsage? LastUsage { get; private set; }
 
     /// <inheritdoc/>
-    public bool IsTruncated => false;
+    public bool IsTruncated { get; private set; }
 
     /// <inheritdoc/>
     public string? LastRequestBody => null;
@@ -30,6 +31,35 @@ public class MockProvider : IAiProvider
 
     /// <inheritdoc/>
     public PdfCapability PdfCapability => PdfCapability.TextExtraction;
+
+    #endregion
+
+    #region Configuration
+
+    /// <summary>
+    /// The sequence of <see cref="StreamEvent"/> instances to yield during <see cref="StreamAsync"/>.
+    /// When set, overrides default behavior and yields these events verbatim.
+    /// A <see cref="StreamEvent.StreamCompleted"/> is appended automatically if the sequence does not end with one.
+    /// </summary>
+    public IReadOnlyList<StreamEvent>? ScriptedEvents { get; set; }
+
+    /// <summary>
+    /// Delay in milliseconds between each yielded event. Default is 30ms.
+    /// Set to 0 for instant streaming (useful in tests).
+    /// </summary>
+    public int EventDelayMs { get; set; } = 30;
+
+    /// <summary>
+    /// Simulated token usage to emit as a <see cref="StreamEvent.Usage"/> event.
+    /// Only used when <see cref="ScriptedEvents"/> is null (default streaming mode).
+    /// </summary>
+    public TokenUsage? SimulatedUsage { get; set; }
+
+    /// <summary>
+    /// Whether to simulate a truncated response.
+    /// Only used when <see cref="ScriptedEvents"/> is null (default streaming mode).
+    /// </summary>
+    public bool SimulateTruncated { get; set; }
 
     #endregion
 
@@ -109,16 +139,57 @@ public class MockProvider : IAiProvider
     }
 
     /// <inheritdoc/>
-    public async IAsyncEnumerable<string> StreamAsync(AiRequest request, [EnumeratorCancellation] CancellationToken ct = default)
+    public async IAsyncEnumerable<StreamEvent> StreamAsync(AiRequest request, [EnumeratorCancellation] CancellationToken ct = default)
     {
-        // Stream the markdown response token-by-token (word-level)
-        var words = MarkdownResponse.Split(' ');
-        for (var i = 0; i < words.Length; i++)
+        IsTruncated = false;
+        LastUsage = null;
+
+        if (ScriptedEvents is not null)
         {
-            ct.ThrowIfCancellationRequested();
-            var token = (i > 0 ? " " : "") + words[i];
-            yield return token;
-            await Task.Delay(30, ct);
+            // Scripted mode: yield each event from the configured sequence
+            var hasCompleted = false;
+            foreach (var evt in ScriptedEvents)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (EventDelayMs > 0)
+                    await Task.Delay(EventDelayMs, ct);
+
+                if (evt is StreamEvent.Usage u)
+                    LastUsage = u.TokenUsage;
+                else if (evt is StreamEvent.StreamCompleted c)
+                {
+                    IsTruncated = c.IsTruncated;
+                    hasCompleted = true;
+                }
+
+                yield return evt;
+            }
+
+            if (!hasCompleted)
+                yield return new StreamEvent.StreamCompleted(IsTruncated);
+        }
+        else
+        {
+            // Default mode: stream the built-in markdown response word-by-word
+            var words = MarkdownResponse.Split(' ');
+            for (var i = 0; i < words.Length; i++)
+            {
+                ct.ThrowIfCancellationRequested();
+                var token = (i > 0 ? " " : "") + words[i];
+                yield return new StreamEvent.TextDelta(token);
+                if (EventDelayMs > 0)
+                    await Task.Delay(EventDelayMs, ct);
+            }
+
+            IsTruncated = SimulateTruncated;
+
+            if (SimulatedUsage is not null)
+            {
+                LastUsage = SimulatedUsage;
+                yield return new StreamEvent.Usage(SimulatedUsage);
+            }
+
+            yield return new StreamEvent.StreamCompleted(IsTruncated);
         }
     }
 

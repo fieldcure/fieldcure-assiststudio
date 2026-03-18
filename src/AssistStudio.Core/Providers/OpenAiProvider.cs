@@ -152,7 +152,7 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
     }
 
     /// <inheritdoc/>
-    public async IAsyncEnumerable<string> StreamAsync(AiRequest request, [EnumeratorCancellation] CancellationToken ct = default)
+    public async IAsyncEnumerable<StreamEvent> StreamAsync(AiRequest request, [EnumeratorCancellation] CancellationToken ct = default)
     {
         var body = BuildRequestBody(request, stream: true);
         LastRequestBody = body;
@@ -167,6 +167,9 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
             if (sse.Data == "[DONE]")
             {
                 LastRawResponse = responseSb.ToString();
+                if (LastUsage is not null)
+                    yield return new StreamEvent.Usage(LastUsage);
+                yield return new StreamEvent.StreamCompleted(IsTruncated);
                 yield break;
             }
 
@@ -202,11 +205,14 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
             {
                 var text = contentEl.GetString();
                 if (!string.IsNullOrEmpty(text))
-                    yield return text;
+                    yield return new StreamEvent.TextDelta(text);
             }
         }
 
         LastRawResponse = responseSb.ToString();
+        if (LastUsage is not null)
+            yield return new StreamEvent.Usage(LastUsage);
+        yield return new StreamEvent.StreamCompleted(IsTruncated);
     }
 
     /// <inheritdoc/>

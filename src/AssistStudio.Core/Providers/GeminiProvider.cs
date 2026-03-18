@@ -161,7 +161,7 @@ public partial class GeminiProvider : IAiProvider, IDisposable
     }
 
     /// <inheritdoc/>
-    public async IAsyncEnumerable<string> StreamAsync(AiRequest request, [EnumeratorCancellation] CancellationToken ct = default)
+    public async IAsyncEnumerable<StreamEvent> StreamAsync(AiRequest request, [EnumeratorCancellation] CancellationToken ct = default)
     {
         var body = BuildRequestBody(request);
         LastRequestBody = body;
@@ -209,13 +209,16 @@ public partial class GeminiProvider : IAiProvider, IDisposable
                     {
                         var text = textEl.GetString();
                         if (!string.IsNullOrEmpty(text))
-                            yield return text;
+                            yield return new StreamEvent.TextDelta(text);
                     }
                 }
             }
         }
 
         LastRawResponse = responseSb.ToString();
+        if (LastUsage is not null)
+            yield return new StreamEvent.Usage(LastUsage);
+        yield return new StreamEvent.StreamCompleted(IsTruncated);
     }
 
     /// <inheritdoc/>
