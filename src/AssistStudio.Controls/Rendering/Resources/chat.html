@@ -138,28 +138,26 @@
 
     /* ===== Thinking Block ===== */
     .thinking-block {
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
+        border-left: 3px solid var(--border-color);
         margin-bottom: 8px;
-        overflow: hidden;
+        padding-left: 10px;
     }
     .thinking-header {
         display: flex;
         align-items: center;
-        gap: 6px;
-        padding: 6px 10px;
-        background: var(--code-bg);
+        gap: 5px;
+        padding: 2px 0;
         cursor: pointer;
         user-select: none;
-        font-size: 12px;
+        font-size: 11px;
         color: var(--timestamp-color);
     }
     .thinking-header:hover {
-        background: var(--code-header-bg);
+        color: var(--text-color);
     }
     .thinking-toggle {
         transition: transform 0.2s;
-        font-size: 10px;
+        font-size: 9px;
     }
     .thinking-block.collapsed .thinking-toggle {
         transform: rotate(-90deg);
@@ -168,13 +166,12 @@
         display: none;
     }
     .thinking-content {
-        padding: 8px 10px;
-        font-size: 13px;
-        color: var(--blockquote-text);
+        padding: 4px 0;
+        font-size: 12px;
+        color: var(--timestamp-color);
         white-space: pre-wrap;
-        max-height: 300px;
+        max-height: 200px;
         overflow-y: auto;
-        border-top: 1px solid var(--border-color);
     }
     .thinking-block.streaming .thinking-content {
         max-height: none;
