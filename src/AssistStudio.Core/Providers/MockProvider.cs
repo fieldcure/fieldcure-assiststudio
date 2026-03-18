@@ -34,6 +34,13 @@ public class MockProvider : IAiProvider
 
     #endregion
 
+    #region Fields
+
+    /// <summary>Tracks whether a tool call has already been emitted in default mode to prevent repeat calls.</summary>
+    private bool _toolCallEmitted;
+
+    #endregion
+
     #region Configuration
 
     /// <summary>
@@ -65,7 +72,7 @@ public class MockProvider : IAiProvider
 
     #region Constants
 
-    /// <summary>The static Markdown response returned by the mock provider.</summary>
+    /// <summary>The static Markdown response returned by the mock provider on the first round.</summary>
     private const string MarkdownResponse = """
         Here's a **Markdown** demo response!
 
@@ -112,6 +119,16 @@ public class MockProvider : IAiProvider
         ---
 
         That's the end of the demo!
+        """;
+
+    /// <summary>A short follow-up response returned after tool execution in the second round.</summary>
+    private const string ToolFollowUpResponse = """
+        The tool has been executed successfully. Here's a summary of the results:
+
+        - **Status**: Completed
+        - **Items found**: 3
+
+        That concludes the demo of the tool calling flow!
         """;
 
     #endregion
@@ -170,8 +187,26 @@ public class MockProvider : IAiProvider
         }
         else
         {
-            // Default mode: stream the built-in markdown response word-by-word
-            var words = MarkdownResponse.Split(' ');
+            // Default mode: simulate the full streaming pipeline (thinking → text → tool calls)
+
+            // Phase 1: Thinking simulation
+            var thinkingChunks = new[]
+            {
+                "Let me analyze ", "this request... ",
+                "I'll consider ", "the best approach ", "to respond."
+            };
+            foreach (var chunk in thinkingChunks)
+            {
+                ct.ThrowIfCancellationRequested();
+                yield return new StreamEvent.ThinkingDelta(chunk);
+                if (EventDelayMs > 0)
+                    await Task.Delay(EventDelayMs, ct);
+            }
+
+            // Phase 2: Text streaming (word-by-word)
+            // Use the short follow-up if a tool call was already emitted (i.e., this is round 2+)
+            var responseText = _toolCallEmitted ? ToolFollowUpResponse : MarkdownResponse;
+            var words = responseText.Split(' ');
             for (var i = 0; i < words.Length; i++)
             {
                 ct.ThrowIfCancellationRequested();
@@ -179,6 +214,21 @@ public class MockProvider : IAiProvider
                 yield return new StreamEvent.TextDelta(token);
                 if (EventDelayMs > 0)
                     await Task.Delay(EventDelayMs, ct);
+            }
+
+            // Phase 3: Tool call simulation (once only — skip after the first emission)
+            // Prefer a tool with RequiresConfirmation to demo the approval panel
+            if (request.Tools is { Count: > 0 } && !_toolCallEmitted)
+            {
+                var tool = request.Tools.FirstOrDefault(t => t.RequiresConfirmation) ?? request.Tools[0];
+                var callId = Guid.NewGuid().ToString("N");
+                yield return new StreamEvent.ToolCallStart(callId, tool.Name);
+                if (EventDelayMs > 0)
+                    await Task.Delay(EventDelayMs, ct);
+                yield return new StreamEvent.ToolCallDelta(callId, "{}");
+                if (EventDelayMs > 0)
+                    await Task.Delay(EventDelayMs, ct);
+                _toolCallEmitted = true;
             }
 
             IsTruncated = SimulateTruncated;
