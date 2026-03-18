@@ -82,9 +82,8 @@ public sealed partial class ModelsPage : Page
         UpdateAllSubHeaders();
         UpdateExpandedState();
 
-        // Note: SyncPresetsFromUI is NOT called here — presets are already loaded by
-        // AppSettings.LoadPresets() at startup. Sync only happens when the user changes
-        // API keys or model selections (via OnCloudModelChanged / OnApiKeyChanged).
+        // Presets are already loaded by AppSettings.LoadPresets() at startup.
+        // Individual event handlers persist changes directly via PersistPresets().
 
         // Initialize Ollama URL from saved settings
         OllamaUrlBox.Text = AppSettings.GetOllamaBaseUrl() ?? "http://localhost:11434";
@@ -291,7 +290,27 @@ public sealed partial class ModelsPage : Page
 
         UpdateProviderSubHeader(section, modelCombo, hasKey: true);
         _ = FetchAndCacheModelsAsync(provider, key, modelCombo);
-        SyncPresetsFromUI();
+
+        var preset = FindPreset(provider);
+        if (preset is not null)
+        {
+            preset.ApiKey = key;
+        }
+        else
+        {
+            var newPreset = new ProviderPreset
+            {
+                Name = ProviderToDisplayName(provider),
+                ProviderType = provider,
+                ModelId = modelCombo.SelectedItem as string
+                          ?? AppSettings.GetDefaultModel(provider) ?? "",
+                ApiKey = key,
+                BaseUrl = provider == "Groq" ? "https://api.groq.com/openai/v1" : null,
+            };
+            var ollamaIdx = _presets.ToList().FindIndex(p => p.ProviderType == "Ollama");
+            _presets.Insert(ollamaIdx >= 0 ? ollamaIdx : _presets.Count, newPreset);
+        }
+        PersistPresets();
     }
 
     /// <summary>
@@ -301,10 +320,9 @@ public sealed partial class ModelsPage : Page
     {
         PasswordVaultHelper.DeleteApiKey(provider);
 
-        // Clear the in-memory cached key so SyncPresetsFromUI won't resurrect it
-        var existing = _presets.FirstOrDefault(p => p.ProviderType == provider);
+        var existing = FindPreset(provider);
         if (existing is not null)
-            existing.ApiKey = "";
+            _presets.Remove(existing);
 
         inputPanel.Visibility = Visibility.Visible;
         displayPanel.Visibility = Visibility.Collapsed;
@@ -312,7 +330,7 @@ public sealed partial class ModelsPage : Page
         optionsPanel.Visibility = Visibility.Collapsed;
 
         UpdateProviderSubHeader(section, modelCombo, hasKey: false);
-        SyncPresetsFromUI();
+        PersistPresets();
     }
 
     #endregion
@@ -376,7 +394,7 @@ public sealed partial class ModelsPage : Page
     /// </summary>
     private void PopulateModelCombos()
     {
-        // Suppress SelectionChanged → SyncPresetsFromUI during initial population
+        // Suppress SelectionChanged → PersistPresets during initial population
         _isPopulating = true;
         try
         {
@@ -724,82 +742,15 @@ public sealed partial class ModelsPage : Page
     };
 
     /// <summary>
-    /// Rebuilds the provider preset collection from the current UI state (API keys and selected models)
-    /// and notifies the settings panel of the changes.
+    /// Finds the preset for the specified provider type in the current collection.
     /// </summary>
-    private void SyncPresetsFromUI()
-    {
-        if (OllamaModelCombo is null) return;
+    private ProviderPreset? FindPreset(string providerType)
+        => _presets.FirstOrDefault(p => p.ProviderType == providerType);
 
-        // Cloud providers — read API keys from vault to ensure consistency after add/remove
-        _presets.Clear();
-
-        foreach (var provider in new[] { "Claude", "OpenAI", "Gemini", "Groq" })
-        {
-            var key = PasswordVaultHelper.LoadApiKey(provider);
-            if (string.IsNullOrEmpty(key)) continue;
-
-            var (modelCombo, pdfCombo, thinkingToggle, thinkingBudget, thinkingOverrideCombo) = provider switch
-            {
-                "Claude" => (ClaudeModelCombo, ClaudePdfCombo, ClaudeThinkingToggle, ClaudeThinkingBudget, ClaudeThinkingOverrideCombo),
-                "OpenAI" => (OpenAIModelCombo, OpenAIPdfCombo, OpenAIThinkingToggle, OpenAIThinkingBudget, OpenAIThinkingOverrideCombo),
-                "Gemini" => (GeminiModelCombo, GeminiPdfCombo, GeminiThinkingToggle, GeminiThinkingBudget, GeminiThinkingOverrideCombo),
-                "Groq" => (GroqModelCombo, GroqPdfCombo, GroqThinkingToggle, GroqThinkingBudget, GroqThinkingOverrideCombo),
-                _ => ((ComboBox?)null, (ComboBox?)null, (ToggleSwitch?)null, (NumberBox?)null, (ComboBox?)null)
-            };
-
-            var modelId = modelCombo?.SelectedItem as string ?? "";
-            if (string.IsNullOrEmpty(modelId))
-                modelId = AppSettings.GetDefaultModel(provider) ?? "";
-            else
-                AppSettings.SetDefaultModel(provider, modelId);
-
-            var preset = new ProviderPreset
-            {
-                Name = ProviderToDisplayName(provider),
-                ProviderType = provider,
-                ModelId = modelId,
-                ApiKey = key,
-                PdfCapability = pdfCombo is not null ? GetPdfCapabilityFromCombo(pdfCombo) : PdfCapability.Auto,
-                ThinkingEnabled = thinkingToggle?.IsOn ?? false,
-                ThinkingBudget = thinkingToggle?.IsOn == true && thinkingBudget is not null && !double.IsNaN(thinkingBudget.Value)
-                    ? (int)thinkingBudget.Value
-                    : null,
-                ThinkingOverride = GetThinkingOverrideFromCombo(thinkingOverrideCombo)
-            };
-
-            if (provider == "Groq")
-                preset.BaseUrl = "https://api.groq.com/openai/v1";
-
-            _presets.Add(preset);
-        }
-
-        // Ollama
-        var ollamaDisplay = OllamaModelCombo.SelectedItem as string ?? "";
-        var ollamaModel = StripFitSuffix(ollamaDisplay);
-        if (string.IsNullOrEmpty(ollamaModel))
-            ollamaModel = AppSettings.GetDefaultModel("Ollama") ?? "";
-        else
-            AppSettings.SetDefaultModel("Ollama", ollamaModel);
-        var ollamaBaseUrl = GetOllamaBaseUrlFromUI();
-        _presets.Add(new ProviderPreset
-        {
-            Name = "Ollama",
-            ProviderType = "Ollama",
-            ModelId = ollamaModel,
-            BaseUrl = ollamaBaseUrl,
-            PdfCapability = GetPdfCapabilityFromCombo(OllamaPdfCombo)
-        });
-
-        // Mock
-        _presets.Add(new ProviderPreset
-        {
-            Name = "Mock",
-            ProviderType = "Mock"
-        });
-
-        AppSettings.SavePresets(_presets);
-    }
+    /// <summary>
+    /// Persists the current preset collection to settings and fires the PresetsChanged event.
+    /// </summary>
+    private void PersistPresets() => AppSettings.SavePresets(_presets);
 
     /// <summary>
     /// Handles cloud provider model combo box selection changes to persist the model and sync presets.
@@ -830,8 +781,11 @@ public sealed partial class ModelsPage : Page
             "Groq" => (GroqThinkingOverrideCombo, GroqThinkingToggle, GroqThinkingBudget, GroqThinkingHint),
             _ => ((ComboBox?)null, (ToggleSwitch?)null, (NumberBox?)null, (TextBlock?)null)
         };
+        // Guard against cascading events from UpdateThinkingState setting toggle.IsOn
+        _isPopulating = true;
         if (overrideCombo is not null && toggle is not null && budgetBox is not null && hint is not null)
             UpdateThinkingState(provider, combo, overrideCombo, toggle, budgetBox, hint);
+        _isPopulating = false;
 
         // Update sub-header to reflect new model selection
         var section = GetSectionForProvider(provider);
@@ -839,7 +793,17 @@ public sealed partial class ModelsPage : Page
             UpdateProviderSubHeader(section, combo, hasKey: true);
 
         AppSettings.SetDefaultModel(provider, model);
-        SyncPresetsFromUI();
+
+        var preset = FindPreset(provider);
+        if (preset is not null)
+        {
+            preset.ModelId = model;
+            preset.ThinkingEnabled = toggle?.IsOn ?? false;
+            preset.ThinkingBudget = toggle?.IsOn == true && budgetBox is not null && !double.IsNaN(budgetBox.Value)
+                ? (int)budgetBox.Value : null;
+            preset.ThinkingOverride = GetThinkingOverrideFromCombo(overrideCombo);
+        }
+        PersistPresets();
     }
 
     /// <summary>
@@ -848,7 +812,23 @@ public sealed partial class ModelsPage : Page
     private void OnPdfHandlingChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_isPopulating) return;
-        SyncPresetsFromUI();
+        if (sender is not ComboBox combo) return;
+
+        var provider = combo.Name switch
+        {
+            nameof(ClaudePdfCombo) => "Claude",
+            nameof(OpenAIPdfCombo) => "OpenAI",
+            nameof(GeminiPdfCombo) => "Gemini",
+            nameof(GroqPdfCombo) => "Groq",
+            nameof(OllamaPdfCombo) => "Ollama",
+            _ => (string?)null
+        };
+        if (provider is null) return;
+
+        var preset = FindPreset(provider);
+        if (preset is not null)
+            preset.PdfCapability = GetPdfCapabilityFromCombo(combo);
+        PersistPresets();
     }
 
     /// <summary>
@@ -858,22 +838,29 @@ public sealed partial class ModelsPage : Page
     private void OnThinkingToggled(object sender, RoutedEventArgs e)
     {
         if (_isPopulating) return;
-        if (sender is ToggleSwitch toggle)
+        if (sender is not ToggleSwitch toggle || !toggle.IsEnabled) return;
+
+        var (provider, budgetBox) = toggle.Name switch
         {
-            // Ignore programmatic toggle changes when the control is disabled
-            if (!toggle.IsEnabled) return;
-            var budgetBox = toggle.Name switch
-            {
-                nameof(ClaudeThinkingToggle) => ClaudeThinkingBudget,
-                nameof(OpenAIThinkingToggle) => OpenAIThinkingBudget,
-                nameof(GeminiThinkingToggle) => GeminiThinkingBudget,
-                nameof(GroqThinkingToggle) => GroqThinkingBudget,
-                _ => (NumberBox?)null
-            };
-            if (budgetBox is not null)
-                budgetBox.IsEnabled = toggle.IsOn;
+            nameof(ClaudeThinkingToggle) => ("Claude", (NumberBox?)ClaudeThinkingBudget),
+            nameof(OpenAIThinkingToggle) => ("OpenAI", (NumberBox?)OpenAIThinkingBudget),
+            nameof(GeminiThinkingToggle) => ("Gemini", (NumberBox?)GeminiThinkingBudget),
+            nameof(GroqThinkingToggle) => ("Groq", (NumberBox?)GroqThinkingBudget),
+            _ => ((string?)null, (NumberBox?)null)
+        };
+        if (provider is null) return;
+
+        if (budgetBox is not null)
+            budgetBox.IsEnabled = toggle.IsOn;
+
+        var preset = FindPreset(provider);
+        if (preset is not null)
+        {
+            preset.ThinkingEnabled = toggle.IsOn;
+            preset.ThinkingBudget = toggle.IsOn && budgetBox is not null && !double.IsNaN(budgetBox.Value)
+                ? (int)budgetBox.Value : null;
         }
-        SyncPresetsFromUI();
+        PersistPresets();
     }
 
     /// <summary>
@@ -883,8 +870,41 @@ public sealed partial class ModelsPage : Page
     private void OnThinkingOverrideChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_isPopulating) return;
+
+        // Guard against cascading events from UpdateAllThinkingStates setting toggle.IsOn
+        _isPopulating = true;
         UpdateAllThinkingStates();
-        SyncPresetsFromUI();
+        _isPopulating = false;
+
+        if (sender is not ComboBox combo) return;
+        var provider = combo.Name switch
+        {
+            nameof(ClaudeThinkingOverrideCombo) => "Claude",
+            nameof(OpenAIThinkingOverrideCombo) => "OpenAI",
+            nameof(GeminiThinkingOverrideCombo) => "Gemini",
+            nameof(GroqThinkingOverrideCombo) => "Groq",
+            _ => (string?)null
+        };
+        if (provider is null) return;
+
+        var (toggle, budgetBox) = provider switch
+        {
+            "Claude" => ((ToggleSwitch)ClaudeThinkingToggle, (NumberBox)ClaudeThinkingBudget),
+            "OpenAI" => (OpenAIThinkingToggle, OpenAIThinkingBudget),
+            "Gemini" => (GeminiThinkingToggle, GeminiThinkingBudget),
+            "Groq" => (GroqThinkingToggle, GroqThinkingBudget),
+            _ => ((ToggleSwitch?)null, (NumberBox?)null)
+        };
+
+        var preset = FindPreset(provider);
+        if (preset is not null)
+        {
+            preset.ThinkingOverride = GetThinkingOverrideFromCombo(combo);
+            preset.ThinkingEnabled = toggle?.IsOn ?? false;
+            preset.ThinkingBudget = toggle?.IsOn == true && budgetBox is not null && !double.IsNaN(budgetBox.Value)
+                ? (int)budgetBox.Value : null;
+        }
+        PersistPresets();
     }
 
     /// <summary>
@@ -893,7 +913,21 @@ public sealed partial class ModelsPage : Page
     private void OnThinkingBudgetChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
         if (_isPopulating) return;
-        SyncPresetsFromUI();
+
+        var provider = sender.Name switch
+        {
+            nameof(ClaudeThinkingBudget) => "Claude",
+            nameof(OpenAIThinkingBudget) => "OpenAI",
+            nameof(GeminiThinkingBudget) => "Gemini",
+            nameof(GroqThinkingBudget) => "Groq",
+            _ => (string?)null
+        };
+        if (provider is null) return;
+
+        var preset = FindPreset(provider);
+        if (preset is not null)
+            preset.ThinkingBudget = !double.IsNaN(sender.Value) ? (int)sender.Value : null;
+        PersistPresets();
     }
 
     /// <summary>
@@ -926,7 +960,11 @@ public sealed partial class ModelsPage : Page
             var model = StripFitSuffix(display);
             AppSettings.SetDefaultModel("Ollama", model);
             UpdateOllamaSubHeader();
-            SyncPresetsFromUI();
+
+            var preset = FindPreset("Ollama");
+            if (preset is not null)
+                preset.ModelId = model;
+            PersistPresets();
         }
     }
 
@@ -959,7 +997,11 @@ public sealed partial class ModelsPage : Page
     {
         var url = GetOllamaBaseUrlFromUI();
         AppSettings.SetOllamaBaseUrl(url);
-        SyncPresetsFromUI();
+
+        var preset = FindPreset("Ollama");
+        if (preset is not null)
+            preset.BaseUrl = url;
+        PersistPresets();
     }
 
     /// <summary>
