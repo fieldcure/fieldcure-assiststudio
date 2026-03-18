@@ -132,9 +132,15 @@ public partial class OllamaProvider : IAiProvider, IDisposable
                       drEl.GetString() == "length";
 
         var message = root.GetProperty("message");
-        var content = message.TryGetProperty("content", out var contentEl)
+        var rawContent = message.TryGetProperty("content", out var contentEl)
             ? contentEl.GetString()
             : null;
+
+        // Separate <think>...</think> tags from content
+        string? thinkingContent = null;
+        var content = rawContent;
+        if (!string.IsNullOrEmpty(rawContent))
+            (thinkingContent, content) = ExtractThinkingBlock(rawContent);
 
         // Parse tool calls from the response
         var toolCalls = new List<ToolCall>();
@@ -155,6 +161,7 @@ public partial class OllamaProvider : IAiProvider, IDisposable
         return new AiResponse
         {
             Content = content,
+            ThinkingContent = thinkingContent,
             ToolCalls = toolCalls,
             Usage = usage,
             IsTruncated = IsTruncated
@@ -173,6 +180,10 @@ public partial class OllamaProvider : IAiProvider, IDisposable
         IsTruncated = false;
         var responseSb = new StringBuilder();
 
+        // Track <think>...</think> state across streamed chunks.
+        // Models like deepseek-r1 and qwq emit reasoning inside these tags.
+        var thinkState = new ThinkTagState();
+
         while (!reader.EndOfStream)
         {
             ct.ThrowIfCancellationRequested();
@@ -187,6 +198,15 @@ public partial class OllamaProvider : IAiProvider, IDisposable
 
             if (root.TryGetProperty("done", out var doneEl) && doneEl.GetBoolean())
             {
+                // Flush any remaining tag buffer as text (incomplete tag)
+                if (thinkState.TagBuffer.Length > 0)
+                {
+                    yield return thinkState.InsideThink
+                        ? new StreamEvent.ThinkingDelta(thinkState.TagBuffer.ToString())
+                        : new StreamEvent.TextDelta(thinkState.TagBuffer.ToString());
+                    thinkState.TagBuffer.Clear();
+                }
+
                 if (root.TryGetProperty("prompt_eval_count", out var promptEl) &&
                     root.TryGetProperty("eval_count", out var evalEl))
                 {
@@ -207,7 +227,10 @@ public partial class OllamaProvider : IAiProvider, IDisposable
                 {
                     var text = contentEl.GetString();
                     if (!string.IsNullOrEmpty(text))
-                        yield return new StreamEvent.TextDelta(text);
+                    {
+                        foreach (var evt in ClassifyThinkingChunks(text, thinkState))
+                            yield return evt;
+                    }
                 }
 
                 // Parse tool calls (Ollama sends complete tool calls in a single chunk)
@@ -404,6 +427,122 @@ public partial class OllamaProvider : IAiProvider, IDisposable
         }
 
         return body.ToJsonString();
+    }
+
+    /// <summary>
+    /// Extracts a <c>&lt;think&gt;...&lt;/think&gt;</c> block from a complete response string.
+    /// Returns (thinkingContent, remainingContent) where either may be null/empty.
+    /// </summary>
+    private static (string? thinking, string? content) ExtractThinkingBlock(string raw)
+    {
+        const string openTag = "<think>";
+        const string closeTag = "</think>";
+
+        var openIdx = raw.IndexOf(openTag, StringComparison.OrdinalIgnoreCase);
+        if (openIdx < 0) return (null, raw);
+
+        var closeIdx = raw.IndexOf(closeTag, openIdx, StringComparison.OrdinalIgnoreCase);
+        if (closeIdx < 0)
+        {
+            // Unterminated <think> — treat everything after the tag as thinking
+            var thinking = raw[(openIdx + openTag.Length)..].Trim();
+            var before = raw[..openIdx].Trim();
+            return (
+                string.IsNullOrEmpty(thinking) ? null : thinking,
+                string.IsNullOrEmpty(before) ? null : before
+            );
+        }
+
+        var thinkContent = raw[(openIdx + openTag.Length)..closeIdx].Trim();
+        var remaining = string.Concat(raw.AsSpan(0, openIdx), raw.AsSpan(closeIdx + closeTag.Length)).Trim();
+        return (
+            string.IsNullOrEmpty(thinkContent) ? null : thinkContent,
+            string.IsNullOrEmpty(remaining) ? null : remaining
+        );
+    }
+
+    /// <summary>
+    /// Classifies streamed text chunks into <see cref="StreamEvent.ThinkingDelta"/> or
+    /// <see cref="StreamEvent.TextDelta"/> by tracking <c>&lt;think&gt;</c>/<c>&lt;/think&gt;</c> tags
+    /// across chunk boundaries. Batches consecutive characters of the same type to avoid per-char yields.
+    /// </summary>
+    /// <param name="text">The incoming text chunk.</param>
+    /// <param name="state">Mutable state tracking tag parsing across chunks.</param>
+    private static IEnumerable<StreamEvent> ClassifyThinkingChunks(string text, ThinkTagState state)
+    {
+        var contentBatch = new StringBuilder();
+
+        for (var i = 0; i < text.Length; i++)
+        {
+            var ch = text[i];
+
+            if (ch == '<')
+            {
+                // Flush content batch before starting tag detection
+                if (contentBatch.Length > 0)
+                {
+                    yield return state.InsideThink
+                        ? new StreamEvent.ThinkingDelta(contentBatch.ToString())
+                        : new StreamEvent.TextDelta(contentBatch.ToString());
+                    contentBatch.Clear();
+                }
+
+                // Flush any previous incomplete tag buffer as content
+                if (state.TagBuffer.Length > 0)
+                {
+                    yield return state.InsideThink
+                        ? new StreamEvent.ThinkingDelta(state.TagBuffer.ToString())
+                        : new StreamEvent.TextDelta(state.TagBuffer.ToString());
+                    state.TagBuffer.Clear();
+                }
+                state.TagBuffer.Append(ch);
+            }
+            else if (state.TagBuffer.Length > 0)
+            {
+                state.TagBuffer.Append(ch);
+                var buf = state.TagBuffer.ToString();
+
+                // Check for complete <think> tag
+                if (buf.Equals("<think>", StringComparison.OrdinalIgnoreCase))
+                {
+                    state.InsideThink = true;
+                    state.TagBuffer.Clear();
+                }
+                // Check for complete </think> tag
+                else if (buf.Equals("</think>", StringComparison.OrdinalIgnoreCase))
+                {
+                    state.InsideThink = false;
+                    state.TagBuffer.Clear();
+                }
+                // Still a valid prefix of <think> or </think>?
+                else if (!"<think>".StartsWith(buf, StringComparison.OrdinalIgnoreCase)
+                    && !"</think>".StartsWith(buf, StringComparison.OrdinalIgnoreCase))
+                {
+                    // Not a think tag — add to content batch
+                    contentBatch.Append(buf);
+                    state.TagBuffer.Clear();
+                }
+            }
+            else
+            {
+                contentBatch.Append(ch);
+            }
+        }
+
+        // Flush remaining content batch (tag buffer stays for cross-chunk continuity)
+        if (contentBatch.Length > 0)
+        {
+            yield return state.InsideThink
+                ? new StreamEvent.ThinkingDelta(contentBatch.ToString())
+                : new StreamEvent.TextDelta(contentBatch.ToString());
+        }
+    }
+
+    /// <summary>Mutable state for tracking <c>&lt;think&gt;</c> tag parsing across streamed chunks.</summary>
+    private sealed class ThinkTagState
+    {
+        public bool InsideThink;
+        public readonly StringBuilder TagBuffer = new();
     }
 
     /// <summary>Sends an HTTP POST request to the Ollama API and validates the response.</summary>
