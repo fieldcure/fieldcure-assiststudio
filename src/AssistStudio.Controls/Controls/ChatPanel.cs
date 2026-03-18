@@ -1162,7 +1162,7 @@ public sealed class ChatPanel : Control
     #region Private Methods
 
     /// <summary>
-    /// Sets a tooltip with <see cref="PlacementMode.Mouse"/> placement on the specified element.
+    /// Sets a tooltip with <see cref="Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse"/> placement on the specified element.
     /// </summary>
     private static void SetBottomRightToolTip(FrameworkElement element, string text)
     {
