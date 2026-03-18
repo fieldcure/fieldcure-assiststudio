@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using FieldCure.AssistStudio.Controls;
 using FieldCure.AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
+using FieldCure.AssistStudio.Tools;
 using System.Collections;
 using System.Collections.ObjectModel;
 
@@ -67,6 +68,7 @@ public partial class MainViewModel : ObservableObject
         ToolRegistry.Register(new WriteFileTool());
         ToolRegistry.Register(new SearchFilesTool());
         ToolRegistry.Register(new RunCommandTool());
+        ToolRegistry.Register(new UrlFetchTool());
     }
 
     #endregion
