@@ -1,3 +1,4 @@
+using AssistStudio.Dialogs;
 using AssistStudio.Helpers;
 using AssistStudio.Mcp;
 using FieldCure.AssistStudio.Models;

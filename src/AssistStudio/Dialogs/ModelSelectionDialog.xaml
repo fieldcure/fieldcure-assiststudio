@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<helpers:ThemedContentDialog
+<local:ThemedContentDialog
     x:Class="AssistStudio.Dialogs.ModelSelectionDialog"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:helpers="using:AssistStudio.Helpers"
+    xmlns:local="using:AssistStudio.Dialogs"
     x:Uid="ModelDialog"
     Title="Ollama Models"
     CloseButtonText="Close"
@@ -82,4 +82,4 @@
             <Button x:Uid="ModelDialog_PullCustom" Content="Download" Click="OnPullCustomModel" />
         </StackPanel>
     </StackPanel>
-</helpers:ThemedContentDialog>
+</local:ThemedContentDialog>

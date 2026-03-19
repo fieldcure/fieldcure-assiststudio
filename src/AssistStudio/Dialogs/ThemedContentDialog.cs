@@ -2,7 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Windows.ApplicationModel.Resources;
 
-namespace AssistStudio.Helpers;
+namespace AssistStudio.Dialogs;
 
 /// <summary>
 /// Base class for content dialogs with automatic theme support.
@@ -13,7 +13,7 @@ namespace AssistStudio.Helpers;
 /// Callers must still set <see cref="ContentDialog.XamlRoot"/> before calling
 /// <see cref="ContentDialog.ShowAsync"/>.
 /// </remarks>
-public class ThemedContentDialog : ContentDialog
+public partial class ThemedContentDialog : ContentDialog
 {
     #region Fields
 
