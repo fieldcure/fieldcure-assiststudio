@@ -94,8 +94,8 @@ public sealed partial class ModelsPage : Page
         // Initialize Ollama URL from saved settings
         OllamaUrlBox.Text = AppSettings.GetOllamaBaseUrl() ?? "http://localhost:11434";
 
-        // Auto-check Ollama status
-        _ = CheckOllamaStatusAsync();
+        // Lazy-check Ollama status to avoid blocking page entry
+        _ = DelayedCheckOllamaAsync();
 
         // Resume progress tracking if downloads were started before navigating away
         if (_pendingPulls.Count > 0)
@@ -1069,6 +1069,15 @@ public sealed partial class ModelsPage : Page
         if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
             return uri.Host != "localhost" && uri.Host != "127.0.0.1" && uri.Host != "::1";
         return false;
+    }
+
+    /// <summary>
+    /// Delays Ollama status check to avoid blocking page navigation.
+    /// </summary>
+    private async Task DelayedCheckOllamaAsync()
+    {
+        await Task.Delay(300);
+        await CheckOllamaStatusAsync();
     }
 
     /// <summary>
