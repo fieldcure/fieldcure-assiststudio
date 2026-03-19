@@ -27,7 +27,7 @@ public enum ChatTheme
 /// A templated control that provides a complete chat experience with message streaming,
 /// attachments, preset selection, and conversation management. Default style is defined in Generic.xaml.
 /// </summary>
-public sealed class ChatPanel : Control
+public sealed partial class ChatPanel : Control
 {
     #region Dependency Properties
 
@@ -802,7 +802,10 @@ public sealed class ChatPanel : Control
         {
             assistantMessage.IsStreaming = false;
             if (_inputArea is not null)
+            {
                 _inputArea.IsInputEnabled = true;
+                _inputArea.FocusInput();
+            }
             UpdateSummarizeButtonState();
         }
     }
@@ -882,7 +885,10 @@ public sealed class ChatPanel : Control
         {
             assistantMessage.IsStreaming = false;
             if (_inputArea is not null)
+            {
                 _inputArea.IsInputEnabled = true;
+                _inputArea.FocusInput();
+            }
             UpdateSummarizeButtonState();
         }
     }
@@ -999,7 +1005,10 @@ public sealed class ChatPanel : Control
         {
             summaryMessage.IsStreaming = false;
             if (_inputArea is not null)
+            {
                 _inputArea.IsInputEnabled = true;
+                _inputArea.FocusInput();
+            }
             UpdateSummarizeButtonState();
         }
     }
@@ -1087,7 +1096,10 @@ public sealed class ChatPanel : Control
         {
             summaryMessage.IsStreaming = false;
             if (_inputArea is not null)
+            {
                 _inputArea.IsInputEnabled = true;
+                _inputArea.FocusInput();
+            }
             UpdateSummarizeButtonState();
         }
     }
@@ -1423,7 +1435,10 @@ public sealed class ChatPanel : Control
         {
             assistantMessage.IsStreaming = false;
             if (_inputArea is not null)
+            {
                 _inputArea.IsInputEnabled = true;
+                _inputArea.FocusInput();
+            }
             UpdateSummarizeButtonState();
         }
     }

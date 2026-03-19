@@ -105,7 +105,7 @@
         word-wrap: break-word;
         overflow-wrap: break-word;
     }
-    .message-bubble.streaming {
+    .message-bubble.streaming .tail-zone {
         white-space: pre-wrap;
     }
     .message.user .message-bubble {
@@ -684,6 +684,54 @@
         return html;
     }
 
+    // --- Progressive Render ---
+    var _progressiveState = {};  // key: msgId → { fullText, lastConfirmedLen, timer }
+
+    function splitBlocks(text) {
+        var lines = text.split('\n');
+        var blocks = [];
+        var current = [];
+        var inFence = false;
+
+        for (var i = 0; i < lines.length; i++) {
+            var line = lines[i];
+            if (/^```/.test(line.trimStart())) {
+                inFence = !inFence;
+            }
+            // Block boundary: empty line outside of fenced code
+            if (!inFence && line === '' && current.length > 0) {
+                blocks.push(current.join('\n'));
+                current = [];
+            } else {
+                current.push(line);
+            }
+        }
+        var tail = current.join('\n');
+        var confirmed = blocks.join('\n\n');
+        return { confirmed: confirmed, tail: tail };
+    }
+
+    function progressiveParse(msgId) {
+        var state = _progressiveState[msgId];
+        if (!state) return;
+        var msg = document.getElementById('msg-' + msgId);
+        if (!msg) return;
+
+        var result = splitBlocks(state.fullText);
+        if (result.confirmed.length > state.lastConfirmedLen) {
+            var renderedZone = msg.querySelector('.rendered-zone');
+            if (renderedZone) {
+                renderedZone.innerHTML = renderMarkdown(result.confirmed);
+                addCopyButtons(renderedZone);
+                state.lastConfirmedLen = result.confirmed.length;
+            }
+        }
+        var tailZone = msg.querySelector('.tail-zone');
+        if (tailZone) {
+            tailZone.textContent = result.tail;
+        }
+    }
+
     function renderMarkdown(fullText) {
         if (typeof marked !== 'undefined' && typeof hljs !== 'undefined') {
             return fixCjkEmphasis(marked.parse(fullText));
@@ -842,7 +890,7 @@
             }
 
             msg.innerHTML = badgeHtml +
-                '<div class="message-bubble streaming"><span class="content"></span><span class="cursor">&#9612;</span></div>';
+                '<div class="message-bubble streaming"><div class="content"><div class="rendered-zone"></div><span class="tail-zone"></span><span class="cursor">&#9612;</span></div></div>';
 
             // Footer: [actions ... timestamp]
             var footer = document.createElement('div');
@@ -858,12 +906,24 @@
         },
 
         appendToken: function(id, token) {
-            var msg = document.getElementById('msg-' + id);
-            if (!msg) return;
-            var content = msg.querySelector('.content');
-            if (content) {
-                content.textContent += token;
+            if (!_progressiveState[id]) {
+                _progressiveState[id] = { fullText: '', lastConfirmedLen: 0, timer: null };
             }
+            var state = _progressiveState[id];
+            state.fullText += token;
+
+            // Lightweight: just append token to tail-zone (O(1))
+            var msg = document.getElementById('msg-' + id);
+            if (msg) {
+                var tailZone = msg.querySelector('.tail-zone');
+                if (tailZone) {
+                    tailZone.textContent += token;
+                }
+            }
+
+            // Debounced progressive parse (confirmed→rendered-zone)
+            clearTimeout(state.timer);
+            state.timer = setTimeout(function() { progressiveParse(id); }, 150);
             doScroll('instant');
         },
 
@@ -930,6 +990,10 @@
         },
 
         finalizeMessage: function(id, fullText, truncated, tokenCount) {
+            // Clean up progressive state
+            var ps = _progressiveState[id];
+            if (ps) clearTimeout(ps.timer);
+            delete _progressiveState[id];
             var msg = document.getElementById('msg-' + id);
             if (!msg) return;
             var bubble = msg.querySelector('.message-bubble');
@@ -983,7 +1047,10 @@
             if (bubble) {
                 bubble.classList.remove('rendered');
                 bubble.classList.add('streaming');
-                bubble.innerHTML = '<span class="content">' + escapeHtml(existingText) + '</span><span class="cursor">&#9612;</span>';
+                bubble.innerHTML = '<div class="content"><div class="rendered-zone"></div><span class="tail-zone">' + escapeHtml(existingText) + '</span><span class="cursor">&#9612;</span></div>';
+                // Initialize progressive state with existing text
+                _progressiveState[id] = { fullText: existingText, lastConfirmedLen: 0 };
+                progressiveParse(id);
             }
             doScroll('smooth');
         },
