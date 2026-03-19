@@ -144,4 +144,16 @@
   <data name="ToolApproval_CollapseTooltip" xml:space="preserve">
     <value>Hide details</value>
   </data>
+  <data name="Chat_SearchTextBox.PlaceholderText" xml:space="preserve">
+    <value>Search...</value>
+  </data>
+  <data name="Chat_SearchPrevButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Previous</value>
+  </data>
+  <data name="Chat_SearchNextButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Next</value>
+  </data>
+  <data name="Chat_SearchCloseButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Close search bar</value>
+  </data>
 </root>

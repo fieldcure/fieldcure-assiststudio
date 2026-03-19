@@ -93,9 +93,9 @@ internal class WebViewChatRenderer
         _webView.CoreWebView2.NavigationStarting += OnNavigationStarting;
         _webView.CoreWebView2.NewWindowRequested += OnNewWindowRequested;
 
-        // Browser accelerator keys (Ctrl+S, Ctrl+P, etc.) are kept enabled so that
+        // Disable browser accelerator keys (Ctrl+F, Ctrl+P, etc.) so that
         // keydown events reach our JS listener, which forwards them via postMessage.
-        // The JS handler calls preventDefault() to suppress browser-default behavior.
+        _webView.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled = false;
 
         var html = LoadEmbeddedResource("chat.html");
 
@@ -118,6 +118,10 @@ internal class WebViewChatRenderer
                         e.preventDefault();
                         const shortcut = e.shiftKey ? 'Ctrl+Shift+S' : 'Ctrl+S';
                         window.chrome.webview.postMessage('shortcut:' + shortcut);
+                    }
+                    if (key === 'f') {
+                        e.preventDefault();
+                        window.chrome.webview.postMessage('shortcut:Ctrl+F');
                     }
                 }
             });

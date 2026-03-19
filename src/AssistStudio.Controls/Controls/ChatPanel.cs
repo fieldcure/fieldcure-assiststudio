@@ -457,6 +457,14 @@ public sealed partial class ChatPanel : Control
     /// </summary>
     private TaskCompletionSource<bool>? _approvalTcs;
 
+    private FrameworkElement? _searchBar;
+    private TextBox? _searchTextBox;
+    private TextBlock? _searchCount;
+    private Button? _searchPrevButton;
+    private Button? _searchNextButton;
+    private Button? _searchCloseButton;
+    private DispatcherTimer? _searchDebounceTimer;
+
     #endregion
 
     #region Public Properties
@@ -741,7 +749,15 @@ public sealed partial class ChatPanel : Control
         _renderer.EditRequested += OnEditRequested;
         _renderer.BranchSwitchRequested += OnBranchSwitchRequested;
         _renderer.SummarizeRequested += OnSummarizeRequested;
-        _renderer.KeyboardShortcutPressed += (_, shortcut) => KeyboardShortcutPressed?.Invoke(this, shortcut);
+        _renderer.KeyboardShortcutPressed += (_, shortcut) =>
+        {
+            if (shortcut == "Ctrl+F")
+            {
+                ToggleSearchBar();
+                return;
+            }
+            KeyboardShortcutPressed?.Invoke(this, shortcut);
+        };
     }
 
     #endregion
@@ -789,6 +805,45 @@ public sealed partial class ChatPanel : Control
         _titleRefreshButton = GetTemplateChild("PART_TitleRefreshButton") as Button;
         _chatWebView = GetTemplateChild("PART_ChatWebView") as WebView2;
         _approvalPanel = GetTemplateChild("PART_ToolApprovalPanel") as ToolApprovalPanel;
+
+        // Wire search bar
+        _searchBar = GetTemplateChild("PART_SearchBar") as FrameworkElement;
+        _searchTextBox = GetTemplateChild("PART_SearchTextBox") as TextBox;
+        _searchCount = GetTemplateChild("PART_SearchCount") as TextBlock;
+        _searchPrevButton = GetTemplateChild("PART_SearchPrevButton") as Button;
+        _searchNextButton = GetTemplateChild("PART_SearchNextButton") as Button;
+        _searchCloseButton = GetTemplateChild("PART_SearchCloseButton") as Button;
+
+        if (_searchTextBox is not null)
+        {
+            _searchDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
+            _searchDebounceTimer.Tick += async (s, e) =>
+            {
+                _searchDebounceTimer.Stop();
+                await ExecuteSearchAsync(_searchTextBox.Text);
+            };
+            _searchTextBox.TextChanged += (s, e) =>
+            {
+                _searchDebounceTimer.Stop();
+                _searchDebounceTimer.Start();
+            };
+            _searchTextBox.KeyDown += (s, e) =>
+            {
+                if (e.Key == Windows.System.VirtualKey.Escape)
+                {
+                    CloseSearchBar();
+                    e.Handled = true;
+                }
+                else if (e.Key == Windows.System.VirtualKey.Enter)
+                {
+                    _ = NavigateSearchAsync(1);
+                    e.Handled = true;
+                }
+            };
+        }
+        if (_searchPrevButton is not null) _searchPrevButton.Click += (s, e) => _ = NavigateSearchAsync(-1);
+        if (_searchNextButton is not null) _searchNextButton.Click += (s, e) => _ = NavigateSearchAsync(1);
+        if (_searchCloseButton is not null) _searchCloseButton.Click += (s, e) => CloseSearchBar();
 
         // Wire approval panel events
         if (_approvalPanel is not null)
@@ -2128,6 +2183,79 @@ public sealed partial class ChatPanel : Control
         ChatTheme.Dark => true,
         _ => ActualTheme == ElementTheme.Dark
     };
+
+    #endregion
+
+    #region Search
+
+    /// <summary>
+    /// Toggles the in-conversation search bar (Ctrl+F).
+    /// </summary>
+    public void ToggleSearchBar()
+    {
+        if (_searchBar is null) return;
+
+        if (_searchBar.Visibility == Visibility.Visible)
+        {
+            CloseSearchBar();
+        }
+        else
+        {
+            _searchBar.Visibility = Visibility.Visible;
+            _searchTextBox?.Focus(FocusState.Programmatic);
+        }
+    }
+
+    private async void CloseSearchBar()
+    {
+        if (_searchBar is not null) _searchBar.Visibility = Visibility.Collapsed;
+        if (_searchTextBox is not null) _searchTextBox.Text = string.Empty;
+        if (_searchCount is not null) _searchCount.Text = string.Empty;
+        _searchDebounceTimer?.Stop();
+
+        if (_chatWebView?.CoreWebView2 is not null)
+            await _chatWebView.ExecuteScriptAsync("window.assistChat.searchClear()").AsTask();
+    }
+
+    private async Task ExecuteSearchAsync(string query)
+    {
+        if (_chatWebView?.CoreWebView2 is null) return;
+
+        var escaped = System.Text.Json.JsonSerializer.Serialize(query);
+        var result = await _chatWebView.ExecuteScriptAsync(
+            $"window.assistChat.search({escaped})").AsTask();
+
+        UpdateSearchCount(result);
+    }
+
+    private async Task NavigateSearchAsync(int direction)
+    {
+        if (_chatWebView?.CoreWebView2 is null) return;
+
+        var result = await _chatWebView.ExecuteScriptAsync(
+            $"window.assistChat.searchNavigate({direction})").AsTask();
+
+        UpdateSearchCount(result);
+    }
+
+    private void UpdateSearchCount(string? jsonResult)
+    {
+        if (_searchCount is null || jsonResult is null) return;
+
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(
+                jsonResult.Trim('"').Replace("\\\"", "\"").Replace("\\\\", "\\"));
+            var root = doc.RootElement;
+            var total = root.GetProperty("total").GetInt32();
+            var current = root.GetProperty("current").GetInt32();
+            _searchCount.Text = total > 0 ? $"{current}/{total}" : string.Empty;
+        }
+        catch
+        {
+            _searchCount.Text = string.Empty;
+        }
+    }
 
     #endregion
 }

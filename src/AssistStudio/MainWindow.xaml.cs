@@ -137,6 +137,7 @@ public sealed partial class MainWindow : Window
         RegisterAccelerator(VirtualKeyModifiers.Control, VirtualKey.O, OnMenuLoadConversation);
         RegisterAccelerator(VirtualKeyModifiers.Control, VirtualKey.S, OnMenuSaveConversation);
         RegisterAccelerator(VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, VirtualKey.S, OnMenuSaveAsConversation);
+        RegisterAccelerator(VirtualKeyModifiers.Control, VirtualKey.F, OnToggleSearch);
         RegisterAccelerator(VirtualKeyModifiers.None, VirtualKey.F1, OnMenuSettings);
 
         // Notification system
@@ -170,6 +171,23 @@ public sealed partial class MainWindow : Window
             case "Ctrl+Shift+S":
                 OnMenuSaveAsConversation(this, new RoutedEventArgs());
                 break;
+            case "Ctrl+F":
+                OnToggleSearch(this, new RoutedEventArgs());
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Toggles the in-conversation search bar on the active tab.
+    /// </summary>
+    private void OnToggleSearch(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.SelectedTab is { } tab)
+        {
+            // Find the ChatTabView for the selected tab and toggle its search bar
+            var tabViewItem = Tabs.ContainerFromItem(tab) as TabViewItem;
+            if (tabViewItem?.Content is Modules.Views.ChatTabView chatTabView)
+                chatTabView.ChatPanel.ToggleSearchBar();
         }
     }
 
