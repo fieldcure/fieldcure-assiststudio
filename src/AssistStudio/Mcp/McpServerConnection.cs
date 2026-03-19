@@ -29,7 +29,7 @@ public enum McpConnectionState
 /// Manages the <see cref="McpClient"/> lifecycle and provides
 /// access to the server's tools as <see cref="IAssistTool"/> instances.
 /// </summary>
-public class McpServerConnection : INotifyPropertyChanged, IAsyncDisposable
+public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposable
 {
     #region Fields
 
@@ -129,9 +129,23 @@ public class McpServerConnection : INotifyPropertyChanged, IAsyncDisposable
     {
         if (_client is not null)
         {
-            await _client.DisposeAsync();
+            try
+            {
+                // Give the server a moment to shut down gracefully
+                // before the SDK forcefully kills the process
+                await _client.DisposeAsync().AsTask()
+                    .WaitAsync(TimeSpan.FromSeconds(3));
+            }
+            catch (Exception ex) when (
+                ex is OperationCanceledException or TimeoutException or Win32Exception)
+            {
+                // Expected during stdio process teardown — safe to ignore
+                AssistStudio.Helpers.LoggingService.LogException(ex);
+            }
+
             _client = null;
         }
+
         Tools = [];
         State = McpConnectionState.Disconnected;
         ErrorMessage = null;

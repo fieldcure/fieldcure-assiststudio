@@ -5,6 +5,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:AssistStudio.Controls"
+    xmlns:mcp="using:AssistStudio.Mcp"
     mc:Ignorable="d"
     NavigationCacheMode="Enabled">
 
@@ -46,7 +48,17 @@
                 </StackPanel>
 
                 <!-- Server list -->
-                <StackPanel x:Name="ServerListPanel" Spacing="8" />
+                <ItemsControl x:Name="ServerListControl">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="mcp:McpServerConnection">
+                            <controls:McpServerCard Connection="{x:Bind}"
+                                                    Margin="0,0,0,8"
+                                                    EnableToggled="OnCardEnableToggled"
+                                                    ReconnectRequested="OnCardReconnectRequested"
+                                                    DeleteRequested="OnCardDeleteRequested" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
 
                 <!-- Empty state -->
                 <TextBlock x:Name="EmptyStateText"
