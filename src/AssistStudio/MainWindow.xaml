@@ -32,121 +32,121 @@
         <!-- Main Content: TabView + Notification overlay -->
         <SplitView.Content>
             <Grid>
-            <TabView x:Name="Tabs"
-                     TabItemsSource="{x:Bind ViewModel.Tabs}"
-                     SelectedItem="{x:Bind ViewModel.SelectedTab, Mode=TwoWay}"
-                     IsAddTabButtonVisible="True"
-                     AddTabButtonClick="OnAddTab"
-                     TabCloseRequested="OnCloseTab"
-                     TabWidthMode="SizeToContent"
-                     VerticalAlignment="Stretch">
+                <TabView x:Name="Tabs"
+                         TabItemsSource="{x:Bind ViewModel.Tabs}"
+                         SelectedItem="{x:Bind ViewModel.SelectedTab, Mode=TwoWay}"
+                         IsAddTabButtonVisible="True"
+                         AddTabButtonClick="OnAddTab"
+                         TabCloseRequested="OnCloseTab"
+                         TabWidthMode="SizeToContent"
+                         VerticalAlignment="Stretch">
 
-                <TabView.TabItemTemplate>
-                    <DataTemplate x:DataType="vm:ChatTabViewModel">
-                        <TabViewItem Header="{x:Bind TabHeader, Mode=OneWay}"
-                                     IconSource="{x:Bind TabIconSource, Mode=OneWay}">
-                            <views:ChatTabView ViewModel="{x:Bind}" />
-                        </TabViewItem>
-                    </DataTemplate>
-                </TabView.TabItemTemplate>
+                    <TabView.TabItemTemplate>
+                        <DataTemplate x:DataType="vm:ChatTabViewModel">
+                            <TabViewItem Header="{x:Bind TabHeader, Mode=OneWay}"
+                                         IconSource="{x:Bind TabIconSource, Mode=OneWay}">
+                                <views:ChatTabView ViewModel="{x:Bind}" />
+                            </TabViewItem>
+                        </DataTemplate>
+                    </TabView.TabItemTemplate>
 
-                <!-- Hamburger Menu (left of tabs) -->
-                <TabView.TabStripHeader>
-                    <Grid x:Name="ShellTitlebarInset">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition x:Name="LeftPaddingColumn" Width="0" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
+                    <!-- Hamburger Menu (left of tabs) -->
+                    <TabView.TabStripHeader>
+                        <Grid x:Name="ShellTitlebarInset">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition x:Name="LeftPaddingColumn" Width="0" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
 
-                        <Button x:Name="MainMenuButton"
-                                Grid.Column="1"
-                                IsTabStop="False"
-                                Width="42"
-                                Height="32"
-                                Margin="4,8,0,0"
-                                BorderThickness="0"
-                                Background="Transparent"
-                                Padding="0"
-                                Click="OnMainMenuClick">
-                            <FontIcon Glyph="&#xE700;" FontSize="16" />
+                            <Button x:Name="MainMenuButton"
+                                    Grid.Column="1"
+                                    IsTabStop="False"
+                                    Width="42"
+                                    Height="32"
+                                    Margin="4,8,0,0"
+                                    BorderThickness="0"
+                                    Background="Transparent"
+                                    Padding="0"
+                                    Click="OnMainMenuClick">
+                                <FontIcon Glyph="&#xE700;" FontSize="16" />
 
-                            <FlyoutBase.AttachedFlyout>
-                                <MenuFlyout x:Name="MainMenuFlyout"
-                                            Placement="BottomEdgeAlignedLeft">
-                                    <MenuFlyoutItem x:Uid="Menu_New" Text="New"
-                                                    Click="OnMenuNewTab"
-                                                    KeyboardAcceleratorTextOverride="Ctrl+N">
-                                        <MenuFlyoutItem.Icon>
-                                            <FontIcon Glyph="&#xE8F4;" />
-                                        </MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                    <MenuFlyoutItem x:Uid="Menu_Open" Text="Open..."
-                                                    Click="OnMenuLoadConversation"
-                                                    KeyboardAcceleratorTextOverride="Ctrl+O">
-                                        <MenuFlyoutItem.Icon>
-                                            <FontIcon Glyph="&#xE8E5;" />
-                                        </MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                    <MenuFlyoutSubItem x:Name="RecentConversationsSubMenu"
-                                                       x:Uid="Menu_RecentConversations"
-                                                       Text="Recent Conversations">
-                                        <MenuFlyoutSubItem.Icon>
-                                            <FontIcon Glyph="&#xE81C;" />
-                                        </MenuFlyoutSubItem.Icon>
-                                    </MenuFlyoutSubItem>
-                                    <MenuFlyoutSeparator />
-                                    <MenuFlyoutItem x:Uid="Menu_Save" Text="Save"
-                                                    Click="OnMenuSaveConversation"
-                                                    KeyboardAcceleratorTextOverride="Ctrl+S">
-                                        <MenuFlyoutItem.Icon>
-                                            <FontIcon Glyph="&#xE74E;" />
-                                        </MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                    <MenuFlyoutItem x:Uid="Menu_SaveAs" Text="Save As..."
-                                                    Click="OnMenuSaveAsConversation"
-                                                    KeyboardAcceleratorTextOverride="Ctrl+Shift+S">
-                                        <MenuFlyoutItem.Icon>
-                                            <FontIcon Glyph="&#xE792;" />
-                                        </MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                    <MenuFlyoutItem x:Uid="Menu_SaveAll" Text="Save All"
-                                                    Click="OnMenuSaveAllConversations">
-                                        <MenuFlyoutItem.Icon>
-                                            <FontIcon Glyph="&#xEA35;" />
-                                        </MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                    <MenuFlyoutSeparator />
-                                    <MenuFlyoutItem x:Uid="Menu_Settings" Text="Settings"
-                                                    Click="OnMenuSettings">
-                                        <MenuFlyoutItem.Icon>
-                                            <FontIcon Glyph="&#xE713;" />
-                                        </MenuFlyoutItem.Icon>
-                                        <MenuFlyoutItem.KeyboardAccelerators>
-                                            <KeyboardAccelerator Key="F1" />
-                                        </MenuFlyoutItem.KeyboardAccelerators>
-                                    </MenuFlyoutItem>
-                                </MenuFlyout>
-                            </FlyoutBase.AttachedFlyout>
-                        </Button>
-                    </Grid>
-                </TabView.TabStripHeader>
+                                <FlyoutBase.AttachedFlyout>
+                                    <MenuFlyout x:Name="MainMenuFlyout"
+                                                Placement="BottomEdgeAlignedLeft">
+                                        <MenuFlyoutItem x:Uid="Menu_New" Text="New"
+                                                        Click="OnMenuNewTab"
+                                                        KeyboardAcceleratorTextOverride="Ctrl+N">
+                                            <MenuFlyoutItem.Icon>
+                                                <FontIcon Glyph="&#xE8F4;" />
+                                            </MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutItem x:Uid="Menu_Open" Text="Open..."
+                                                        Click="OnMenuLoadConversation"
+                                                        KeyboardAcceleratorTextOverride="Ctrl+O">
+                                            <MenuFlyoutItem.Icon>
+                                                <FontIcon Glyph="&#xE8E5;" />
+                                            </MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutSubItem x:Name="RecentConversationsSubMenu"
+                                                           x:Uid="Menu_RecentConversations"
+                                                           Text="Recent Conversations">
+                                            <MenuFlyoutSubItem.Icon>
+                                                <FontIcon Glyph="&#xE81C;" />
+                                            </MenuFlyoutSubItem.Icon>
+                                        </MenuFlyoutSubItem>
+                                        <MenuFlyoutSeparator />
+                                        <MenuFlyoutItem x:Uid="Menu_Save" Text="Save"
+                                                        Click="OnMenuSaveConversation"
+                                                        KeyboardAcceleratorTextOverride="Ctrl+S">
+                                            <MenuFlyoutItem.Icon>
+                                                <FontIcon Glyph="&#xE74E;" />
+                                            </MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutItem x:Uid="Menu_SaveAs" Text="Save As..."
+                                                        Click="OnMenuSaveAsConversation"
+                                                        KeyboardAcceleratorTextOverride="Ctrl+Shift+S">
+                                            <MenuFlyoutItem.Icon>
+                                                <FontIcon Glyph="&#xE792;" />
+                                            </MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutItem x:Uid="Menu_SaveAll" Text="Save All"
+                                                        Click="OnMenuSaveAllConversations">
+                                            <MenuFlyoutItem.Icon>
+                                                <FontIcon Glyph="&#xEA35;" />
+                                            </MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutSeparator />
+                                        <MenuFlyoutItem x:Uid="Menu_Settings" Text="Settings"
+                                                        Click="OnMenuSettings">
+                                            <MenuFlyoutItem.Icon>
+                                                <FontIcon Glyph="&#xE713;" />
+                                            </MenuFlyoutItem.Icon>
+                                            <MenuFlyoutItem.KeyboardAccelerators>
+                                                <KeyboardAccelerator Key="F1" />
+                                            </MenuFlyoutItem.KeyboardAccelerators>
+                                        </MenuFlyoutItem>
+                                    </MenuFlyout>
+                                </FlyoutBase.AttachedFlyout>
+                            </Button>
+                        </Grid>
+                    </TabView.TabStripHeader>
 
-                <!-- Title Bar drag area (right of tabs) -->
-                <TabView.TabStripFooter>
-                    <Grid Background="Transparent">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition x:Name="DragColumn" Width="*" MinWidth="48" />
-                            <ColumnDefinition x:Name="RightPaddingColumn" Width="0" />
-                        </Grid.ColumnDefinitions>
-                        <Grid x:Name="TitleBarReservedArea"
-                              Grid.Column="0"
-                              Background="Transparent" />
-                    </Grid>
-                </TabView.TabStripFooter>
-            </TabView>
+                    <!-- Title Bar drag area (right of tabs) -->
+                    <TabView.TabStripFooter>
+                        <Grid Background="Transparent">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition x:Name="DragColumn" Width="*" MinWidth="48" />
+                                <ColumnDefinition x:Name="RightPaddingColumn" Width="0" />
+                            </Grid.ColumnDefinitions>
+                            <Grid x:Name="TitleBarReservedArea"
+                                  Grid.Column="0"
+                                  Background="Transparent" />
+                        </Grid>
+                    </TabView.TabStripFooter>
+                </TabView>
 
-            <!-- Notification -->
-            <InfoBar x:Name="StatusNotification"
+                <!-- Notification -->
+                <InfoBar x:Name="StatusNotification"
                      IsIconVisible="True"
                      HorizontalAlignment="Center"
                      VerticalAlignment="Bottom"
