@@ -207,6 +207,15 @@
   <data name="Profiles_ToolsWarning.Text" xml:space="preserve">
     <value>Tool support depends on the selected model.</value>
   </data>
+  <data name="Profiles_ExtendedTools" xml:space="preserve">
+    <value>Extended Tools</value>
+  </data>
+  <data name="Profiles_SearchToolsName" xml:space="preserve">
+    <value>Search Tools</value>
+  </data>
+  <data name="Profiles_SearchToolsDesc" xml:space="preserve">
+    <value>Sends a single search_tools meta-tool instead of individual MCP tool definitions. Automatically activates when selected MCP tools exceed 10.</value>
+  </data>
   <data name="Profiles_AnyProvider" xml:space="preserve">
     <value>Any provider</value>
   </data>
@@ -406,6 +415,9 @@
   </data>
   <data name="Tool_run_command" xml:space="preserve">
     <value>Run Command</value>
+  </data>
+  <data name="Tool_fetch_url" xml:space="preserve">
+    <value>Fetch URL</value>
   </data>
   <data name="Profiles_NoToolsRegistered" xml:space="preserve">
     <value>No tools registered.</value>

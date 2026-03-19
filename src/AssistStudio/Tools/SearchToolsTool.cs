@@ -9,7 +9,7 @@ namespace AssistStudio.Tools;
 /// Used when total tool count exceeds a threshold to avoid sending all tool
 /// definitions in every request. The LLM discovers MCP tools on demand via this tool.
 /// </summary>
-public class SearchToolsTool : IAssistTool
+public class SearchToolsTool : IAssistTool, ISearchToolScope
 {
     #region Fields
 
@@ -78,13 +78,24 @@ public class SearchToolsTool : IAssistTool
             .Split([' ', '_', '-'], StringSplitOptions.RemoveEmptyEntries);
 
         var allTools = _registry.AllTools;
-        var matched = allTools
+        var searchable = AllowedToolNames is null
+            ? allTools
+            : allTools.Where(t => AllowedToolNames.Contains(t.Name));
+
+        var matched = searchable
             .Where(t => Match(t, keywords))
             .Select(t => FormatTool(t, detail))
             .ToList();
 
         return Task.FromResult(JsonSerializer.Serialize(matched));
     }
+
+    #endregion
+
+    #region ISearchToolScope Implementation
+
+    /// <inheritdoc/>
+    public IReadOnlySet<string>? AllowedToolNames { get; set; }
 
     #endregion
 

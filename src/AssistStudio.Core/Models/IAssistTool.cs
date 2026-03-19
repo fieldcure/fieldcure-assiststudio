@@ -27,3 +27,16 @@ public interface IAssistTool
     /// </summary>
     Task<string> ExecuteAsync(JsonElement parameters, CancellationToken ct = default);
 }
+
+/// <summary>
+/// Implemented by meta-tools (e.g. search_tools) that can restrict their search scope
+/// to a subset of available tools.
+/// </summary>
+public interface ISearchToolScope
+{
+    /// <summary>
+    /// When null, searches all available tools. When non-null, only tools whose names
+    /// are in this set are searchable.
+    /// </summary>
+    IReadOnlySet<string>? AllowedToolNames { get; set; }
+}

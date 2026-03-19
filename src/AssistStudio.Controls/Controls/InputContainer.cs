@@ -77,7 +77,7 @@ public sealed partial class InputContainer : Control
     /// <summary>Identifies the <see cref="SelectedProfile"/> dependency property.</summary>
     public static readonly DependencyProperty SelectedProfileProperty =
         DependencyProperty.Register(nameof(SelectedProfile), typeof(Profile), typeof(InputContainer),
-            new PropertyMetadata(null));
+            new PropertyMetadata(null, OnSelectedProfileChanged));
 
     /// <summary>Identifies the <see cref="MaxLength"/> dependency property.</summary>
     public static readonly DependencyProperty MaxLengthProperty =
@@ -408,6 +408,8 @@ public sealed partial class InputContainer : Control
         _profileComboBox = GetTemplateChild("PART_ProfileComboBox") as ComboBox;
         _containerBorder = GetTemplateChild("PART_ContainerBorder") as Border;
         _toolButton = GetTemplateChild("PART_ToolButton") as Button;
+        if (_toolButton is not null)
+            _toolButton.Click += (_, _) => BuildToolFlyout();
 
         // Apply ThemeShadow in code (XAML compiler crashes with ThemeShadow in ControlTemplate.Resources)
         if (_containerBorder is not null)
@@ -894,8 +896,14 @@ public sealed partial class InputContainer : Control
             // Reset enabled set — all tools enabled by default
             self._enabledToolSet = null;
             self.EnabledToolNames = null;
-            self.BuildToolFlyout();
+            self.UpdateToolButtonVisibility();
         }
+    }
+
+    private static void OnSelectedProfileChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is InputContainer self)
+            self.UpdateToolButtonVisibility();
     }
 
     #endregion
@@ -1164,7 +1172,17 @@ public sealed partial class InputContainer : Control
     }
 
     /// <summary>
-    /// Builds or updates the tool toggle flyout based on <see cref="AvailableTools"/>.
+    /// Updates the tool button visibility based on whether tools are available.
+    /// </summary>
+    private void UpdateToolButtonVisibility()
+    {
+        if (_toolButton is null) return;
+        _toolButton.Visibility = AvailableTools.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>
+    /// Builds the tool toggle flyout from current <see cref="AvailableTools"/>.
+    /// Called each time the tool button is clicked to ensure fresh data.
     /// </summary>
     private void BuildToolFlyout()
     {
@@ -1180,7 +1198,7 @@ public sealed partial class InputContainer : Control
 
         _toolButton.Visibility = Visibility.Visible;
 
-        var panel = new StackPanel { Spacing = 4, Padding = new Thickness(4) };
+        var panel = new StackPanel { Spacing = 4 };
 
         foreach (var tool in tools)
         {
@@ -1207,7 +1225,8 @@ public sealed partial class InputContainer : Control
         }
         catch { /* keep defaults */ }
 
-        panel.Children.Add(new Microsoft.UI.Xaml.Shapes.Rectangle
+        var footer = new StackPanel { Spacing = 4, Padding = new Thickness(4, 0, 4, 4) };
+        footer.Children.Add(new Microsoft.UI.Xaml.Shapes.Rectangle
         {
             Height = 1,
             Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
@@ -1230,12 +1249,21 @@ public sealed partial class InputContainer : Control
                     cb.IsChecked = !nowAllChecked;
             }
         };
-        panel.Children.Add(_toolToggleLink);
+        footer.Children.Add(_toolToggleLink);
+
+        var outerPanel = new StackPanel { Padding = new Thickness(4) };
+        outerPanel.Children.Add(new ScrollViewer
+        {
+            Content = panel,
+            MaxHeight = 400,
+            Padding = new Thickness(0, 0, 8, 0),
+        });
+        outerPanel.Children.Add(footer);
 
         var flyout = new Flyout
         {
-            Content = panel,
-            Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.Top
+            Content = outerPanel,
+            Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedLeft
         };
         _toolButton.Flyout = flyout;
 

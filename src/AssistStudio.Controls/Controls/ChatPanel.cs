@@ -101,10 +101,7 @@ public sealed partial class ChatPanel : Control
         DependencyProperty.Register(nameof(MaxToolCallRounds), typeof(int), typeof(ChatPanel),
             new PropertyMetadata(10));
 
-    /// <summary>Identifies the <see cref="SearchToolsThreshold"/> dependency property.</summary>
-    public static readonly DependencyProperty SearchToolsThresholdProperty =
-        DependencyProperty.Register(nameof(SearchToolsThreshold), typeof(int), typeof(ChatPanel),
-            new PropertyMetadata(0));
+
 
     /// <summary>Identifies the <see cref="RecentTurnsToKeep"/> dependency property.</summary>
     public static readonly DependencyProperty RecentTurnsToKeepProperty =
@@ -488,16 +485,6 @@ public sealed partial class ChatPanel : Control
     {
         get => (int)GetValue(MaxToolCallRoundsProperty);
         set => SetValue(MaxToolCallRoundsProperty, value);
-    }
-
-    /// <summary>
-    /// Gets or sets the tool count threshold above which the search_tools meta-tool
-    /// is used instead of sending all tool definitions. 0 = disabled (always send all).
-    /// </summary>
-    public int SearchToolsThreshold
-    {
-        get => (int)GetValue(SearchToolsThresholdProperty);
-        set => SetValue(SearchToolsThresholdProperty, value);
     }
 
     /// <summary>
@@ -1415,32 +1402,14 @@ public sealed partial class ChatPanel : Control
 
     /// <summary>
     /// Returns the currently active tools, filtered by the input area's enabled tool selection.
-    /// When the active tool count exceeds <see cref="SearchToolsThreshold"/> and a "search_tools"
-    /// meta-tool is registered, only built-in (non-MCP) tools plus search_tools are sent
-    /// to reduce token usage.
+    /// Tool policy (search_tools substitution, etc.) is applied at the App layer (ResolveTools).
     /// </summary>
     private IReadOnlyList<IAssistTool> GetActiveTools()
     {
         var enabledNames = _inputArea?.EnabledToolNames;
-        var tools = enabledNames is null
+        return enabledNames is null
             ? RegisteredTools
             : [.. RegisteredTools.Where(t => enabledNames.Contains(t.Name))];
-
-        // Token-saving: if too many tools, send only non-MCP tools + search_tools
-        var threshold = SearchToolsThreshold;
-        if (threshold > 0 && tools.Count > threshold)
-        {
-            var searchTool = tools.FirstOrDefault(t => t.Name == "search_tools");
-            if (searchTool is not null)
-            {
-                var compact = tools.Where(t => t is not McpToolAdapter).ToList();
-                if (!compact.Contains(searchTool))
-                    compact.Add(searchTool);
-                return compact;
-            }
-        }
-
-        return tools;
     }
 
     private record StreamResult(TokenUsage? Usage, bool IsTruncated, IReadOnlyList<ToolCall>? ToolCalls = null)

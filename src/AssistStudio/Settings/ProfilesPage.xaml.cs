@@ -278,6 +278,11 @@ public sealed partial class ProfilesPage : Page
             AppSettings.ActiveProfile = selected.Name;
             AppSettings.SystemPrompt = selected.Text;
             AppSettings.NotifyProfilesChanged();
+            System.Diagnostics.Debug.WriteLine($"[SaveAll] NotifyProfilesChanged fired for {selected.Name}");
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine("[SaveAll] No profile selected, NotifyProfilesChanged NOT fired");
         }
     }
 
@@ -392,8 +397,8 @@ public sealed partial class ProfilesPage : Page
         var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
         var hasAnyTool = false;
 
-        // --- Built-in tools ---
-        var builtInTools = ToolRegistry.All;
+        // --- Built-in tools (exclude search_tools, shown in Extended section) ---
+        var builtInTools = ToolRegistry.All.Where(t => t.Name != "search_tools").ToList();
         if (builtInTools.Count > 0)
         {
             hasAnyTool = true;
@@ -421,7 +426,33 @@ public sealed partial class ProfilesPage : Page
             });
         }
 
+        // --- Extended tools (Search Tools toggle) ---
+        var extPanel = new StackPanel { Spacing = 4 };
+        var searchToolsCb = new CheckBox
+        {
+            Content = loader.GetString("Profiles_SearchToolsName"),
+            IsChecked = profile.UseSearchTools,
+            MinWidth = 0,
+        };
+        extPanel.Children.Add(searchToolsCb);
+        extPanel.Children.Add(new TextBlock
+        {
+            Text = loader.GetString("Profiles_SearchToolsDesc"),
+            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+            TextWrapping = TextWrapping.Wrap,
+            Opacity = 0.7,
+        });
+        ToolsPanel.Children.Add(new CollapsibleSection
+        {
+            Header = loader.GetString("Profiles_ExtendedTools"),
+            SubHeader = "1",
+            Body = extPanel,
+            ContentSpacing = 4,
+            IsExpanded = true,
+        });
+
         // --- MCP tools grouped by server ---
+        var mcpSections = new List<CollapsibleSection>();
         var filterPlaceholder = loader.GetString("Profiles_FilterToolsPlaceholder");
         var mcpToolsByServer = App.McpRegistry.GetToolsByServer();
         foreach (var (serverName, serverTools) in mcpToolsByServer)
@@ -468,15 +499,36 @@ public sealed partial class ProfilesPage : Page
             bodyPanel.Children.Add(filterBox);
             bodyPanel.Children.Add(toolsPanel);
 
-            ToolsPanel.Children.Add(new CollapsibleSection
+            var section = new CollapsibleSection
             {
                 Header = serverName,
                 SubHeader = $"{serverTools.Count}",
                 Body = bodyPanel,
                 ContentSpacing = 4,
                 IsExpanded = false,
-            });
+                Visibility = profile.UseSearchTools ? Visibility.Collapsed : Visibility.Visible,
+            };
+            mcpSections.Add(section);
+            ToolsPanel.Children.Add(section);
         }
+
+        // Toggle MCP sections visibility when Search Tools changes
+        searchToolsCb.Checked += (_, _) =>
+        {
+            profile.UseSearchTools = true;
+            foreach (var s in mcpSections) s.Visibility = Visibility.Collapsed;
+            System.Diagnostics.Debug.WriteLine($"[SearchTools] Checked: profile={profile.Name}, UseSearchTools={profile.UseSearchTools}, IsBuiltIn={profile.IsBuiltIn}");
+            SaveAll();
+            // Verify save round-trip
+            var reloaded = AppSettings.LoadProfiles().FirstOrDefault(p => p.Name == profile.Name);
+            System.Diagnostics.Debug.WriteLine($"[SearchTools] After reload: UseSearchTools={reloaded?.UseSearchTools}");
+        };
+        searchToolsCb.Unchecked += (_, _) =>
+        {
+            profile.UseSearchTools = false;
+            foreach (var s in mcpSections) s.Visibility = Visibility.Visible;
+            SaveAll();
+        };
 
         if (!hasAnyTool)
         {

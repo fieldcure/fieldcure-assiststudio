@@ -28,7 +28,6 @@
         AutoTitle="{x:Bind ViewModel.AutoTitle, Mode=OneWay}"
         AutoSummarize="{x:Bind ViewModel.AutoSummarize, Mode=OneWay}"
         IsDebugMode="{x:Bind ViewModel.IsDebugMode, Mode=OneWay}"
-        RegisteredTools="{x:Bind ViewModel.RegisteredTools, Mode=OneWay}"
-        SearchToolsThreshold="10" />
+        RegisteredTools="{x:Bind ViewModel.RegisteredTools, Mode=OneWay}" />
 
 </UserControl>

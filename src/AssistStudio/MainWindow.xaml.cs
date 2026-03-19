@@ -76,7 +76,17 @@ public sealed partial class MainWindow : Window
         };
         AppSettings.SystemPromptChanged += (_, prompt) => ViewModel.ApplySystemPromptToAll(prompt);
         AppSettings.PresetsChanged += (_, _) => ViewModel.RefreshPresetsOnAll();
-        AppSettings.ProfilesChanged += (_, _) => ViewModel.RefreshProfilesOnAll();
+        AppSettings.ProfilesChanged += (_, _) =>
+        {
+            ViewModel.RefreshProfilesOnAll();
+            foreach (var tab in ViewModel.Tabs)
+                tab.RefreshTools();
+        };
+        App.McpRegistry.ToolsChanged += (_, _) =>
+        {
+            foreach (var tab in ViewModel.Tabs)
+                tab.RefreshTools();
+        };
 
         // Navigate to SettingsPanel when the pane opens
         RootSplitView.PaneOpening += (_, _) =>

@@ -242,7 +242,37 @@ public static class AppSettings
     /// <returns>A list of all available profiles.</returns>
     public static List<Profile> LoadProfiles()
     {
-        var result = new List<Profile>(BuiltInProfiles);
+        // Clone built-in profiles so modifications don't affect the static defaults
+        var result = BuiltInProfiles.Select(p => new Profile
+        {
+            Name = p.Name,
+            Text = p.Text,
+            IsBuiltIn = p.IsBuiltIn,
+            PreferredProviderType = p.PreferredProviderType,
+            PreferredModelId = p.PreferredModelId,
+            ToolNames = [.. p.ToolNames],
+            UseSearchTools = p.UseSearchTools,
+        }).ToList();
+
+        // Apply saved overrides for built-in profiles (tool settings etc.)
+        var overridesJson = Settings.Values["BuiltInProfileOverrides"] as string;
+        if (!string.IsNullOrEmpty(overridesJson))
+        {
+            try
+            {
+                var overrides = JsonSerializer.Deserialize(overridesJson, AppJsonContext.Default.ListProfile) ?? [];
+                foreach (var ov in overrides)
+                {
+                    var target = result.FirstOrDefault(p => p.Name == ov.Name);
+                    if (target is not null)
+                    {
+                        target.ToolNames = ov.ToolNames;
+                        target.UseSearchTools = ov.UseSearchTools;
+                    }
+                }
+            }
+            catch { /* ignore corrupt data */ }
+        }
 
         var json = Settings.Values["CustomProfiles"] as string;
         if (!string.IsNullOrEmpty(json))
@@ -259,13 +289,24 @@ public static class AppSettings
     }
 
     /// <summary>
-    /// Saves only the custom (non-built-in) profiles to local storage.
+    /// Saves profiles to local storage. Custom profiles are saved fully;
+    /// built-in profiles save only tool-related overrides.
     /// </summary>
     public static void SaveCustomProfiles(IEnumerable<Profile> allProfiles)
     {
-        var custom = allProfiles.Where(p => !p.IsBuiltIn).ToList();
+        var all = allProfiles.ToList();
+
+        var custom = all.Where(p => !p.IsBuiltIn).ToList();
         var json = JsonSerializer.Serialize(custom, AppJsonContext.Default.ListProfile);
         Settings.Values["CustomProfiles"] = json;
+
+        // Save tool overrides for built-in profiles
+        var builtInOverrides = all
+            .Where(p => p.IsBuiltIn)
+            .Select(p => new Profile { Name = p.Name, ToolNames = p.ToolNames, UseSearchTools = p.UseSearchTools })
+            .ToList();
+        var ovJson = JsonSerializer.Serialize(builtInOverrides, AppJsonContext.Default.ListProfile);
+        Settings.Values["BuiltInProfileOverrides"] = ovJson;
     }
 
     #endregion

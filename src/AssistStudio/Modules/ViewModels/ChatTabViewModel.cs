@@ -295,9 +295,34 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     {
         AvailableProfiles = profiles;
 
-        // Don't override profile on tabs that already have conversation history
         if (GetMessages().Count == 0)
+        {
+            // Empty tab: switch to the active profile
             SelectedProfile = selectedProfile;
+        }
+        else
+        {
+            // Tab with history: keep current profile but sync tool settings from saved data
+            var current = _panel?.SelectedProfile;
+            if (current is not null)
+            {
+                var updated = profiles.FirstOrDefault(p => p.Name == current.Name);
+                if (updated is not null)
+                {
+                    current.ToolNames = updated.ToolNames;
+                    current.UseSearchTools = updated.UseSearchTools;
+                    ResolveTools(current);
+                    if (_panel is not null)
+                    {
+                        _panel.DispatcherQueue.TryEnqueue(() =>
+                        {
+                            _panel.RegisteredTools = [];
+                            _panel.RegisteredTools = RegisteredTools;
+                        });
+                    }
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -402,6 +427,48 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
+    /// Re-resolves tools for the current profile. Call after profile tool settings
+    /// are modified externally (e.g., in ProfilesPage).
+    /// Reloads saved profiles to sync changes made in a different Profile instance.
+    /// </summary>
+    public void RefreshTools()
+    {
+        var profile = _panel?.SelectedProfile;
+        if (profile is null)
+        {
+            System.Diagnostics.Debug.WriteLine("[RefreshTools] profile is null, skipping");
+            return;
+        }
+
+        // ProfilesPage uses its own Profile instances, so reload from settings
+        // and sync tool-related properties back to the active instance.
+        var saved = AppSettings.LoadProfiles();
+        var match = saved.FirstOrDefault(p => p.Name == profile.Name);
+        if (match is not null)
+        {
+            profile.ToolNames = match.ToolNames;
+            profile.UseSearchTools = match.UseSearchTools;
+        }
+
+        System.Diagnostics.Debug.WriteLine($"[RefreshTools] profile={profile.Name}, UseSearchTools={profile.UseSearchTools}, ToolNames={profile.ToolNames.Count}");
+
+        ResolveTools(profile);
+
+        System.Diagnostics.Debug.WriteLine($"[RefreshTools] RegisteredTools.Count={RegisteredTools.Count}: {string.Join(", ", RegisteredTools.Select(t => t.Name))}");
+
+        // Force push to ChatPanel on UI thread
+        if (_panel is not null)
+        {
+            _panel.DispatcherQueue.TryEnqueue(() =>
+            {
+                _panel.RegisteredTools = [];
+                _panel.RegisteredTools = RegisteredTools;
+                System.Diagnostics.Debug.WriteLine($"[RefreshTools] Pushed to ChatPanel on UI thread");
+            });
+        }
+    }
+
+    /// <summary>
     /// Handles the auto-generated title from the utility AI and applies it to the tab.
     /// </summary>
     public void OnTitleGenerated(object? _sender, string title)
@@ -454,20 +521,40 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// </summary>
     private void ResolveTools(Profile? profile)
     {
-        if (profile is null || profile.ToolNames.Count == 0)
+        if (profile is null || (profile.ToolNames.Count == 0 && !profile.UseSearchTools))
         {
             RegisteredTools = [];
             return;
         }
 
-        // Get built-in tools matching profile's tool names
-        var builtIn = ToolRegistry.Resolve(profile.ToolNames);
+        // Get built-in tools matching profile's tool names (exclude search_tools, handled below)
+        var builtIn = ToolRegistry.Resolve(profile.ToolNames)
+            .Where(t => t.Name != "search_tools")
+            .ToList();
 
-        // Get MCP tools that match profile's tool names
+        // Get profile-selected MCP tools
         var mcpTools = App.McpRegistry.AllTools
             .Where(t => profile.ToolNames.Contains(t.Name))
             .Cast<IAssistTool>()
             .ToList();
+
+        // Policy: UseSearchTools ON, or selected MCP tools > 10 → replace MCP tools with search_tools
+        var searchTool = ToolRegistry.Resolve(["search_tools"]).FirstOrDefault();
+        if (searchTool is not null && (profile.UseSearchTools || mcpTools.Count > 10))
+        {
+            // Configure search scope
+            if (searchTool is ISearchToolScope scoped)
+            {
+                scoped.AllowedToolNames = profile.UseSearchTools
+                    ? null  // Search all MCP tools
+                    : mcpTools.Select(t => t.Name).ToHashSet();
+            }
+
+            // Replace MCP tools with search_tools meta-tool
+            builtIn.Add(searchTool);
+            RegisteredTools = builtIn;
+            return;
+        }
 
         if (mcpTools.Count == 0)
         {

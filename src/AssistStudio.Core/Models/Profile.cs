@@ -25,5 +25,10 @@ public class Profile
     /// <summary>Tool names to enable when this profile is active.</summary>
     public List<string> ToolNames { get; set; } = [];
 
+    /// <summary>
+    /// When true, sends a single search_tools meta-tool instead of individual MCP tool definitions.
+    /// </summary>
+    public bool UseSearchTools { get; set; }
+
     #endregion
 }
