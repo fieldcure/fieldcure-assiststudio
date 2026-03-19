@@ -387,24 +387,53 @@ public sealed partial class ProfilesPage : Page
     private void PopulateToolsPanel(Profile profile)
     {
         ToolsPanel.Children.Clear();
-        var tools = ToolRegistry.All;
         var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
+        var hasAnyTool = false;
 
-        foreach (var tool in tools)
+        // --- Built-in tools ---
+        var builtInTools = ToolRegistry.All;
+        if (builtInTools.Count > 0)
         {
-            var localizedName = loader.GetString($"Tool_{tool.Name}");
-            var cb = new CheckBox
+            hasAnyTool = true;
+            ToolsPanel.Children.Add(CreateGroupHeader(
+                loader.GetString("Profiles_BuiltInTools")));
+            foreach (var tool in builtInTools)
             {
-                Content = string.IsNullOrEmpty(localizedName) ? tool.DisplayName : localizedName,
-                Tag = tool.Name,
-                IsChecked = profile.ToolNames.Contains(tool.Name),
-            };
-            cb.Checked += OnToolChecked;
-            cb.Unchecked += OnToolChecked;
-            ToolsPanel.Children.Add(cb);
+                var localizedName = loader.GetString($"Tool_{tool.Name}");
+                var cb = new CheckBox
+                {
+                    Content = string.IsNullOrEmpty(localizedName) ? tool.DisplayName : localizedName,
+                    Tag = tool.Name,
+                    IsChecked = profile.ToolNames.Contains(tool.Name),
+                };
+                cb.Checked += OnToolChecked;
+                cb.Unchecked += OnToolChecked;
+                ToolsPanel.Children.Add(cb);
+            }
         }
 
-        if (tools.Count == 0)
+        // --- MCP tools grouped by server ---
+        var mcpToolsByServer = App.McpRegistry.GetToolsByServer();
+        foreach (var (serverName, serverTools) in mcpToolsByServer)
+        {
+            if (serverTools.Count == 0) continue;
+            hasAnyTool = true;
+            ToolsPanel.Children.Add(CreateGroupHeader(serverName));
+            foreach (var tool in serverTools)
+            {
+                var cb = new CheckBox
+                {
+                    Content = tool.DisplayName,
+                    Tag = tool.Name,
+                    IsChecked = profile.ToolNames.Contains(tool.Name),
+                };
+                cb.Checked += OnToolChecked;
+                cb.Unchecked += OnToolChecked;
+                ToolsPanel.Children.Add(cb);
+            }
+        }
+
+        if (!hasAnyTool)
         {
             ToolsPanel.Children.Add(new TextBlock
             {
@@ -413,6 +442,20 @@ public sealed partial class ProfilesPage : Page
                 FontSize = 12,
             });
         }
+    }
+
+    /// <summary>
+    /// Creates a styled group header TextBlock for the tools panel.
+    /// </summary>
+    private static TextBlock CreateGroupHeader(string text)
+    {
+        return new TextBlock
+        {
+            Text = text,
+            Style = Microsoft.UI.Xaml.Application.Current.Resources["CaptionTextBlockStyle"] as Style,
+            Opacity = 0.6,
+            Margin = new Thickness(0, 8, 0, 2),
+        };
     }
 
     /// <summary>

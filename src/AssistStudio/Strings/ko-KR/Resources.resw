@@ -410,6 +410,9 @@
   <data name="Profiles_NoToolsRegistered" xml:space="preserve">
     <value>등록된 도구가 없습니다.</value>
   </data>
+  <data name="Profiles_BuiltInTools" xml:space="preserve">
+    <value>기본 제공</value>
+  </data>
   <!-- CollapsibleSection -->
   <data name="CollapsibleSection_CollapseTooltip" xml:space="preserve">
     <value>섹션 접기</value>

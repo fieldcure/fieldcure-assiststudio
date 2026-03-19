@@ -410,6 +410,9 @@
   <data name="Profiles_NoToolsRegistered" xml:space="preserve">
     <value>No tools registered.</value>
   </data>
+  <data name="Profiles_BuiltInTools" xml:space="preserve">
+    <value>Built-in</value>
+  </data>
   <!-- CollapsibleSection -->
   <data name="CollapsibleSection_CollapseTooltip" xml:space="preserve">
     <value>Collapse section</value>
