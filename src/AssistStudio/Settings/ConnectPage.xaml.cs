@@ -325,7 +325,7 @@ public sealed partial class ConnectPage : Page
         panel.Children.Add(urlBox);
         panel.Children.Add(envBox);
 
-        var dialog = new ContentDialog
+        var dialog = new ThemedContentDialog
         {
             Title = _loader.GetString("Connect_AddServerDialog"),
             Content = panel,
@@ -333,7 +333,7 @@ public sealed partial class ConnectPage : Page
             CloseButtonText = _loader.GetString("Dialog_Cancel"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = XamlRoot,
-            RequestedTheme = ActualTheme,
+
         };
 
         if (await dialog.ShowAsync() != ContentDialogResult.Primary)
@@ -391,7 +391,7 @@ public sealed partial class ConnectPage : Page
             panel.Children.Add(cb);
         }
 
-        var dialog = new ContentDialog
+        var dialog = new ThemedContentDialog
         {
             Title = _loader.GetString("Connect_ImportDialog"),
             Content = panel,
@@ -399,7 +399,7 @@ public sealed partial class ConnectPage : Page
             CloseButtonText = _loader.GetString("Dialog_Cancel"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = XamlRoot,
-            RequestedTheme = ActualTheme,
+
         };
 
         if (await dialog.ShowAsync() != ContentDialogResult.Primary)
@@ -438,13 +438,13 @@ public sealed partial class ConnectPage : Page
 
     private async Task ShowMessageAsync(string title, string message)
     {
-        var dialog = new ContentDialog
+        var dialog = new ThemedContentDialog
         {
             Title = title,
             Content = message,
             CloseButtonText = _loader.GetString("Dialog_Cancel"),
             XamlRoot = XamlRoot,
-            RequestedTheme = ActualTheme,
+
         };
         await dialog.ShowAsync();
     }

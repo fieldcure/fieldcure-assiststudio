@@ -10,7 +10,7 @@ namespace AssistStudio.Dialogs;
 /// Dialog for browsing, pulling, and deleting Ollama models.
 /// Displays local models and available models with hardware compatibility indicators.
 /// </summary>
-public sealed partial class ModelSelectionDialog : ContentDialog
+public sealed partial class ModelSelectionDialog : ThemedContentDialog
 {
     #region Fields
 

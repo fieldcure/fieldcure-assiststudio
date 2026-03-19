@@ -417,7 +417,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 
         var input = new TextBox { Text = currentTitle, SelectionStart = currentTitle.Length };
         var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
-        var dialog = new ContentDialog
+        var dialog = new ThemedContentDialog
         {
             Title = loader.GetString("Dialog_RenameConversation"),
             Content = input,
@@ -425,7 +425,6 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             CloseButtonText = loader.GetString("Dialog_Cancel"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = _panel.XamlRoot,
-            RequestedTheme = _panel.ActualTheme,
         };
 
         var result = await dialog.ShowAsync();

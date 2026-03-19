@@ -470,7 +470,7 @@ public sealed partial class MainWindow : Window
         if (vm.IsDirty && vm.GetMessages().Count > 0)
         {
             var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
-            var dialog = new ContentDialog
+            var dialog = new ThemedContentDialog
             {
                 Title = loader.GetString("Dialog_SaveConversation"),
                 Content = loader.GetString("Dialog_SaveConversationContent"),
@@ -479,7 +479,6 @@ public sealed partial class MainWindow : Window
                 CloseButtonText = loader.GetString("Dialog_Cancel"),
                 DefaultButton = ContentDialogButton.Primary,
                 XamlRoot = Content.XamlRoot,
-                RequestedTheme = (Content as FrameworkElement)?.ActualTheme ?? ElementTheme.Default,
             };
 
             var result = await dialog.ShowAsync();
@@ -525,7 +524,7 @@ public sealed partial class MainWindow : Window
         args.Cancel = true;
 
         var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
-        var dialog = new ContentDialog
+        var dialog = new ThemedContentDialog
         {
             Title = loader.GetString("Dialog_UnsavedChanges"),
             Content = string.Format(loader.GetString("Dialog_UnsavedChangesContent"), dirtyTabs.Count),
@@ -534,7 +533,6 @@ public sealed partial class MainWindow : Window
             CloseButtonText = loader.GetString("Dialog_Cancel"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = Content.XamlRoot,
-            RequestedTheme = (Content as FrameworkElement)?.ActualTheme ?? ElementTheme.Default,
         };
 
         var result = await dialog.ShowAsync();

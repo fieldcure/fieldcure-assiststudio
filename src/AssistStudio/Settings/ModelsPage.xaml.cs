@@ -1254,7 +1254,6 @@ public sealed partial class ModelsPage : Page
         var dialog = new ModelSelectionDialog(manager)
         {
             XamlRoot = XamlRoot,
-            RequestedTheme = ActualTheme,
         };
         await dialog.ShowAsync();
 

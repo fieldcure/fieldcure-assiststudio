@@ -120,7 +120,7 @@ public sealed partial class ProfilesPage : Page
         };
 
         var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
-        var dialog = new ContentDialog
+        var dialog = new ThemedContentDialog
         {
             Title = loader.GetString("Profiles_NewProfileDialog"),
             Content = input,
@@ -128,7 +128,6 @@ public sealed partial class ProfilesPage : Page
             CloseButtonText = loader.GetString("Dialog_Cancel"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = XamlRoot,
-            RequestedTheme = ActualTheme,
         };
 
         var result = await dialog.ShowAsync();
