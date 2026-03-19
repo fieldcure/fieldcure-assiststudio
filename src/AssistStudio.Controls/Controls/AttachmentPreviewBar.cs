@@ -40,12 +40,44 @@ public sealed class AttachmentPreviewBar : Control
 
     #endregion
 
+    #region Dependency Properties
+
+    /// <summary>Identifies the <see cref="ThumbnailSize"/> dependency property.</summary>
+    public static readonly DependencyProperty ThumbnailSizeProperty =
+        DependencyProperty.Register(nameof(ThumbnailSize), typeof(double), typeof(AttachmentPreviewBar),
+            new PropertyMetadata(80.0));
+
+    /// <summary>Identifies the <see cref="MaxTextWidth"/> dependency property.</summary>
+    public static readonly DependencyProperty MaxTextWidthProperty =
+        DependencyProperty.Register(nameof(MaxTextWidth), typeof(double), typeof(AttachmentPreviewBar),
+            new PropertyMetadata(72.0));
+
+    #endregion
+
     #region Public Properties
 
     /// <summary>
     /// Gets the collection of attachments currently displayed in the preview bar.
     /// </summary>
     public ObservableCollection<ChatAttachment> Attachments => _attachments;
+
+    /// <summary>
+    /// Gets or sets the size (width and height) of each attachment thumbnail in pixels.
+    /// </summary>
+    public double ThumbnailSize
+    {
+        get => (double)GetValue(ThumbnailSizeProperty);
+        set => SetValue(ThumbnailSizeProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the maximum width for the filename text in non-image attachment previews.
+    /// </summary>
+    public double MaxTextWidth
+    {
+        get => (double)GetValue(MaxTextWidthProperty);
+        set => SetValue(MaxTextWidthProperty, value);
+    }
 
     #endregion
 
@@ -146,10 +178,11 @@ public sealed class AttachmentPreviewBar : Control
     /// </summary>
     private UIElement CreatePreviewItem(ChatAttachment attachment)
     {
+        var size = ThumbnailSize;
         var container = new Grid
         {
-            Width = 80,
-            Height = 80,
+            Width = size,
+            Height = size,
             CornerRadius = new CornerRadius(8),
             BorderBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(
                 Microsoft.UI.Colors.Gray),
@@ -196,7 +229,7 @@ public sealed class AttachmentPreviewBar : Control
                 Text = attachment.FileName,
                 FontSize = 10,
                 TextTrimming = TextTrimming.CharacterEllipsis,
-                MaxWidth = 72,
+                MaxWidth = MaxTextWidth,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 TextAlignment = TextAlignment.Center
             });

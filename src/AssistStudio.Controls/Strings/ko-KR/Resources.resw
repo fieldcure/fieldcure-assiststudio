@@ -108,6 +108,9 @@
   <data name="InputContainer_SendTooltip" xml:space="preserve">
     <value>메시지 전송</value>
   </data>
+  <data name="InputContainer_ToolsTooltip" xml:space="preserve">
+    <value>도구</value>
+  </data>
   <data name="ChatPanel_EditTitleTooltip" xml:space="preserve">
     <value>제목 편집</value>
   </data>

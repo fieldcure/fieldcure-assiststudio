@@ -81,6 +81,81 @@ public sealed partial class ChatPanel : Control
         DependencyProperty.Register(nameof(Title), typeof(string), typeof(ChatPanel),
             new PropertyMetadata(null, OnTitlePropertyChanged));
 
+    /// <summary>Identifies the <see cref="AutoTitle"/> dependency property.</summary>
+    public static readonly DependencyProperty AutoTitleProperty =
+        DependencyProperty.Register(nameof(AutoTitle), typeof(bool), typeof(ChatPanel),
+            new PropertyMetadata(false));
+
+    /// <summary>Identifies the <see cref="AutoSummarize"/> dependency property.</summary>
+    public static readonly DependencyProperty AutoSummarizeProperty =
+        DependencyProperty.Register(nameof(AutoSummarize), typeof(bool), typeof(ChatPanel),
+            new PropertyMetadata(false));
+
+    /// <summary>Identifies the <see cref="MaxInputTokens"/> dependency property.</summary>
+    public static readonly DependencyProperty MaxInputTokensProperty =
+        DependencyProperty.Register(nameof(MaxInputTokens), typeof(int), typeof(ChatPanel),
+            new PropertyMetadata(0));
+
+    /// <summary>Identifies the <see cref="MaxToolCallRounds"/> dependency property.</summary>
+    public static readonly DependencyProperty MaxToolCallRoundsProperty =
+        DependencyProperty.Register(nameof(MaxToolCallRounds), typeof(int), typeof(ChatPanel),
+            new PropertyMetadata(10));
+
+    /// <summary>Identifies the <see cref="RecentTurnsToKeep"/> dependency property.</summary>
+    public static readonly DependencyProperty RecentTurnsToKeepProperty =
+        DependencyProperty.Register(nameof(RecentTurnsToKeep), typeof(int), typeof(ChatPanel),
+            new PropertyMetadata(10));
+
+    /// <summary>Identifies the <see cref="UtilityProvider"/> dependency property.</summary>
+    public static readonly DependencyProperty UtilityProviderProperty =
+        DependencyProperty.Register(nameof(UtilityProvider), typeof(IAiProvider), typeof(ChatPanel),
+            new PropertyMetadata(null));
+
+    /// <summary>Identifies the <see cref="WorkspaceContext"/> dependency property.</summary>
+    public static readonly DependencyProperty WorkspaceContextProperty =
+        DependencyProperty.Register(nameof(WorkspaceContext), typeof(IWorkspaceContext), typeof(ChatPanel),
+            new PropertyMetadata(null));
+
+    /// <summary>Identifies the <see cref="ContextProvider"/> dependency property.</summary>
+    public static readonly DependencyProperty ContextProviderProperty =
+        DependencyProperty.Register(nameof(ContextProvider), typeof(IContextProvider), typeof(ChatPanel),
+            new PropertyMetadata(null));
+
+    /// <summary>Identifies the <see cref="RegisteredTools"/> dependency property.</summary>
+    public static readonly DependencyProperty RegisteredToolsProperty =
+        DependencyProperty.Register(nameof(RegisteredTools), typeof(IReadOnlyList<IAssistTool>), typeof(ChatPanel),
+            new PropertyMetadata(null, OnRegisteredToolsChanged));
+
+    /// <summary>Identifies the <see cref="FontFamily"/> dependency property for chat rendering.</summary>
+    public static new readonly DependencyProperty FontFamilyProperty =
+        DependencyProperty.Register("ChatFontFamily", typeof(string), typeof(ChatPanel),
+            new PropertyMetadata(null, OnFontFamilyChanged));
+
+    /// <summary>Identifies the <see cref="FontSize"/> dependency property for chat rendering.</summary>
+    public static new readonly DependencyProperty FontSizeProperty =
+        DependencyProperty.Register("ChatFontSize", typeof(double), typeof(ChatPanel),
+            new PropertyMetadata(14.0, OnFontSizeChanged));
+
+    /// <summary>Identifies the <see cref="IsReadOnly"/> dependency property.</summary>
+    public static readonly DependencyProperty IsReadOnlyProperty =
+        DependencyProperty.Register(nameof(IsReadOnly), typeof(bool), typeof(ChatPanel),
+            new PropertyMetadata(false, OnIsReadOnlyChanged));
+
+    /// <summary>Identifies the <see cref="ShowTitleBar"/> dependency property.</summary>
+    public static readonly DependencyProperty ShowTitleBarProperty =
+        DependencyProperty.Register(nameof(ShowTitleBar), typeof(bool), typeof(ChatPanel),
+            new PropertyMetadata(true, OnShowTitleBarChanged));
+
+    /// <summary>Identifies the <see cref="AllowAttachments"/> dependency property.</summary>
+    public static readonly DependencyProperty AllowAttachmentsProperty =
+        DependencyProperty.Register(nameof(AllowAttachments), typeof(bool), typeof(ChatPanel),
+            new PropertyMetadata(true, OnAllowAttachmentsChanged));
+
+    /// <summary>Identifies the <see cref="EmptyStateContent"/> dependency property.</summary>
+    public static readonly DependencyProperty EmptyStateContentProperty =
+        DependencyProperty.Register(nameof(EmptyStateContent), typeof(object), typeof(ChatPanel),
+            new PropertyMetadata(null));
+
     #endregion
 
     #region Dependency Property Callbacks
@@ -190,6 +265,76 @@ public sealed partial class ChatPanel : Control
             }
             // Update the actual system prompt used in requests
             panel.SystemPrompt = preset.Text;
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="RegisteredTools"/> changes to sync tools to the input area.
+    /// </summary>
+    private static void OnRegisteredToolsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && panel._inputArea is not null)
+        {
+            panel._inputArea.AvailableTools = panel.RegisteredTools;
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="FontFamily"/> changes to update the chat rendering font.
+    /// </summary>
+    private static void OnFontFamilyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && panel._isInitialized && e.NewValue is string fontFamily)
+        {
+            _ = panel._renderer.SetFontFamilyAsync(fontFamily);
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="FontSize"/> changes to update the chat rendering font size.
+    /// </summary>
+    private static void OnFontSizeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && panel._isInitialized && e.NewValue is double fontSize)
+        {
+            _ = panel._renderer.SetFontSizeAsync(fontSize);
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="IsReadOnly"/> changes to show or hide the input area.
+    /// </summary>
+    private static void OnIsReadOnlyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && panel._inputArea is not null)
+        {
+            panel._inputArea.Visibility = (bool)e.NewValue
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="ShowTitleBar"/> changes to show or hide the title bar.
+    /// </summary>
+    private static void OnShowTitleBarChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && panel._titleBar is not null)
+        {
+            panel._titleBar.Visibility = (bool)e.NewValue
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="AllowAttachments"/> changes to show or hide the attach button.
+    /// </summary>
+    private static void OnAllowAttachmentsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && panel._inputArea is not null)
+        {
+            panel._inputArea.ShowAttachButton = (bool)e.NewValue;
         }
     }
 
@@ -305,53 +450,143 @@ public sealed partial class ChatPanel : Control
     #region Public Properties
 
     /// <summary>
-    /// Maximum input tokens before auto-summarization triggers. 0 = disabled (default).
+    /// Gets or sets whether to automatically generate a title after the first assistant response.
     /// </summary>
-    public int MaxInputTokens { get; set; } = 0;
+    public bool AutoTitle
+    {
+        get => (bool)GetValue(AutoTitleProperty);
+        set => SetValue(AutoTitleProperty, value);
+    }
 
     /// <summary>
-    /// Number of recent conversation turns to keep when summarizing.
+    /// Gets or sets whether to automatically summarize the conversation when input tokens exceed <see cref="MaxInputTokens"/>.
     /// </summary>
-    public int RecentTurnsToKeep { get; set; } = 10;
+    public bool AutoSummarize
+    {
+        get => (bool)GetValue(AutoSummarizeProperty);
+        set => SetValue(AutoSummarizeProperty, value);
+    }
 
     /// <summary>
-    /// Enable automatic conversation summarization when input tokens exceed MaxInputTokens.
+    /// Gets or sets the maximum input tokens before auto-summarization triggers. 0 = disabled (default).
     /// </summary>
-    public bool AutoSummarize { get; set; } = false;
+    public int MaxInputTokens
+    {
+        get => (int)GetValue(MaxInputTokensProperty);
+        set => SetValue(MaxInputTokensProperty, value);
+    }
 
     /// <summary>
-    /// Provider used for utility tasks (title generation, summarization).
-    /// Falls back to the main Provider if not set.
+    /// Gets or sets the maximum number of consecutive tool call rounds before forcing a text response.
     /// </summary>
-    public IAiProvider? UtilityProvider { get; set; }
+    public int MaxToolCallRounds
+    {
+        get => (int)GetValue(MaxToolCallRoundsProperty);
+        set => SetValue(MaxToolCallRoundsProperty, value);
+    }
 
     /// <summary>
-    /// Enable automatic title generation after the first assistant response.
+    /// Gets or sets the number of recent conversation turns to keep when summarizing.
     /// </summary>
-    public bool AutoTitle { get; set; } = false;
+    public int RecentTurnsToKeep
+    {
+        get => (int)GetValue(RecentTurnsToKeepProperty);
+        set => SetValue(RecentTurnsToKeepProperty, value);
+    }
 
     /// <summary>
-    /// Registered tools available for AI tool calling. When non-empty, the provider uses
-    /// CompleteAsync (non-streaming) to enable tool call responses.
+    /// Gets or sets the provider used for utility tasks (title generation, summarization).
+    /// Falls back to the main <see cref="Provider"/> if not set.
     /// </summary>
-    public IReadOnlyList<IAssistTool> RegisteredTools { get; set; } = [];
+    public IAiProvider? UtilityProvider
+    {
+        get => (IAiProvider?)GetValue(UtilityProviderProperty);
+        set => SetValue(UtilityProviderProperty, value);
+    }
 
     /// <summary>
-    /// Optional workspace context provider. When set, the current workspace state
+    /// Gets or sets the optional workspace context provider. When set, the current workspace state
     /// is automatically injected into every AI request.
     /// </summary>
-    public IWorkspaceContext? WorkspaceContext { get; set; }
+    public IWorkspaceContext? WorkspaceContext
+    {
+        get => (IWorkspaceContext?)GetValue(WorkspaceContextProperty);
+        set => SetValue(WorkspaceContextProperty, value);
+    }
 
     /// <summary>
-    /// Optional RAG context provider. When set, relevant context chunks are retrieved
-    /// for the user's query and passed to the AI provider.
+    /// Gets or sets the optional RAG context provider. When set, relevant context chunks are
+    /// retrieved for the user's query and passed to the AI provider.
     /// </summary>
-    public IContextProvider? ContextProvider { get; set; }
+    public IContextProvider? ContextProvider
+    {
+        get => (IContextProvider?)GetValue(ContextProviderProperty);
+        set => SetValue(ContextProviderProperty, value);
+    }
 
     /// <summary>
-    /// Maximum number of consecutive tool call rounds before forcing a text response. Default is 10.
+    /// Gets or sets the registered tools available for AI tool calling. When non-empty, the provider uses
+    /// CompleteAsync (non-streaming) to enable tool call responses.
     /// </summary>
-    public int MaxToolCallRounds { get; set; } = 10;
+    public IReadOnlyList<IAssistTool> RegisteredTools
+    {
+        get => (IReadOnlyList<IAssistTool>?)GetValue(RegisteredToolsProperty) ?? [];
+        set => SetValue(RegisteredToolsProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the font family name for chat message rendering.
+    /// </summary>
+    public new string? FontFamily
+    {
+        get => (string?)GetValue(FontFamilyProperty);
+        set => SetValue(FontFamilyProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the base font size in pixels for chat message rendering.
+    /// </summary>
+    public new double FontSize
+    {
+        get => (double)GetValue(FontSizeProperty);
+        set => SetValue(FontSizeProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets whether the chat panel is in read-only mode (input area hidden).
+    /// </summary>
+    public bool IsReadOnly
+    {
+        get => (bool)GetValue(IsReadOnlyProperty);
+        set => SetValue(IsReadOnlyProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets whether the title bar is visible.
+    /// </summary>
+    public bool ShowTitleBar
+    {
+        get => (bool)GetValue(ShowTitleBarProperty);
+        set => SetValue(ShowTitleBarProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets whether file attachments are allowed.
+    /// </summary>
+    public bool AllowAttachments
+    {
+        get => (bool)GetValue(AllowAttachmentsProperty);
+        set => SetValue(AllowAttachmentsProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets custom content displayed in the empty state panel.
+    /// </summary>
+    public object? EmptyStateContent
+    {
+        get => GetValue(EmptyStateContentProperty);
+        set => SetValue(EmptyStateContentProperty, value);
+    }
 
     /// <summary>
     /// Gets or sets the AI provider used for streaming chat responses.
@@ -574,6 +809,12 @@ public sealed partial class ChatPanel : Control
                 _inputArea.SelectedProfile = selectedProfile;
                 _inputArea.SelectProfileInCombo(selectedProfile);
             }
+
+            // Sync tools and visibility settings
+            _inputArea.AvailableTools = RegisteredTools;
+            _inputArea.ShowAttachButton = AllowAttachments;
+            if (IsReadOnly)
+                _inputArea.Visibility = Visibility.Collapsed;
         }
         if (_rootGrid is not null)
         {
@@ -1157,6 +1398,16 @@ public sealed partial class ChatPanel : Control
 
     #region Private Methods
 
+    /// <summary>
+    /// Returns the currently active tools, filtered by the input area's enabled tool selection.
+    /// </summary>
+    private IReadOnlyList<IAssistTool> GetActiveTools()
+    {
+        var enabledNames = _inputArea?.EnabledToolNames;
+        if (enabledNames is null) return RegisteredTools;
+        return RegisteredTools.Where(t => enabledNames.Contains(t.Name)).ToList();
+    }
+
     private record StreamResult(TokenUsage? Usage, bool IsTruncated, IReadOnlyList<ToolCall>? ToolCalls = null)
     {
         public bool HasToolCalls => ToolCalls is { Count: > 0 };
@@ -1222,9 +1473,10 @@ public sealed partial class ChatPanel : Control
         ChatMessage assistantMessage, CancellationToken ct)
     {
         ToolCallExecutor? executor = null;
-        if (RegisteredTools.Count > 0)
+        var activeTools = GetActiveTools();
+        if (activeTools.Count > 0)
         {
-            executor = new ToolCallExecutor(RegisteredTools);
+            executor = new ToolCallExecutor(activeTools);
             if (_approvalPanel is not null && _inputArea is not null)
             {
                 executor.ConfirmationHandler = async (toolName, arguments) =>
@@ -1684,7 +1936,7 @@ public sealed partial class ChatPanel : Control
             ContextChunks = chunks is { Count: > 0 } ? chunks : null,
             Temperature = preset?.Temperature ?? 0.7,
             MaxTokens = preset?.MaxTokens ?? 4096,
-            Tools = RegisteredTools.Count > 0 ? RegisteredTools : null,
+            Tools = GetActiveTools() is { Count: > 0 } tools ? tools : null,
             ThinkingEnabled = preset?.ThinkingEnabled ?? false,
             ThinkingBudget = preset?.ThinkingBudget
         };

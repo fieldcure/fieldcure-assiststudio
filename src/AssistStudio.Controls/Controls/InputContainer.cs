@@ -79,6 +79,36 @@ public sealed partial class InputContainer : Control
         DependencyProperty.Register(nameof(SelectedProfile), typeof(Profile), typeof(InputContainer),
             new PropertyMetadata(null));
 
+    /// <summary>Identifies the <see cref="MaxLength"/> dependency property.</summary>
+    public static readonly DependencyProperty MaxLengthProperty =
+        DependencyProperty.Register(nameof(MaxLength), typeof(int), typeof(InputContainer),
+            new PropertyMetadata(0, OnMaxLengthChanged));
+
+    /// <summary>Identifies the <see cref="ShowSummarizeButton"/> dependency property.</summary>
+    public static readonly DependencyProperty ShowSummarizeButtonProperty =
+        DependencyProperty.Register(nameof(ShowSummarizeButton), typeof(bool), typeof(InputContainer),
+            new PropertyMetadata(true, OnShowSummarizeButtonChanged));
+
+    /// <summary>Identifies the <see cref="ShowAttachButton"/> dependency property.</summary>
+    public static readonly DependencyProperty ShowAttachButtonProperty =
+        DependencyProperty.Register(nameof(ShowAttachButton), typeof(bool), typeof(InputContainer),
+            new PropertyMetadata(true, OnShowAttachButtonChanged));
+
+    /// <summary>Identifies the <see cref="InputAreaMinHeight"/> dependency property.</summary>
+    public static readonly DependencyProperty InputAreaMinHeightProperty =
+        DependencyProperty.Register(nameof(InputAreaMinHeight), typeof(double), typeof(InputContainer),
+            new PropertyMetadata(32.0, OnInputAreaMinHeightChanged));
+
+    /// <summary>Identifies the <see cref="AvailableTools"/> dependency property.</summary>
+    public static readonly DependencyProperty AvailableToolsProperty =
+        DependencyProperty.Register(nameof(AvailableTools), typeof(IReadOnlyList<IAssistTool>), typeof(InputContainer),
+            new PropertyMetadata(null, OnAvailableToolsChanged));
+
+    /// <summary>Identifies the <see cref="EnabledToolNames"/> dependency property.</summary>
+    public static readonly DependencyProperty EnabledToolNamesProperty =
+        DependencyProperty.Register(nameof(EnabledToolNames), typeof(IReadOnlyList<string>), typeof(InputContainer),
+            new PropertyMetadata(null));
+
     #endregion
 
     #region Fields
@@ -97,6 +127,21 @@ public sealed partial class InputContainer : Control
     /// Flag indicating a pending prompt preset ComboBox population deferred until control is loaded.
     /// </summary>
     private bool _pendingProfilePopulate;
+
+    /// <summary>
+    /// Pending MaxLength value deferred until the text box is available.
+    /// </summary>
+    private int? _pendingMaxLength;
+
+    /// <summary>
+    /// Pending InputAreaMinHeight value deferred until the text box is available.
+    /// </summary>
+    private double? _pendingMinHeight;
+
+    /// <summary>
+    /// Internal set of enabled tool names for the tool toggle flyout.
+    /// </summary>
+    private HashSet<string>? _enabledToolSet;
 
     #endregion
 
@@ -146,6 +191,11 @@ public sealed partial class InputContainer : Control
     /// The border container that receives a theme shadow.
     /// </summary>
     private Border? _containerBorder;
+
+    /// <summary>
+    /// The button that opens the tool toggle flyout.
+    /// </summary>
+    private Button? _toolButton;
 
     #endregion
 
@@ -227,6 +277,61 @@ public sealed partial class InputContainer : Control
         set => SetValue(SelectedProfileProperty, value);
     }
 
+    /// <summary>
+    /// Gets or sets the maximum character length for input. 0 = unlimited (default).
+    /// </summary>
+    public int MaxLength
+    {
+        get => (int)GetValue(MaxLengthProperty);
+        set => SetValue(MaxLengthProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets whether the summarize button is visible.
+    /// </summary>
+    public bool ShowSummarizeButton
+    {
+        get => (bool)GetValue(ShowSummarizeButtonProperty);
+        set => SetValue(ShowSummarizeButtonProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets whether the attach button is visible.
+    /// </summary>
+    public bool ShowAttachButton
+    {
+        get => (bool)GetValue(ShowAttachButtonProperty);
+        set => SetValue(ShowAttachButtonProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the minimum height of the input text area.
+    /// </summary>
+    public double InputAreaMinHeight
+    {
+        get => (double)GetValue(InputAreaMinHeightProperty);
+        set => SetValue(InputAreaMinHeightProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the list of available tools for the tool toggle flyout.
+    /// Set by the parent <see cref="ChatPanel"/> from its RegisteredTools.
+    /// </summary>
+    public IReadOnlyList<IAssistTool> AvailableTools
+    {
+        get => (IReadOnlyList<IAssistTool>?)GetValue(AvailableToolsProperty) ?? [];
+        set => SetValue(AvailableToolsProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the list of currently enabled tool names. Null means all tools are enabled.
+    /// </summary>
+    public IReadOnlyList<string>? EnabledToolNames
+    {
+        get => (IReadOnlyList<string>?)GetValue(EnabledToolNamesProperty);
+        set => SetValue(EnabledToolNamesProperty, value);
+    }
+
     #endregion
 
     #region Events
@@ -295,6 +400,7 @@ public sealed partial class InputContainer : Control
         _presetComboBox = GetTemplateChild("PART_PresetComboBox") as ComboBox;
         _profileComboBox = GetTemplateChild("PART_ProfileComboBox") as ComboBox;
         _containerBorder = GetTemplateChild("PART_ContainerBorder") as Border;
+        _toolButton = GetTemplateChild("PART_ToolButton") as Button;
 
         // Apply ThemeShadow in code (XAML compiler crashes with ThemeShadow in ControlTemplate.Resources)
         if (_containerBorder is not null)
@@ -339,6 +445,27 @@ public sealed partial class InputContainer : Control
             ApplySummarizeVisualState(IsSummarizeEnabled && IsInputEnabled);
             UpdateSummarizeTooltip(IsSummarizeEnabled);
         }
+
+        // Apply deferred property values
+        if (_pendingMaxLength.HasValue && _messageTextBox is not null)
+        {
+            _messageTextBox.MaxLength = _pendingMaxLength.Value;
+            _pendingMaxLength = null;
+        }
+        if (_pendingMinHeight.HasValue && _messageTextBox is not null)
+        {
+            _messageTextBox.MinHeight = _pendingMinHeight.Value;
+            _pendingMinHeight = null;
+        }
+
+        // Apply initial visibility for ShowSummarizeButton / ShowAttachButton
+        if (_summarizeButton is not null)
+            _summarizeButton.Visibility = ShowSummarizeButton ? Visibility.Visible : Visibility.Collapsed;
+        if (_attachButton is not null)
+            _attachButton.Visibility = ShowAttachButton ? Visibility.Visible : Visibility.Collapsed;
+
+        // Build tool flyout if tools are available
+        BuildToolFlyout();
 
         // Update Send button when attachments change
         if (_previewBar is not null)
@@ -694,6 +821,76 @@ public sealed partial class InputContainer : Control
         }
     }
 
+    /// <summary>
+    /// Called when <see cref="MaxLength"/> changes to apply the character limit to the text box.
+    /// </summary>
+    private static void OnMaxLengthChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is InputContainer self)
+        {
+            var value = (int)e.NewValue;
+            if (self._messageTextBox is not null)
+                self._messageTextBox.MaxLength = value;
+            else
+                self._pendingMaxLength = value;
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="ShowSummarizeButton"/> changes to show or hide the summarize button.
+    /// </summary>
+    private static void OnShowSummarizeButtonChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is InputContainer self && self._summarizeButton is not null)
+        {
+            self._summarizeButton.Visibility = (bool)e.NewValue
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="ShowAttachButton"/> changes to show or hide the attach button.
+    /// </summary>
+    private static void OnShowAttachButtonChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is InputContainer self && self._attachButton is not null)
+        {
+            self._attachButton.Visibility = (bool)e.NewValue
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="InputAreaMinHeight"/> changes to set the text box minimum height.
+    /// </summary>
+    private static void OnInputAreaMinHeightChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is InputContainer self)
+        {
+            var value = (double)e.NewValue;
+            if (self._messageTextBox is not null)
+                self._messageTextBox.MinHeight = value;
+            else
+                self._pendingMinHeight = value;
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="AvailableTools"/> changes to rebuild the tool toggle flyout.
+    /// </summary>
+    private static void OnAvailableToolsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is InputContainer self)
+        {
+            // Reset enabled set — all tools enabled by default
+            self._enabledToolSet = null;
+            self.EnabledToolNames = null;
+            self.BuildToolFlyout();
+        }
+    }
+
     #endregion
 
     #region Private Methods
@@ -957,6 +1154,77 @@ public sealed partial class InputContainer : Control
     {
         var state = Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift);
         return (state & Windows.UI.Core.CoreVirtualKeyStates.Down) == Windows.UI.Core.CoreVirtualKeyStates.Down;
+    }
+
+    /// <summary>
+    /// Builds or updates the tool toggle flyout based on <see cref="AvailableTools"/>.
+    /// </summary>
+    private void BuildToolFlyout()
+    {
+        if (_toolButton is null) return;
+
+        var tools = AvailableTools;
+        if (tools.Count == 0)
+        {
+            _toolButton.Visibility = Visibility.Collapsed;
+            _toolButton.Flyout = null;
+            return;
+        }
+
+        _toolButton.Visibility = Visibility.Visible;
+
+        var panel = new StackPanel { Spacing = 4, Padding = new Thickness(4) };
+        foreach (var tool in tools)
+        {
+            var checkBox = new CheckBox
+            {
+                Content = tool.DisplayName,
+                IsChecked = _enabledToolSet is null || _enabledToolSet.Contains(tool.Name),
+                Tag = tool.Name,
+                MinWidth = 0
+            };
+            checkBox.Checked += ToolCheckBox_Changed;
+            checkBox.Unchecked += ToolCheckBox_Changed;
+            panel.Children.Add(checkBox);
+        }
+
+        var flyout = new Flyout
+        {
+            Content = panel,
+            Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.Top
+        };
+        _toolButton.Flyout = flyout;
+
+        // Apply tooltip
+        try
+        {
+            var loader = new Windows.ApplicationModel.Resources.ResourceLoader(
+                "AssistStudio.Controls/Resources");
+            SetTooltip(_toolButton, loader.GetString("InputContainer_ToolsTooltip"));
+        }
+        catch { /* Resource not found */ }
+    }
+
+    /// <summary>
+    /// Handles tool checkbox toggle to update <see cref="EnabledToolNames"/>.
+    /// </summary>
+    private void ToolCheckBox_Changed(object sender, RoutedEventArgs e)
+    {
+        if (sender is not CheckBox checkBox || checkBox.Tag is not string toolName) return;
+
+        var tools = AvailableTools;
+        // Initialize the enabled set from all tools if needed
+        _enabledToolSet ??= new HashSet<string>(tools.Select(t => t.Name));
+
+        if (checkBox.IsChecked == true)
+            _enabledToolSet.Add(toolName);
+        else
+            _enabledToolSet.Remove(toolName);
+
+        // If all enabled, set null (meaning "all"); otherwise publish the list
+        EnabledToolNames = _enabledToolSet.Count == tools.Count
+            ? null
+            : _enabledToolSet.ToList();
     }
 
     #endregion

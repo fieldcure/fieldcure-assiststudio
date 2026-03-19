@@ -245,6 +245,12 @@
                                             Padding="6">
                                         <FontIcon Glyph="&#xEB78;" FontSize="14" />
                                     </Button>
+                                    <Button x:Name="PART_ToolButton"
+                                            Style="{StaticResource SubtleButtonStyle}"
+                                            Padding="6"
+                                            Visibility="Collapsed">
+                                        <FontIcon Glyph="&#xE90F;" FontSize="14" />
+                                    </Button>
                                 </StackPanel>
 
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4"

@@ -255,6 +255,24 @@ internal class WebViewChatRenderer
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 
+    /// <summary>
+    /// Sets the font family for all chat message rendering.
+    /// </summary>
+    public Task SetFontFamilyAsync(string fontFamily)
+    {
+        var escaped = fontFamily.Replace("'", "\\'");
+        return _webView.ExecuteScriptAsync($"document.body.style.fontFamily = '{escaped}';").AsTask();
+    }
+
+    /// <summary>
+    /// Sets the base font size (in pixels) for chat message rendering.
+    /// </summary>
+    public Task SetFontSizeAsync(double fontSize)
+    {
+        return _webView.ExecuteScriptAsync(
+            $"document.documentElement.style.setProperty('--font-size-base', '{fontSize}px');").AsTask();
+    }
+
     #endregion
 
     #region Event Handlers
