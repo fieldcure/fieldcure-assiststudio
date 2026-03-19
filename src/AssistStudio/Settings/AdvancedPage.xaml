@@ -48,6 +48,25 @@
                          Title="Restart required"
                          Message="Please restart the app to apply the language change." />
 
+                <!-- Logging -->
+                <TextBlock x:Uid="Advanced_Logging" Text="Logging"
+                           Style="{StaticResource BodyStrongTextBlockStyle}"
+                           Margin="0,16,0,0" />
+
+                <TextBlock x:Uid="Advanced_LoggingDescription"
+                           Text="Application logs are stored locally for troubleshooting."
+                           Style="{StaticResource CaptionTextBlockStyle}"
+                           TextWrapping="Wrap"
+                           Opacity="0.7" />
+
+                <Button x:Uid="Advanced_OpenLogsFolder"
+                        Content="Open logs folder"
+                        Click="OnOpenLogsFolderClick">
+                    <Button.Resources>
+                        <FontIcon x:Key="ButtonIcon" Glyph="&#xE838;" FontSize="14" />
+                    </Button.Resources>
+                </Button>
+
             </StackPanel>
         </ScrollViewer>
     </Grid>

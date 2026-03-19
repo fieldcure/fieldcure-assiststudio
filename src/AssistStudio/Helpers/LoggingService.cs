@@ -76,6 +76,11 @@ public static class LoggingService
     public static string? GetLogFilePath() => logFilePath;
 
     /// <summary>
+    /// Gets the logs folder path.
+    /// </summary>
+    public static string? GetLogsFolderPath() => logsFolderPath;
+
+    /// <summary>
     /// Logs an informational message.
     /// </summary>
     public static void LogInfo(string message, bool consoleOnly = false)

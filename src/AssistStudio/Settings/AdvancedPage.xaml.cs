@@ -1,6 +1,9 @@
-﻿using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Navigation;
+﻿using System.Diagnostics;
 using System.Globalization;
+using AssistStudio.Helpers;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Navigation;
 using Windows.Globalization;
 
 namespace AssistStudio.Settings;
@@ -102,6 +105,16 @@ public sealed partial class AdvancedPage : Page
 
         // Show restart warning if language changed from initial
         LanguageRestartInfo.IsOpen = selected.Id != _initialLanguageId;
+    }
+
+    /// <summary>
+    /// Opens the logs folder in File Explorer.
+    /// </summary>
+    private void OnOpenLogsFolderClick(object sender, RoutedEventArgs e)
+    {
+        var logsPath = LoggingService.GetLogsFolderPath();
+        if (logsPath is not null)
+            Process.Start(new ProcessStartInfo(logsPath) { UseShellExecute = true });
     }
 
     #endregion

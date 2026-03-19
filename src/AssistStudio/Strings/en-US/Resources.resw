@@ -257,6 +257,15 @@
   <data name="Advanced_Restart.Message" xml:space="preserve">
     <value>Please restart the app to apply the language change.</value>
   </data>
+  <data name="Advanced_Logging.Text" xml:space="preserve">
+    <value>Logging</value>
+  </data>
+  <data name="Advanced_LoggingDescription.Text" xml:space="preserve">
+    <value>Application logs are stored locally for troubleshooting.</value>
+  </data>
+  <data name="Advanced_OpenLogsFolder.Content" xml:space="preserve">
+    <value>Open logs folder</value>
+  </data>
   <!-- About Page -->
   <data name="About_Title.Text" xml:space="preserve">
     <value>About</value>

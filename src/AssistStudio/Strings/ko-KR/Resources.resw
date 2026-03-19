@@ -257,6 +257,15 @@
   <data name="Advanced_Restart.Message" xml:space="preserve">
     <value>&#xC5B8;&#xC5B4; &#xBCC0;&#xACBD;&#xC744; &#xC801;&#xC6A9;&#xD558;&#xB824;&#xBA74; &#xC571;&#xC744; &#xB2E4;&#xC2DC; &#xC2DC;&#xC791;&#xD574; &#xC8FC;&#xC138;&#xC694;.</value>
   </data>
+  <data name="Advanced_Logging.Text" xml:space="preserve">
+    <value>로깅</value>
+  </data>
+  <data name="Advanced_LoggingDescription.Text" xml:space="preserve">
+    <value>문제 해결을 위해 앱 로그가 로컬에 저장됩니다.</value>
+  </data>
+  <data name="Advanced_OpenLogsFolder.Content" xml:space="preserve">
+    <value>로그 폴더 열기</value>
+  </data>
   <!-- About Page -->
   <data name="About_Title.Text" xml:space="preserve">
     <value>&#xC815;&#xBCF4;</value>
