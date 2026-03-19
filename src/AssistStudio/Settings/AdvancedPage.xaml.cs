@@ -104,7 +104,9 @@ public sealed partial class AdvancedPage : Page
         ApplicationLanguages.PrimaryLanguageOverride = selected.Id;
 
         // Show restart warning if language changed from initial
-        LanguageRestartInfo.IsOpen = selected.Id != _initialLanguageId;
+        LanguageRestartPrompt.Visibility = selected.Id != _initialLanguageId
+            ? Visibility.Visible
+            : Visibility.Collapsed;
     }
 
     /// <summary>

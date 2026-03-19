@@ -10,6 +10,10 @@
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
             <!-- SubtleButtonStyle is built-in since WinAppSDK 1.8 (XamlControlsResources) -->
+            <Style x:Key="DescriptionTextBlockStyle" TargetType="TextBlock"
+                   BasedOn="{StaticResource CaptionTextBlockStyle}">
+                <Setter Property="Foreground" Value="{ThemeResource SystemBaseMediumHighColor}" />
+            </Style>
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Light">
                     <SolidColorBrush x:Key="StatusErrorForegroundBrush" Color="#C42B1C" />

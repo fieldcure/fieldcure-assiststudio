@@ -40,13 +40,12 @@
                           Width="220"
                           SelectionChanged="OnLanguageChanged" />
 
-                <InfoBar x:Name="LanguageRestartInfo"
-                         x:Uid="Advanced_Restart"
-                         IsOpen="False"
-                         IsClosable="False"
-                         Severity="Warning"
-                         Title="Restart required"
-                         Message="Please restart the app to apply the language change." />
+                <TextBlock x:Name="LanguageRestartPrompt"
+                           x:Uid="Advanced_Restart"
+                           Style="{StaticResource DescriptionTextBlockStyle}"
+                           Foreground="{ThemeResource SystemControlErrorTextForegroundBrush}"
+                           TextWrapping="Wrap"
+                           Visibility="Collapsed" />
 
                 <!-- Logging -->
                 <TextBlock x:Uid="Advanced_Logging" Text="Logging"

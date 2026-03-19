@@ -251,11 +251,8 @@
   <data name="Advanced_LanguageDescription.Text" xml:space="preserve">
     <value>&#xC2DC;&#xC2A4;&#xD15C; &#xAE30;&#xBCF8; &#xC5B8;&#xC5B4;&#xB97C; &#xBB34;&#xC2DC;&#xD558;&#xACE0; &#xC0AC;&#xC6A9;&#xC790; &#xC9C0;&#xC815; &#xC5B8;&#xC5B4;&#xB97C; &#xC120;&#xD0DD;&#xD569;&#xB2C8;&#xB2E4;. &#xBCC0;&#xACBD; &#xC0AC;&#xD56D;&#xC744; &#xC801;&#xC6A9;&#xD558;&#xB824;&#xBA74; &#xC571;&#xC744; &#xB2E4;&#xC2DC; &#xC2DC;&#xC791;&#xD574;&#xC57C; &#xD569;&#xB2C8;&#xB2E4;.</value>
   </data>
-  <data name="Advanced_Restart.Title" xml:space="preserve">
-    <value>&#xC7AC;&#xC2DC;&#xC791; &#xD544;&#xC694;</value>
-  </data>
-  <data name="Advanced_Restart.Message" xml:space="preserve">
-    <value>&#xC5B8;&#xC5B4; &#xBCC0;&#xACBD;&#xC744; &#xC801;&#xC6A9;&#xD558;&#xB824;&#xBA74; &#xC571;&#xC744; &#xB2E4;&#xC2DC; &#xC2DC;&#xC791;&#xD574; &#xC8FC;&#xC138;&#xC694;.</value>
+  <data name="Advanced_Restart.Text" xml:space="preserve">
+    <value>언어 변경을 적용하려면 앱을 다시 시작해 주세요.</value>
   </data>
   <data name="Advanced_Logging.Text" xml:space="preserve">
     <value>로깅</value>
