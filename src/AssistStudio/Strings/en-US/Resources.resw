@@ -555,4 +555,13 @@
   <data name="Connect_Servers" xml:space="preserve">
     <value>servers</value>
   </data>
+  <data name="Mcp_ServersConnected" xml:space="preserve">
+    <value>{0} MCP server(s) connected</value>
+  </data>
+  <data name="Mcp_ServerReconnected" xml:space="preserve">
+    <value>MCP server "{0}" reconnected</value>
+  </data>
+  <data name="Mcp_ConnectionFailed" xml:space="preserve">
+    <value>MCP connection failed</value>
+  </data>
 </root>

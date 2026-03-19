@@ -1,5 +1,8 @@
 using System.Collections.ObjectModel;
+using AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
+using Microsoft.UI.Xaml.Controls;
+using Windows.ApplicationModel.Resources;
 
 namespace AssistStudio.Mcp;
 
@@ -13,6 +16,7 @@ public class McpServerRegistry : IAsyncDisposable
 
     private readonly SemaphoreSlim _lock = new(1, 1);
     private readonly ObservableCollection<McpServerConnection> _connections = [];
+    private readonly ResourceLoader _loader = new();
 
     #endregion
 
@@ -78,6 +82,24 @@ public class McpServerRegistry : IAsyncDisposable
             {
                 errors.Add($"{config.Name}: {ex.Message}");
             }
+        }
+
+        var connected = _connections.Count(c => c.IsConnected);
+        if (connected > 0)
+        {
+            NotificationCenter.Instance.Post(
+                InfoBarSeverity.Success,
+                string.Format(_loader.GetString("Mcp_ServersConnected"), connected),
+                string.Empty);
+        }
+
+        if (errors.Count > 0)
+        {
+            NotificationCenter.Instance.Post(
+                InfoBarSeverity.Warning,
+                _loader.GetString("Mcp_ConnectionFailed"),
+                string.Join(", ", errors.Select(e => e.Split(':')[0])),
+                5000);
         }
 
         return errors;
@@ -156,6 +178,14 @@ public class McpServerRegistry : IAsyncDisposable
             await connection.DisconnectAsync();
             await connection.ConnectAsync(ct);
             ToolsChanged?.Invoke(this, EventArgs.Empty);
+
+            if (connection.IsConnected)
+            {
+                NotificationCenter.Instance.Post(
+                    InfoBarSeverity.Success,
+                    string.Format(_loader.GetString("Mcp_ServerReconnected"), connection.Config.Name),
+                    string.Empty);
+            }
         }
         finally
         {
