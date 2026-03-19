@@ -1,18 +1,22 @@
 # FieldCure.AssistStudio.Controls.WinUI
 
-**Drop-in AI Chat UI Controls for WinUI 3** — Markdown rendering, streaming, attachments, tool approval, and theming out of the box.
+**Drop-in AI Chat UI Controls for WinUI 3** — Markdown rendering, streaming, attachments, thinking blocks, conversation branching, tool approval, and theming out of the box.
 
 [![NuGet](https://img.shields.io/nuget/v/FieldCure.AssistStudio.Controls.WinUI)](https://www.nuget.org/packages/FieldCure.AssistStudio.Controls.WinUI)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/fieldcure/fieldcure-assiststudio/blob/main/LICENSE)
 
 ## Features
 
-- **ChatPanel** — Complete chat experience: message list, input area, streaming, attachments, preset/profile selectors.
-- **WebView2 Rendering** — Markdown, syntax highlighting (highlight.js), and LaTeX (KaTeX) rendered in a single WebView2 instance.
+- **ChatPanel** — Complete chat experience: message list, input area, streaming, attachments, preset/profile selectors, workspace context.
+- **WebView2 Rendering** — Markdown (marked.js), syntax highlighting (highlight.js), and LaTeX (KaTeX) in a single WebView2 instance.
+- **Progressive Streaming** — Two-zone DOM rendering with typing cursor (▌). `StreamEvent` discriminated union drives text, thinking, and tool call display.
+- **Extended Thinking** — Collapsible thinking/reasoning blocks with visual left-bar styling. Auto-collapses when streaming completes.
+- **Conversation Branching** — Tree-based message editing. Edit any user message to create a new branch. Navigate between branches with the ◀ 1/2 ▶ navigator in message footers.
+- **Code Copy-to-Clipboard** — One-click copy button on every rendered code block.
+- **Tool Approval** — Inline `ToolApprovalPanel` for user confirmation before tool execution, with expandable JSON arguments preview.
 - **TemplatedControls** — All controls are `TemplatedControl`s with `PART_` conventions. Override `Generic.xaml` to fully customize.
 - **Theming** — Light, Dark, and System themes. Set `Theme="System"` to follow the app theme.
 - **Localization** — Built-in en-US and ko-KR resource strings.
-- **Tool Approval** — Inline `ToolApprovalPanel` for user confirmation before tool execution.
 - **Multi-TFM** — Targets both `net8.0-windows10.0.19041.0` and `net9.0-windows10.0.19041.0`.
 
 ## Install
@@ -46,7 +50,7 @@ Chat.Provider = new ClaudeProvider(apiKey: "sk-ant-...", modelId: "claude-sonnet
 
 ### ChatPanel
 
-The main control. Provides message list (WebView2), input area, streaming, attachments, presets, and profiles.
+The main control. Provides message list (WebView2), input area, streaming, attachments, thinking blocks, conversation branching, presets, and profiles.
 
 ```xml
 <assist:ChatPanel Provider="{x:Bind ViewModel.Provider, Mode=OneWay}"
@@ -54,12 +58,40 @@ The main control. Provides message list (WebView2), input area, streaming, attac
                   Theme="Dark"
                   Placeholder="Type a message..."
                   AvailablePresets="{x:Bind ViewModel.Presets}"
-                  SelectedPreset="{x:Bind ViewModel.CurrentPreset, Mode=TwoWay}" />
+                  SelectedPreset="{x:Bind ViewModel.CurrentPreset, Mode=TwoWay}"
+                  RegisteredTools="{x:Bind ViewModel.Tools}"
+                  WorkspaceContext="{x:Bind ViewModel.Workspace}" />
 ```
 
-**Dependency Properties:** `Provider`, `SystemPrompt`, `Theme`, `Title`, `Placeholder`, `AvailablePresets`, `SelectedPreset`, `AvailableProfiles`, `SelectedProfile`, `IsDebugMode`
+**Dependency Properties:**
 
-**Properties:** `UtilityProvider`, `AutoTitle`, `AutoSummarize`, `RegisteredTools`
+| Property | Type | Description |
+|----------|------|-------------|
+| `Provider` | `IAiProvider` | Active AI provider for completions and streaming |
+| `SystemPrompt` | `string` | System prompt prepended to every request |
+| `Theme` | `ChatTheme` | Light / Dark / System |
+| `Placeholder` | `string` | Input placeholder text |
+| `Title` | `string` | Title bar text |
+| `AvailablePresets` | `IList` | Provider presets for the selector |
+| `SelectedPreset` | `ProviderPreset` | Currently active preset |
+| `AvailableProfiles` | `IList<Profile>` | Profile list for the selector |
+| `SelectedProfile` | `Profile` | Currently active profile |
+| `RegisteredTools` | `IReadOnlyList<IAssistTool>` | Tools available to the provider |
+| `WorkspaceContext` | `IWorkspaceContext` | Dynamic context injection |
+| `ContextProvider` | `IContextProvider` | RAG context retrieval (optional) |
+| `UtilityProvider` | `IAiProvider` | Provider for auto-titling and summarization |
+| `AutoTitle` | `bool` | Auto-generate conversation titles |
+| `AutoSummarize` | `bool` | Auto-summarize long conversations |
+| `MaxInputTokens` | `int` | Token limit for input |
+| `MaxToolCallRounds` | `int` | Max consecutive tool call rounds |
+| `RecentTurnsToKeep` | `int` | Turns to keep after summarization |
+| `IsDebugMode` | `bool` | Show debug info (raw request/response) |
+| `ShowTitleBar` | `bool` | Show/hide the title bar |
+| `AllowAttachments` | `bool` | Enable/disable file attachments |
+| `IsReadOnly` | `bool` | Read-only conversation view |
+| `FontFamily` | `string` | Chat font family |
+| `FontSize` | `double` | Chat font size |
+| `EmptyStateContent` | `object` | Custom empty state UI |
 
 **Events:** `PresetChanged`, `ProfileChanged`, `MessageAdded`, `TitleGenerated`, `TitleEditRequested`, `KeyboardShortcutPressed`
 
@@ -67,15 +99,41 @@ The main control. Provides message list (WebView2), input area, streaming, attac
 
 Chat input area — text box, attach button, preset/profile selectors. Used internally by `ChatPanel`, but can be placed standalone.
 
+**Dependency Properties:** `Placeholder`, `IsInputEnabled`, `IsSummarizeEnabled`, `AvailablePresets`, `SelectedPreset`, `AvailableProfiles`, `SelectedProfile`
+
 ### AttachmentPreviewBar
 
-Horizontal scrollable bar showing thumbnails of attached files before sending.
+Horizontal scrollable bar showing thumbnails of attached files before sending. Supports images (thumbnails), text files (icon + name), and documents (icon + name).
+
+**Dependency Properties:** `ThumbnailSize` (default 80px), `MaxTextWidth`
 
 ### ToolApprovalPanel
 
-Inline confirmation panel for tools with `RequiresConfirmation = true`. Displays tool name, expandable JSON arguments, and Allow/Reject buttons.
+Inline confirmation panel for tools with `RequiresConfirmation = true`. Displays tool name, expandable JSON arguments, and Allow/Reject buttons. Replaces `InputContainer` during confirmation.
+
+**Dependency Properties:** `ToolName`, `ToolDisplayName`, `Arguments`, `IsExpanded`
+
+**Events:** `Approved`, `Rejected`
+
+### Conversation Branching
+
+When a user edits a sent message, the original branch is preserved and a new sibling branch is created. The branch navigator appears in the message footer:
+
+```
+◀  1/2  ▶
+```
+
+- Branches are stored via `ChatMessage.ParentId` forming a tree structure
+- Navigation is handled through WebView2 `WebMessageReceived` events
+- The full tree persists in `.astx` (JSON) files — no conversation history is lost
+
+### Thinking Blocks
+
+When a provider streams `ThinkingDelta` events, a collapsible thinking block renders above the response with a distinct left-bar style. The block auto-collapses when streaming completes, keeping the UI clean while preserving the reasoning for review.
 
 ### Re-templating
+
+Override the default template in your app's resources:
 
 ```xml
 <Style TargetType="assist:ChatPanel" BasedOn="{StaticResource DefaultChatPanelStyle}">

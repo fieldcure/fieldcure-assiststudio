@@ -1,11 +1,16 @@
-﻿# FieldCure AssistStudio
+# FieldCure AssistStudio
 
-**AI Chat Controls for WinUI 3 — Bring Your Own Key, pick any provider.**
+**AI Chat Controls for WinUI 3 + Windows AI Workspace App — Bring Your Own Key, pick any provider.**
 
 [![NuGet Core](https://img.shields.io/nuget/v/FieldCure.AssistStudio.Core?label=Core)](https://www.nuget.org/packages/FieldCure.AssistStudio.Core)
 [![NuGet Controls](https://img.shields.io/nuget/v/FieldCure.AssistStudio.Controls.WinUI?label=Controls.WinUI)](https://www.nuget.org/packages/FieldCure.AssistStudio.Controls.WinUI)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![.NET](https://img.shields.io/badge/.NET-8.0%2B-purple)](https://dotnet.microsoft.com/)
+
+AssistStudio is two things:
+
+1. **A reusable WinUI 3 library** (two NuGet packages) for building desktop AI assistants with multi-provider support, tool approval, and profile-based behavior.
+2. **A Windows-native AI workspace app** for cloud and local models, profiles, tools, and structured conversations.
 
 ![Chat conversation with Markdown and syntax highlighting](docs/chat-conversation.png)
 
@@ -14,15 +19,20 @@
 ## Features
 
 - **BYOK (Bring Your Own Key)** — Users supply their own API keys. No proxy, no middleman.
-- **Multi-Provider** — Claude, OpenAI, Gemini, and Ollama out of the box. Implement `IAiProvider` to add your own.
-- **Streaming** — Real-time token-by-token responses via `IAsyncEnumerable<string>`.
-- **Vision & Documents** — Attach images (PNG, JPG, WebP, …), PDFs, and DOCX files to any conversation.
+- **Multi-Provider** — Claude, OpenAI, Gemini, Ollama, and Groq out of the box. Implement `IAiProvider` to add your own.
+- **Streaming** — Real-time structured event streaming via `IAsyncEnumerable<StreamEvent>` — a discriminated union covering text, thinking, tool calls, usage, and completion.
+- **Extended Thinking** — Per-provider thinking/reasoning support (Claude extended thinking, OpenAI o-series reasoning, Ollama think tags). Configurable via `ThinkingOverride` and `ThinkingBudget`.
+- **Conversation Branching** — Tree-based message editing with branch navigator (◀ 1/2 ▶). Edit any message to explore alternatives without losing history.
+- **MCP Integration** — Connect to MCP servers (Stdio / HTTP) to aggregate tools from any Model Context Protocol source. `McpToolAdapter` bridges MCP tools to the `IAssistTool` pipeline.
+- **Vision & Documents** — Attach images (PNG, JPG, WebP, GIF), PDFs, and DOCX files. Per-provider `PdfCapability` (Auto / TextExtraction / NativePdf / PageAsImage).
+- **Tool / Function Calling** — Define tools with `IAssistTool`. `ToolCallExecutor` orchestrates execution with confirmation flow. `ToolApprovalPanel` shows inline approval UI.
 - **Token Tracking** — Input/output token counts exposed after every request.
-- **Re-templatable WinUI 3 Controls** — `ChatPanel`, `InputContainer`, `AttachmentPreviewBar`, and `ToolApprovalPanel` are `TemplatedControl`s with no app dependency. Override `Generic.xaml` to fully customize the UI.
-- **Profiles & Presets** — Save provider configurations as presets; switch system prompts with profiles.
-- **Conversation Persistence** — Save and load conversations in `.astx` (JSON) format.
+- **Re-templatable WinUI 3 Controls** — `ChatPanel`, `InputContainer`, `AttachmentPreviewBar`, and `ToolApprovalPanel` are `TemplatedControl`s. Override `Generic.xaml` to fully customize the UI.
+- **Profiles & Presets** — Save provider configurations as presets; switch system prompts and tool selections with profiles.
+- **Workspace Context** — `IWorkspaceContext` for dynamic system prompt injection based on app state.
+- **Conversation Persistence** — Save and load conversations in `.astx` (JSON) format with full branching tree.
 - **Localization** — Built-in en-US and ko-KR resource strings.
-- **Tool / Function Calling** — Define tools with `IAssistTool` and let providers invoke them. Tools that require confirmation show an inline `ToolApprovalPanel` for user approval before execution.
+- **Structured Logging** — `DiagnosticLogger` with pluggable `OnException`, `OnWarning`, `OnInfo` callbacks.
 
 ---
 
@@ -44,25 +54,30 @@
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────┐
-│  AssistStudio (Demo App)                        │
-│  WinUI 3 desktop app — showcases all controls   │
-├─────────────────────────────────────────────────┤
-│  AssistStudio.Controls        ← NuGet package   │
-│  ChatPanel · InputContainer · ToolApprovalPanel │
-│  WebView2 rendering · Themes · Localization     │
-├─────────────────────────────────────────────────┤
-│  AssistStudio.Core            ← NuGet package   │
-│  IAiProvider · IAssistTool · Models · Helpers   │
-│  Claude │ OpenAI │ Gemini │ Ollama providers    │
-└─────────────────────────────────────────────────┘
+                        ┌──────────────────────┐
+                        │   MCP Servers         │
+                        │  (Stdio / HTTP)       │
+                        └──────────┬───────────┘
+                                   │ McpToolAdapter
+┌──────────────────────────────────┼──────────────────┐
+│  AssistStudio (Workspace App)                       │
+│  WinUI 3 — MCP management · SearchTools · Profiles  │
+├─────────────────────────────────────────────────────┤
+│  AssistStudio.Controls            ← NuGet package   │
+│  ChatPanel · Branching · ThinkingBlock · EditMode   │
+│  WebView2 rendering · Themes · Localization         │
+├─────────────────────────────────────────────────────┤
+│  AssistStudio.Core                ← NuGet package   │
+│  IAiProvider · StreamEvent · IAssistTool · Models   │
+│  Claude │ OpenAI │ Gemini │ Ollama │ Groq           │
+└─────────────────────────────────────────────────────┘
 ```
 
 | Project | NuGet Package | TFM | Key Types |
 |---------|--------------|-----|-----------|
-| **AssistStudio.Core** | `FieldCure.AssistStudio.Core` | `net8.0` | `IAiProvider`, `IAssistTool`, `AiRequest`, `AiResponse`, `ChatMessage`, `TokenUsage`, `ProviderPreset`, `Profile`, `ConversationManager` |
-| **AssistStudio.Controls** | `FieldCure.AssistStudio.Controls.WinUI` | `net8.0-windows10.0.19041.0`<br>`net9.0-windows10.0.19041.0` | `ChatPanel`, `InputContainer`, `AttachmentPreviewBar`, `ToolApprovalPanel`, `WebViewChatRenderer`, `ChatTheme` |
-| **AssistStudio** | *(demo app, not published)* | `net9.0-windows10.0.19041.0` | Reference implementation with settings, dialogs, and `PasswordVaultHelper` |
+| **AssistStudio.Core** | `FieldCure.AssistStudio.Core` | `net8.0` | `IAiProvider`, `StreamEvent`, `IAssistTool`, `AiRequest`, `AiResponse`, `ChatMessage`, `ToolCallExecutor`, `ToolResolver`, `McpToolAdapter`, `IWorkspaceContext`, `ProviderPreset`, `Profile`, `ConversationManager` |
+| **AssistStudio.Controls** | `FieldCure.AssistStudio.Controls.WinUI` | `net8.0-windows10.0.19041.0`<br>`net9.0-windows10.0.19041.0` | `ChatPanel`, `InputContainer`, `AttachmentPreviewBar`, `ToolApprovalPanel`, `ChatTheme` |
+| **AssistStudio** | *(workspace app)* | `net9.0-windows10.0.19041.0` | Reference implementation with settings, MCP server management, built-in tools, and `PasswordVaultHelper` |
 
 > **Core is platform-agnostic** (`net8.0`). It has no Windows-specific dependencies — you can reference it from a console app, a server, or any .NET project.
 
@@ -101,7 +116,32 @@ var provider = new ClaudeProvider(apiKey: "sk-ant-...", modelId: "claude-sonnet-
 Chat.Provider = provider;
 ```
 
-That's it — you have a fully functional AI chat with streaming, Markdown rendering, and syntax highlighting.
+That's it — you have a fully functional AI chat with streaming, Markdown rendering, syntax highlighting, thinking blocks, and conversation branching.
+
+### 3. Streaming with StreamEvent
+
+```csharp
+var request = new AiRequest("Explain quantum computing.");
+
+await foreach (var evt in provider.StreamAsync(request))
+{
+    switch (evt)
+    {
+        case StreamEvent.ThinkingDelta t:
+            Console.Write($"[think] {t.Text}");
+            break;
+        case StreamEvent.TextDelta d:
+            Console.Write(d.Text);
+            break;
+        case StreamEvent.ToolCallStart s:
+            Console.WriteLine($"\n→ Calling {s.FunctionName}...");
+            break;
+        case StreamEvent.Usage u:
+            Console.WriteLine($"\nTokens: {u.TokenUsage.TotalTokens}");
+            break;
+    }
+}
+```
 
 ---
 
@@ -109,12 +149,13 @@ That's it — you have a fully functional AI chat with streaming, Markdown rende
 
 ### Supported providers
 
-| Provider | Streaming | Vision | Documents | Tool Calling | API Key Required |
-|----------|:---------:|:------:|:---------:|:------------:|:----------------:|
-| **Claude** (Anthropic) | Yes | Yes | Yes | Yes | Yes |
-| **OpenAI** (+ compatible endpoints) | Yes | Yes | Yes | Yes | Yes |
-| **Gemini** (Google) | Yes | Yes | Yes | Yes | Yes |
-| **Ollama** (local) | Yes | Model-dependent | Model-dependent | Model-dependent | No |
+| Provider | Streaming | Vision | Documents | Tool Calling | Thinking | API Key Required |
+|----------|:---------:|:------:|:---------:|:------------:|:--------:|:----------------:|
+| **Claude** (Anthropic) | Yes | Yes | Yes | Yes | Yes | Yes |
+| **OpenAI** (+ compatible) | Yes | Yes | Yes | Yes | o-series | Yes |
+| **Gemini** (Google) | Yes | Yes | Yes | Yes | No | Yes |
+| **Ollama** (local) | Yes | Dep. | Dep. | Dep. | think tags | No |
+| **Groq** | Yes | Yes | Yes | Yes | Dep. | Yes |
 
 > OpenAI provider works with any OpenAI-compatible API (Groq, Azure OpenAI, etc.) by setting a custom `baseUrl`.
 
@@ -134,6 +175,7 @@ public class MyCustomProvider : IAiProvider
     public bool IsTruncated { get; private set; }
     public string? LastRequestBody { get; private set; }
     public string? LastRawResponse { get; private set; }
+    public PdfCapability PdfCapability => PdfCapability.TextExtraction;
 
     public async Task<AiResponse> CompleteAsync(AiRequest request, CancellationToken ct = default)
     {
@@ -141,13 +183,13 @@ public class MyCustomProvider : IAiProvider
         throw new NotImplementedException();
     }
 
-    public async IAsyncEnumerable<string> StreamAsync(
+    public async IAsyncEnumerable<StreamEvent> StreamAsync(
         AiRequest request,
-        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+        [EnumeratorCancellation] CancellationToken ct = default)
     {
-        // Yield tokens as they arrive
-        yield return "Hello ";
-        yield return "from MyService!";
+        yield return new StreamEvent.TextDelta("Hello ");
+        yield return new StreamEvent.TextDelta("from MyService!");
+        yield return new StreamEvent.StreamCompleted(false);
     }
 
     public Task<IReadOnlyList<AiModel>> ListModelsAsync(CancellationToken ct = default)
@@ -156,6 +198,9 @@ public class MyCustomProvider : IAiProvider
 
     public Task<ConnectionInfo> ValidateConnectionAsync(CancellationToken ct = default)
         => Task.FromResult(new ConnectionInfo(true, null, null, null));
+
+    public ThinkingSupport GetThinkingSupport(string modelId)
+        => ThinkingSupport.NotSupported;
 }
 ```
 
@@ -173,7 +218,7 @@ All controls are **TemplatedControls** defined in `Generic.xaml`. They carry no 
 
 ### ChatPanel
 
-The main control. Provides a complete chat experience: message list (WebView2), input area, streaming, attachments, presets, and profiles.
+The main control. Provides a complete chat experience: message list (WebView2), input area, streaming, thinking blocks, conversation branching, attachments, presets, and profiles.
 
 ```xml
 <assist:ChatPanel Provider="{x:Bind ViewModel.Provider, Mode=OneWay}"
@@ -181,12 +226,14 @@ The main control. Provides a complete chat experience: message list (WebView2), 
                   Theme="Dark"
                   Placeholder="Type a message..."
                   AvailablePresets="{x:Bind ViewModel.Presets}"
-                  SelectedPreset="{x:Bind ViewModel.CurrentPreset, Mode=TwoWay}" />
+                  SelectedPreset="{x:Bind ViewModel.CurrentPreset, Mode=TwoWay}"
+                  RegisteredTools="{x:Bind ViewModel.Tools}"
+                  WorkspaceContext="{x:Bind ViewModel.Workspace}" />
 ```
 
-**Key dependency properties:** `Provider`, `SystemPrompt`, `Theme`, `Placeholder`, `AvailablePresets`, `SelectedPreset`, `AvailableProfiles`, `SelectedProfile`, `MessageFontSize`, `ShowTitleBar`
+**Key dependency properties:** `Provider`, `SystemPrompt`, `Theme`, `Title`, `Placeholder`, `AvailablePresets`, `SelectedPreset`, `AvailableProfiles`, `SelectedProfile`, `RegisteredTools`, `WorkspaceContext`, `UtilityProvider`, `AutoTitle`, `AutoSummarize`, `MaxInputTokens`, `MaxToolCallRounds`, `RecentTurnsToKeep`, `IsDebugMode`, `ShowTitleBar`, `AllowAttachments`, `IsReadOnly`, `FontFamily`, `FontSize`, `EmptyStateContent`
 
-**Events:** `MessageSent`, `PresetChanged`, `FilesDropped`, `TitleBarRequested`
+**Events:** `PresetChanged`, `ProfileChanged`, `MessageAdded`, `TitleGenerated`, `TitleEditRequested`, `KeyboardShortcutPressed`
 
 ### InputContainer
 
@@ -212,6 +259,20 @@ Override the default template in your app's resources:
 
 ---
 
+## MCP Integration
+
+The workspace app demonstrates full MCP (Model Context Protocol) integration:
+
+- **McpServerRegistry** — Singleton server connection manager with observable tool collection
+- **McpServerConnection** — Per-server lifecycle (Disconnected → Connecting → Connected / Error)
+- **McpToolAdapter** — Bridges MCP tools to `IAssistTool` without Core SDK dependency
+- **ToolResolver** — Merges built-in + MCP tools, prefixing MCP tool names with server name on conflict
+- **SearchToolsTool** — Meta-tool for searching across large MCP tool sets to save tokens
+
+MCP servers are configured with Stdio or HTTP transport and connected at app startup. Tools from all connected servers are aggregated and made available to providers.
+
+---
+
 ## Configuration
 
 ### Provider presets
@@ -225,7 +286,9 @@ var preset = new ProviderPreset
     ModelId = "claude-sonnet-4-20250514",
     Temperature = 0.7,
     MaxTokens = 4096,
-    StreamingEnabled = true
+    StreamingEnabled = true,
+    ThinkingEnabled = true,
+    ThinkingBudget = 8192
 };
 ```
 
@@ -237,8 +300,9 @@ Profiles pair a system prompt with optional provider/model preferences and tool 
 var profile = new Profile
 {
     Name = "Task Planner",
-    Text = "You are a task planner that breaks down complex requests into steps and executes them using available tools.",
-    ToolNames = ["search_files", "read_file", "write_file", "run_command"]
+    Text = "You are a task planner that breaks down complex requests into steps.",
+    ToolNames = ["search_files", "read_file", "write_file", "run_command"],
+    UseSearchTools = true  // Use meta-tool instead of sending all tool definitions
 };
 ```
 
