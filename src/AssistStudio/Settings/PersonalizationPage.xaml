@@ -24,7 +24,7 @@
 
         <!-- Content -->
         <ScrollViewer Grid.Row="1" Padding="20,16">
-            <StackPanel Spacing="16">
+            <StackPanel Spacing="16" Padding="0,0,0,24">
 
                 <TextBlock x:Uid="Personalization_Theme" Text="Theme"
                            Style="{StaticResource BodyStrongTextBlockStyle}" />

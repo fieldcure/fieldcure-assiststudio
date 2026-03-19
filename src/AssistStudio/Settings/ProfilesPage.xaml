@@ -30,7 +30,7 @@
 
         <!-- Content -->
         <ScrollViewer Grid.Row="1" Padding="20,16">
-            <StackPanel Spacing="16">
+            <StackPanel Spacing="16" Padding="0,0,0,24">
 
                 <TextBlock x:Uid="Profiles_Description" Text="Create profiles with different instructions, model preferences, and tool permissions."
                            Style="{StaticResource CaptionTextBlockStyle}"

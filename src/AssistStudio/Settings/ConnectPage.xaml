@@ -24,7 +24,7 @@
 
         <!-- Content -->
         <ScrollViewer Grid.Row="1">
-            <StackPanel Spacing="16" Padding="20" MaxWidth="700" HorizontalAlignment="Left">
+            <StackPanel Spacing="16" Padding="20,20,20,44" MaxWidth="700" HorizontalAlignment="Left">
 
                 <!-- Description -->
                 <TextBlock x:Uid="Connect_Description"

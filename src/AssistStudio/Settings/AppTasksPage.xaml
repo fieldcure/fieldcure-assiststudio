@@ -24,7 +24,7 @@
 
         <!-- Content -->
         <ScrollViewer Grid.Row="1" Padding="20,16">
-            <StackPanel Spacing="24" MaxWidth="480" HorizontalAlignment="Left">
+            <StackPanel Spacing="24" MaxWidth="480" HorizontalAlignment="Left" Padding="0,0,0,24">
 
                 <TextBlock x:Uid="AppTasks_Description"
                            Text="Choose which model the app uses for background tasks such as title generation and conversation summaries."
