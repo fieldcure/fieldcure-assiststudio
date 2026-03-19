@@ -69,6 +69,7 @@ public partial class MainViewModel : ObservableObject
         ToolRegistry.Register(new SearchFilesTool());
         ToolRegistry.Register(new RunCommandTool());
         ToolRegistry.Register(new UrlFetchTool());
+        ToolRegistry.Register(new SearchToolsTool(App.McpRegistry));
     }
 
     #endregion
