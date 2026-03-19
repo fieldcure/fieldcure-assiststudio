@@ -82,9 +82,11 @@ public sealed partial class ConnectPage : Page
         var sources = McpConfigImporter.DetectSources();
         if (sources.Count == 0)
         {
-            await ShowMessageAsync(
+            NotificationCenter.Instance.Post(
+                Microsoft.UI.Xaml.Controls.InfoBarSeverity.Warning,
                 _loader.GetString("Connect_NoSourcesFound"),
-                _loader.GetString("Connect_NoSourcesMessage"));
+                _loader.GetString("Connect_NoSourcesMessage"),
+                4000);
             return;
         }
 
@@ -319,22 +321,9 @@ public sealed partial class ConnectPage : Page
             _ = ConnectPendingServersAsync();
         }
 
-        await ShowMessageAsync(
+        NotificationCenter.Instance.Post(
             _loader.GetString("Connect_ImportComplete"),
             string.Format(_loader.GetString("Connect_ImportedCount"), imported));
-    }
-
-    private async Task ShowMessageAsync(string title, string message)
-    {
-        var dialog = new ThemedContentDialog
-        {
-            Title = title,
-            Content = message,
-            CloseButtonText = _loader.GetString("Dialog_Cancel"),
-            XamlRoot = XamlRoot,
-
-        };
-        await dialog.ShowAsync();
     }
 
     #endregion

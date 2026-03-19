@@ -117,6 +117,9 @@ public sealed partial class MainWindow : Window
         RegisterAccelerator(VirtualKeyModifiers.Control, VirtualKey.S, OnMenuSaveConversation);
         RegisterAccelerator(VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, VirtualKey.S, OnMenuSaveAsConversation);
         RegisterAccelerator(VirtualKeyModifiers.None, VirtualKey.F1, OnMenuSettings);
+
+        // Notification system
+        InitializeNotificationCenter();
     }
 
     #endregion

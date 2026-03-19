@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using AssistStudio.Mcp;
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml;
@@ -74,8 +75,22 @@ public sealed partial class McpServerCard : UserControl
 
     private static void OnConnectionChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is McpServerCard card)
-            card.UpdateUI();
+        if (d is not McpServerCard card) return;
+
+        // Unsubscribe from old connection
+        if (e.OldValue is McpServerConnection oldConn)
+            oldConn.PropertyChanged -= card.OnConnectionPropertyChanged;
+
+        // Subscribe to new connection
+        if (e.NewValue is McpServerConnection newConn)
+            newConn.PropertyChanged += card.OnConnectionPropertyChanged;
+
+        card.UpdateUI();
+    }
+
+    private void OnConnectionPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        DispatcherQueue.TryEnqueue(UpdateUI);
     }
 
     private void UpdateUI()

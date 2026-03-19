@@ -29,8 +29,9 @@
             <Frame x:Name="SettingsFrame" />
         </SplitView.Pane>
 
-        <!-- Main Content: TabView -->
+        <!-- Main Content: TabView + Notification overlay -->
         <SplitView.Content>
+            <Grid>
             <TabView x:Name="Tabs"
                      TabItemsSource="{x:Bind ViewModel.Tabs}"
                      SelectedItem="{x:Bind ViewModel.SelectedTab, Mode=TwoWay}"
@@ -143,6 +144,14 @@
                     </Grid>
                 </TabView.TabStripFooter>
             </TabView>
+
+            <!-- Notification -->
+            <InfoBar x:Name="StatusNotification"
+                     IsIconVisible="True"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Bottom"
+                     Margin="0,0,0,20" />
+            </Grid>
         </SplitView.Content>
     </SplitView>
 </Window>
