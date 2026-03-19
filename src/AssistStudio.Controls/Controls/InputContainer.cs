@@ -197,6 +197,13 @@ public sealed partial class InputContainer : Control
     /// </summary>
     private Button? _toolButton;
 
+    /// <summary>
+    /// The "Select all / Deselect all" toggle link in the tool flyout.
+    /// </summary>
+    private HyperlinkButton? _toolToggleLink;
+    private string _selectAllLabel = "Select all";
+    private string _deselectAllLabel = "Deselect all";
+
     #endregion
 
     #region Constructors
@@ -1175,49 +1182,6 @@ public sealed partial class InputContainer : Control
 
         var panel = new StackPanel { Spacing = 4, Padding = new Thickness(4) };
 
-        // Toggle all link
-        var allChecked = _enabledToolSet is null || _enabledToolSet.Count == tools.Count;
-        string selectAllLabel, deselectAllLabel;
-        try
-        {
-            var res = new Windows.ApplicationModel.Resources.ResourceLoader(
-                "AssistStudio.Controls/Resources");
-            selectAllLabel = res.GetString("InputContainer_SelectAll");
-            deselectAllLabel = res.GetString("InputContainer_DeselectAll");
-        }
-        catch
-        {
-            selectAllLabel = "Select all";
-            deselectAllLabel = "Deselect all";
-        }
-
-        var toggleLink = new HyperlinkButton
-        {
-            Content = allChecked ? deselectAllLabel : selectAllLabel,
-            Padding = new Thickness(0),
-            FontSize = 12,
-        };
-        toggleLink.Click += (_, _) =>
-        {
-            var nowAllChecked = _enabledToolSet is null || _enabledToolSet.Count == tools.Count;
-            foreach (var child in panel.Children)
-            {
-                if (child is CheckBox cb)
-                    cb.IsChecked = !nowAllChecked;
-            }
-            toggleLink.Content = nowAllChecked ? selectAllLabel : deselectAllLabel;
-        };
-        panel.Children.Add(toggleLink);
-
-        // Separator
-        panel.Children.Add(new Microsoft.UI.Xaml.Shapes.Rectangle
-        {
-            Height = 1,
-            Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
-            Opacity = 0.3,
-            Margin = new Thickness(0, 2, 0, 2),
-        });
-
         foreach (var tool in tools)
         {
             var checkBox = new CheckBox
@@ -1231,6 +1195,42 @@ public sealed partial class InputContainer : Control
             checkBox.Unchecked += ToolCheckBox_Changed;
             panel.Children.Add(checkBox);
         }
+
+        // Separator + Toggle all link at bottom
+        var allChecked = _enabledToolSet is null || _enabledToolSet.Count == tools.Count;
+        try
+        {
+            var res = new Windows.ApplicationModel.Resources.ResourceLoader(
+                "AssistStudio.Controls/Resources");
+            _selectAllLabel = res.GetString("InputContainer_SelectAll");
+            _deselectAllLabel = res.GetString("InputContainer_DeselectAll");
+        }
+        catch { /* keep defaults */ }
+
+        panel.Children.Add(new Microsoft.UI.Xaml.Shapes.Rectangle
+        {
+            Height = 1,
+            Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
+            Opacity = 0.3,
+            Margin = new Thickness(0, 2, 0, 2),
+        });
+
+        _toolToggleLink = new HyperlinkButton
+        {
+            Content = allChecked ? _deselectAllLabel : _selectAllLabel,
+            Padding = new Thickness(0),
+            FontSize = 12,
+        };
+        _toolToggleLink.Click += (_, _) =>
+        {
+            var nowAllChecked = _enabledToolSet is null || _enabledToolSet.Count == tools.Count;
+            foreach (var child in panel.Children)
+            {
+                if (child is CheckBox cb)
+                    cb.IsChecked = !nowAllChecked;
+            }
+        };
+        panel.Children.Add(_toolToggleLink);
 
         var flyout = new Flyout
         {
@@ -1266,9 +1266,12 @@ public sealed partial class InputContainer : Control
             _enabledToolSet.Remove(toolName);
 
         // If all enabled, set null (meaning "all"); otherwise publish the list
-        EnabledToolNames = _enabledToolSet.Count == tools.Count
-            ? null
-            : _enabledToolSet.ToList();
+        var nowAll = _enabledToolSet.Count == tools.Count;
+        EnabledToolNames = nowAll ? null : _enabledToolSet.ToList();
+
+        // Sync toggle link label
+        if (_toolToggleLink is not null)
+            _toolToggleLink.Content = nowAll ? _deselectAllLabel : _selectAllLabel;
     }
 
     #endregion
