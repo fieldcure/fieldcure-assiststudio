@@ -74,6 +74,7 @@ public static class ConversationManager
             SavedAt = DateTime.UtcNow,
             Messages = messages.Select(m => new SavedMessage
             {
+                Id = m.Id,
                 Role = m.Role,
                 Content = m.Content,
                 ProviderName = m.ProviderName,
@@ -81,6 +82,7 @@ public static class ConversationManager
                 Timestamp = m.Timestamp,
                 ToolCalls = m.ToolCalls,
                 ToolCallId = m.ToolCallId,
+                ParentId = m.ParentId,
             }).ToList(),
         };
 
@@ -229,6 +231,9 @@ public class SavedMessage
 {
     #region Properties
 
+    /// <summary>The unique message identifier. Null for legacy files (a new ID will be generated on load).</summary>
+    public string? Id { get; set; }
+
     /// <summary>The role of the message sender.</summary>
     public ChatRole Role { get; set; }
 
@@ -249,6 +254,9 @@ public class SavedMessage
 
     /// <summary>The ID of the tool call this message is a result for (tool role messages only).</summary>
     public string? ToolCallId { get; set; }
+
+    /// <summary>The parent message ID in the conversation tree. Null for the first message.</summary>
+    public string? ParentId { get; set; }
 
     #endregion
 }

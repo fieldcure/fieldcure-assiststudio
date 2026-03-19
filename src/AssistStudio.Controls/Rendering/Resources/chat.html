@@ -34,6 +34,11 @@
         --hr-color: #d0d7de;
         --copy-btn-bg: #e8eaed;
         --copy-btn-hover: #d0d4d8;
+        --edit-border: rgba(100, 149, 237, 0.45);
+        --edit-border-focus: rgba(100, 149, 237, 0.65);
+        --edit-focus-ring: rgba(100, 149, 237, 0.12);
+        --edit-save-bg: #585858;
+        --edit-save-hover: #484848;
     }
 
     [data-theme="dark"] {
@@ -60,6 +65,11 @@
         --hr-color: #30363d;
         --copy-btn-bg: #30363d;
         --copy-btn-hover: #484f58;
+        --edit-border: rgba(130, 170, 255, 0.4);
+        --edit-border-focus: rgba(130, 170, 255, 0.6);
+        --edit-focus-ring: rgba(130, 170, 255, 0.15);
+        --edit-save-bg: #a0a0a0;
+        --edit-save-hover: #b0b0b0;
     }
 
     /* ===== Base Reset ===== */
@@ -500,42 +510,115 @@
         color: #2ea043;
     }
 
-    /* Edit mode: inline editable textarea */
+    /* Edit mode: Claude.ai-style inline editor */
     .message-edit-area {
         width: 100%;
-        min-height: 60px;
-        padding: 8px 10px;
-        border: 1px solid var(--link-color);
-        border-radius: 8px;
+        min-height: 36px;
+        max-height: 300px;
+        overflow-y: auto;
+        padding: 12px 16px;
+        border: 1.5px solid var(--edit-border);
+        border-radius: 16px;
         background: var(--bg-user);
         color: var(--text-user);
         font-family: inherit;
         font-size: inherit;
-        resize: vertical;
+        line-height: 1.5;
+        resize: none;
         outline: none;
         box-sizing: border-box;
     }
+    .message-edit-area:focus {
+        border-color: var(--edit-border-focus);
+        box-shadow: 0 0 0 3px var(--edit-focus-ring);
+    }
+    .message-edit-footer {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        margin-top: 8px;
+    }
+    .edit-branch-hint {
+        flex: 1;
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        font-size: 12px;
+        line-height: 1.4;
+        color: var(--timestamp-color);
+    }
+    .edit-branch-hint .hint-icon {
+        flex-shrink: 0;
+        margin-top: 1px;
+    }
     .message-edit-actions {
         display: flex;
-        gap: 6px;
-        margin-top: 6px;
-        justify-content: flex-end;
+        gap: 8px;
+        flex-shrink: 0;
     }
     .message-edit-actions button {
-        padding: 4px 12px;
+        padding: 7px 20px;
         border: none;
-        border-radius: 4px;
+        border-radius: 20px;
         cursor: pointer;
-        font-size: 12px;
+        font-size: 13px;
+        font-weight: 500;
     }
     .edit-confirm-btn {
-        background: var(--link-color);
+        background: var(--edit-save-bg);
         color: #fff;
+    }
+    .edit-confirm-btn:hover {
+        background: var(--edit-save-hover);
     }
     .edit-cancel-btn {
         background: transparent;
-        color: var(--timestamp-color);
-        border: 1px solid var(--timestamp-color) !important;
+        color: var(--text-secondary);
+        border: 1px solid var(--border, rgba(128,128,128,0.3)) !important;
+    }
+    .edit-cancel-btn:hover {
+        background: var(--hover, rgba(128,128,128,0.08));
+    }
+
+    /* ===== User Message Footer (branch nav + timestamp) ===== */
+    .user-message-footer {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 4px;
+        padding: 0 4px;
+    }
+    .user-message-footer .message-timestamp {
+        margin-top: 0;
+    }
+
+    /* ===== Branch Navigator ===== */
+    .branch-nav {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        color: var(--text-secondary);
+        user-select: none;
+    }
+    .branch-nav button {
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: 3px;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: 0 4px;
+        font-size: 11px;
+        line-height: 18px;
+    }
+    .branch-nav button:hover:not(:disabled) {
+        background: var(--hover);
+        color: var(--text-primary);
+    }
+    .branch-nav button:disabled {
+        opacity: 0.3;
+        cursor: default;
     }
 
     /* ===== Provider Badge ===== */
@@ -577,7 +660,10 @@
         summarize: 'Summarize response',
         copyRequest: 'Copy Request',
         copyResponse: 'Copy Response',
-        tokens: 'tokens'
+        tokens: 'tokens',
+        editBranchHint: 'Editing this message will create a new conversation branch. Use the arrow navigation buttons to switch between branches.',
+        editCancel: 'Cancel',
+        editSave: 'Save'
     };
 
     var _debugMode = false;
@@ -759,6 +845,34 @@
         }, 1500);
     }
 
+    function createBranchNav(msgId, index, count) {
+        var nav = document.createElement('div');
+        nav.className = 'branch-nav';
+        nav.dataset.msgId = msgId;
+
+        var prevBtn = document.createElement('button');
+        prevBtn.textContent = '\u25C0';
+        prevBtn.disabled = index <= 0;
+        prevBtn.addEventListener('click', function() {
+            window.chrome.webview.postMessage('branch:' + msgId + ':-1');
+        });
+
+        var label = document.createElement('span');
+        label.textContent = (index + 1) + ' / ' + count;
+
+        var nextBtn = document.createElement('button');
+        nextBtn.textContent = '\u25B6';
+        nextBtn.disabled = index >= count - 1;
+        nextBtn.addEventListener('click', function() {
+            window.chrome.webview.postMessage('branch:' + msgId + ':1');
+        });
+
+        nav.appendChild(prevBtn);
+        nav.appendChild(label);
+        nav.appendChild(nextBtn);
+        return nav;
+    }
+
     function createUserMessageActions(msgId) {
         var actions = document.createElement('div');
         actions.className = 'message-actions';
@@ -778,20 +892,44 @@
 
             var originalText = bubble.textContent;
             var originalHtml = bubble.innerHTML;
+            var originalMaxWidth = bubble.style.maxWidth;
             bubble.innerHTML = '';
+            bubble.style.maxWidth = '100%';
 
             var textarea = document.createElement('textarea');
             textarea.className = 'message-edit-area';
             textarea.value = originalText;
+            function autoResize() {
+                textarea.style.height = 'auto';
+                textarea.style.height = textarea.scrollHeight + 'px';
+            }
+            textarea.addEventListener('input', autoResize);
             bubble.appendChild(textarea);
+            autoResize();
+
+            // Footer: hint + buttons
+            var footer = document.createElement('div');
+            footer.className = 'message-edit-footer';
+
+            var hint = document.createElement('div');
+            hint.className = 'edit-branch-hint';
+            hint.innerHTML = '<span class="hint-icon">\u24D8</span><span>' + escapeHtml(_L.editBranchHint) + '</span>';
+            footer.appendChild(hint);
 
             var editActions = document.createElement('div');
             editActions.className = 'message-edit-actions';
 
+            var cancelBtn = document.createElement('button');
+            cancelBtn.className = 'edit-cancel-btn';
+            cancelBtn.textContent = _L.editCancel;
+            cancelBtn.addEventListener('click', function() {
+                bubble.innerHTML = originalHtml;
+                bubble.style.maxWidth = originalMaxWidth;
+            });
+
             var confirmBtn = document.createElement('button');
             confirmBtn.className = 'edit-confirm-btn';
-            confirmBtn.textContent = '\uE73E';
-            confirmBtn.style.fontFamily = "'Segoe Fluent Icons', 'Segoe MDL2 Assets'";
+            confirmBtn.textContent = _L.editSave;
             confirmBtn.addEventListener('click', function() {
                 var newText = textarea.value.trim();
                 if (newText) {
@@ -799,17 +937,10 @@
                 }
             });
 
-            var cancelBtn = document.createElement('button');
-            cancelBtn.className = 'edit-cancel-btn';
-            cancelBtn.textContent = '\uE711';
-            cancelBtn.style.fontFamily = "'Segoe Fluent Icons', 'Segoe MDL2 Assets'";
-            cancelBtn.addEventListener('click', function() {
-                bubble.innerHTML = originalHtml;
-            });
-
             editActions.appendChild(cancelBtn);
             editActions.appendChild(confirmBtn);
-            bubble.appendChild(editActions);
+            footer.appendChild(editActions);
+            bubble.appendChild(footer);
             textarea.focus();
         }));
 
@@ -863,16 +994,27 @@
         return actions;
     }
 
-    window.fluentChat = {
-        appendUserMessage: function(id, text, timestamp, attachments) {
+    window.assistChat = {
+        appendUserMessage: function(id, text, timestamp, attachments, siblingIndex, siblingCount) {
             var msg = document.createElement('div');
             msg.className = 'message user';
             msg.id = 'msg-' + id;
             var attachmentHtml = renderAttachments(attachments);
             var textHtml = text ? escapeHtml(text) : '';
             msg.innerHTML =
-                '<div class="message-bubble">' + attachmentHtml + textHtml + '</div>' +
-                '<div class="message-timestamp">' + formatTimestamp(timestamp) + '</div>';
+                '<div class="message-bubble">' + attachmentHtml + textHtml + '</div>';
+
+            var footer = document.createElement('div');
+            footer.className = 'user-message-footer';
+            if (siblingCount > 1) {
+                footer.appendChild(createBranchNav(id, siblingIndex, siblingCount));
+            }
+            var ts = document.createElement('span');
+            ts.className = 'message-timestamp';
+            ts.textContent = formatTimestamp(timestamp);
+            footer.appendChild(ts);
+            msg.appendChild(footer);
+
             msg.appendChild(createUserMessageActions(id));
             container.appendChild(msg);
             doScroll('smooth');
@@ -1064,6 +1206,19 @@
             if (!msgEl) return;
             while (msgEl.nextElementSibling) {
                 msgEl.nextElementSibling.remove();
+            }
+        },
+
+        updateBranchNav: function(id, siblingIndex, siblingCount) {
+            var msgEl = document.getElementById('msg-' + id);
+            if (!msgEl) return;
+            var oldNav = msgEl.querySelector('.branch-nav');
+            if (oldNav) oldNav.remove();
+            if (siblingCount > 1) {
+                var footer = msgEl.querySelector('.user-message-footer');
+                if (footer) {
+                    footer.insertBefore(createBranchNav(id, siblingIndex, siblingCount), footer.firstChild);
+                }
             }
         },
 

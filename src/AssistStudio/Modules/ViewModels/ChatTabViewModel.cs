@@ -155,7 +155,13 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Messages queued before the ChatPanel is available (during conversation loading).
     /// </summary>
-    private readonly List<(ChatRole Role, string Content, string? ProviderName, string? ModelId)> _pendingMessages = [];
+    private readonly List<(ChatRole Role, string Content, string? ProviderName, string? ModelId, string? Id, string? ParentId)> _pendingMessages = [];
+
+    /// <summary>
+    /// Branch-only messages queued before the ChatPanel is available.
+    /// These are registered in the tree but not added to the active path.
+    /// </summary>
+    private readonly List<(ChatRole Role, string Content, string? ProviderName, string? ModelId, string? Id, string? ParentId)> _pendingBranchMessages = [];
 
     #endregion
 
@@ -237,10 +243,20 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         // Relay keyboard shortcut from WebView2 (separate HWND)
         panel.KeyboardShortcutPressed += (s, e) => KeyboardShortcutPressed?.Invoke(s, e);
 
-        // Flush messages that were queued before the Panel existed (conversation loading)
-        foreach (var (role, content, providerName, modelId) in _pendingMessages)
+        // Flush branch messages first (tree-only, not active path)
+        foreach (var (role, content, providerName, modelId, id, parentId) in _pendingBranchMessages)
         {
-            panel.AddRestoredMessage(role, content, providerName, modelId);
+            var msg = id is not null
+                ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = modelId, ParentId = parentId }
+                : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = modelId, ParentId = parentId };
+            panel.RegisterBranchMessage(msg);
+        }
+        _pendingBranchMessages.Clear();
+
+        // Flush active path messages
+        foreach (var (role, content, providerName, modelId, id, parentId) in _pendingMessages)
+        {
+            panel.AddRestoredMessage(role, content, providerName, modelId, id, parentId);
         }
         _pendingMessages.Clear();
     }
@@ -253,12 +269,33 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// Adds a restored message to the chat panel during conversation loading.
     /// If the panel is not yet attached, messages are queued.
     /// </summary>
-    public void AddRestoredMessage(ChatRole role, string content, string? providerName, string? providerModelId)
+    public void AddRestoredMessage(ChatRole role, string content, string? providerName, string? providerModelId,
+        string? id = null, string? parentId = null)
     {
         if (_panel is not null)
-            _panel.AddRestoredMessage(role, content, providerName, providerModelId);
+            _panel.AddRestoredMessage(role, content, providerName, providerModelId, id, parentId);
         else
-            _pendingMessages.Add((role, content, providerName, providerModelId));
+            _pendingMessages.Add((role, content, providerName, providerModelId, id, parentId));
+    }
+
+    /// <summary>
+    /// Registers a message in the conversation tree without adding to the active path.
+    /// Used for loading inactive branch messages from saved conversations.
+    /// </summary>
+    public void RegisterBranchMessage(ChatRole role, string content, string? providerName, string? providerModelId,
+        string? id = null, string? parentId = null)
+    {
+        if (_panel is not null)
+        {
+            var msg = id is not null
+                ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId }
+                : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId };
+            _panel.RegisterBranchMessage(msg);
+        }
+        else
+        {
+            _pendingBranchMessages.Add((role, content, providerName, providerModelId, id, parentId));
+        }
     }
 
     /// <summary>
@@ -268,6 +305,15 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     public IReadOnlyList<ChatMessage> GetMessages()
     {
         return _panel?.GetMessages() ?? [];
+    }
+
+    /// <summary>
+    /// Gets all messages in the conversation tree (active path + all branches).
+    /// Used for saving the full tree to disk.
+    /// </summary>
+    public IReadOnlyList<ChatMessage> GetAllMessages()
+    {
+        return _panel?.GetAllMessages() ?? [];
     }
 
     /// <summary>

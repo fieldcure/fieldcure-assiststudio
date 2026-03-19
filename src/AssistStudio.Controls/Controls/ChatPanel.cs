@@ -350,9 +350,19 @@ public sealed partial class ChatPanel : Control
     private readonly WebViewChatRenderer _renderer = new();
 
     /// <summary>
-    /// The in-memory collection of all chat messages in the current conversation.
+    /// The in-memory collection of all chat messages in the current active path.
     /// </summary>
     private readonly ObservableCollection<ChatMessage> _messages = [];
+
+    /// <summary>
+    /// Full conversation tree: parentId → list of child messages.
+    /// The <see cref="_messages"/> list remains the active path from root to current leaf.
+    /// Root-level messages (no parent) use <see cref="TreeRootKey"/> as the key.
+    /// </summary>
+    private readonly Dictionary<string, List<ChatMessage>> _childrenMap = [];
+
+    /// <summary>Sentinel key for root-level messages (ParentId == null).</summary>
+    private const string TreeRootKey = "";
 
     /// <summary>
     /// Cancellation token source for the currently active streaming operation.
@@ -729,6 +739,7 @@ public sealed partial class ChatPanel : Control
         _renderer.MessageCopyRequested += OnMessageCopyRequested;
         _renderer.RetryRequested += OnRetryRequested;
         _renderer.EditRequested += OnEditRequested;
+        _renderer.BranchSwitchRequested += OnBranchSwitchRequested;
         _renderer.SummarizeRequested += OnSummarizeRequested;
         _renderer.KeyboardShortcutPressed += (_, shortcut) => KeyboardShortcutPressed?.Invoke(this, shortcut);
     }
@@ -854,17 +865,36 @@ public sealed partial class ChatPanel : Control
     public IReadOnlyList<ChatMessage> GetMessages() => _messages;
 
     /// <summary>
+    /// Returns all messages in the conversation tree (active path + all branches).
+    /// Used for saving the full tree to disk.
+    /// </summary>
+    public IReadOnlyList<ChatMessage> GetAllMessages()
+    {
+        if (_childrenMap.Count == 0) return _messages;
+        return _childrenMap.Values.SelectMany(v => v).Distinct().ToList();
+    }
+
+    /// <summary>
+    /// Registers a message in the tree without adding to the active path.
+    /// Used for loading inactive branch messages from saved conversations.
+    /// </summary>
+    public void RegisterBranchMessage(ChatMessage msg)
+    {
+        RegisterInTree(msg);
+    }
+
+    /// <summary>
     /// Adds a previously saved message to the conversation (for restoring saved conversations).
     /// Messages added before the WebView is initialized will be rendered once initialization completes.
     /// </summary>
     public void AddRestoredMessage(ChatRole role, string content,
-        string? providerName = null, string? providerModelId = null)
+        string? providerName = null, string? providerModelId = null,
+        string? id = null, string? parentId = null)
     {
-        var msg = new ChatMessage(role, content)
-        {
-            ProviderName = providerName,
-            ProviderModelId = providerModelId,
-        };
+        var msg = id is not null
+            ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId }
+            : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId };
+        RegisterInTree(msg);
         _messages.Add(msg);
     }
 
@@ -977,11 +1007,13 @@ public sealed partial class ChatPanel : Control
         SwitchToChatLayout();
 
         // Add user message with attachments
-        var userMessage = new ChatMessage(ChatRole.User, e.Text) { Attachments = e.Attachments };
+        var parentId = _messages.Count > 0 ? _messages[^1].Id : null;
+        var userMessage = new ChatMessage(ChatRole.User, e.Text) { Attachments = e.Attachments, ParentId = parentId };
+        RegisterInTree(userMessage);
         _messages.Add(userMessage);
         await _renderer.AppendUserMessageAsync(
             userMessage.Id, userMessage.Content, userMessage.Timestamp.ToString("O"),
-            userMessage.Attachments);
+            userMessage.Attachments, userMessage.SiblingIndex, userMessage.SiblingCount);
         MessageAdded?.Invoke(this, userMessage);
         DiagnosticLogger.LogInfo($"[Chat] User message sent, attachments={e.Attachments.Count}");
 
@@ -989,7 +1021,8 @@ public sealed partial class ChatPanel : Control
         if (Provider is null)
         {
             DiagnosticLogger.LogWarning("[Chat] Provider is null when sending message");
-            var errorMsg = new ChatMessage(ChatRole.Assistant) { Content = "[Error: No AI provider configured]" };
+            var errorMsg = new ChatMessage(ChatRole.Assistant) { Content = "[Error: No AI provider configured]", ParentId = userMessage.Id };
+            RegisterInTree(errorMsg);
             _messages.Add(errorMsg);
             await _renderer.BeginAssistantMessageAsync(errorMsg.Id, "Error", null);
             await _renderer.FinalizeMessageAsync(errorMsg.Id, errorMsg.Content);
@@ -1000,8 +1033,10 @@ public sealed partial class ChatPanel : Control
         {
             IsStreaming = true,
             ProviderName = Provider.ProviderName,
-            ProviderModelId = Provider.ModelId
+            ProviderModelId = Provider.ModelId,
+            ParentId = userMessage.Id
         };
+        RegisterInTree(assistantMessage);
         _messages.Add(assistantMessage);
         await _renderer.BeginAssistantMessageAsync(assistantMessage.Id, Provider.ProviderName, Provider.ModelId);
         MessageAdded?.Invoke(this, assistantMessage);
@@ -1084,7 +1119,11 @@ public sealed partial class ChatPanel : Control
         if (assistantMessage is null) return;
 
         // Add a user message asking to continue (not shown in UI)
-        var continueMessage = new ChatMessage(ChatRole.User, "Continue writing from where you left off.");
+        var continueMessage = new ChatMessage(ChatRole.User, "Continue writing from where you left off.")
+        {
+            ParentId = assistantMessage.Id
+        };
+        RegisterInTree(continueMessage);
         _messages.Add(continueMessage);
 
         // Resume the existing assistant message bubble for continued streaming
@@ -1170,31 +1209,89 @@ public sealed partial class ChatPanel : Control
     {
         if (!_isInitialized || Provider is null) return;
 
-        var userMessage = _messages.FirstOrDefault(m => m.Role == ChatRole.User && m.Id == e.MessageId);
-        if (userMessage is null) return;
+        var original = _messages.FirstOrDefault(m => m.Role == ChatRole.User && m.Id == e.MessageId);
+        if (original is null) return;
 
-        // Update message content
-        userMessage.Content = e.NewText;
+        // Create sibling message (same ParentId as original → branching)
+        var edited = new ChatMessage(ChatRole.User, e.NewText)
+        {
+            ParentId = original.ParentId,
+            Attachments = original.Attachments,
+        };
+        RegisterInTree(edited);
 
-        // Remove everything after this user message
-        var idx = _messages.IndexOf(userMessage);
+        // Switch active path: remove from original's position onward
+        var idx = _messages.IndexOf(original);
         if (idx < 0) return;
-        while (_messages.Count > idx + 1)
-        {
+        while (_messages.Count > idx)
             _messages.RemoveAt(_messages.Count - 1);
-        }
-        await _renderer.RemoveMessagesAfterAsync(e.MessageId);
+        _messages.Add(edited);
 
-        // Update the user bubble text in the UI
-        if (_chatWebView is not null)
+        // Update renderer: remove old messages, render new branch with navigator
+        var removeAfterId = idx > 0 ? _messages[idx - 1].Id : null;
+        if (removeAfterId is not null)
+            await _renderer.RemoveMessagesAfterAsync(removeAfterId);
+        else
+            await _renderer.ClearMessagesAsync();
+
+        await _renderer.AppendUserMessageAsync(
+            edited.Id, edited.Content, edited.Timestamp.ToString("O"),
+            edited.Attachments, edited.SiblingIndex, edited.SiblingCount);
+
+        // Also update the branch nav on the original message's siblings (if they're visible in other views)
+        // Not needed here since we re-rendered from the branch point
+
+        // Stream new response
+        await StreamAssistantResponseAsync(edited);
+    }
+
+    /// <summary>
+    /// Handles branch switch requests from the chat UI.
+    /// Rebuilds the active path from root to the selected branch's leaf.
+    /// </summary>
+    private async void OnBranchSwitchRequested(object? sender, (string MessageId, int Direction) e)
+    {
+        var current = _messages.FirstOrDefault(m => m.Id == e.MessageId);
+        if (current is null) return;
+
+        // Find sibling in the tree
+        if (!_childrenMap.TryGetValue(current.ParentId ?? TreeRootKey, out var siblings)) return;
+        var newIndex = current.SiblingIndex + e.Direction;
+        if (newIndex < 0 || newIndex >= siblings.Count) return;
+        var target = siblings[newIndex];
+
+        // Truncate active path from current message's position
+        var idx = _messages.IndexOf(current);
+        if (idx < 0) return;
+        while (_messages.Count > idx)
+            _messages.RemoveAt(_messages.Count - 1);
+
+        // Walk from target down to its deepest leaf (following last child at each level)
+        var path = BuildPathToLeaf(target);
+        foreach (var msg in path)
+            _messages.Add(msg);
+
+        // Re-render from the branch point
+        var removeAfterId = idx > 0 ? _messages[idx - 1].Id : null;
+        if (removeAfterId is not null)
+            await _renderer.RemoveMessagesAfterAsync(removeAfterId);
+        else
+            await _renderer.ClearMessagesAsync();
+
+        foreach (var msg in path)
         {
-            var escaped = System.Text.Json.JsonSerializer.Serialize(e.NewText);
-            await _chatWebView.ExecuteScriptAsync(
-                $"document.querySelector('#msg-{e.MessageId} .message-bubble').textContent = {escaped}");
+            if (msg.Role == ChatRole.User)
+            {
+                await _renderer.AppendUserMessageAsync(
+                    msg.Id, msg.Content, msg.Timestamp.ToString("O"),
+                    msg.Attachments, msg.SiblingIndex, msg.SiblingCount);
+            }
+            else if (msg.Role == ChatRole.Assistant)
+            {
+                await _renderer.BeginAssistantMessageAsync(msg.Id, msg.ProviderName, msg.ProviderModelId);
+                await _renderer.FinalizeMessageAsync(msg.Id, msg.Content);
+            }
         }
-
-        // Re-send
-        await StreamAssistantResponseAsync(userMessage);
     }
 
     /// <summary>
@@ -1402,6 +1499,46 @@ public sealed partial class ChatPanel : Control
 
     #endregion
 
+    #region Tree Methods
+
+    /// <summary>
+    /// Registers a message in the conversation tree.
+    /// </summary>
+    private void RegisterInTree(ChatMessage msg)
+    {
+        var key = msg.ParentId ?? TreeRootKey;
+        if (!_childrenMap.TryGetValue(key, out var siblings))
+        {
+            siblings = [];
+            _childrenMap[key] = siblings;
+        }
+        if (!siblings.Any(s => s.Id == msg.Id))
+        {
+            msg.SiblingIndex = siblings.Count;
+            siblings.Add(msg);
+        }
+        foreach (var s in siblings)
+            s.SiblingCount = siblings.Count;
+    }
+
+    /// <summary>
+    /// Builds a path from the given message to its deepest leaf,
+    /// always following the last child (most recent branch) at each level.
+    /// </summary>
+    private List<ChatMessage> BuildPathToLeaf(ChatMessage start)
+    {
+        var path = new List<ChatMessage> { start };
+        var current = start;
+        while (_childrenMap.TryGetValue(current.Id, out var children) && children.Count > 0)
+        {
+            current = children[^1]; // follow last (most recent) child
+            path.Add(current);
+        }
+        return path;
+    }
+
+    #endregion
+
     #region Private Methods
 
     /// <summary>
@@ -1532,13 +1669,16 @@ public sealed partial class ChatPanel : Control
             }
 
             // Add the assistant's tool call message to history
+            var toolCallParentId = _messages.Count > 0 ? _messages[^1].Id : null;
             var toolCallMsg = new ChatMessage(ChatRole.Assistant)
             {
                 ToolCalls = result.ToolCalls,
                 Content = assistantMessage.Content,
                 ProviderName = Provider.ProviderName,
-                ProviderModelId = Provider.ModelId
+                ProviderModelId = Provider.ModelId,
+                ParentId = toolCallParentId
             };
+            RegisterInTree(toolCallMsg);
             _messages.Add(toolCallMsg);
 
             // Execute each tool call and add results
@@ -1558,7 +1698,13 @@ public sealed partial class ChatPanel : Control
                     toolResult = $"{{\"error\":\"{ex.Message}\"}}";
                 }
 
-                _messages.Add(new ChatMessage(ChatRole.Tool, toolResult) { ToolCallId = call.Id });
+                var toolResultMsg = new ChatMessage(ChatRole.Tool, toolResult)
+                {
+                    ToolCallId = call.Id,
+                    ParentId = toolCallMsg.Id
+                };
+                RegisterInTree(toolResultMsg);
+                _messages.Add(toolResultMsg);
 
                 var toolDisplayName = RegisteredTools
                     .FirstOrDefault(t => t.Name == call.FunctionName)?.DisplayName ?? call.FunctionName;
@@ -1669,8 +1815,10 @@ public sealed partial class ChatPanel : Control
         {
             IsStreaming = true,
             ProviderName = Provider.ProviderName,
-            ProviderModelId = Provider.ModelId
+            ProviderModelId = Provider.ModelId,
+            ParentId = userMessage.Id
         };
+        RegisterInTree(assistantMessage);
         _messages.Add(assistantMessage);
         await _renderer.BeginAssistantMessageAsync(assistantMessage.Id, Provider.ProviderName, Provider.ModelId);
         MessageAdded?.Invoke(this, assistantMessage);
@@ -1888,7 +2036,10 @@ public sealed partial class ChatPanel : Control
                 ["summarize"] = loader.GetString("Chat_Summarize"),
                 ["copyRequest"] = loader.GetString("Chat_CopyRequest"),
                 ["copyResponse"] = loader.GetString("Chat_CopyResponse"),
-                ["tokens"] = loader.GetString("Chat_Tokens")
+                ["tokens"] = loader.GetString("Chat_Tokens"),
+                ["editBranchHint"] = loader.GetString("Chat_EditBranchHint"),
+                ["editCancel"] = loader.GetString("Chat_EditCancel"),
+                ["editSave"] = loader.GetString("Chat_EditSave")
             };
 
             // Filter out empty strings (key not found returns empty)

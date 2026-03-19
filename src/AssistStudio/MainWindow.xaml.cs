@@ -305,8 +305,8 @@ public sealed partial class MainWindow : Window
 
         if (tab.FilePath is not null)
         {
-            // Re-save to existing path
-            var messages = tab.GetMessages();
+            // Re-save to existing path (save full tree including branches)
+            var messages = tab.GetAllMessages();
             if (messages.Count == 0) return;
             LoggingService.LogInfo($"[File] Save: {Path.GetFileName(tab.FilePath)}, messages={messages.Count}");
             await ConversationManager.SaveToFileAsync(tab.FilePath, tab.Title, tab.CurrentPreset?.Name, messages);
@@ -334,7 +334,7 @@ public sealed partial class MainWindow : Window
     /// <returns><c>true</c> if the file was saved successfully; <c>false</c> if the user cancelled or save failed.</returns>
     private async Task<bool> SaveAsAsync(ChatTabViewModel tab)
     {
-        var messages = tab.GetMessages();
+        var messages = tab.GetAllMessages();
         if (messages.Count == 0) return false;
 
         var picker = new FileSavePicker();
@@ -368,7 +368,7 @@ public sealed partial class MainWindow : Window
         LoggingService.LogInfo($"[File] SaveAll: {ViewModel.Tabs.Count} tabs");
         foreach (var tab in ViewModel.Tabs)
         {
-            var messages = tab.GetMessages();
+            var messages = tab.GetAllMessages();
             if (messages.Count == 0) continue;
 
             if (tab.FilePath is not null)
@@ -519,7 +519,7 @@ public sealed partial class MainWindow : Window
                 if (vm.FilePath is not null)
                 {
                     await ConversationManager.SaveToFileAsync(
-                        vm.FilePath, vm.Title, vm.CurrentPreset?.Name, vm.GetMessages());
+                        vm.FilePath, vm.Title, vm.CurrentPreset?.Name, vm.GetAllMessages());
                     vm.IsDirty = false;
                 }
                 else
@@ -576,7 +576,7 @@ public sealed partial class MainWindow : Window
                 if (tab.FilePath is not null)
                 {
                     await ConversationManager.SaveToFileAsync(
-                        tab.FilePath, tab.Title, tab.CurrentPreset?.Name, tab.GetMessages());
+                        tab.FilePath, tab.Title, tab.CurrentPreset?.Name, tab.GetAllMessages());
                 }
                 else
                 {

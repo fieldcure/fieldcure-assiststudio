@@ -171,11 +171,8 @@ public partial class MainViewModel : ObservableObject
             Tabs.Add(vm);
         }
 
-        // Restore messages
-        foreach (var msg in data.Messages)
-        {
-            vm.AddRestoredMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId);
-        }
+        // Restore messages with tree reconstruction
+        RestoreConversationTree(vm, data.Messages);
 
         vm.Title = data.TabName;
         vm.HasBeenSaved = true;
@@ -193,7 +190,7 @@ public partial class MainViewModel : ObservableObject
     {
         if (tab is null) return;
 
-        var messages = tab.GetMessages();
+        var messages = tab.GetAllMessages();
         if (messages.Count == 0) return;
 
         var tabName = tab.Title;
@@ -300,6 +297,61 @@ public partial class MainViewModel : ObservableObject
     #endregion
 
     #region Private Methods
+
+    /// <summary>
+    /// Restores a conversation tree from saved messages.
+    /// Determines the active path (root → last leaf) and registers branch messages in the tree only.
+    /// </summary>
+    private static void RestoreConversationTree(ChatTabViewModel vm, List<SavedMessage> messages)
+    {
+        if (messages.Count == 0) return;
+
+        // Check if any message has branching (multiple children for same parent)
+        var hasBranching = messages
+            .Where(m => m.ParentId is not null)
+            .GroupBy(m => m.ParentId)
+            .Any(g => g.Count() > 1);
+
+        if (!hasBranching)
+        {
+            // Simple linear conversation — add all as active path
+            foreach (var msg in messages)
+                vm.AddRestoredMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId, msg.Id, msg.ParentId);
+            return;
+        }
+
+        // Build parent→children map to find the active path
+        var childrenMap = new Dictionary<string, List<SavedMessage>>();
+        var rootKey = "";
+        foreach (var msg in messages)
+        {
+            var key = msg.ParentId ?? rootKey;
+            if (!childrenMap.TryGetValue(key, out var list))
+            {
+                list = [];
+                childrenMap[key] = list;
+            }
+            list.Add(msg);
+        }
+
+        // Walk from root following last child (most recent branch) to build active path
+        var activePath = new HashSet<string?>();
+        var currentKey = rootKey;
+        while (childrenMap.TryGetValue(currentKey, out var children) && children.Count > 0)
+        {
+            var last = children[^1]; // most recent branch
+            activePath.Add(last.Id);
+            currentKey = last.Id ?? rootKey;
+        }
+
+        // First pass: register all messages as branch messages (tree only)
+        foreach (var msg in messages)
+            vm.RegisterBranchMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId, msg.Id, msg.ParentId);
+
+        // Second pass: add only active path messages to _messages
+        foreach (var msg in messages.Where(m => activePath.Contains(m.Id)))
+            vm.AddRestoredMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId, msg.Id, msg.ParentId);
+    }
 
     /// <summary>
     /// Finds an already-open tab whose <see cref="ChatTabViewModel.FilePath"/> matches

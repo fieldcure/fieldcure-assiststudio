@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization;
 
 namespace FieldCure.AssistStudio.Models;
 
@@ -47,6 +48,18 @@ public partial class ChatMessage : INotifyPropertyChanged
     public ChatMessage(ChatRole role, string content = "")
     {
         Id = Guid.NewGuid().ToString("N");
+        Role = role;
+        _content = content;
+        Timestamp = DateTime.UtcNow;
+        Attachments = [];
+    }
+
+    /// <summary>
+    /// Initializes a <see cref="ChatMessage"/> with an existing ID (for restoring saved conversations).
+    /// </summary>
+    public ChatMessage(string id, ChatRole role, string content = "")
+    {
+        Id = id;
         Role = role;
         _content = content;
         Timestamp = DateTime.UtcNow;
@@ -112,6 +125,30 @@ public partial class ChatMessage : INotifyPropertyChanged
         get => _thinkingContent;
         set => SetField(ref _thinkingContent, value);
     }
+
+    #endregion
+
+    #region Tree Properties
+
+    /// <summary>
+    /// The ID of the parent message in the conversation tree.
+    /// Null for the first message (root). Used for branching support.
+    /// </summary>
+    public string? ParentId { get; init; }
+
+    /// <summary>
+    /// Total number of sibling messages sharing the same parent.
+    /// Computed at runtime, not serialized.
+    /// </summary>
+    [JsonIgnore]
+    public int SiblingCount { get; set; } = 1;
+
+    /// <summary>
+    /// Zero-based index among siblings sharing the same parent.
+    /// Computed at runtime, not serialized.
+    /// </summary>
+    [JsonIgnore]
+    public int SiblingIndex { get; set; }
 
     #endregion
 

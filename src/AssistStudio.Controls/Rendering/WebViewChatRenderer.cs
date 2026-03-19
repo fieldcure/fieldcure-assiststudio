@@ -70,6 +70,12 @@ internal class WebViewChatRenderer
     /// </summary>
     public event EventHandler<string>? KeyboardShortcutPressed;
 
+    /// <summary>
+    /// Occurs when the user clicks a branch navigation arrow.
+    /// Payload: (MessageId, Direction: -1 for previous, +1 for next).
+    /// </summary>
+    public event EventHandler<(string MessageId, int Direction)>? BranchSwitchRequested;
+
     #endregion
 
     #region Public Methods
@@ -122,10 +128,11 @@ internal class WebViewChatRenderer
     /// Appends a user message bubble to the chat UI with optional attachments.
     /// </summary>
     public Task AppendUserMessageAsync(string id, string text, string timestamp,
-        IReadOnlyList<ChatAttachment>? attachments = null)
+        IReadOnlyList<ChatAttachment>? attachments = null,
+        int siblingIndex = 0, int siblingCount = 1)
     {
         var attachmentsJson = SerializeAttachments(attachments);
-        var script = $"window.fluentChat.appendUserMessage({Js(id)}, {Js(text)}, {Js(timestamp)}, {attachmentsJson})";
+        var script = $"window.assistChat.appendUserMessage({Js(id)}, {Js(text)}, {Js(timestamp)}, {attachmentsJson}, {siblingIndex}, {siblingCount})";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 
@@ -134,7 +141,7 @@ internal class WebViewChatRenderer
     /// </summary>
     public Task BeginAssistantMessageAsync(string id, string? providerName = null, string? modelId = null)
     {
-        var script = $"window.fluentChat.beginAssistantMessage({Js(id)}, {Js(providerName ?? "")}, {Js(modelId ?? "")})";
+        var script = $"window.assistChat.beginAssistantMessage({Js(id)}, {Js(providerName ?? "")}, {Js(modelId ?? "")})";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 
@@ -143,7 +150,7 @@ internal class WebViewChatRenderer
     /// </summary>
     public Task ResumeMessageAsync(string id, string existingText)
     {
-        var script = $"window.fluentChat.resumeMessage({Js(id)}, {Js(existingText)})";
+        var script = $"window.assistChat.resumeMessage({Js(id)}, {Js(existingText)})";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 
@@ -152,7 +159,7 @@ internal class WebViewChatRenderer
     /// </summary>
     public Task AppendTokenAsync(string id, string token)
     {
-        var script = $"window.fluentChat.appendToken({Js(id)}, {Js(token)})";
+        var script = $"window.assistChat.appendToken({Js(id)}, {Js(token)})";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 
@@ -161,7 +168,7 @@ internal class WebViewChatRenderer
     /// </summary>
     public Task BeginThinkingBlockAsync(string id)
     {
-        var script = $"window.fluentChat.beginThinkingBlock({Js(id)})";
+        var script = $"window.assistChat.beginThinkingBlock({Js(id)})";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 
@@ -170,7 +177,7 @@ internal class WebViewChatRenderer
     /// </summary>
     public Task AppendThinkingTokenAsync(string id, string token)
     {
-        var script = $"window.fluentChat.appendThinkingToken({Js(id)}, {Js(token)})";
+        var script = $"window.assistChat.appendThinkingToken({Js(id)}, {Js(token)})";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 
@@ -179,7 +186,7 @@ internal class WebViewChatRenderer
     /// </summary>
     public Task EndThinkingBlockAsync(string id)
     {
-        var script = $"window.fluentChat.endThinkingBlock({Js(id)})";
+        var script = $"window.assistChat.endThinkingBlock({Js(id)})";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 
@@ -188,7 +195,7 @@ internal class WebViewChatRenderer
     /// </summary>
     public Task AppendToolBlockAsync(string id, string toolName)
     {
-        var script = $"window.fluentChat.appendToolBlock({Js(id)}, {Js(toolName)})";
+        var script = $"window.assistChat.appendToolBlock({Js(id)}, {Js(toolName)})";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 
@@ -197,7 +204,7 @@ internal class WebViewChatRenderer
     /// </summary>
     public Task FinalizeMessageAsync(string id, string fullMarkdown, bool truncated = false, int tokenCount = 0)
     {
-        var script = $"window.fluentChat.finalizeMessage({Js(id)}, {Js(fullMarkdown)}, {(truncated ? "true" : "false")}, {tokenCount})";
+        var script = $"window.assistChat.finalizeMessage({Js(id)}, {Js(fullMarkdown)}, {(truncated ? "true" : "false")}, {tokenCount})";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 
@@ -206,7 +213,7 @@ internal class WebViewChatRenderer
     /// </summary>
     public Task ScrollToBottomAsync()
     {
-        return _webView.ExecuteScriptAsync("window.fluentChat.scrollToBottom()").AsTask();
+        return _webView.ExecuteScriptAsync("window.assistChat.scrollToBottom()").AsTask();
     }
 
     /// <summary>
@@ -214,7 +221,25 @@ internal class WebViewChatRenderer
     /// </summary>
     public Task RemoveMessagesAfterAsync(string messageId)
     {
-        var script = $"window.fluentChat.removeMessagesAfter({Js(messageId)})";
+        var script = $"window.assistChat.removeMessagesAfter({Js(messageId)})";
+        return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
+    /// <summary>
+    /// Removes all messages from the chat display (for full re-render on branch switch).
+    /// </summary>
+    public Task ClearMessagesAsync()
+    {
+        return _webView.ExecuteScriptAsync(
+            "document.getElementById('chat-container').innerHTML = ''").AsTask();
+    }
+
+    /// <summary>
+    /// Updates the branch navigator on an existing message.
+    /// </summary>
+    public Task UpdateBranchNavAsync(string id, int siblingIndex, int siblingCount)
+    {
+        var script = $"window.assistChat.updateBranchNav({Js(id)}, {siblingIndex}, {siblingCount})";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 
@@ -233,7 +258,7 @@ internal class WebViewChatRenderer
     /// </summary>
     public Task SetThemeAsync(bool isDark)
     {
-        var script = $"window.fluentChat.setTheme({(isDark ? "true" : "false")})";
+        var script = $"window.assistChat.setTheme({(isDark ? "true" : "false")})";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 
@@ -242,7 +267,7 @@ internal class WebViewChatRenderer
     /// </summary>
     public Task SetDebugModeAsync(bool enabled)
     {
-        var script = $"window.fluentChat.setDebugMode({(enabled ? "true" : "false")})";
+        var script = $"window.assistChat.setDebugMode({(enabled ? "true" : "false")})";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 
@@ -251,7 +276,7 @@ internal class WebViewChatRenderer
     /// </summary>
     public Task SetDebugDataAsync(string userMsgId, string? requestBody, string assistantMsgId, string? rawResponse)
     {
-        var script = $"window.fluentChat.setDebugData({Js(userMsgId)}, {Js(requestBody ?? "")}, {Js(assistantMsgId)}, {Js(rawResponse ?? "")})";
+        var script = $"window.assistChat.setDebugData({Js(userMsgId)}, {Js(requestBody ?? "")}, {Js(assistantMsgId)}, {Js(rawResponse ?? "")})";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 
@@ -353,6 +378,17 @@ internal class WebViewChatRenderer
                     var messageId = payload[..colonIdx];
                     var newText = payload[(colonIdx + 1)..];
                     EditRequested?.Invoke(this, (messageId, newText));
+                }
+            }
+            else if (message?.StartsWith("branch:") == true)
+            {
+                var payload = message["branch:".Length..];
+                var colonIdx = payload.IndexOf(':');
+                if (colonIdx > 0)
+                {
+                    var messageId = payload[..colonIdx];
+                    if (int.TryParse(payload[(colonIdx + 1)..], out var direction))
+                        BranchSwitchRequested?.Invoke(this, (messageId, direction));
                 }
             }
             else if (message?.StartsWith("summarize:") == true)
