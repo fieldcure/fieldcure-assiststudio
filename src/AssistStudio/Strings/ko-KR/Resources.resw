@@ -413,6 +413,9 @@
   <data name="Profiles_BuiltInTools" xml:space="preserve">
     <value>기본 제공</value>
   </data>
+  <data name="Profiles_FilterToolsPlaceholder" xml:space="preserve">
+    <value>도구 검색...</value>
+  </data>
   <!-- CollapsibleSection -->
   <data name="CollapsibleSection_CollapseTooltip" xml:space="preserve">
     <value>섹션 접기</value>

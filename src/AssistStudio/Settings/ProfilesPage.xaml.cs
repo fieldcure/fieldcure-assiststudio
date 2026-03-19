@@ -1,11 +1,13 @@
 ﻿using AssistStudio.Dialogs;
 using AssistStudio.Helpers;
 using AssistStudio.Tools;
+using FieldCure.AssistStudio.Controls;
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Navigation;
+using System.Globalization;
 
 namespace AssistStudio.Settings;
 
@@ -395,8 +397,7 @@ public sealed partial class ProfilesPage : Page
         if (builtInTools.Count > 0)
         {
             hasAnyTool = true;
-            ToolsPanel.Children.Add(CreateGroupHeader(
-                loader.GetString("Profiles_BuiltInTools")));
+            var builtInPanel = new StackPanel { Spacing = 2 };
             foreach (var tool in builtInTools)
             {
                 var localizedName = loader.GetString($"Tool_{tool.Name}");
@@ -408,29 +409,73 @@ public sealed partial class ProfilesPage : Page
                 };
                 cb.Checked += OnToolChecked;
                 cb.Unchecked += OnToolChecked;
-                ToolsPanel.Children.Add(cb);
+                builtInPanel.Children.Add(cb);
             }
+            ToolsPanel.Children.Add(new CollapsibleSection
+            {
+                Header = loader.GetString("Profiles_BuiltInTools"),
+                SubHeader = $"{builtInTools.Count}",
+                Body = builtInPanel,
+                ContentSpacing = 4,
+                IsExpanded = true,
+            });
         }
 
         // --- MCP tools grouped by server ---
+        var filterPlaceholder = loader.GetString("Profiles_FilterToolsPlaceholder");
         var mcpToolsByServer = App.McpRegistry.GetToolsByServer();
         foreach (var (serverName, serverTools) in mcpToolsByServer)
         {
             if (serverTools.Count == 0) continue;
             hasAnyTool = true;
-            ToolsPanel.Children.Add(CreateGroupHeader(serverName));
+            var toolsPanel = new StackPanel { Spacing = 2 };
             foreach (var tool in serverTools)
             {
                 var cb = new CheckBox
                 {
-                    Content = tool.DisplayName,
+                    Content = HumanizeName(tool.Name),
                     Tag = tool.Name,
                     IsChecked = profile.ToolNames.Contains(tool.Name),
                 };
                 cb.Checked += OnToolChecked;
                 cb.Unchecked += OnToolChecked;
-                ToolsPanel.Children.Add(cb);
+                toolsPanel.Children.Add(cb);
             }
+
+            // Wrap with filter box + tools list
+            var filterBox = new AutoSuggestBox
+            {
+                PlaceholderText = filterPlaceholder,
+                QueryIcon = new SymbolIcon(Symbol.Find),
+                Margin = new Thickness(0, 0, 0, 4),
+            };
+            filterBox.TextChanged += (sender, _) =>
+            {
+                var query = sender.Text.Trim();
+                foreach (var child in toolsPanel.Children)
+                {
+                    if (child is CheckBox cb)
+                    {
+                        cb.Visibility = string.IsNullOrEmpty(query)
+                            || cb.Content?.ToString()?.Contains(query, StringComparison.OrdinalIgnoreCase) == true
+                            ? Visibility.Visible
+                            : Visibility.Collapsed;
+                    }
+                }
+            };
+
+            var bodyPanel = new StackPanel { Spacing = 4 };
+            bodyPanel.Children.Add(filterBox);
+            bodyPanel.Children.Add(toolsPanel);
+
+            ToolsPanel.Children.Add(new CollapsibleSection
+            {
+                Header = serverName,
+                SubHeader = $"{serverTools.Count}",
+                Body = bodyPanel,
+                ContentSpacing = 4,
+                IsExpanded = false,
+            });
         }
 
         if (!hasAnyTool)
@@ -445,17 +490,18 @@ public sealed partial class ProfilesPage : Page
     }
 
     /// <summary>
-    /// Creates a styled group header TextBlock for the tools panel.
+    /// Converts a snake_case or kebab-case tool name to a human-readable Title Case string.
+    /// Example: "create_document" → "Create Document", "list-repos" → "List Repos".
     /// </summary>
-    private static TextBlock CreateGroupHeader(string text)
+    private static string HumanizeName(string name)
     {
-        return new TextBlock
-        {
-            Text = text,
-            Style = Microsoft.UI.Xaml.Application.Current.Resources["CaptionTextBlockStyle"] as Style,
-            Opacity = 0.6,
-            Margin = new Thickness(0, 8, 0, 2),
-        };
+        if (string.IsNullOrEmpty(name)) return name;
+        // Remove server prefix if present (e.g., "github/list_repos" → "list_repos")
+        var slashIndex = name.IndexOf('/');
+        if (slashIndex >= 0 && slashIndex < name.Length - 1)
+            name = name[(slashIndex + 1)..];
+        return CultureInfo.CurrentCulture.TextInfo.ToTitleCase(
+            name.Replace('_', ' ').Replace('-', ' '));
     }
 
     /// <summary>

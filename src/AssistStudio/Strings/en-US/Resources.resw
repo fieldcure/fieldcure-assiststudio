@@ -413,6 +413,9 @@
   <data name="Profiles_BuiltInTools" xml:space="preserve">
     <value>Built-in</value>
   </data>
+  <data name="Profiles_FilterToolsPlaceholder" xml:space="preserve">
+    <value>Filter tools...</value>
+  </data>
   <!-- CollapsibleSection -->
   <data name="CollapsibleSection_CollapseTooltip" xml:space="preserve">
     <value>Collapse section</value>
