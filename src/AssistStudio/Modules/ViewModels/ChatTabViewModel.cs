@@ -232,6 +232,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     public void AttachPanel(ChatPanel panel)
     {
         _panel = panel;
+        LoggingService.LogInfo($"[Tab] Panel attached: {Title}, pending={_pendingMessages.Count}");
 
         // Relay keyboard shortcut from WebView2 (separate HWND)
         panel.KeyboardShortcutPressed += (s, e) => KeyboardShortcutPressed?.Invoke(s, e);
@@ -401,6 +402,8 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// </summary>
     public void OnPresetChanged(object? _sender, ProviderPreset preset)
     {
+        LoggingService.LogInfo($"[Tab] Preset switched: {preset.Name} (model={preset.ModelId})");
+
         // Dispose old provider
         if (Provider is IDisposable disposable)
         {
@@ -420,6 +423,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// </summary>
     public void OnProfileChanged(object? _sender, Profile profile)
     {
+        LoggingService.LogInfo($"[Tab] Profile changed: {profile.Name}");
         SystemPrompt = profile.Text;
 
         // Resolve tools from both built-in and MCP sources
@@ -436,7 +440,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         var profile = _panel?.SelectedProfile;
         if (profile is null)
         {
-            System.Diagnostics.Debug.WriteLine("[RefreshTools] profile is null, skipping");
+            LoggingService.LogInfo("[Settings] RefreshTools: profile is null, skipping");
             return;
         }
 
@@ -450,11 +454,11 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             profile.UseSearchTools = match.UseSearchTools;
         }
 
-        System.Diagnostics.Debug.WriteLine($"[RefreshTools] profile={profile.Name}, UseSearchTools={profile.UseSearchTools}, ToolNames={profile.ToolNames.Count}");
+        LoggingService.LogInfo($"[Settings] RefreshTools: profile={profile.Name}, UseSearchTools={profile.UseSearchTools}, ToolNames={profile.ToolNames.Count}");
 
         ResolveTools(profile);
 
-        System.Diagnostics.Debug.WriteLine($"[RefreshTools] RegisteredTools.Count={RegisteredTools.Count}: {string.Join(", ", RegisteredTools.Select(t => t.Name))}");
+        LoggingService.LogInfo($"[Settings] RefreshTools resolved: {RegisteredTools.Count} tools — [{string.Join(", ", RegisteredTools.Select(t => t.Name))}]");
 
         // Force push to ChatPanel on UI thread
         if (_panel is not null)
@@ -463,7 +467,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             {
                 _panel.RegisteredTools = [];
                 _panel.RegisteredTools = RegisteredTools;
-                System.Diagnostics.Debug.WriteLine($"[RefreshTools] Pushed to ChatPanel on UI thread");
+                LoggingService.LogInfo("[Settings] RefreshTools pushed to ChatPanel");
             });
         }
     }
@@ -473,6 +477,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// </summary>
     public void OnTitleGenerated(object? _sender, string title)
     {
+        LoggingService.LogInfo($"[Tab] Title generated: {title}");
         Title = title;
     }
 

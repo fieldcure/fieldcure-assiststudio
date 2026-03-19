@@ -96,6 +96,7 @@ public partial class MainViewModel : ObservableObject
 
         Tabs.Add(vm);
         SelectedTab = vm;
+        LoggingService.LogInfo($"[Tab] Created tab #{_tabCounter}: preset={preset.Name}");
         return vm;
     }
 
@@ -113,6 +114,7 @@ public partial class MainViewModel : ObservableObject
             var existing = FindTabByFilePath(filePath);
             if (existing is not null)
             {
+                LoggingService.LogInfo($"[Tab] Switched to existing tab: {Path.GetFileName(filePath)}");
                 SelectedTab = existing;
                 return existing;
             }
@@ -180,6 +182,7 @@ public partial class MainViewModel : ObservableObject
         vm.FilePath = filePath;
 
         SelectedTab = vm;
+        LoggingService.LogInfo($"[Tab] Loaded conversation: {data.TabName}, messages={data.Messages.Count}, reused={reuseTab}");
         return vm;
     }
 
@@ -223,6 +226,7 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public void CloseTab(ChatTabViewModel tab)
     {
+        LoggingService.LogInfo($"[Tab] Closed: {tab.Title}");
         tab.Dispose();
         Tabs.Remove(tab);
     }
@@ -236,6 +240,7 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public void ApplyThemeToAll(string theme)
     {
+        LoggingService.LogInfo($"[Settings] Applying theme '{theme}' to {Tabs.Count} tabs");
         var chatTheme = theme switch
         {
             "Light" => ChatTheme.Light,
@@ -256,6 +261,7 @@ public partial class MainViewModel : ObservableObject
     {
         _profiles = AppSettings.LoadProfiles();
         var active = GetActiveProfile();
+        LoggingService.LogInfo($"[Settings] Applying system prompt to {Tabs.Count} tabs, activeProfile={active?.Name}");
 
         foreach (var tab in Tabs)
         {
@@ -270,6 +276,7 @@ public partial class MainViewModel : ObservableObject
     {
         _profiles = AppSettings.LoadProfiles();
         var active = GetActiveProfile();
+        LoggingService.LogInfo($"[Settings] Refreshing profiles: {_profiles.Count} profiles, active={active?.Name}");
 
         foreach (var tab in Tabs)
         {
@@ -283,6 +290,7 @@ public partial class MainViewModel : ObservableObject
     public void RefreshPresetsOnAll()
     {
         var presets = GetPresets();
+        LoggingService.LogInfo($"[Settings] Refreshing presets: {presets.Count} presets on {Tabs.Count} tabs");
         foreach (var tab in Tabs)
         {
             tab.ApplyPresets(presets);

@@ -71,19 +71,30 @@ public sealed partial class MainWindow : Window
         // Wire settings events → ViewModel
         AppSettings.ThemeChanged += (_, theme) =>
         {
+            LoggingService.LogInfo($"[Settings] ThemeChanged → pushing to {ViewModel.Tabs.Count} tabs: {theme}");
             ApplyAppTheme(theme);
             ViewModel.ApplyThemeToAll(theme);
         };
-        AppSettings.SystemPromptChanged += (_, prompt) => ViewModel.ApplySystemPromptToAll(prompt);
-        AppSettings.PresetsChanged += (_, _) => ViewModel.RefreshPresetsOnAll();
+        AppSettings.SystemPromptChanged += (_, prompt) =>
+        {
+            LoggingService.LogInfo($"[Settings] SystemPromptChanged → pushing to {ViewModel.Tabs.Count} tabs");
+            ViewModel.ApplySystemPromptToAll(prompt);
+        };
+        AppSettings.PresetsChanged += (_, _) =>
+        {
+            LoggingService.LogInfo($"[Settings] PresetsChanged → refreshing on {ViewModel.Tabs.Count} tabs");
+            ViewModel.RefreshPresetsOnAll();
+        };
         AppSettings.ProfilesChanged += (_, _) =>
         {
+            LoggingService.LogInfo($"[Settings] ProfilesChanged → refreshing on {ViewModel.Tabs.Count} tabs");
             ViewModel.RefreshProfilesOnAll();
             foreach (var tab in ViewModel.Tabs)
                 tab.RefreshTools();
         };
         App.McpRegistry.ToolsChanged += (_, _) =>
         {
+            LoggingService.LogInfo($"[Settings] MCP ToolsChanged → refreshing tools on {ViewModel.Tabs.Count} tabs");
             foreach (var tab in ViewModel.Tabs)
                 tab.RefreshTools();
         };
@@ -172,6 +183,7 @@ public sealed partial class MainWindow : Window
     private void OnFirstActivated(object sender, WindowActivatedEventArgs args)
     {
         Activated -= OnFirstActivated;
+        LoggingService.LogInfo($"[App] First activation — theme: {AppSettings.Theme}");
         ApplyAppTheme(AppSettings.Theme);
     }
 
@@ -296,6 +308,7 @@ public sealed partial class MainWindow : Window
             // Re-save to existing path
             var messages = tab.GetMessages();
             if (messages.Count == 0) return;
+            LoggingService.LogInfo($"[File] Save: {Path.GetFileName(tab.FilePath)}, messages={messages.Count}");
             await ConversationManager.SaveToFileAsync(tab.FilePath, tab.Title, tab.CurrentPreset?.Name, messages);
             tab.IsDirty = false;
         }
@@ -336,6 +349,7 @@ public sealed partial class MainWindow : Window
         try
         {
             var presetName = tab.CurrentPreset?.Name;
+            LoggingService.LogInfo($"[File] SaveAs: {Path.GetFileName(file.Path)}, messages={messages.Count}");
             await ConversationManager.SaveToFileAsync(file.Path, tab.Title, presetName, messages);
             tab.FilePath = file.Path;
             tab.IsDirty = false;
@@ -351,6 +365,7 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private async void OnMenuSaveAllConversations(object sender, RoutedEventArgs e)
     {
+        LoggingService.LogInfo($"[File] SaveAll: {ViewModel.Tabs.Count} tabs");
         foreach (var tab in ViewModel.Tabs)
         {
             var messages = tab.GetMessages();
@@ -384,6 +399,7 @@ public sealed partial class MainWindow : Window
         var data = await ConversationManager.LoadConversationAsync(file.Path);
         if (data is not null)
         {
+            LoggingService.LogInfo($"[File] Load: {Path.GetFileName(file.Path)}, messages={data.Messages.Count}");
             ViewModel.LoadConversation(data, file.Path);
             AppSettings.AddRecentFile(file.Path);
         }
@@ -533,6 +549,7 @@ public sealed partial class MainWindow : Window
         if (_isClosing) return;
 
         var dirtyTabs = ViewModel.Tabs.Where(t => t.IsDirty && t.GetMessages().Count > 0).ToList();
+        LoggingService.LogInfo($"[App] Window closing — {dirtyTabs.Count} dirty tabs");
         if (dirtyTabs.Count == 0) return;
 
         args.Cancel = true;
@@ -584,6 +601,7 @@ public sealed partial class MainWindow : Window
         var data = await ConversationManager.LoadConversationAsync(filePath);
         if (data is not null)
         {
+            LoggingService.LogInfo($"[File] Activation load: {Path.GetFileName(filePath)}, messages={data.Messages.Count}");
             ViewModel.LoadConversation(data, filePath);
             AppSettings.AddRecentFile(filePath);
         }

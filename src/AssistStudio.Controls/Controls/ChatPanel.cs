@@ -983,11 +983,12 @@ public sealed partial class ChatPanel : Control
             userMessage.Id, userMessage.Content, userMessage.Timestamp.ToString("O"),
             userMessage.Attachments);
         MessageAdded?.Invoke(this, userMessage);
+        DiagnosticLogger.LogInfo($"[Chat] User message sent, attachments={e.Attachments.Count}");
 
         // Stream assistant response
         if (Provider is null)
         {
-            System.Diagnostics.Debug.WriteLine("ChatPanel: Provider is null when sending message");
+            DiagnosticLogger.LogWarning("[Chat] Provider is null when sending message");
             var errorMsg = new ChatMessage(ChatRole.Assistant) { Content = "[Error: No AI provider configured]" };
             _messages.Add(errorMsg);
             await _renderer.BeginAssistantMessageAsync(errorMsg.Id, "Error", null);
@@ -1017,6 +1018,7 @@ public sealed partial class ChatPanel : Control
                 var result = await StreamAndExecuteAsync(assistantMessage, ct);
                 await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content,
                     result.IsTruncated, result.Usage?.TotalTokens ?? 0);
+                DiagnosticLogger.LogInfo($"[Chat] Response complete — tokens={result.Usage?.TotalTokens ?? 0}, truncated={result.IsTruncated}");
             }
 
             if (IsDebugMode)
@@ -1033,6 +1035,7 @@ public sealed partial class ChatPanel : Control
         }
         catch (OperationCanceledException)
         {
+            DiagnosticLogger.LogInfo("[Chat] Streaming cancelled by user");
             await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content);
         }
         catch (Exception ex)
@@ -1073,6 +1076,7 @@ public sealed partial class ChatPanel : Control
     private async void OnContinueRequested(object? sender, string messageId)
     {
         if (!_isInitialized || Provider is null) return;
+        DiagnosticLogger.LogInfo($"[Chat] Continue requested for message {messageId}");
 
         // Find the assistant message to continue
         var assistantMessage = _messages.LastOrDefault(m =>
@@ -1485,6 +1489,7 @@ public sealed partial class ChatPanel : Control
             {
                 executor.ConfirmationHandler = async (toolName, arguments) =>
                 {
+                    DiagnosticLogger.LogInfo($"[Tool] Approval requested: {toolName}");
                     _approvalPanel.ToolName = toolName;
                     _approvalPanel.ToolDisplayName = GetLocalizedToolName(toolName);
                     _approvalPanel.Arguments = arguments;
@@ -1494,6 +1499,7 @@ public sealed partial class ChatPanel : Control
 
                     _approvalTcs = new TaskCompletionSource<bool>();
                     var approved = await _approvalTcs.Task;
+                    DiagnosticLogger.LogInfo($"[Tool] Approval result: {toolName} → {(approved ? "approved" : "rejected")}");
 
                     _approvalPanel.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
                     _inputArea.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
@@ -1509,13 +1515,21 @@ public sealed partial class ChatPanel : Control
         do
         {
             var request = await CreateRequestAsync([.. _messages]);
+            if (round == 0)
+                DiagnosticLogger.LogInfo($"[Chat] Request start — provider={Provider!.ProviderName}, model={Provider.ModelId}, tools={activeTools.Count}, thinking={request.ThinkingEnabled}");
             result = await ConsumeStreamAsync(Provider!.StreamAsync(request, ct), assistantMessage, ct);
+            DiagnosticLogger.LogInfo($"[Chat] Stream completed — tokens={result.Usage?.TotalTokens ?? 0}, truncated={result.IsTruncated}, hasToolCalls={result.HasToolCalls}");
 
             if (!result.HasToolCalls || executor is null)
                 break;
 
             round++;
-            if (round > MaxToolCallRounds) break;
+            DiagnosticLogger.LogInfo($"[Chat] Tool round {round}/{MaxToolCallRounds}, toolCalls={result.ToolCalls!.Count}");
+            if (round > MaxToolCallRounds)
+            {
+                DiagnosticLogger.LogWarning($"[Tool] Max tool call rounds ({MaxToolCallRounds}) exceeded, stopping");
+                break;
+            }
 
             // Add the assistant's tool call message to history
             var toolCallMsg = new ChatMessage(ChatRole.Assistant)
@@ -1530,13 +1544,16 @@ public sealed partial class ChatPanel : Control
             // Execute each tool call and add results
             foreach (var call in result.ToolCalls!)
             {
+                DiagnosticLogger.LogInfo($"[Tool] Executing: {call.FunctionName} (id={call.Id})");
                 string toolResult;
                 try
                 {
                     toolResult = await executor.ExecuteAsync(call, ct);
+                    DiagnosticLogger.LogInfo($"[Tool] Result: {call.FunctionName}, length={toolResult.Length}");
                 }
                 catch (Exception ex)
                 {
+                    DiagnosticLogger.LogWarning($"[Tool] Execution error: {call.FunctionName} — {ex.Message}");
                     DiagnosticLogger.LogException(ex);
                     toolResult = $"{{\"error\":\"{ex.Message}\"}}";
                 }
@@ -1604,6 +1621,7 @@ public sealed partial class ChatPanel : Control
         var turnsToKeep = Math.Min(RecentTurnsToKeep, _messages.Count);
         var oldMessages = _messages.Take(_messages.Count - turnsToKeep).ToList();
         if (oldMessages.Count == 0) return;
+        DiagnosticLogger.LogInfo($"[Chat] Summarizing history — {oldMessages.Count} old messages, keeping {turnsToKeep}");
 
         // Build summarization prompt
         var historyText = string.Join("\n",
@@ -1623,6 +1641,7 @@ public sealed partial class ChatPanel : Control
         try
         {
             var summary = (await Provider.CompleteAsync(summaryRequest, ct)).Content ?? "";
+            DiagnosticLogger.LogInfo("[Chat] History summarized successfully");
 
             // Replace old messages with a summary system message
             for (var i = 0; i < oldMessages.Count; i++)
@@ -1679,6 +1698,7 @@ public sealed partial class ChatPanel : Control
         }
         catch (OperationCanceledException)
         {
+            DiagnosticLogger.LogInfo("[Chat] Streaming cancelled by user");
             await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content);
         }
         catch (Exception ex)
@@ -1816,10 +1836,12 @@ public sealed partial class ChatPanel : Control
                     : userMsg.Content;
             }
 
+            DiagnosticLogger.LogInfo($"[Chat] Title generated: {title}");
             DispatcherQueue.TryEnqueue(() => TitleGenerated?.Invoke(this, title));
         }
         catch (Exception ex)
         {
+            DiagnosticLogger.LogWarning("[Chat] Title generation failed, using fallback");
             DiagnosticLogger.LogException(ex);
             var fallback = userMsg.Content.Length > 40
                 ? userMsg.Content[..40].TrimEnd() + "\u2026"

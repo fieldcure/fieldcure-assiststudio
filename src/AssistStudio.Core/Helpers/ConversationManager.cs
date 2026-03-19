@@ -86,6 +86,7 @@ public static class ConversationManager
 
         var json = JsonSerializer.Serialize(data, ConversationTypeInfo);
         await AtomicWriteAsync(filePath, json);
+        DiagnosticLogger.LogInfo($"[File] Saved: {Path.GetFileName(filePath)}, messages={messages.Count}");
     }
 
     /// <summary>
@@ -93,10 +94,16 @@ public static class ConversationManager
     /// </summary>
     public static async Task<ConversationData?> LoadConversationAsync(string filePath)
     {
-        if (!File.Exists(filePath)) return null;
+        if (!File.Exists(filePath))
+        {
+            DiagnosticLogger.LogWarning($"[File] File not found: {filePath}");
+            return null;
+        }
 
         var json = await File.ReadAllTextAsync(filePath);
-        return JsonSerializer.Deserialize(json, ConversationTypeInfo);
+        var data = JsonSerializer.Deserialize(json, ConversationTypeInfo);
+        DiagnosticLogger.LogInfo($"[File] Loaded: {Path.GetFileName(filePath)}, messages={data?.Messages.Count ?? 0}");
+        return data;
     }
 
     /// <summary>

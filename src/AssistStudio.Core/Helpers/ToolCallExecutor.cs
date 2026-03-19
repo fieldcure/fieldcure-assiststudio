@@ -52,7 +52,10 @@ public class ToolCallExecutor
         {
             var approved = await ConfirmationHandler(tool.Name, call.Arguments);
             if (!approved)
+            {
+                DiagnosticLogger.LogInfo($"[Tool] Skipped (user declined): {tool.Name}");
                 return JsonSerializer.Serialize(new { skipped = true, reason = "User declined" });
+            }
         }
 
         var args = JsonSerializer.Deserialize<JsonElement>(call.Arguments);

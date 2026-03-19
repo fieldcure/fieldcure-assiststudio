@@ -71,8 +71,10 @@ public class McpServerRegistry : IAsyncDisposable
         CancellationToken ct = default)
     {
         var errors = new List<string>();
+        var configList = configs.ToList();
+        LoggingService.LogInfo($"[MCP] ConnectAll: {configList.Count(c => c.IsEnabled)} enabled servers");
 
-        foreach (var config in configs.Where(c => c.IsEnabled))
+        foreach (var config in configList.Where(c => c.IsEnabled))
         {
             try
             {
@@ -112,6 +114,7 @@ public class McpServerRegistry : IAsyncDisposable
         McpServerConfig config,
         CancellationToken ct = default)
     {
+        LoggingService.LogInfo($"[MCP] AddAndConnect: {config.Name}");
         await _lock.WaitAsync(ct);
         try
         {
@@ -152,6 +155,7 @@ public class McpServerRegistry : IAsyncDisposable
     /// </summary>
     public async Task RemoveAsync(McpServerConnection connection)
     {
+        LoggingService.LogInfo($"[MCP] Removing: {connection.Config.Name}");
         await _lock.WaitAsync();
         try
         {
@@ -172,6 +176,7 @@ public class McpServerRegistry : IAsyncDisposable
         McpServerConnection connection,
         CancellationToken ct = default)
     {
+        LoggingService.LogInfo($"[MCP] Reconnecting: {connection.Config.Name}");
         await _lock.WaitAsync(ct);
         try
         {
@@ -208,6 +213,7 @@ public class McpServerRegistry : IAsyncDisposable
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
+        LoggingService.LogInfo($"[MCP] Disposing registry, {_connections.Count} connections");
         await _lock.WaitAsync();
         try
         {

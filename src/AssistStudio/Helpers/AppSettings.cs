@@ -319,6 +319,7 @@ public static class AppSettings
     /// </summary>
     public static void AddRecentFile(string filePath)
     {
+        LoggingService.LogInfo($"[File] Recent file added: {Path.GetFileName(filePath)}");
         var list = RecentFilePaths;
         list.Remove(filePath);
         list.Insert(0, filePath);

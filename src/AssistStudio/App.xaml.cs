@@ -51,6 +51,9 @@ public partial class App : Application
         // Wire up Core/Controls diagnostic logging to the app's LoggingService
         DiagnosticLogger.OnException = ex => LoggingService.LogException(ex);
         DiagnosticLogger.OnWarning = msg => LoggingService.LogWarning(msg);
+        DiagnosticLogger.OnInfo = msg => LoggingService.LogInfo(msg);
+
+        LoggingService.LogInfo("[App] Startup — services initialized");
 
         // Initialize MCP server connections (fire-and-forget, failures won't block startup)
         _ = InitializeMcpAsync();
@@ -59,6 +62,7 @@ public partial class App : Application
 
         FieldCure.AssistStudio.Controls.WindowHelper.TrackWindow(MainWindow);
         MainWindow.Activate();
+        LoggingService.LogInfo("[App] MainWindow activated");
 
         // Handle file activation on cold start
         var activatedArgs = AppInstance.GetCurrent().GetActivatedEventArgs();
@@ -66,6 +70,7 @@ public partial class App : Application
             activatedArgs.Data is IFileActivatedEventArgs fileArgs &&
             fileArgs.Files.Count > 0)
         {
+            LoggingService.LogInfo($"[App] Cold-start file activation: {fileArgs.Files[0].Path}");
             MainWindow.OpenFileFromActivation(fileArgs.Files[0].Path);
         }
 
@@ -87,6 +92,7 @@ public partial class App : Application
             fileArgs.Files.Count > 0)
         {
             var filePath = fileArgs.Files[0].Path;
+            LoggingService.LogInfo($"[App] Redirected file activation: {filePath}");
             MainWindow?.DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Normal, () =>
             {
                 MainWindow?.OpenFileFromActivation(filePath);
@@ -107,6 +113,7 @@ public partial class App : Application
         try
         {
             var configs = await AppSettings.LoadMcpServersAsync();
+            LoggingService.LogInfo($"[App] Initializing MCP servers ({configs.Count} configs)");
             if (configs.Count > 0)
             {
                 var errors = await McpRegistry.ConnectAllAsync(configs);

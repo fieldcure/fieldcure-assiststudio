@@ -22,6 +22,11 @@ public static class DiagnosticLogger
     public static Action<string>? OnWarning { get; set; }
 
     /// <summary>
+    /// Callback invoked when an informational message is logged.
+    /// </summary>
+    public static Action<string>? OnInfo { get; set; }
+
+    /// <summary>
     /// Logs an exception. Invokes <see cref="OnException"/> if registered,
     /// otherwise falls back to <see cref="Debug.WriteLine(string)"/>.
     /// </summary>
@@ -31,6 +36,18 @@ public static class DiagnosticLogger
             OnException(ex);
         else
             Debug.WriteLine(ex);
+    }
+
+    /// <summary>
+    /// Logs an informational message. Invokes <see cref="OnInfo"/> if registered,
+    /// otherwise falls back to <see cref="Debug.WriteLine(string)"/>.
+    /// </summary>
+    public static void LogInfo(string message)
+    {
+        if (OnInfo is not null)
+            OnInfo(message);
+        else
+            Debug.WriteLine($"[Info] {message}");
     }
 
     /// <summary>
