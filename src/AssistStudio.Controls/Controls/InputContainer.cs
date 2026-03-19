@@ -1174,6 +1174,50 @@ public sealed partial class InputContainer : Control
         _toolButton.Visibility = Visibility.Visible;
 
         var panel = new StackPanel { Spacing = 4, Padding = new Thickness(4) };
+
+        // Toggle all link
+        var allChecked = _enabledToolSet is null || _enabledToolSet.Count == tools.Count;
+        string selectAllLabel, deselectAllLabel;
+        try
+        {
+            var res = new Windows.ApplicationModel.Resources.ResourceLoader(
+                "AssistStudio.Controls/Resources");
+            selectAllLabel = res.GetString("InputContainer_SelectAll");
+            deselectAllLabel = res.GetString("InputContainer_DeselectAll");
+        }
+        catch
+        {
+            selectAllLabel = "Select all";
+            deselectAllLabel = "Deselect all";
+        }
+
+        var toggleLink = new HyperlinkButton
+        {
+            Content = allChecked ? deselectAllLabel : selectAllLabel,
+            Padding = new Thickness(0),
+            FontSize = 12,
+        };
+        toggleLink.Click += (_, _) =>
+        {
+            var nowAllChecked = _enabledToolSet is null || _enabledToolSet.Count == tools.Count;
+            foreach (var child in panel.Children)
+            {
+                if (child is CheckBox cb)
+                    cb.IsChecked = !nowAllChecked;
+            }
+            toggleLink.Content = nowAllChecked ? selectAllLabel : deselectAllLabel;
+        };
+        panel.Children.Add(toggleLink);
+
+        // Separator
+        panel.Children.Add(new Microsoft.UI.Xaml.Shapes.Rectangle
+        {
+            Height = 1,
+            Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
+            Opacity = 0.3,
+            Margin = new Thickness(0, 2, 0, 2),
+        });
+
         foreach (var tool in tools)
         {
             var checkBox = new CheckBox

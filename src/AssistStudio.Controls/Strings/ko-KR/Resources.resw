@@ -111,6 +111,12 @@
   <data name="InputContainer_ToolsTooltip" xml:space="preserve">
     <value>도구</value>
   </data>
+  <data name="InputContainer_SelectAll" xml:space="preserve">
+    <value>모두 선택</value>
+  </data>
+  <data name="InputContainer_DeselectAll" xml:space="preserve">
+    <value>모두 해제</value>
+  </data>
   <data name="ChatPanel_EditTitleTooltip" xml:space="preserve">
     <value>제목 편집</value>
   </data>
