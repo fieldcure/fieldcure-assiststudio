@@ -463,4 +463,72 @@
   <data name="Ollama_Error_Unknown" xml:space="preserve">
     <value>An unexpected error occurred.</value>
   </data>
+  <!-- Navigation -->
+  <data name="Nav_Connect.Content" xml:space="preserve">
+    <value>Connect</value>
+  </data>
+  <!-- Connect Page -->
+  <data name="Connect_Title.Text" xml:space="preserve">
+    <value>Connect</value>
+  </data>
+  <data name="Connect_Description.Text" xml:space="preserve">
+    <value>Register MCP (Model Context Protocol) servers to extend AI capabilities with external tools. Connected servers provide tools that can be used during conversations.</value>
+  </data>
+  <data name="Connect_AddServer" xml:space="preserve">
+    <value>Add Server</value>
+  </data>
+  <data name="Connect_ImportFrom" xml:space="preserve">
+    <value>Import from...</value>
+  </data>
+  <data name="Connect_EmptyState" xml:space="preserve">
+    <value>No MCP servers registered. Add a server or import from another application.</value>
+  </data>
+  <data name="Connect_AddServerDialog" xml:space="preserve">
+    <value>Add MCP Server</value>
+  </data>
+  <data name="Connect_ServerName" xml:space="preserve">
+    <value>Server Name</value>
+  </data>
+  <data name="Connect_Transport" xml:space="preserve">
+    <value>Transport</value>
+  </data>
+  <data name="Connect_Command" xml:space="preserve">
+    <value>Command</value>
+  </data>
+  <data name="Connect_Arguments" xml:space="preserve">
+    <value>Arguments</value>
+  </data>
+  <data name="Connect_Url" xml:space="preserve">
+    <value>URL</value>
+  </data>
+  <data name="Connect_EnvVars" xml:space="preserve">
+    <value>Environment Variables (KEY=VALUE, one per line)</value>
+  </data>
+  <data name="Connect_ImportDialog" xml:space="preserve">
+    <value>Import MCP Servers</value>
+  </data>
+  <data name="Connect_ImportComplete" xml:space="preserve">
+    <value>Import Complete</value>
+  </data>
+  <data name="Connect_ImportedCount" xml:space="preserve">
+    <value>{0} server(s) imported.</value>
+  </data>
+  <data name="Connect_NoSourcesFound" xml:space="preserve">
+    <value>No Sources Found</value>
+  </data>
+  <data name="Connect_NoSourcesMessage" xml:space="preserve">
+    <value>No MCP configurations were found from Claude Desktop, VS Code, or Claude Code.</value>
+  </data>
+  <data name="Connect_Reconnect" xml:space="preserve">
+    <value>Reconnect</value>
+  </data>
+  <data name="Connect_Remove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="Connect_Tools" xml:space="preserve">
+    <value>tools</value>
+  </data>
+  <data name="Connect_Servers" xml:space="preserve">
+    <value>servers</value>
+  </data>
 </root>

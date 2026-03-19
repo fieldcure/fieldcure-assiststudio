@@ -386,6 +386,86 @@ public static class AppSettings
 
     #endregion
 
+    #region MCP Server Methods
+
+    /// <summary>
+    /// Raised when MCP server configurations change.
+    /// </summary>
+    public static event EventHandler? McpServersChanged;
+
+    /// <summary>
+    /// Gets the path to the MCP servers configuration file.
+    /// Uses a file instead of LocalSettings to avoid the 8KB-per-value limit.
+    /// </summary>
+    private static string McpServersFilePath
+        => Path.Combine(ApplicationData.Current.LocalFolder.Path, "mcp_servers.json");
+
+    /// <summary>
+    /// Loads MCP server configurations from the JSON file,
+    /// restoring environment variable values from PasswordVault.
+    /// </summary>
+    public static async Task<List<McpServerConfig>> LoadMcpServersAsync()
+    {
+        try
+        {
+            if (!File.Exists(McpServersFilePath))
+                return [];
+
+            var json = await File.ReadAllTextAsync(McpServersFilePath);
+            var configs = JsonSerializer.Deserialize(json, AppJsonContext.Default.ListMcpServerConfig) ?? [];
+
+            // Restore env var values from PasswordVault
+            foreach (var config in configs)
+            {
+                if (config.EnvironmentVariableKeys is { Count: > 0 } keys)
+                {
+                    config.EnvironmentVariables = [];
+                    foreach (var key in keys)
+                    {
+                        var value = PasswordVaultHelper.LoadMcpEnvVar(config.Id, key);
+                        if (!string.IsNullOrEmpty(value))
+                            config.EnvironmentVariables[key] = value;
+                    }
+                }
+            }
+
+            return configs;
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Saves MCP server configurations to the JSON file,
+    /// storing environment variable values in PasswordVault.
+    /// </summary>
+    public static async Task SaveMcpServersAsync(List<McpServerConfig> configs)
+    {
+        // Save env var values to PasswordVault, update key lists
+        foreach (var config in configs)
+        {
+            if (config.EnvironmentVariables is { Count: > 0 } envVars)
+            {
+                config.EnvironmentVariableKeys = [.. envVars.Keys];
+                foreach (var (key, value) in envVars)
+                    PasswordVaultHelper.SaveMcpEnvVar(config.Id, key, value);
+            }
+            else
+            {
+                config.EnvironmentVariableKeys = null;
+            }
+        }
+
+        var json = JsonSerializer.Serialize(configs, AppJsonContext.Default.ListMcpServerConfig);
+        await File.WriteAllTextAsync(McpServersFilePath, json);
+
+        McpServersChanged?.Invoke(null, EventArgs.Empty);
+    }
+
+    #endregion
+
     #region Private Methods
 
     /// <summary>

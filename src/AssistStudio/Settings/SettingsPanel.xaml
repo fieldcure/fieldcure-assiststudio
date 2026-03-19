@@ -32,6 +32,11 @@
                         <FontIcon Glyph="&#xE794;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
+                <NavigationViewItem x:Uid="Nav_Connect" Content="Connect" Tag="Connect">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xEBD2;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
                 <NavigationViewItem x:Uid="Nav_AppTasks" Content="App Tasks" Tag="AppTasks">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE99A;" />

@@ -16,6 +16,7 @@ namespace FieldCure.AssistStudio.Helpers;
 [JsonSerializable(typeof(ConversationData))]
 [JsonSerializable(typeof(Dictionary<string, string>))]
 [JsonSerializable(typeof(IDictionary<string, string>))]
+[JsonSerializable(typeof(List<McpServerConfig>))]
 public partial class AppJsonContext : JsonSerializerContext
 {
 }

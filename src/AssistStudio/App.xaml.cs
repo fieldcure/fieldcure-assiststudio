@@ -1,4 +1,5 @@
 ﻿using AssistStudio.Helpers;
+using AssistStudio.Mcp;
 using FieldCure.AssistStudio.Helpers;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
@@ -19,6 +20,11 @@ public partial class App : Application
     /// Gets the main application window instance.
     /// </summary>
     public MainWindow? MainWindow { get; private set; }
+
+    /// <summary>
+    /// Gets the app-level MCP server registry singleton.
+    /// </summary>
+    public static McpServerRegistry McpRegistry { get; } = new();
 
     #endregion
 
@@ -45,6 +51,9 @@ public partial class App : Application
         // Wire up Core/Controls diagnostic logging to the app's LoggingService
         DiagnosticLogger.OnException = ex => LoggingService.LogException(ex);
         DiagnosticLogger.OnWarning = msg => LoggingService.LogWarning(msg);
+
+        // Initialize MCP server connections (fire-and-forget, failures won't block startup)
+        _ = InitializeMcpAsync();
 
         MainWindow = new MainWindow();
 
@@ -83,6 +92,31 @@ public partial class App : Application
                 MainWindow?.OpenFileFromActivation(filePath);
                 MainWindow?.Activate(); // Bring to front
             });
+        }
+    }
+
+    #endregion
+
+    #region Private Methods
+
+    /// <summary>
+    /// Loads saved MCP server configurations and connects to enabled servers.
+    /// </summary>
+    private static async Task InitializeMcpAsync()
+    {
+        try
+        {
+            var configs = await AppSettings.LoadMcpServersAsync();
+            if (configs.Count > 0)
+            {
+                var errors = await McpRegistry.ConnectAllAsync(configs);
+                foreach (var error in errors)
+                    LoggingService.LogWarning($"MCP connect failed: {error}");
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggingService.LogException(ex);
         }
     }
 

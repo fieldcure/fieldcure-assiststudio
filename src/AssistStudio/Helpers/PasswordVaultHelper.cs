@@ -94,4 +94,43 @@ internal static class PasswordVaultHelper
     }
 
     #endregion
+
+    #region MCP Environment Variable Methods
+
+    /// <summary>
+    /// Saves an MCP server environment variable value to the vault.
+    /// Stored under <c>McpEnv_{serverId}_{key}</c>.
+    /// </summary>
+    public static void SaveMcpEnvVar(string serverId, string key, string value)
+    {
+        SaveApiKey($"McpEnv_{serverId}_{key}", value);
+    }
+
+    /// <summary>
+    /// Loads an MCP server environment variable value from the vault.
+    /// </summary>
+    public static string LoadMcpEnvVar(string serverId, string key)
+    {
+        return LoadApiKey($"McpEnv_{serverId}_{key}");
+    }
+
+    /// <summary>
+    /// Deletes an MCP server environment variable from the vault.
+    /// </summary>
+    public static void DeleteMcpEnvVar(string serverId, string key)
+    {
+        DeleteApiKey($"McpEnv_{serverId}_{key}");
+    }
+
+    /// <summary>
+    /// Deletes all MCP environment variables for a given server.
+    /// </summary>
+    public static void DeleteAllMcpEnvVars(string serverId, IEnumerable<string>? keys)
+    {
+        if (keys is null) return;
+        foreach (var key in keys)
+            DeleteMcpEnvVar(serverId, key);
+    }
+
+    #endregion
 }

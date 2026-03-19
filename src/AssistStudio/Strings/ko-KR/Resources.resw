@@ -463,4 +463,72 @@
   <data name="Ollama_Error_Unknown" xml:space="preserve">
     <value>예기치 않은 오류가 발생했습니다.</value>
   </data>
+  <!-- Navigation -->
+  <data name="Nav_Connect.Content" xml:space="preserve">
+    <value>연동</value>
+  </data>
+  <!-- Connect Page -->
+  <data name="Connect_Title.Text" xml:space="preserve">
+    <value>연동</value>
+  </data>
+  <data name="Connect_Description.Text" xml:space="preserve">
+    <value>MCP(Model Context Protocol) 서버를 등록하여 외부 도구로 AI 기능을 확장합니다. 연결된 서버의 도구는 대화 중에 사용할 수 있습니다.</value>
+  </data>
+  <data name="Connect_AddServer" xml:space="preserve">
+    <value>서버 추가</value>
+  </data>
+  <data name="Connect_ImportFrom" xml:space="preserve">
+    <value>가져오기...</value>
+  </data>
+  <data name="Connect_EmptyState" xml:space="preserve">
+    <value>등록된 MCP 서버가 없습니다. 서버를 추가하거나 다른 앱에서 가져오세요.</value>
+  </data>
+  <data name="Connect_AddServerDialog" xml:space="preserve">
+    <value>MCP 서버 추가</value>
+  </data>
+  <data name="Connect_ServerName" xml:space="preserve">
+    <value>서버 이름</value>
+  </data>
+  <data name="Connect_Transport" xml:space="preserve">
+    <value>전송 방식</value>
+  </data>
+  <data name="Connect_Command" xml:space="preserve">
+    <value>명령어</value>
+  </data>
+  <data name="Connect_Arguments" xml:space="preserve">
+    <value>인수</value>
+  </data>
+  <data name="Connect_Url" xml:space="preserve">
+    <value>URL</value>
+  </data>
+  <data name="Connect_EnvVars" xml:space="preserve">
+    <value>환경 변수 (KEY=VALUE, 한 줄에 하나씩)</value>
+  </data>
+  <data name="Connect_ImportDialog" xml:space="preserve">
+    <value>MCP 서버 가져오기</value>
+  </data>
+  <data name="Connect_ImportComplete" xml:space="preserve">
+    <value>가져오기 완료</value>
+  </data>
+  <data name="Connect_ImportedCount" xml:space="preserve">
+    <value>{0}개 서버를 가져왔습니다.</value>
+  </data>
+  <data name="Connect_NoSourcesFound" xml:space="preserve">
+    <value>소스 없음</value>
+  </data>
+  <data name="Connect_NoSourcesMessage" xml:space="preserve">
+    <value>Claude Desktop, VS Code, Claude Code에서 MCP 설정을 찾지 못했습니다.</value>
+  </data>
+  <data name="Connect_Reconnect" xml:space="preserve">
+    <value>재연결</value>
+  </data>
+  <data name="Connect_Remove" xml:space="preserve">
+    <value>제거</value>
+  </data>
+  <data name="Connect_Tools" xml:space="preserve">
+    <value>도구</value>
+  </data>
+  <data name="Connect_Servers" xml:space="preserve">
+    <value>서버</value>
+  </data>
 </root>

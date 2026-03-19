@@ -2,6 +2,7 @@
 using AssistStudio.Tools;
 using CommunityToolkit.Mvvm.ComponentModel;
 using FieldCure.AssistStudio.Controls;
+using FieldCure.AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
 using FieldCure.AssistStudio.Providers;
 using Microsoft.UI.Xaml.Controls;
@@ -215,11 +216,8 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         _isDebugMode = true;
 #endif
 
-        // Apply linked tools from active profile
-        if (selectedProfile?.ToolNames.Count > 0)
-        {
-            _registeredTools = ToolRegistry.Resolve(selectedProfile.ToolNames);
-        }
+        // Apply linked tools from active profile (built-in + MCP)
+        ResolveTools(selectedProfile);
     }
 
     #endregion
@@ -398,10 +396,8 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     {
         SystemPrompt = profile.Text;
 
-        // Auto-apply linked tools from profile
-        RegisteredTools = profile.ToolNames.Count > 0
-            ? ToolRegistry.Resolve(profile.ToolNames)
-            : [];
+        // Resolve tools from both built-in and MCP sources
+        ResolveTools(profile);
     }
 
     /// <summary>
@@ -450,6 +446,38 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     #endregion
 
     #region Private Methods
+
+    /// <summary>
+    /// Resolves registered tools from both built-in (ToolRegistry) and MCP sources.
+    /// If the profile has specific tool names, filters by those names.
+    /// Otherwise, includes all built-in tools.
+    /// </summary>
+    private void ResolveTools(Profile? profile)
+    {
+        if (profile is null || profile.ToolNames.Count == 0)
+        {
+            RegisteredTools = [];
+            return;
+        }
+
+        // Get built-in tools matching profile's tool names
+        var builtIn = ToolRegistry.Resolve(profile.ToolNames);
+
+        // Get MCP tools that match profile's tool names
+        var mcpTools = App.McpRegistry.AllTools
+            .Where(t => profile.ToolNames.Contains(t.Name))
+            .Cast<IAssistTool>()
+            .ToList();
+
+        if (mcpTools.Count == 0)
+        {
+            RegisteredTools = builtIn;
+            return;
+        }
+
+        // Combine using ToolResolver to handle name conflicts
+        RegisteredTools = ToolResolver.Resolve(builtIn, mcpTools, conversationState: null);
+    }
 
     /// <summary>
     /// Resolves the app tasks provider based on the user's settings, returning <c>null</c>

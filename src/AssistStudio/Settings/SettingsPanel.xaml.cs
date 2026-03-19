@@ -78,6 +78,7 @@ public sealed partial class SettingsPanel : Page
         {
             "Profiles" => typeof(ProfilesPage),
             "Models" => typeof(ModelsPage),
+            "Connect" => typeof(ConnectPage),
             "AppTasks" => typeof(AppTasksPage),
             "Personalization" => typeof(PersonalizationPage),
             "Advanced" => typeof(AdvancedPage),
