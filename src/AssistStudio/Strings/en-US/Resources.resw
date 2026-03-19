@@ -195,14 +195,14 @@
   <data name="Profiles_NewProfileDialog" xml:space="preserve">
     <value>New Profile</value>
   </data>
-  <data name="Profiles_PreferredProvider.Header" xml:space="preserve">
-    <value>Preferred provider</value>
+  <data name="Profiles_DesiredProvider.Text" xml:space="preserve">
+    <value>Desired provider</value>
   </data>
-  <data name="Profiles_PreferredModel.Header" xml:space="preserve">
-    <value>Preferred model</value>
+  <data name="Profiles_DesiredModel.Text" xml:space="preserve">
+    <value>Desired model</value>
   </data>
-  <data name="Profiles_Tools.Text" xml:space="preserve">
-    <value>Tools</value>
+  <data name="Profiles_DesiredTools.Text" xml:space="preserve">
+    <value>Desired tools</value>
   </data>
   <data name="Profiles_ToolsWarning.Text" xml:space="preserve">
     <value>Tool support depends on the selected model.</value>

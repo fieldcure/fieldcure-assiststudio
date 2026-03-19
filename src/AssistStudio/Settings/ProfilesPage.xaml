@@ -98,24 +98,24 @@
                              MinHeight="200"
                              TextChanged="OnEditorChanged" />
 
-                    <!-- Preferred Provider -->
+                    <!-- Desired Provider -->
+                    <TextBlock x:Uid="Profiles_DesiredProvider" Text="Desired provider"
+                               Style="{StaticResource BodyStrongTextBlockStyle}" />
                     <ComboBox x:Name="ProviderCombo"
-                              x:Uid="Profiles_PreferredProvider"
-                              Header="Preferred provider"
                               HorizontalAlignment="Stretch"
                               SelectionChanged="OnProviderChanged" />
 
-                    <!-- Preferred Model -->
+                    <!-- Desired Model -->
+                    <TextBlock x:Uid="Profiles_DesiredModel" Text="Desired model"
+                               Style="{StaticResource BodyStrongTextBlockStyle}" />
                     <ComboBox x:Name="ModelCombo"
-                              x:Uid="Profiles_PreferredModel"
-                              Header="Preferred model"
                               HorizontalAlignment="Stretch"
                               IsEnabled="False"
                               SelectionChanged="OnModelChanged" />
 
-                    <!-- Tools -->
+                    <!-- Desired Tools -->
                     <StackPanel Spacing="4">
-                        <TextBlock x:Uid="Profiles_Tools" Text="Tools"
+                        <TextBlock x:Uid="Profiles_DesiredTools" Text="Desired tools"
                                    Style="{StaticResource BodyStrongTextBlockStyle}" />
                         <TextBlock x:Uid="Profiles_ToolsWarning"
                                    Style="{StaticResource CaptionTextBlockStyle}"
