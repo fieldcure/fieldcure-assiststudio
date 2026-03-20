@@ -132,5 +132,29 @@ internal static class PasswordVaultHelper
             DeleteMcpEnvVar(serverId, key);
     }
 
+    /// <summary>
+    /// Saves multiple MCP environment variables to the vault.
+    /// </summary>
+    public static void SaveMcpEnvVars(string serverId, Dictionary<string, string> envVars)
+    {
+        foreach (var (key, value) in envVars)
+            SaveMcpEnvVar(serverId, key, value);
+    }
+
+    /// <summary>
+    /// Loads multiple MCP environment variables from the vault.
+    /// </summary>
+    public static Dictionary<string, string> LoadMcpEnvVars(string serverId, IEnumerable<string> keys)
+    {
+        var result = new Dictionary<string, string>();
+        foreach (var key in keys)
+        {
+            var value = LoadMcpEnvVar(serverId, key);
+            if (!string.IsNullOrEmpty(value))
+                result[key] = value;
+        }
+        return result;
+    }
+
     #endregion
 }

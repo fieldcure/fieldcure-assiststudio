@@ -594,11 +594,32 @@
   <data name="Connect_NoSourcesMessage" xml:space="preserve">
     <value>No MCP configurations were found from Claude Desktop, VS Code, or Claude Code.</value>
   </data>
+  <data name="Connect_Edit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
   <data name="Connect_Reconnect" xml:space="preserve">
     <value>Reconnect</value>
   </data>
   <data name="Connect_Remove" xml:space="preserve">
     <value>Remove</value>
+  </data>
+  <data name="Connect_EditServerDialog" xml:space="preserve">
+    <value>Edit MCP Server</value>
+  </data>
+  <data name="Connect_Disabled" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="Connect_RestartRequired" xml:space="preserve">
+    <value>Settings changed. Restarting {0}...</value>
+  </data>
+  <data name="Connect_Restarted" xml:space="preserve">
+    <value>{0} restarted</value>
+  </data>
+  <data name="Connect_RestartFailed" xml:space="preserve">
+    <value>Restart failed</value>
+  </data>
+  <data name="Connect_ServerRemoved" xml:space="preserve">
+    <value>{0} removed</value>
   </data>
   <data name="Connect_Tools" xml:space="preserve">
     <value>tools</value>

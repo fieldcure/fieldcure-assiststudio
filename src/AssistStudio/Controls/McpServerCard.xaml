@@ -47,6 +47,11 @@
                               Toggled="EnableToggle_Toggled" />
                 <StackPanel Orientation="Horizontal" Spacing="4"
                             HorizontalAlignment="Right">
+                    <Button x:Name="EditButton"
+                            Style="{ThemeResource SubtleButtonStyle}"
+                            Padding="6" Click="EditButton_Click">
+                        <FontIcon Glyph="&#xE70F;" FontSize="14" />
+                    </Button>
                     <Button x:Name="ReconnectButton"
                             Style="{ThemeResource SubtleButtonStyle}"
                             Padding="6" Click="ReconnectButton_Click">

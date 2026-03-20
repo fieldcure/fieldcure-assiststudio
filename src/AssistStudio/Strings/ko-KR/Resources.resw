@@ -594,11 +594,32 @@
   <data name="Connect_NoSourcesMessage" xml:space="preserve">
     <value>Claude Desktop, VS Code, Claude Code에서 MCP 설정을 찾지 못했습니다.</value>
   </data>
+  <data name="Connect_Edit" xml:space="preserve">
+    <value>편집</value>
+  </data>
   <data name="Connect_Reconnect" xml:space="preserve">
     <value>재연결</value>
   </data>
   <data name="Connect_Remove" xml:space="preserve">
     <value>제거</value>
+  </data>
+  <data name="Connect_EditServerDialog" xml:space="preserve">
+    <value>MCP 서버 편집</value>
+  </data>
+  <data name="Connect_Disabled" xml:space="preserve">
+    <value>비활성</value>
+  </data>
+  <data name="Connect_RestartRequired" xml:space="preserve">
+    <value>설정이 변경되었습니다. {0} 재시작 중...</value>
+  </data>
+  <data name="Connect_Restarted" xml:space="preserve">
+    <value>{0} 재시작됨</value>
+  </data>
+  <data name="Connect_RestartFailed" xml:space="preserve">
+    <value>재시작 실패</value>
+  </data>
+  <data name="Connect_ServerRemoved" xml:space="preserve">
+    <value>{0} 제거됨</value>
   </data>
   <data name="Connect_Tools" xml:space="preserve">
     <value>도구</value>

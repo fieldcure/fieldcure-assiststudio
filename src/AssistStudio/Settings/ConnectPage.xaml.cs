@@ -53,11 +53,12 @@ public sealed partial class ConnectPage : Page
 
     private async void AddServerButton_Click(object sender, RoutedEventArgs e)
     {
-        var config = await ShowAddServerDialogAsync();
+        var config = await ShowServerDialogAsync(null);
         if (config is null) return;
 
         _registry?.AddWithoutConnect(config);
         await SaveAndRefreshAsync();
+        LoggingService.LogInfo($"[MCP] Server added: {config.Name} ({config.TransportType})");
 
         // Connect in background
         if (config.IsEnabled && _registry is not null)
@@ -100,6 +101,8 @@ public sealed partial class ConnectPage : Page
         if (sender is McpServerCard card)
             connection.Config.IsEnabled = card.IsToggleOn;
 
+        LoggingService.LogInfo($"[MCP] Toggle: {connection.Config.Name} → {(connection.Config.IsEnabled ? "enabled" : "disabled")}");
+
         if (connection.Config.IsEnabled && !connection.IsConnected)
         {
             try { await _registry.ReconnectAsync(connection); }
@@ -120,10 +123,71 @@ public sealed partial class ConnectPage : Page
         await SaveAndRefreshAsync();
     }
 
+    private async void OnCardEditRequested(object? sender, McpServerConnection connection)
+    {
+        if (_registry is null) return;
+
+        var config = connection.Config;
+        var updated = await ShowServerDialogAsync(config);
+        if (updated is null) return;
+
+        // Detect if restart-requiring fields changed
+        var needsRestart = config.Command != updated.Command
+            || !ArgsEqual(config.Arguments, updated.Arguments)
+            || config.Url != updated.Url;
+
+        // Apply changes to existing config
+        config.Description = updated.Description;
+        config.Command = updated.Command;
+        config.Arguments = updated.Arguments;
+        config.Url = updated.Url;
+
+        // Update env vars: clear old vault entries, save new ones
+        PasswordVaultHelper.DeleteAllMcpEnvVars(config.Id, config.EnvironmentVariableKeys);
+        config.EnvironmentVariables = updated.EnvironmentVariables;
+        if (config.EnvironmentVariables is { Count: > 0 })
+        {
+            config.EnvironmentVariableKeys = [.. config.EnvironmentVariables.Keys];
+            PasswordVaultHelper.SaveMcpEnvVars(config.Id, config.EnvironmentVariables);
+            needsRestart = true;
+        }
+        else
+        {
+            config.EnvironmentVariableKeys = null;
+        }
+
+        await SaveAndRefreshAsync();
+        LoggingService.LogInfo($"[MCP] Server edited: {config.Name}, needsRestart={needsRestart}");
+
+        // Auto-restart if connected and config changed
+        if (needsRestart && connection.IsConnected)
+        {
+            LoggingService.LogInfo($"[MCP] Restarting after edit: {config.Name}");
+            try
+            {
+                await _registry.ReconnectAsync(connection);
+                NotificationCenter.Instance.Post(
+                    InfoBarSeverity.Success,
+                    string.Format(_loader.GetString("Connect_Restarted"), config.Name),
+                    string.Empty);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError($"[MCP] Restart failed for '{config.Name}': {ex.Message}");
+                NotificationCenter.Instance.Post(
+                    InfoBarSeverity.Error,
+                    _loader.GetString("Connect_RestartFailed"),
+                    ex.Message);
+            }
+            RefreshServerList();
+        }
+    }
+
     private async void OnCardReconnectRequested(object? sender, McpServerConnection connection)
     {
         if (_registry is null) return;
 
+        LoggingService.LogInfo($"[MCP] Reconnect requested: {connection.Config.Name}");
         try
         {
             await _registry.ReconnectAsync(connection);
@@ -140,6 +204,9 @@ public sealed partial class ConnectPage : Page
     {
         if (_registry is null) return;
 
+        var name = connection.Config.Name;
+        LoggingService.LogInfo($"[MCP] Delete requested: {name}");
+
         // Clean up env vars from vault
         PasswordVaultHelper.DeleteAllMcpEnvVars(connection.Config.Id, connection.Config.EnvironmentVariableKeys);
 
@@ -149,10 +216,14 @@ public sealed partial class ConnectPage : Page
         }
         catch (Exception ex)
         {
-            LoggingService.LogError($"[MCP] Remove failed for '{connection.Config.Name}': {ex.Message}");
+            LoggingService.LogError($"[MCP] Remove failed for '{name}': {ex.Message}");
         }
 
         await SaveAndRefreshAsync();
+        NotificationCenter.Instance.Post(
+            InfoBarSeverity.Success,
+            string.Format(_loader.GetString("Connect_ServerRemoved"), name),
+            string.Empty);
     }
 
     #endregion
@@ -178,40 +249,91 @@ public sealed partial class ConnectPage : Page
 
     #region Dialogs
 
-    private async Task<McpServerConfig?> ShowAddServerDialogAsync()
+    /// <summary>
+    /// Shows the server configuration dialog for adding or editing a server.
+    /// When <paramref name="existing"/> is not null, the dialog is in edit mode
+    /// with name and transport type read-only.
+    /// </summary>
+    /// <param name="existing">Existing config to edit, or null for a new server.</param>
+    /// <returns>A new config (add) or updated config copy (edit), or null if cancelled.</returns>
+    private async Task<McpServerConfig?> ShowServerDialogAsync(McpServerConfig? existing)
     {
-        var nameBox = new TextBox { Header = _loader.GetString("Connect_ServerName"), PlaceholderText = "e.g., GitHub" };
+        var isEdit = existing is not null;
+
+        var nameBox = new TextBox
+        {
+            Header = _loader.GetString("Connect_ServerName"),
+            PlaceholderText = "e.g., GitHub",
+            Text = existing?.Name ?? "",
+            IsEnabled = !isEdit,
+        };
         var descriptionBox = new TextBox
         {
             Header = _loader.GetString("Connect_ServerDescription"),
             PlaceholderText = "e.g., Manage GitHub repos, issues, and PRs",
             MaxLength = 100,
+            TextWrapping = TextWrapping.Wrap,
+            Text = existing?.Description ?? "",
         };
         var transportCombo = new ComboBox
         {
             Header = _loader.GetString("Connect_Transport"),
             Items = { "Stdio", "Http" },
-            SelectedIndex = 0,
+            SelectedIndex = existing?.TransportType == McpTransportType.Http ? 1 : 0,
             HorizontalAlignment = HorizontalAlignment.Stretch,
+            IsEnabled = !isEdit,
         };
-        var commandBox = new TextBox { Header = _loader.GetString("Connect_Command"), PlaceholderText = "e.g., npx" };
-        var argsBox = new TextBox { Header = _loader.GetString("Connect_Arguments"), PlaceholderText = "e.g., -y @modelcontextprotocol/server-github" };
-        var urlBox = new TextBox { Header = _loader.GetString("Connect_Url"), PlaceholderText = "e.g., http://localhost:3001/mcp", Visibility = Visibility.Collapsed };
+
+        var isStdio = (existing?.TransportType ?? McpTransportType.Stdio) == McpTransportType.Stdio;
+        var commandBox = new TextBox
+        {
+            Header = _loader.GetString("Connect_Command"),
+            PlaceholderText = "e.g., npx",
+            Text = existing?.Command ?? "",
+            Visibility = isStdio ? Visibility.Visible : Visibility.Collapsed,
+        };
+        var argsBox = new TextBox
+        {
+            Header = _loader.GetString("Connect_Arguments"),
+            PlaceholderText = "e.g., -y @modelcontextprotocol/server-github",
+            TextWrapping = TextWrapping.Wrap,
+            Text = existing?.Arguments is { Count: > 0 } args ? string.Join(" ", args) : "",
+            Visibility = isStdio ? Visibility.Visible : Visibility.Collapsed,
+        };
+        var urlBox = new TextBox
+        {
+            Header = _loader.GetString("Connect_Url"),
+            PlaceholderText = "e.g., http://localhost:3001/mcp",
+            Text = existing?.Url ?? "",
+            Visibility = isStdio ? Visibility.Collapsed : Visibility.Visible,
+        };
+
+        // Build env vars text from existing config
+        var envText = "";
+        if (isEdit && existing!.EnvironmentVariableKeys is { Count: > 0 } keys)
+        {
+            var envVars = PasswordVaultHelper.LoadMcpEnvVars(existing.Id, keys);
+            envText = string.Join("\n", envVars.Select(kv => $"{kv.Key}={kv.Value}"));
+        }
         var envBox = new TextBox
         {
             Header = _loader.GetString("Connect_EnvVars"),
             PlaceholderText = "GITHUB_TOKEN=ghp_xxx",
             AcceptsReturn = true,
             MinHeight = 60,
+            Text = envText,
         };
 
-        transportCombo.SelectionChanged += (_, _) =>
+        if (!isEdit)
         {
-            var isStdio = transportCombo.SelectedIndex == 0;
-            commandBox.Visibility = isStdio ? Visibility.Visible : Visibility.Collapsed;
-            argsBox.Visibility = isStdio ? Visibility.Visible : Visibility.Collapsed;
-            urlBox.Visibility = isStdio ? Visibility.Collapsed : Visibility.Visible;
-        };
+            transportCombo.SelectionChanged += (_, _) =>
+            {
+                var stdio = transportCombo.SelectedIndex == 0;
+                commandBox.Visibility = stdio ? Visibility.Visible : Visibility.Collapsed;
+                argsBox.Visibility = stdio ? Visibility.Visible : Visibility.Collapsed;
+                urlBox.Visibility = stdio ? Visibility.Collapsed : Visibility.Visible;
+            };
+        }
 
         var panel = new StackPanel { Spacing = 12, MinWidth = 400 };
         panel.Children.Add(nameBox);
@@ -224,13 +346,14 @@ public sealed partial class ConnectPage : Page
 
         var dialog = new ThemedContentDialog
         {
-            Title = _loader.GetString("Connect_AddServerDialog"),
+            Title = isEdit
+                ? _loader.GetString("Connect_EditServerDialog")
+                : _loader.GetString("Connect_AddServerDialog"),
             Content = panel,
             PrimaryButtonText = _loader.GetString("Dialog_OK"),
             CloseButtonText = _loader.GetString("Dialog_Cancel"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = XamlRoot,
-
         };
 
         if (await dialog.ShowAsync() != ContentDialogResult.Primary)
@@ -241,6 +364,7 @@ public sealed partial class ConnectPage : Page
 
         var config = new McpServerConfig
         {
+            Id = existing?.Id ?? Guid.NewGuid().ToString("N")[..8],
             Name = nameBox.Text.Trim(),
             Description = descriptionBox.Text.Trim(),
             TransportType = transportCombo.SelectedIndex == 0 ? McpTransportType.Stdio : McpTransportType.Http,
@@ -361,6 +485,13 @@ public sealed partial class ConnectPage : Page
         }
 
         DispatcherQueue.TryEnqueue(RefreshServerList);
+    }
+
+    private static bool ArgsEqual(List<string>? a, List<string>? b)
+    {
+        if (a is null && b is null) return true;
+        if (a is null || b is null) return false;
+        return a.SequenceEqual(b);
     }
 
     #endregion

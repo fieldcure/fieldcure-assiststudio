@@ -38,6 +38,9 @@ public sealed partial class McpServerCard : UserControl
     /// <summary>Raised when the user toggles the enable switch.</summary>
     public event EventHandler<McpServerConnection>? EnableToggled;
 
+    /// <summary>Raised when the user clicks the edit button.</summary>
+    public event EventHandler<McpServerConnection>? EditRequested;
+
     /// <summary>Raised when the user clicks the reconnect button.</summary>
     public event EventHandler<McpServerConnection>? ReconnectRequested;
 
@@ -130,6 +133,7 @@ public sealed partial class McpServerCard : UserControl
         _suppressToggleEvent = false;
 
         // Tooltips
+        ToolTipService.SetToolTip(EditButton, _loader.GetString("Connect_Edit"));
         ToolTipService.SetToolTip(ReconnectButton, _loader.GetString("Connect_Reconnect"));
         ToolTipService.SetToolTip(DeleteButton, _loader.GetString("Connect_Remove"));
     }
@@ -143,6 +147,12 @@ public sealed partial class McpServerCard : UserControl
         if (_suppressToggleEvent) return;
         if (Connection is not null)
             EnableToggled?.Invoke(this, Connection);
+    }
+
+    private void EditButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (Connection is not null)
+            EditRequested?.Invoke(this, Connection);
     }
 
     private void ReconnectButton_Click(object sender, RoutedEventArgs e)
