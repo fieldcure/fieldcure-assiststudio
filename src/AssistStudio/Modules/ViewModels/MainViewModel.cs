@@ -315,7 +315,7 @@ public partial class MainViewModel : ObservableObject
         {
             // Simple linear conversation — add all as active path
             foreach (var msg in messages)
-                vm.AddRestoredMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId, msg.Id, msg.ParentId);
+                vm.AddRestoredMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId, msg.Id, msg.ParentId, msg.ToolCalls, msg.ToolCallId);
             return;
         }
 
@@ -345,11 +345,11 @@ public partial class MainViewModel : ObservableObject
 
         // First pass: register branch-only messages in the tree (not on the active path)
         foreach (var msg in messages.Where(m => !activePath.Contains(m.Id)))
-            vm.RegisterBranchMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId, msg.Id, msg.ParentId);
+            vm.RegisterBranchMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId, msg.Id, msg.ParentId, msg.ToolCalls, msg.ToolCallId);
 
         // Second pass: add active path messages (registers in tree + adds to _messages)
         foreach (var msg in messages.Where(m => activePath.Contains(m.Id)))
-            vm.AddRestoredMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId, msg.Id, msg.ParentId);
+            vm.AddRestoredMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId, msg.Id, msg.ParentId, msg.ToolCalls, msg.ToolCallId);
     }
 
     /// <summary>

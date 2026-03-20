@@ -944,11 +944,12 @@ public sealed partial class ChatPanel : Control
     /// </summary>
     public void AddRestoredMessage(ChatRole role, string content,
         string? providerName = null, string? providerModelId = null,
-        string? id = null, string? parentId = null)
+        string? id = null, string? parentId = null,
+        IReadOnlyList<ToolCall>? toolCalls = null, string? toolCallId = null)
     {
         var msg = id is not null
-            ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId }
-            : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId };
+            ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId }
+            : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId };
         RegisterInTree(msg);
         _messages.Add(msg);
     }
@@ -1023,25 +1024,50 @@ public sealed partial class ChatPanel : Control
                 await _renderer.SetDebugModeAsync(true);
 
             // Render any pre-existing messages (restored conversations)
+            DiagnosticLogger.LogInfo($"[Chat] OnLoaded: restoring {_messages.Count} messages");
             if (_messages.Count > 0)
             {
                 SwitchToChatLayout();
             }
+            var renderedCount = 0;
             foreach (var msg in _messages)
             {
                 if (msg.Role == ChatRole.User)
                 {
                     await _renderer.AppendUserMessageAsync(
-                        msg.Id, msg.Content, msg.Timestamp.ToString("O"), msg.Attachments,
+                        msg.Id, msg.Content ?? "", msg.Timestamp.ToString("O"), msg.Attachments,
                         msg.SiblingIndex, msg.SiblingCount);
+                    renderedCount++;
+                }
+                else if (msg.Role == ChatRole.Assistant && msg.ToolCalls is { Count: > 0 })
+                {
+                    // Intermediate tool-call message — exists for API re-submission only, skip rendering.
                 }
                 else if (msg.Role == ChatRole.Assistant)
                 {
                     await _renderer.BeginAssistantMessageAsync(
                         msg.Id, msg.ProviderName, msg.ProviderModelId);
-                    await _renderer.FinalizeMessageAsync(msg.Id, msg.Content);
+
+                    // Restore tool block indicators from [Tool: ...] markers in content
+                    var toolMarkers = System.Text.RegularExpressions.Regex.Matches(
+                        msg.Content ?? "", @"\[Tool:\s*([^\]]+)\]");
+                    foreach (System.Text.RegularExpressions.Match m in toolMarkers)
+                    {
+                        var toolName = m.Groups[1].Value.Trim();
+                        var displayName = RegisteredTools
+                            .FirstOrDefault(t => t.Name == toolName)?.DisplayName ?? toolName;
+                        await _renderer.AppendToolBlockAsync(msg.Id, displayName);
+                    }
+
+                    await _renderer.FinalizeMessageAsync(msg.Id, msg.Content ?? "");
+                    renderedCount++;
+                }
+                else if (msg.Role == ChatRole.Tool)
+                {
+                    // Tool result message — exists for API re-submission only, skip rendering.
                 }
             }
+            DiagnosticLogger.LogInfo($"[Chat] OnLoaded: rendered {renderedCount}/{_messages.Count} messages");
 
             // Warm up the WebView2 internal HWND so accelerator keys
             // and focus work immediately (without waiting for user click).
