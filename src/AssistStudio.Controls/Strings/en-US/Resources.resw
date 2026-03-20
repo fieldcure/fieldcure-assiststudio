@@ -76,13 +76,13 @@
     <value>tokens</value>
   </data>
   <data name="Chat_EditBranchHint" xml:space="preserve">
-    <value>Editing this message will create a new conversation branch. Use the arrow navigation buttons to switch between branches.</value>
+    <value>Editing this message will create a new conversation branch. Use the arrow navigation buttons to switch between branches. The current input bar settings (profile/model/tools) will be applied on send.</value>
   </data>
   <data name="Chat_EditCancel" xml:space="preserve">
     <value>Cancel</value>
   </data>
   <data name="Chat_EditSave" xml:space="preserve">
-    <value>Save</value>
+    <value>Send</value>
   </data>
   <data name="InputContainer_Placeholder" xml:space="preserve">
     <value>Type a message...</value>
