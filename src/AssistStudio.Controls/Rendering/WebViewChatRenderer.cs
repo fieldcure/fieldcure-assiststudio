@@ -93,9 +93,9 @@ internal class WebViewChatRenderer
         _webView.CoreWebView2.NavigationStarting += OnNavigationStarting;
         _webView.CoreWebView2.NewWindowRequested += OnNewWindowRequested;
 
-        // Disable browser accelerator keys (Ctrl+F, Ctrl+P, etc.) so that
-        // keydown events reach our JS listener, which forwards them via postMessage.
-        _webView.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled = false;
+        // Enable browser accelerator keys so clipboard shortcuts (Ctrl+C/V/X/A) work natively.
+        // Unwanted browser shortcuts (Ctrl+F, Ctrl+P, etc.) are blocked via JS keydown handler.
+        _webView.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled = true;
 
         var html = LoadEmbeddedResource("chat.html");
 

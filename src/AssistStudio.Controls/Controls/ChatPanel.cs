@@ -136,7 +136,7 @@ public sealed partial class ChatPanel : Control
     /// <summary>Identifies the <see cref="FontSize"/> dependency property for chat rendering.</summary>
     public new static readonly DependencyProperty FontSizeProperty =
         DependencyProperty.Register("ChatFontSize", typeof(double), typeof(ChatPanel),
-            new PropertyMetadata(14.0, OnFontSizeChanged));
+            new PropertyMetadata(15.0, OnFontSizeChanged));
 
     /// <summary>Identifies the <see cref="IsReadOnly"/> dependency property.</summary>
     public static readonly DependencyProperty IsReadOnlyProperty =
@@ -1041,6 +1041,12 @@ public sealed partial class ChatPanel : Control
                     await _renderer.FinalizeMessageAsync(msg.Id, msg.Content);
                 }
             }
+
+            // Warm up the WebView2 internal HWND so accelerator keys
+            // and focus work immediately (without waiting for user click).
+            _chatWebView.Focus(FocusState.Programmatic);
+            if (_inputArea is not null)
+                _inputArea.Focus(FocusState.Programmatic);
 
             // Listen for theme changes
             ActualThemeChanged += async (_, _) => await ApplyThemeAsync();
