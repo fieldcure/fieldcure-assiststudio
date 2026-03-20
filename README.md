@@ -30,7 +30,7 @@ AssistStudio is two things:
 - **Re-templatable WinUI 3 Controls** — `ChatPanel`, `InputContainer`, `AttachmentPreviewBar`, and `ToolApprovalPanel` are `TemplatedControl`s. Override `Generic.xaml` to fully customize the UI.
 - **Profiles & Presets** — Save provider configurations as presets; switch system prompts and tool selections with profiles.
 - **Workspace Context** — `IWorkspaceContext` for dynamic system prompt injection based on app state.
-- **Conversation Persistence** — Save and load conversations in `.astx` (JSON) format with full branching tree.
+- **Conversation Persistence** — Save and load conversations in `.astd` (JSON) format with full branching tree.
 - **Localization** — Built-in en-US and ko-KR resource strings.
 - **Structured Logging** — `DiagnosticLogger` with pluggable `OnException`, `OnWarning`, `OnInfo` callbacks.
 

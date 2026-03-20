@@ -125,7 +125,7 @@ When a user edits a sent message, the original branch is preserved and a new sib
 
 - Branches are stored via `ChatMessage.ParentId` forming a tree structure
 - Navigation is handled through WebView2 `WebMessageReceived` events
-- The full tree persists in `.astx` (JSON) files — no conversation history is lost
+- The full tree persists in `.astd` (JSON) files — no conversation history is lost
 
 ### Thinking Blocks
 

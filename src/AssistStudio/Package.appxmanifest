@@ -45,11 +45,11 @@
       </uap:VisualElements>
       <Extensions>
         <uap:Extension Category="windows.fileTypeAssociation">
-          <uap:FileTypeAssociation Name="astx">
+          <uap:FileTypeAssociation Name="astd">
             <uap:SupportedFileTypes>
-              <uap:FileType ContentType="application/json">.astx</uap:FileType>
+              <uap:FileType ContentType="application/json">.astd</uap:FileType>
             </uap:SupportedFileTypes>
-            <uap:DisplayName>AssistStudio Conversation</uap:DisplayName>
+            <uap:DisplayName>AssistStudio Document</uap:DisplayName>
             <uap:Logo>Assets\Square44x44Logo.png</uap:Logo>
           </uap:FileTypeAssociation>
         </uap:Extension>

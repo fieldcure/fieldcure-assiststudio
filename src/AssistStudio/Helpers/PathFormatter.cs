@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Linq;
 
 namespace AssistStudio.Helpers;
@@ -175,7 +175,7 @@ public static class PathFormatter
     /// <summary>
     /// Formats a path for menu display with an index number.
     /// </summary>
-    /// <param name="index">The menu item index (1-based).</param>
+    /// <param name="index">The menu item index (1-based).</param>rkxdl
     /// <param name="path">The full file path.</param>
     /// <param name="maxLength">The maximum length for the path portion. Default is 50.</param>
     /// <returns>A formatted string suitable for menu display.</returns>

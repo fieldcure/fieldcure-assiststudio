@@ -200,7 +200,7 @@ public class MyProvider : IAiProvider
 | `IWorkspaceContext` | Dynamic system prompt injection interface |
 | `IContextProvider` | RAG retrieval interface — returns `ContextChunk`s for a query |
 | `ContextChunk` | Retrieved context record — `Text`, `Source`, `Score` |
-| `ConversationManager` | Save/load conversations in `.astx` (JSON) format with tree support |
+| `ConversationManager` | Save/load conversations in `.astd` (JSON) format with tree support |
 | `ProviderFactory` | Create `IAiProvider` from a `ProviderPreset` |
 | `DiagnosticLogger` | Structured logging with `OnException`/`OnWarning`/`OnInfo` callbacks |
 | `ThinkingSupport` | Enum — `NotSupported`, `Optional`, `Required` |

@@ -13,7 +13,7 @@ public static class ConversationManager
     #region Constants
 
     /// <summary>The file extension used for conversation files.</summary>
-    public const string FileExtension = ".astx";
+    public const string FileExtension = ".astd";
 
     #endregion
 

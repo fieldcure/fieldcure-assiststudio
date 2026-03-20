@@ -638,7 +638,7 @@ public sealed partial class MainWindow : Window
     #region File Activation
 
     /// <summary>
-    /// Opens a conversation file from a file-activation path (e.g., double-clicking an .astx file).
+    /// Opens a conversation file from a file-activation path (e.g., double-clicking an .astd file).
     /// </summary>
     public async void OpenFileFromActivation(string filePath)
     {
