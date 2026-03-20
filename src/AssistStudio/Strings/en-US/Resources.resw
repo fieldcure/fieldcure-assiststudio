@@ -636,4 +636,7 @@
   <data name="Mcp_ConnectionFailed" xml:space="preserve">
     <value>MCP connection failed</value>
   </data>
+  <data name="Mcp_Disconnecting" xml:space="preserve">
+    <value>Disconnecting MCP servers, please wait...</value>
+  </data>
 </root>

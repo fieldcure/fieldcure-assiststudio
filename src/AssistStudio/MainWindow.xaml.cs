@@ -555,6 +555,8 @@ public sealed partial class MainWindow : Window
 
         if (ViewModel.Tabs.Count == 0)
         {
+            await ShutdownMcpServersAsync();
+            _isClosing = true;
             Close();
         }
     }
@@ -572,13 +574,15 @@ public sealed partial class MainWindow : Window
 
         var dirtyTabs = ViewModel.Tabs.Where(t => t.IsDirty && t.GetMessages().Count > 0).ToList();
         LoggingService.LogInfo($"[App] Window closing — {dirtyTabs.Count} dirty tabs");
+        args.Cancel = true;
+
         if (dirtyTabs.Count == 0)
         {
             await ShutdownMcpServersAsync();
+            _isClosing = true;
+            Close();
             return;
         }
-
-        args.Cancel = true;
 
         var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
         var dialog = new ThemedContentDialog
@@ -619,10 +623,13 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// Gracefully shuts down all MCP server connections before app exit.
     /// </summary>
-    private static async Task ShutdownMcpServersAsync()
+    private async Task ShutdownMcpServersAsync()
     {
         try
         {
+            var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
+            NotificationCenter.Instance.Post(loader.GetString("Mcp_Disconnecting"), durationMs: 30000);
+
             LoggingService.LogInfo("[App] Shutting down MCP servers...");
             await App.McpRegistry.DisposeAsync();
             LoggingService.LogInfo("[App] MCP servers shut down.");

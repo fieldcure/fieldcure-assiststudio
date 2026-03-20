@@ -636,4 +636,7 @@
   <data name="Mcp_ConnectionFailed" xml:space="preserve">
     <value>MCP 연결 실패</value>
   </data>
+  <data name="Mcp_Disconnecting" xml:space="preserve">
+    <value>MCP 서버 연결을 해제하고 있습니다. 잠시 기다려 주세요...</value>
+  </data>
 </root>
