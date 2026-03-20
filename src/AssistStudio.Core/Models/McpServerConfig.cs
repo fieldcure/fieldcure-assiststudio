@@ -64,6 +64,14 @@ public class McpServerConfig
     /// </summary>
     public List<string>? EnvironmentVariableKeys { get; set; }
 
+    /// <summary>
+    /// Short description of what this server provides.
+    /// Injected into search_tools description for AI model awareness.
+    /// Auto-populated from server's self-reported info on first connect;
+    /// user can override in settings.
+    /// </summary>
+    public string Description { get; set; } = "";
+
     /// <summary>Whether this server is enabled.</summary>
     public bool IsEnabled { get; set; } = true;
 

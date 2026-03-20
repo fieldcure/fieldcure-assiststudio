@@ -558,6 +558,9 @@
   <data name="Connect_ServerName" xml:space="preserve">
     <value>Server Name</value>
   </data>
+  <data name="Connect_ServerDescription" xml:space="preserve">
+    <value>Description (for AI)</value>
+  </data>
   <data name="Connect_Transport" xml:space="preserve">
     <value>Transport</value>
   </data>

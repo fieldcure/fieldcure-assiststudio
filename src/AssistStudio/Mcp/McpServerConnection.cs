@@ -103,6 +103,12 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
             var transport = CreateTransport();
             _client = await McpClient.CreateAsync(transport, cancellationToken: ct);
 
+            // Auto-fill description from server's self-reported info
+            if (string.IsNullOrWhiteSpace(Config.Description) && _client.ServerInfo is { } serverInfo)
+            {
+                Config.Description = serverInfo.Title ?? "";
+            }
+
             var mcpTools = await _client.ListToolsAsync(cancellationToken: ct);
             Tools = mcpTools
                 .Select(t => new McpToolAdapter(

@@ -1,5 +1,6 @@
 using AssistStudio.Mcp;
 using FieldCure.AssistStudio.Models;
+using System.Text;
 using System.Text.Json;
 
 namespace AssistStudio.Tools;
@@ -39,9 +40,7 @@ public class SearchToolsTool : IAssistTool, ISearchToolScope
     public string DisplayName => "Search Tools";
 
     /// <inheritdoc/>
-    public string Description =>
-        "Search available tools by keyword. Returns matching tool names and descriptions. " +
-        "Call this before invoking any external tool you don't already know about.";
+    public string Description => BuildDescription();
 
     /// <inheritdoc/>
     public string ParameterSchema => """
@@ -100,6 +99,34 @@ public class SearchToolsTool : IAssistTool, ISearchToolScope
     #endregion
 
     #region Private Methods
+
+    private string BuildDescription()
+    {
+        const string baseDesc =
+            "Search available tools by keyword. Returns matching tool names and descriptions. " +
+            "Call this before invoking any external tool you don't already know about.";
+
+        var connected = _registry.Connections
+            .Where(c => c.IsConnected && c.Config.IsEnabled)
+            .ToList();
+
+        if (connected.Count == 0)
+            return baseDesc;
+
+        var sb = new StringBuilder(baseDesc);
+        sb.AppendLine().AppendLine();
+        sb.AppendLine("Connected MCP servers:");
+
+        foreach (var conn in connected)
+        {
+            sb.Append($"- {conn.Config.Name} ({conn.Tools.Count} tools)");
+            if (!string.IsNullOrWhiteSpace(conn.Config.Description))
+                sb.Append($": {conn.Config.Description}");
+            sb.AppendLine();
+        }
+
+        return sb.ToString().TrimEnd();
+    }
 
     private static bool Match(IAssistTool tool, string[] keywords)
     {

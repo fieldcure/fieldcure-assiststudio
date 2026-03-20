@@ -558,6 +558,9 @@
   <data name="Connect_ServerName" xml:space="preserve">
     <value>서버 이름</value>
   </data>
+  <data name="Connect_ServerDescription" xml:space="preserve">
+    <value>설명 (AI용)</value>
+  </data>
   <data name="Connect_Transport" xml:space="preserve">
     <value>전송 방식</value>
   </data>

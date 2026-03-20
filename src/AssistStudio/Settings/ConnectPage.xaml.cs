@@ -181,6 +181,12 @@ public sealed partial class ConnectPage : Page
     private async Task<McpServerConfig?> ShowAddServerDialogAsync()
     {
         var nameBox = new TextBox { Header = _loader.GetString("Connect_ServerName"), PlaceholderText = "e.g., GitHub" };
+        var descriptionBox = new TextBox
+        {
+            Header = _loader.GetString("Connect_ServerDescription"),
+            PlaceholderText = "e.g., Manage GitHub repos, issues, and PRs",
+            MaxLength = 100,
+        };
         var transportCombo = new ComboBox
         {
             Header = _loader.GetString("Connect_Transport"),
@@ -209,6 +215,7 @@ public sealed partial class ConnectPage : Page
 
         var panel = new StackPanel { Spacing = 12, MinWidth = 400 };
         panel.Children.Add(nameBox);
+        panel.Children.Add(descriptionBox);
         panel.Children.Add(transportCombo);
         panel.Children.Add(commandBox);
         panel.Children.Add(argsBox);
@@ -235,6 +242,7 @@ public sealed partial class ConnectPage : Page
         var config = new McpServerConfig
         {
             Name = nameBox.Text.Trim(),
+            Description = descriptionBox.Text.Trim(),
             TransportType = transportCombo.SelectedIndex == 0 ? McpTransportType.Stdio : McpTransportType.Http,
         };
 
