@@ -1,6 +1,7 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
 using ModelContextProtocol.Client;
 
@@ -96,7 +97,7 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
     {
         State = McpConnectionState.Connecting;
         ErrorMessage = null;
-        Helpers.LoggingService.LogInfo($"[MCP] Connecting: {Config.Name} ({Config.TransportType})");
+        LoggingService.LogInfo($"[MCP] Connecting: {Config.Name} ({Config.TransportType})");
 
         try
         {
@@ -120,11 +121,11 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
                 .ToList();
 
             State = McpConnectionState.Connected;
-            Helpers.LoggingService.LogInfo($"[MCP] Connected: {Config.Name}, tools={Tools.Count}");
+            LoggingService.LogInfo($"[MCP] Connected: {Config.Name}, tools={Tools.Count}");
         }
         catch (Exception ex)
         {
-            Helpers.LoggingService.LogError($"[MCP] Connection failed: {Config.Name} — {ex.Message}");
+            LoggingService.LogError($"[MCP] Connection failed: {Config.Name} — {ex.Message}");
             ErrorMessage = ex.Message;
             State = McpConnectionState.Error;
             throw;
@@ -136,7 +137,7 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
     /// </summary>
     public async Task DisconnectAsync()
     {
-        Helpers.LoggingService.LogInfo($"[MCP] Disconnecting: {Config.Name}");
+        LoggingService.LogInfo($"[MCP] Disconnecting: {Config.Name}");
         if (_client is not null)
         {
             try
@@ -150,7 +151,7 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
                 ex is OperationCanceledException or TimeoutException or Win32Exception)
             {
                 // Expected during stdio process teardown — safe to ignore
-                AssistStudio.Helpers.LoggingService.LogException(ex);
+                LoggingService.LogException(ex);
             }
 
             _client = null;
@@ -159,7 +160,7 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
         Tools = [];
         State = McpConnectionState.Disconnected;
         ErrorMessage = null;
-        Helpers.LoggingService.LogInfo($"[MCP] Disconnected: {Config.Name}");
+        LoggingService.LogInfo($"[MCP] Disconnected: {Config.Name}");
     }
 
     /// <inheritdoc />
