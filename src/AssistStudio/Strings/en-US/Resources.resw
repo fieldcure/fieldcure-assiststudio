@@ -496,6 +496,9 @@
   <data name="Models_ThinkingBudget.Header" xml:space="preserve">
     <value>Reasoning budget (tokens)</value>
   </data>
+  <data name="Models_MaxTokens.Header" xml:space="preserve">
+    <value>Max tokens</value>
+  </data>
   <data name="Models_ThinkingOverrideAuto" xml:space="preserve">
     <value>Auto</value>
   </data>

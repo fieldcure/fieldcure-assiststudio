@@ -496,6 +496,9 @@
   <data name="Models_ThinkingBudget.Header" xml:space="preserve">
     <value>추론 예산 (토큰)</value>
   </data>
+  <data name="Models_MaxTokens.Header" xml:space="preserve">
+    <value>최대 토큰</value>
+  </data>
   <data name="Models_ThinkingOverrideAuto" xml:space="preserve">
     <value>자동</value>
   </data>

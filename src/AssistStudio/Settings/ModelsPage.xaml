@@ -84,6 +84,13 @@
                                               PlaceholderText="Not available"
                                               SelectionChanged="OnCloudModelChanged" />
                                 </StackPanel>
+                                <NumberBox x:Name="ClaudeMaxTokensBox"
+                                           x:Uid="Models_MaxTokens"
+                                           Header="Max tokens"
+                                           Value="4096" Minimum="1" Maximum="1000000"
+                                           SpinButtonPlacementMode="Inline"
+                                           SmallChange="1024" LargeChange="4096"
+                                           ValueChanged="OnMaxTokensChanged" />
                                 <StackPanel Spacing="4">
                                     <TextBlock x:Uid="Models_PdfHandling" Text="PDF handling" FontSize="12" Opacity="0.7" />
                                     <ComboBox x:Name="ClaudePdfCombo"
@@ -161,6 +168,13 @@
                                               PlaceholderText="Not available"
                                               SelectionChanged="OnCloudModelChanged" />
                                 </StackPanel>
+                                <NumberBox x:Name="OpenAIMaxTokensBox"
+                                           x:Uid="Models_MaxTokens"
+                                           Header="Max tokens"
+                                           Value="4096" Minimum="1" Maximum="1000000"
+                                           SpinButtonPlacementMode="Inline"
+                                           SmallChange="1024" LargeChange="4096"
+                                           ValueChanged="OnMaxTokensChanged" />
                                 <StackPanel Spacing="4">
                                     <TextBlock x:Uid="Models_PdfHandling" Text="PDF handling" FontSize="12" Opacity="0.7" />
                                     <ComboBox x:Name="OpenAIPdfCombo"
@@ -238,6 +252,13 @@
                                               PlaceholderText="Not available"
                                               SelectionChanged="OnCloudModelChanged" />
                                 </StackPanel>
+                                <NumberBox x:Name="GeminiMaxTokensBox"
+                                           x:Uid="Models_MaxTokens"
+                                           Header="Max tokens"
+                                           Value="4096" Minimum="1" Maximum="1000000"
+                                           SpinButtonPlacementMode="Inline"
+                                           SmallChange="1024" LargeChange="4096"
+                                           ValueChanged="OnMaxTokensChanged" />
                                 <StackPanel Spacing="4">
                                     <TextBlock x:Uid="Models_PdfHandling" Text="PDF handling" FontSize="12" Opacity="0.7" />
                                     <ComboBox x:Name="GeminiPdfCombo"
@@ -315,6 +336,13 @@
                                               PlaceholderText="Not available"
                                               SelectionChanged="OnCloudModelChanged" />
                                 </StackPanel>
+                                <NumberBox x:Name="GroqMaxTokensBox"
+                                           x:Uid="Models_MaxTokens"
+                                           Header="Max tokens"
+                                           Value="4096" Minimum="1" Maximum="1000000"
+                                           SpinButtonPlacementMode="Inline"
+                                           SmallChange="1024" LargeChange="4096"
+                                           ValueChanged="OnMaxTokensChanged" />
                                 <StackPanel Spacing="4">
                                     <TextBlock x:Uid="Models_PdfHandling" Text="PDF handling" FontSize="12" Opacity="0.7" />
                                     <ComboBox x:Name="GroqPdfCombo"
@@ -447,6 +475,13 @@
                                           PlaceholderText="Not available"
                                           SelectionChanged="OnOllamaModelChanged" />
                             </StackPanel>
+                            <NumberBox x:Name="OllamaMaxTokensBox"
+                                       x:Uid="Models_MaxTokens"
+                                       Header="Max tokens"
+                                       Value="4096" Minimum="1" Maximum="1000000"
+                                       SpinButtonPlacementMode="Inline"
+                                       SmallChange="1024" LargeChange="4096"
+                                       ValueChanged="OnMaxTokensChanged" />
                             <StackPanel Spacing="4">
                                 <TextBlock x:Uid="Models_PdfHandling" Text="PDF handling" FontSize="12" Opacity="0.7" />
                                 <ComboBox x:Name="OllamaPdfCombo"

@@ -424,6 +424,7 @@ public sealed partial class ModelsPage : Page
             PopulateComboFromCacheOrFallback("Groq", GroqModelCombo, FallbackGroqModels);
 
             PopulatePdfCombos();
+            PopulateMaxTokens();
             PopulateThinkingToggles();
         }
         finally
@@ -481,6 +482,29 @@ public sealed partial class ModelsPage : Page
             var saved = presets.TryGetValue(provider, out var p) ? p.PdfCapability : PdfCapability.Auto;
             var idx = Array.FindIndex(PdfOptions, o => o.Value == saved);
             combo.SelectedIndex = idx >= 0 ? idx : 0;
+        }
+    }
+
+    /// <summary>
+    /// Populates all Max Tokens NumberBoxes from saved presets.
+    /// </summary>
+    private void PopulateMaxTokens()
+    {
+        var presets = _presets.ToDictionary(p => p.ProviderType) ?? [];
+
+        var boxes = new (string Provider, NumberBox Box)[]
+        {
+            ("Claude", ClaudeMaxTokensBox),
+            ("OpenAI", OpenAIMaxTokensBox),
+            ("Gemini", GeminiMaxTokensBox),
+            ("Groq", GroqMaxTokensBox),
+            ("Ollama", OllamaMaxTokensBox),
+        };
+
+        foreach (var (provider, box) in boxes)
+        {
+            if (presets.TryGetValue(provider, out var p))
+                box.Value = p.MaxTokens;
         }
     }
 
@@ -823,6 +847,31 @@ public sealed partial class ModelsPage : Page
                 ? (int)budgetBox.Value : null;
             preset.ThinkingOverride = GetThinkingOverrideFromCombo(overrideCombo);
         }
+        PersistPresets();
+    }
+
+    /// <summary>
+    /// Handles Max Tokens NumberBox value changes for any provider.
+    /// </summary>
+    private void OnMaxTokensChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+    {
+        if (_isPopulating) return;
+        if (double.IsNaN(args.NewValue)) return;
+
+        var provider = sender.Name switch
+        {
+            nameof(ClaudeMaxTokensBox) => "Claude",
+            nameof(OpenAIMaxTokensBox) => "OpenAI",
+            nameof(GeminiMaxTokensBox) => "Gemini",
+            nameof(GroqMaxTokensBox) => "Groq",
+            nameof(OllamaMaxTokensBox) => "Ollama",
+            _ => (string?)null
+        };
+        if (provider is null) return;
+
+        var preset = FindPreset(provider);
+        if (preset is not null)
+            preset.MaxTokens = (int)args.NewValue;
         PersistPresets();
     }
 
