@@ -464,6 +464,7 @@ public sealed partial class MainWindow : Window
                 if (data is not null)
                 {
                     ViewModel.LoadConversation(data, path);
+                    AppSettings.AddRecentFile(path);
                 }
             };
 
