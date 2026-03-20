@@ -5,14 +5,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:local="using:AssistStudio.Settings"
-    xmlns:models="using:FieldCure.AssistStudio.Models"
     mc:Ignorable="d"
     NavigationCacheMode="Enabled">
-
-    <Page.Resources>
-        <local:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility" />
-    </Page.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
@@ -37,16 +31,20 @@
                            TextWrapping="Wrap"
                            Opacity="0.7" />
 
-                <!-- Profile list -->
+                <!-- Profile selector -->
                 <StackPanel Spacing="8">
-                    <Grid>
+                    <TextBlock x:Uid="Profiles_List" Text="Profiles"
+                               Style="{StaticResource BodyStrongTextBlockStyle}" />
+                    <Grid ColumnSpacing="4">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock x:Uid="Profiles_List" Text="Profiles"
-                                   Style="{StaticResource BodyStrongTextBlockStyle}"
-                                   VerticalAlignment="Center" />
+                        <ComboBox x:Name="ProfileCombo"
+                                  HorizontalAlignment="Stretch"
+                                  DisplayMemberPath="Name"
+                                  SelectionChanged="OnProfileSelectionChanged" />
                         <Button x:Name="AddProfileButton" Grid.Column="1"
                                 x:Uid="Profiles_AddProfile"
                                 Click="OnAddProfileClicked"
@@ -54,36 +52,18 @@
                                 Padding="6">
                             <FontIcon Glyph="&#xE710;" FontSize="14" />
                         </Button>
+                        <Button x:Name="DeleteProfileButton" Grid.Column="2"
+                                x:Uid="Profiles_DeleteProfile"
+                                Click="OnDeleteProfileClicked"
+                                ToolTipService.ToolTip="Delete"
+                                Padding="6">
+                            <FontIcon Glyph="&#xE74D;" FontSize="14" />
+                        </Button>
                     </Grid>
-
-                    <ListView x:Name="ProfileListView"
-                              SelectionMode="Single"
-                              SelectionChanged="OnProfileSelectionChanged"
-                              MaxHeight="200">
-                        <ListView.ItemTemplate>
-                            <DataTemplate x:DataType="models:Profile">
-                                <Grid Padding="4,2" ColumnSpacing="8">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="{x:Bind Name}" VerticalAlignment="Center" />
-                                    <Button Grid.Column="1" Padding="4"
-                                            x:Uid="Profiles_DeleteProfile"
-                                            Visibility="{x:Bind IsBuiltIn, Converter={StaticResource InverseBoolToVisibility}}"
-                                            Click="OnDeleteProfileClicked"
-                                            ToolTipService.ToolTip="Delete"
-                                            Style="{StaticResource SubtleButtonStyle}">
-                                        <FontIcon Glyph="&#xE74D;" FontSize="12" />
-                                    </Button>
-                                </Grid>
-                            </DataTemplate>
-                        </ListView.ItemTemplate>
-                    </ListView>
                 </StackPanel>
 
                 <!-- Editor -->
-                <StackPanel Spacing="8">
+                <StackPanel Spacing="16">
                     <TextBox x:Name="ProfileNameBox"
                              x:Uid="Profiles_ProfileName"
                              Header="Name"
@@ -95,7 +75,8 @@
                              PlaceholderText="Enter instructions..."
                              AcceptsReturn="True"
                              TextWrapping="Wrap"
-                             MinHeight="200"
+                             MinHeight="100"
+                             MaxHeight="400"
                              TextChanged="OnEditorChanged" />
 
                     <!-- Desired Provider -->

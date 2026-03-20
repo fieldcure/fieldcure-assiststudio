@@ -1,4 +1,4 @@
-﻿using AssistStudio.Dialogs;
+using AssistStudio.Dialogs;
 using AssistStudio.Helpers;
 using AssistStudio.Tools;
 using AssistStudio.Controls;
@@ -29,6 +29,11 @@ public sealed partial class ProfilesPage : Page
     /// </summary>
     private bool _suppressEvents;
 
+    /// <summary>
+    /// Maps each tool CollapsibleSection to its list of CheckBoxes for count updates.
+    /// </summary>
+    private readonly Dictionary<CollapsibleSection, List<CheckBox>> _toolSections = [];
+
     #endregion
 
     #region Constructors
@@ -52,18 +57,18 @@ public sealed partial class ProfilesPage : Page
 
         _suppressEvents = true;
         _profiles = AppSettings.LoadProfiles();
-        ProfileListView.ItemsSource = _profiles;
+        ProfileCombo.ItemsSource = _profiles;
 
         // Select active profile
         var activeName = AppSettings.ActiveProfile;
         var activeIndex = _profiles.FindIndex(p => p.Name == activeName);
         if (activeIndex >= 0)
         {
-            ProfileListView.SelectedIndex = activeIndex;
+            ProfileCombo.SelectedIndex = activeIndex;
         }
         else if (_profiles.Count > 0)
         {
-            ProfileListView.SelectedIndex = 0;
+            ProfileCombo.SelectedIndex = 0;
         }
         _suppressEvents = false;
 
@@ -75,7 +80,7 @@ public sealed partial class ProfilesPage : Page
     #region Event Handlers
 
     /// <summary>
-    /// Handles profile list selection changes to load the selected profile into the editor.
+    /// Handles profile combo box selection changes to load the selected profile into the editor.
     /// </summary>
     private void OnProfileSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -90,7 +95,7 @@ public sealed partial class ProfilesPage : Page
     private void OnEditorChanged(object sender, TextChangedEventArgs e)
     {
         if (_suppressEvents) return;
-        if (ProfileListView.SelectedItem is not Profile profile) return;
+        if (ProfileCombo.SelectedItem is not Profile profile) return;
 
         if (!profile.IsBuiltIn)
         {
@@ -98,12 +103,12 @@ public sealed partial class ProfilesPage : Page
         }
         profile.Text = SystemPromptBox.Text;
 
-        // Refresh list display
+        // Refresh combo display
         _suppressEvents = true;
-        var idx = ProfileListView.SelectedIndex;
-        ProfileListView.ItemsSource = null;
-        ProfileListView.ItemsSource = _profiles;
-        ProfileListView.SelectedIndex = idx;
+        var idx = ProfileCombo.SelectedIndex;
+        ProfileCombo.ItemsSource = null;
+        ProfileCombo.ItemsSource = _profiles;
+        ProfileCombo.SelectedIndex = idx;
         _suppressEvents = false;
 
         SaveAll();
@@ -148,9 +153,9 @@ public sealed partial class ProfilesPage : Page
         _profiles.Add(newProfile);
 
         _suppressEvents = true;
-        ProfileListView.ItemsSource = null;
-        ProfileListView.ItemsSource = _profiles;
-        ProfileListView.SelectedIndex = _profiles.Count - 1;
+        ProfileCombo.ItemsSource = null;
+        ProfileCombo.ItemsSource = _profiles;
+        ProfileCombo.SelectedIndex = _profiles.Count - 1;
         _suppressEvents = false;
 
         LoadSelectedProfile();
@@ -163,7 +168,7 @@ public sealed partial class ProfilesPage : Page
     private void OnProviderChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_suppressEvents) return;
-        if (ProfileListView.SelectedItem is not Profile profile) return;
+        if (ProfileCombo.SelectedItem is not Profile profile) return;
 
         var providerType = ProviderCombo.SelectedIndex <= 0
             ? null
@@ -185,19 +190,19 @@ public sealed partial class ProfilesPage : Page
     private void OnModelChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_suppressEvents) return;
-        if (ProfileListView.SelectedItem is not Profile profile) return;
+        if (ProfileCombo.SelectedItem is not Profile profile) return;
 
         profile.PreferredModelId = ModelCombo.SelectedItem as string;
         SaveAll();
     }
 
     /// <summary>
-    /// Handles tool checkbox checked/unchecked events.
+    /// Handles tool checkbox checked/unchecked events and updates section subheaders.
     /// </summary>
     private void OnToolChecked(object sender, RoutedEventArgs e)
     {
         if (_suppressEvents) return;
-        if (ProfileListView.SelectedItem is not Profile profile) return;
+        if (ProfileCombo.SelectedItem is not Profile profile) return;
         if (sender is not CheckBox cb || cb.Tag is not string toolName) return;
 
         if (cb.IsChecked == true)
@@ -210,25 +215,35 @@ public sealed partial class ProfilesPage : Page
             profile.ToolNames.Remove(toolName);
         }
 
+        // Update the parent section's subheader count
+        foreach (var (section, checkBoxes) in _toolSections)
+        {
+            if (checkBoxes.Contains(cb))
+            {
+                var selected = checkBoxes.Count(c => c.IsChecked == true);
+                section.SubHeader = $"{selected}/{checkBoxes.Count}";
+                break;
+            }
+        }
+
         SaveAll();
     }
 
     /// <summary>
-    /// Handles the delete profile button click to remove a custom profile.
+    /// Handles the delete profile button click to remove the currently selected custom profile.
     /// </summary>
     private void OnDeleteProfileClicked(object sender, RoutedEventArgs e)
     {
-        if (sender is not FrameworkElement fe) return;
-        if (fe.DataContext is not Profile profile) return;
+        if (ProfileCombo.SelectedItem is not Profile profile) return;
         if (profile.IsBuiltIn) return;
 
         var idx = _profiles.IndexOf(profile);
         _profiles.Remove(profile);
 
         _suppressEvents = true;
-        ProfileListView.ItemsSource = null;
-        ProfileListView.ItemsSource = _profiles;
-        ProfileListView.SelectedIndex = Math.Min(idx, _profiles.Count - 1);
+        ProfileCombo.ItemsSource = null;
+        ProfileCombo.ItemsSource = _profiles;
+        ProfileCombo.SelectedIndex = Math.Min(idx, _profiles.Count - 1);
         _suppressEvents = false;
 
         LoadSelectedProfile();
@@ -244,11 +259,17 @@ public sealed partial class ProfilesPage : Page
     /// </summary>
     private void LoadSelectedProfile()
     {
-        if (ProfileListView.SelectedItem is not Profile profile) return;
+        if (ProfileCombo.SelectedItem is not Profile profile) return;
 
         _suppressEvents = true;
+
+        // Show name field only for custom profiles
+        ProfileNameBox.Visibility = profile.IsBuiltIn ? Visibility.Collapsed : Visibility.Visible;
         ProfileNameBox.Text = profile.Name;
-        ProfileNameBox.IsEnabled = !profile.IsBuiltIn;
+
+        // Show delete button only for custom profiles
+        DeleteProfileButton.Visibility = profile.IsBuiltIn ? Visibility.Collapsed : Visibility.Visible;
+
         SystemPromptBox.Text = profile.Text;
 
         // Provider
@@ -273,7 +294,7 @@ public sealed partial class ProfilesPage : Page
         AppSettings.SaveCustomProfiles(_profiles);
 
         // Update current system prompt
-        if (ProfileListView.SelectedItem is Profile selected)
+        if (ProfileCombo.SelectedItem is Profile selected)
         {
             AppSettings.ActiveProfile = selected.Name;
             AppSettings.SystemPrompt = selected.Text;
@@ -394,6 +415,7 @@ public sealed partial class ProfilesPage : Page
     private void PopulateToolsPanel(Profile profile)
     {
         ToolsPanel.Children.Clear();
+        _toolSections.Clear();
         var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
         var hasAnyTool = false;
 
@@ -403,6 +425,7 @@ public sealed partial class ProfilesPage : Page
         {
             hasAnyTool = true;
             var builtInPanel = new StackPanel { Spacing = 2 };
+            var builtInCheckBoxes = new List<CheckBox>();
             foreach (var tool in builtInTools)
             {
                 var localizedName = loader.GetString($"Tool_{tool.Name}");
@@ -415,15 +438,19 @@ public sealed partial class ProfilesPage : Page
                 cb.Checked += OnToolChecked;
                 cb.Unchecked += OnToolChecked;
                 builtInPanel.Children.Add(cb);
+                builtInCheckBoxes.Add(cb);
             }
-            ToolsPanel.Children.Add(new CollapsibleSection
+            var selectedCount = builtInCheckBoxes.Count(c => c.IsChecked == true);
+            var builtInSection = new CollapsibleSection
             {
                 Header = loader.GetString("Profiles_BuiltInTools"),
-                SubHeader = $"{builtInTools.Count}",
+                SubHeader = $"{selectedCount}/{builtInTools.Count}",
                 Body = builtInPanel,
                 ContentSpacing = 4,
                 IsExpanded = true,
-            });
+            };
+            _toolSections[builtInSection] = builtInCheckBoxes;
+            ToolsPanel.Children.Add(builtInSection);
         }
 
         // --- Extended tools (Search Tools toggle) ---
@@ -442,14 +469,15 @@ public sealed partial class ProfilesPage : Page
             TextWrapping = TextWrapping.Wrap,
             Opacity = 0.7,
         });
-        ToolsPanel.Children.Add(new CollapsibleSection
+        var extSection = new CollapsibleSection
         {
             Header = loader.GetString("Profiles_ExtendedTools"),
-            SubHeader = "1",
+            SubHeader = profile.UseSearchTools ? "1/1" : "0/1",
             Body = extPanel,
             ContentSpacing = 4,
             IsExpanded = true,
-        });
+        };
+        ToolsPanel.Children.Add(extSection);
 
         // --- MCP tools grouped by server ---
         var mcpSections = new List<CollapsibleSection>();
@@ -460,6 +488,7 @@ public sealed partial class ProfilesPage : Page
             if (serverTools.Count == 0) continue;
             hasAnyTool = true;
             var toolsPanel = new StackPanel { Spacing = 2 };
+            var mcpCheckBoxes = new List<CheckBox>();
             foreach (var tool in serverTools)
             {
                 var cb = new CheckBox
@@ -471,6 +500,7 @@ public sealed partial class ProfilesPage : Page
                 cb.Checked += OnToolChecked;
                 cb.Unchecked += OnToolChecked;
                 toolsPanel.Children.Add(cb);
+                mcpCheckBoxes.Add(cb);
             }
 
             // Wrap with filter box + tools list
@@ -499,15 +529,17 @@ public sealed partial class ProfilesPage : Page
             bodyPanel.Children.Add(filterBox);
             bodyPanel.Children.Add(toolsPanel);
 
+            var mcpSelectedCount = mcpCheckBoxes.Count(c => c.IsChecked == true);
             var section = new CollapsibleSection
             {
                 Header = serverName,
-                SubHeader = $"{serverTools.Count}",
+                SubHeader = $"{mcpSelectedCount}/{serverTools.Count}",
                 Body = bodyPanel,
                 ContentSpacing = 4,
                 IsExpanded = false,
                 Visibility = profile.UseSearchTools ? Visibility.Collapsed : Visibility.Visible,
             };
+            _toolSections[section] = mcpCheckBoxes;
             mcpSections.Add(section);
             ToolsPanel.Children.Add(section);
         }
@@ -516,6 +548,7 @@ public sealed partial class ProfilesPage : Page
         searchToolsCb.Checked += (_, _) =>
         {
             profile.UseSearchTools = true;
+            extSection.SubHeader = "1/1";
             foreach (var s in mcpSections) s.Visibility = Visibility.Collapsed;
             System.Diagnostics.Debug.WriteLine($"[SearchTools] Checked: profile={profile.Name}, UseSearchTools={profile.UseSearchTools}, IsBuiltIn={profile.IsBuiltIn}");
             SaveAll();
@@ -526,6 +559,7 @@ public sealed partial class ProfilesPage : Page
         searchToolsCb.Unchecked += (_, _) =>
         {
             profile.UseSearchTools = false;
+            extSection.SubHeader = "0/1";
             foreach (var s in mcpSections) s.Visibility = Visibility.Visible;
             SaveAll();
         };
@@ -561,10 +595,9 @@ public sealed partial class ProfilesPage : Page
     /// </summary>
     private void SaveActiveProfile()
     {
-        if (ProfileListView.SelectedItem is Profile selected)
+        if (ProfileCombo.SelectedItem is Profile selected)
         {
             AppSettings.ActiveProfile = selected.Name;
-            AppSettings.SystemPrompt = selected.Text;
             AppSettings.SystemPrompt = selected.Text;
         }
     }
