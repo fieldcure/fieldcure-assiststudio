@@ -1032,7 +1032,8 @@ public sealed partial class ChatPanel : Control
                 if (msg.Role == ChatRole.User)
                 {
                     await _renderer.AppendUserMessageAsync(
-                        msg.Id, msg.Content, msg.Timestamp.ToString("O"), msg.Attachments);
+                        msg.Id, msg.Content, msg.Timestamp.ToString("O"), msg.Attachments,
+                        msg.SiblingIndex, msg.SiblingCount);
                 }
                 else if (msg.Role == ChatRole.Assistant)
                 {

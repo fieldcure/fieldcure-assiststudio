@@ -308,8 +308,7 @@ public partial class MainViewModel : ObservableObject
 
         // Check if any message has branching (multiple children for same parent)
         var hasBranching = messages
-            .Where(m => m.ParentId is not null)
-            .GroupBy(m => m.ParentId)
+            .GroupBy(m => m.ParentId ?? "")
             .Any(g => g.Count() > 1);
 
         if (!hasBranching)
@@ -344,11 +343,11 @@ public partial class MainViewModel : ObservableObject
             currentKey = last.Id ?? rootKey;
         }
 
-        // First pass: register all messages as branch messages (tree only)
-        foreach (var msg in messages)
+        // First pass: register branch-only messages in the tree (not on the active path)
+        foreach (var msg in messages.Where(m => !activePath.Contains(m.Id)))
             vm.RegisterBranchMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId, msg.Id, msg.ParentId);
 
-        // Second pass: add only active path messages to _messages
+        // Second pass: add active path messages (registers in tree + adds to _messages)
         foreach (var msg in messages.Where(m => activePath.Contains(m.Id)))
             vm.AddRestoredMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId, msg.Id, msg.ParentId);
     }
