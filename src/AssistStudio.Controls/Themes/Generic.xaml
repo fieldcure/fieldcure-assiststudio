@@ -209,8 +209,10 @@
                                      Grid.Row="1"
                                      AcceptsReturn="True"
                                      TextWrapping="Wrap"
+                                     FontSize="15"
                                      MaxHeight="120"
-                                     MinHeight="32"
+                                     MinHeight="44"
+                                     Padding="12,8"
                                      BorderThickness="0"
                                      Background="Transparent"
                                      PlaceholderText="{TemplateBinding Placeholder}">
@@ -428,13 +430,17 @@
                             <Border x:Name="PART_SearchBar" Grid.Row="1"
                                     VerticalAlignment="Top"
                                     HorizontalAlignment="Right"
-                                    Margin="0,8,16,0"
+                                    Margin="0,8,28,0"
                                     Padding="6,4"
                                     CornerRadius="6"
-                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    Background="{ThemeResource SolidBackgroundFillColorQuarternaryBrush}"
                                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                     BorderThickness="1"
+                                    Translation="0,0,32"
                                     Visibility="Collapsed">
+                                <Border.Shadow>
+                                    <ThemeShadow />
+                                </Border.Shadow>
                                 <StackPanel Orientation="Horizontal" Spacing="4">
                                     <TextBox x:Name="PART_SearchTextBox"
                                              x:Uid="Chat_SearchTextBox"
