@@ -8,6 +8,7 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+                <ResourceDictionary Source="ms-appx:///Controls/Shimmer/Themes/Generic.xaml" />
             </ResourceDictionary.MergedDictionaries>
             <!-- SubtleButtonStyle is built-in since WinAppSDK 1.8 (XamlControlsResources) -->
             <Style x:Key="DescriptionTextBlockStyle" TargetType="TextBlock"

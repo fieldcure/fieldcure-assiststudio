@@ -64,6 +64,13 @@ public sealed partial class ModelSelectionDialog : ThemedContentDialog
     {
         var localIds = new HashSet<string>();
 
+        // Show shimmer placeholders while loading
+        LocalModelsShimmer.Visibility = Visibility.Visible;
+        LocalModelsList.Visibility = Visibility.Collapsed;
+        NoLocalModelsText.Visibility = Visibility.Collapsed;
+        AvailableModelsShimmer.Visibility = Visibility.Visible;
+        AvailableModelsList.Visibility = Visibility.Collapsed;
+
         try
         {
             var localModels = await _manager.ListLocalModelsAsync();
@@ -75,6 +82,8 @@ public sealed partial class ModelSelectionDialog : ThemedContentDialog
             }).ToList();
 
             LocalModelsList.ItemsSource = items;
+            LocalModelsShimmer.Visibility = Visibility.Collapsed;
+            LocalModelsList.Visibility = Visibility.Visible;
             NoLocalModelsText.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             // Include both full name (e.g. "llava:latest") and base name ("llava")
             // so Available list correctly filters out already-downloaded models.
@@ -89,6 +98,7 @@ public sealed partial class ModelSelectionDialog : ThemedContentDialog
         catch (Exception ex)
         {
             LoggingService.LogException(ex);
+            LocalModelsShimmer.Visibility = Visibility.Collapsed;
             NoLocalModelsText.Visibility = Visibility.Visible;
         }
 
@@ -113,10 +123,14 @@ public sealed partial class ModelSelectionDialog : ThemedContentDialog
                     };
                 })
                 .ToList();
+
+            AvailableModelsShimmer.Visibility = Visibility.Collapsed;
+            AvailableModelsList.Visibility = Visibility.Visible;
         }
         catch (Exception ex)
         {
             LoggingService.LogException(ex);
+            AvailableModelsShimmer.Visibility = Visibility.Collapsed;
         }
     }
 

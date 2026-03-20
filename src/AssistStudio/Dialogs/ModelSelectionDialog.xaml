@@ -4,6 +4,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:AssistStudio.Dialogs"
+    xmlns:controls="using:AssistStudio.Controls"
     x:Uid="ModelDialog"
     Title="Ollama Models"
     CloseButtonText="Close"
@@ -22,9 +23,15 @@
         <TextBlock x:Name="NoLocalModelsText" x:Uid="ModelDialog_NoLocalModels"
                    Text="No models downloaded yet."
                    FontSize="12" Opacity="0.6" Visibility="Collapsed" />
+        <StackPanel x:Name="LocalModelsShimmer" Spacing="8">
+            <controls:Shimmer Height="36" CornerRadius="4" />
+            <controls:Shimmer Height="36" CornerRadius="4" />
+            <controls:Shimmer Height="36" CornerRadius="4" />
+        </StackPanel>
         <ListView x:Name="LocalModelsList"
                   MaxHeight="200"
-                  SelectionMode="None">
+                  SelectionMode="None"
+                  Visibility="Collapsed">
             <ListView.ItemTemplate>
                 <DataTemplate>
                     <Grid Padding="4" ColumnSpacing="12">
@@ -46,9 +53,15 @@
         <!-- Available Models -->
         <TextBlock x:Uid="ModelDialog_AvailableModels" Text="Available Models"
                    Style="{StaticResource SubtitleTextBlockStyle}" />
+        <StackPanel x:Name="AvailableModelsShimmer" Spacing="8">
+            <controls:Shimmer Height="36" CornerRadius="4" />
+            <controls:Shimmer Height="36" CornerRadius="4" />
+            <controls:Shimmer Height="36" CornerRadius="4" />
+        </StackPanel>
         <ListView x:Name="AvailableModelsList"
                   MaxHeight="200"
-                  SelectionMode="None">
+                  SelectionMode="None"
+                  Visibility="Collapsed">
             <ListView.ItemTemplate>
                 <DataTemplate>
                     <Grid Padding="4" ColumnSpacing="8">
