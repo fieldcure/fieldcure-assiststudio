@@ -1,8 +1,9 @@
-﻿using AssistStudio.Helpers;
+using AssistStudio.Helpers;
 using FieldCure.AssistStudio.Helpers;
 using FieldCure.AssistStudio.Providers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 
 namespace AssistStudio.Dialogs;
 
@@ -23,6 +24,11 @@ public sealed partial class ModelSelectionDialog : ThemedContentDialog
     /// Detected hardware specifications for compatibility checking.
     /// </summary>
     private readonly HardwareSpec _hw;
+
+    /// <summary>
+    /// The button that triggered the VRAM warning, pending user confirmation.
+    /// </summary>
+    private Button? _pendingPullButton;
 
     #endregion
 
@@ -67,24 +73,26 @@ public sealed partial class ModelSelectionDialog : ThemedContentDialog
         // Show shimmer placeholders while loading
         LocalModelsShimmer.Visibility = Visibility.Visible;
         LocalModelsList.Visibility = Visibility.Collapsed;
-        NoLocalModelsText.Visibility = Visibility.Collapsed;
+        NoLocalModelsPanel.Visibility = Visibility.Collapsed;
         AvailableModelsShimmer.Visibility = Visibility.Visible;
         AvailableModelsList.Visibility = Visibility.Collapsed;
 
         try
         {
             var localModels = await _manager.ListLocalModelsAsync();
+            var deleteTooltip = Loader.GetString("ModelDialog_DeleteTooltip");
             var items = localModels.Select(m => new
             {
                 m.Id,
                 Name = m.Id,
-                Size = FormatSize(m.SizeBytes)
+                Size = FormatSize(m.SizeBytes),
+                DeleteTooltip = deleteTooltip,
             }).ToList();
 
             LocalModelsList.ItemsSource = items;
             LocalModelsShimmer.Visibility = Visibility.Collapsed;
-            LocalModelsList.Visibility = Visibility.Visible;
-            NoLocalModelsText.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            LocalModelsList.Visibility = items.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            NoLocalModelsPanel.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             // Include both full name (e.g. "llava:latest") and base name ("llava")
             // so Available list correctly filters out already-downloaded models.
             foreach (var m in localModels)
@@ -99,12 +107,13 @@ public sealed partial class ModelSelectionDialog : ThemedContentDialog
         {
             LoggingService.LogException(ex);
             LocalModelsShimmer.Visibility = Visibility.Collapsed;
-            NoLocalModelsText.Visibility = Visibility.Visible;
+            NoLocalModelsPanel.Visibility = Visibility.Visible;
         }
 
         try
         {
             var available = await _manager.SearchAvailableModelsAsync();
+            var downloadTooltip = Loader.GetString("ModelDialog_DownloadTooltip");
             AvailableModelsList.ItemsSource = available
                 .Where(m => !localIds.Contains(m.Id))
                 .Select(m =>
@@ -117,9 +126,12 @@ public sealed partial class ModelSelectionDialog : ThemedContentDialog
                     {
                         Name = m.Id,
                         m.DisplayName,
-                        CompatIcon = ModelCompatibility.GetCompatibilityIcon(level),
+                        CompatLevel = level,
+                        CompatGlyph = GetCompatGlyph(level),
+                        CompatBrush = GetCompatBrush(level),
                         CompatText = ModelCompatibility.GetCompatibilityText(level),
                         EstimatedSize = estimated > 0 ? FormatSize(estimated) : "",
+                        DownloadTooltip = downloadTooltip,
                     };
                 })
                 .ToList();
@@ -132,6 +144,40 @@ public sealed partial class ModelSelectionDialog : ThemedContentDialog
             LoggingService.LogException(ex);
             AvailableModelsShimmer.Visibility = Visibility.Collapsed;
         }
+    }
+
+    /// <summary>
+    /// Returns a Segoe Fluent Icons glyph for the given compatibility level.
+    /// </summary>
+    private static string GetCompatGlyph(CompatibilityLevel level) => level switch
+    {
+        CompatibilityLevel.Compatible => "\uE73E",      // CheckMark
+        CompatibilityLevel.NotRecommended => "\uE7BA",   // Warning
+        CompatibilityLevel.NotCompatible => "\uE711",    // Cancel
+        _ => "\uE9CE"                                    // Unknown
+    };
+
+    /// <summary>
+    /// Returns a themed brush for the given compatibility level.
+    /// </summary>
+    private Brush GetCompatBrush(CompatibilityLevel level)
+    {
+        var key = level switch
+        {
+            CompatibilityLevel.Compatible => "SystemFillColorSuccessBrush",
+            CompatibilityLevel.NotRecommended => "SystemFillColorCautionBrush",
+            CompatibilityLevel.NotCompatible => "SystemFillColorCriticalBrush",
+            _ => "SystemFillColorNeutralBrush"
+        };
+
+        if (Resources.TryGetValue(key, out var resource) && resource is Brush brush)
+            return brush;
+
+        // Fallback: try application-level resources
+        if (Application.Current.Resources.TryGetValue(key, out resource) && resource is Brush appBrush)
+            return appBrush;
+
+        return new SolidColorBrush(Microsoft.UI.Colors.Gray);
     }
 
     /// <summary>
@@ -148,6 +194,25 @@ public sealed partial class ModelSelectionDialog : ThemedContentDialog
         {
             LoggingService.LogException(ex);
         }
+    }
+
+    /// <summary>
+    /// Shows a confirmation dialog before deleting the specified model.
+    /// </summary>
+    /// <returns>True if the user confirmed deletion; otherwise, false.</returns>
+    private async Task<bool> ConfirmDeleteAsync(string modelName)
+    {
+        var dialog = new ThemedContentDialog
+        {
+            Title = Loader.GetString("ModelDialog_DeleteConfirmTitle"),
+            Content = string.Format(Loader.GetString("ModelDialog_DeleteConfirmMessage"), modelName),
+            PrimaryButtonText = Loader.GetString("ModelDialog_Delete/Content"),
+            CloseButtonText = Loader.GetString("ModelDialog_Cancel"),
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = XamlRoot
+        };
+        var result = await dialog.ShowAsync();
+        return result == ContentDialogResult.Primary;
     }
 
     /// <summary>
@@ -169,27 +234,74 @@ public sealed partial class ModelSelectionDialog : ThemedContentDialog
     #region Event Handlers
 
     /// <summary>
-    /// Handles the delete button click for a local model.
+    /// Handles the delete button click for a local model with confirmation.
     /// </summary>
-    private void OnDeleteModel(object sender, RoutedEventArgs e)
+    private async void OnDeleteModel(object sender, RoutedEventArgs e)
     {
         if (sender is Button btn && btn.Tag is string modelName)
         {
-            _ = DeleteModelAsync(modelName);
+            if (await ConfirmDeleteAsync(modelName))
+            {
+                await DeleteModelAsync(modelName);
+            }
         }
     }
 
     /// <summary>
     /// Handles the pull button click for an available model, queuing it for download.
+    /// Shows a VRAM warning TeachingTip if the model is not compatible.
     /// </summary>
     private void OnPullModel(object sender, RoutedEventArgs e)
     {
-        if (sender is Button btn && btn.Tag is string modelName)
+        if (sender is not Button btn || btn.Tag is not string modelName)
+            return;
+
+        // Check compatibility from the bound data
+        if (btn.DataContext is { } dc)
         {
-            ModelsToPull.Add(modelName);
-            btn.IsEnabled = false;
-            btn.Content = new Windows.ApplicationModel.Resources.ResourceLoader().GetString("ModelDialog_Queued");
+            var level = (CompatibilityLevel)dc.GetType().GetProperty("CompatLevel")!.GetValue(dc)!;
+            if (level == CompatibilityLevel.NotCompatible)
+            {
+                _pendingPullButton = btn;
+                VramWarningTip.Target = btn;
+                VramWarningTip.IsOpen = true;
+                return;
+            }
         }
+
+        QueuePull(btn, modelName);
+    }
+
+    /// <summary>
+    /// Confirms the VRAM warning and proceeds with download.
+    /// </summary>
+    private void OnVramWarningConfirm(TeachingTip sender, object args)
+    {
+        VramWarningTip.IsOpen = false;
+        if (_pendingPullButton is { Tag: string modelName } btn)
+        {
+            QueuePull(btn, modelName);
+        }
+        _pendingPullButton = null;
+    }
+
+    /// <summary>
+    /// Cancels the VRAM warning.
+    /// </summary>
+    private void OnVramWarningCancel(TeachingTip sender, object args)
+    {
+        VramWarningTip.IsOpen = false;
+        _pendingPullButton = null;
+    }
+
+    /// <summary>
+    /// Queues a model for download and updates the button state.
+    /// </summary>
+    private void QueuePull(Button btn, string modelName)
+    {
+        ModelsToPull.Add(modelName);
+        btn.IsEnabled = false;
+        btn.Content = new FontIcon { Glyph = "\uE73E", FontSize = 14 };
     }
 
     /// <summary>
@@ -198,7 +310,7 @@ public sealed partial class ModelSelectionDialog : ThemedContentDialog
     private void OnPullCustomModel(object sender, RoutedEventArgs e)
     {
         var name = CustomModelBox.Text?.Trim();
-        if (!string.IsNullOrEmpty(name))
+        if (!string.IsNullOrEmpty(name) && !ModelsToPull.Contains(name))
         {
             ModelsToPull.Add(name);
             CustomModelBox.Text = "";

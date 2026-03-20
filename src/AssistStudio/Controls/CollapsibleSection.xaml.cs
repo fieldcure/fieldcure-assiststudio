@@ -5,7 +5,7 @@ using Microsoft.Windows.ApplicationModel.Resources;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace FieldCure.AssistStudio.Controls;
+namespace AssistStudio.Controls;
 
 /// <summary>
 /// A reusable collapsible section control with header, sub-header, and toggle functionality.

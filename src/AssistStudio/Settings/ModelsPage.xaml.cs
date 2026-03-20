@@ -1,6 +1,6 @@
 ﻿using AssistStudio.Dialogs;
 using AssistStudio.Helpers;
-using FieldCure.AssistStudio.Controls;
+using AssistStudio.Controls;
 using FieldCure.AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
 using FieldCure.AssistStudio.Providers;

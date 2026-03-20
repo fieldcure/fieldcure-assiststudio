@@ -1,7 +1,7 @@
 ﻿using AssistStudio.Dialogs;
 using AssistStudio.Helpers;
 using AssistStudio.Tools;
-using FieldCure.AssistStudio.Controls;
+using AssistStudio.Controls;
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;

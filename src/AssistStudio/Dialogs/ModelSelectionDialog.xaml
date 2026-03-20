@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <local:ThemedContentDialog
     x:Class="AssistStudio.Dialogs.ModelSelectionDialog"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -10,89 +10,162 @@
     CloseButtonText="Close"
     DefaultButton="Close">
 
+    <local:ThemedContentDialog.Resources>
+        <x:Double x:Key="ContentDialogTitleFontSize">24</x:Double>
+    </local:ThemedContentDialog.Resources>
+
     <StackPanel Spacing="16" MinWidth="500">
         <!-- Hardware Info -->
-        <StackPanel x:Name="HardwarePanel" Spacing="2" Opacity="0.7">
-            <TextBlock x:Name="GpuInfoText" FontSize="12" />
-            <TextBlock x:Name="RamInfoText" FontSize="12" />
-        </StackPanel>
+        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1" CornerRadius="4" Padding="12,8">
+            <StackPanel Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE7F4;" FontSize="12" Opacity="0.6" VerticalAlignment="Center" />
+                    <TextBlock x:Name="GpuInfoText" FontSize="12" Opacity="0.8" VerticalAlignment="Center" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE950;" FontSize="12" Opacity="0.6" VerticalAlignment="Center" />
+                    <TextBlock x:Name="RamInfoText" FontSize="12" Opacity="0.8" VerticalAlignment="Center" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
 
         <!-- Local Models -->
-        <TextBlock x:Uid="ModelDialog_LocalModels" Text="Local Models"
-                   Style="{StaticResource SubtitleTextBlockStyle}" />
-        <TextBlock x:Name="NoLocalModelsText" x:Uid="ModelDialog_NoLocalModels"
-                   Text="No models downloaded yet."
-                   FontSize="12" Opacity="0.6" Visibility="Collapsed" />
-        <StackPanel x:Name="LocalModelsShimmer" Spacing="8">
-            <controls:Shimmer Height="36" CornerRadius="4" />
-            <controls:Shimmer Height="36" CornerRadius="4" />
-            <controls:Shimmer Height="36" CornerRadius="4" />
-        </StackPanel>
-        <ListView x:Name="LocalModelsList"
-                  MaxHeight="200"
-                  SelectionMode="None"
-                  Visibility="Collapsed">
-            <ListView.ItemTemplate>
-                <DataTemplate>
-                    <Grid Padding="4" ColumnSpacing="12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" />
-                        <TextBlock Grid.Column="1" Text="{Binding Size}" VerticalAlignment="Center" Opacity="0.6" />
-                        <Button Grid.Column="2" x:Uid="ModelDialog_Delete"
-                                Content="Delete" Tag="{Binding Name}"
-                                Click="OnDeleteModel" />
-                    </Grid>
-                </DataTemplate>
-            </ListView.ItemTemplate>
-        </ListView>
+        <controls:CollapsibleSection x:Name="LocalModelsSection"
+                               x:Uid="ModelDialog_LocalModelsSection"
+                               Header="Local Models" IsExpanded="True" ContentSpacing="0">
+            <controls:CollapsibleSection.Body>
+                <StackPanel Spacing="4">
+                    <StackPanel x:Name="NoLocalModelsPanel" Visibility="Collapsed" Spacing="4"
+                                HorizontalAlignment="Center" Padding="0,12">
+                        <FontIcon Glyph="&#xE896;" FontSize="24" Opacity="0.4"
+                                  HorizontalAlignment="Center" />
+                        <TextBlock x:Name="NoLocalModelsText" x:Uid="ModelDialog_NoLocalModels"
+                                   Text="No models downloaded yet. Download from the list below."
+                                   FontSize="12" Opacity="0.6" TextAlignment="Center" />
+                    </StackPanel>
+                    <StackPanel x:Name="LocalModelsShimmer" Spacing="8">
+                        <controls:Shimmer Height="36" CornerRadius="4" />
+                        <controls:Shimmer Height="36" CornerRadius="4" />
+                        <controls:Shimmer Height="36" CornerRadius="4" />
+                    </StackPanel>
+                    <ListView x:Name="LocalModelsList"
+                              MaxHeight="200"
+                              SelectionMode="None"
+                              Visibility="Collapsed">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Padding="4" ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Ellipse Grid.Column="0" Width="6" Height="6" VerticalAlignment="Center"
+                                             Fill="{ThemeResource AccentFillColorDefaultBrush}" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="2" Text="{Binding Size}" VerticalAlignment="Center" Opacity="0.6" />
+                                    <Button Grid.Column="3" Tag="{Binding Name}" Click="OnDeleteModel"
+                                            ToolTipService.ToolTip="{Binding DeleteTooltip}"
+                                            Style="{StaticResource SubtleButtonStyle}"
+                                            Padding="6" VerticalAlignment="Center">
+                                        <FontIcon Glyph="&#xE74D;" FontSize="14" />
+                                    </Button>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </StackPanel>
+            </controls:CollapsibleSection.Body>
+        </controls:CollapsibleSection>
 
         <!-- Available Models -->
-        <TextBlock x:Uid="ModelDialog_AvailableModels" Text="Available Models"
-                   Style="{StaticResource SubtitleTextBlockStyle}" />
-        <StackPanel x:Name="AvailableModelsShimmer" Spacing="8">
-            <controls:Shimmer Height="36" CornerRadius="4" />
-            <controls:Shimmer Height="36" CornerRadius="4" />
-            <controls:Shimmer Height="36" CornerRadius="4" />
-        </StackPanel>
-        <ListView x:Name="AvailableModelsList"
-                  MaxHeight="200"
-                  SelectionMode="None"
-                  Visibility="Collapsed">
-            <ListView.ItemTemplate>
-                <DataTemplate>
-                    <Grid Padding="4" ColumnSpacing="8">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="{Binding CompatIcon}" VerticalAlignment="Center"
-                                   FontSize="14" />
-                        <StackPanel Grid.Column="1" Orientation="Vertical" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding DisplayName}" />
-                            <TextBlock Text="{Binding CompatText}" FontSize="11" Opacity="0.6" />
-                        </StackPanel>
-                        <TextBlock Grid.Column="2" Text="{Binding EstimatedSize}" VerticalAlignment="Center"
-                                   Opacity="0.6" FontSize="12" />
-                        <Button Grid.Column="3" x:Uid="ModelDialog_Pull"
-                                Content="Download" Tag="{Binding Name}"
-                                Click="OnPullModel" />
-                    </Grid>
-                </DataTemplate>
-            </ListView.ItemTemplate>
-        </ListView>
+        <controls:CollapsibleSection x:Name="AvailableModelsSection"
+                               x:Uid="ModelDialog_AvailableModelsSection"
+                               Header="Available Models" IsExpanded="True" ContentSpacing="0">
+            <controls:CollapsibleSection.Body>
+                <StackPanel Spacing="4">
+                    <StackPanel x:Name="AvailableModelsShimmer" Spacing="8">
+                        <controls:Shimmer Height="36" CornerRadius="4" />
+                        <controls:Shimmer Height="36" CornerRadius="4" />
+                        <controls:Shimmer Height="36" CornerRadius="4" />
+                    </StackPanel>
+                    <ListView x:Name="AvailableModelsList"
+                              MaxHeight="200"
+                              SelectionMode="None"
+                              Visibility="Collapsed">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Padding="4" ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon Grid.Column="0" Glyph="{Binding CompatGlyph}"
+                                             Foreground="{Binding CompatBrush}"
+                                             FontSize="14" VerticalAlignment="Center" />
+                                    <StackPanel Grid.Column="1" Orientation="Vertical" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding DisplayName}" />
+                                        <TextBlock Text="{Binding CompatText}" FontSize="11" Opacity="0.6" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="2" Text="{Binding EstimatedSize}" VerticalAlignment="Center"
+                                               Opacity="0.6" FontSize="12" />
+                                    <Button Grid.Column="3" Tag="{Binding Name}" Click="OnPullModel"
+                                            ToolTipService.ToolTip="{Binding DownloadTooltip}"
+                                            Style="{StaticResource SubtleButtonStyle}"
+                                            Padding="6" VerticalAlignment="Center">
+                                        <FontIcon Glyph="&#xE896;" FontSize="14" />
+                                    </Button>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </StackPanel>
+            </controls:CollapsibleSection.Body>
+        </controls:CollapsibleSection>
 
         <!-- Custom Pull -->
-        <StackPanel Orientation="Horizontal" Spacing="8">
-            <TextBox x:Name="CustomModelBox"
+        <Grid ColumnSpacing="8" Margin="28,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="CustomModelBox" Grid.Column="0"
                      x:Uid="ModelDialog_CustomModel"
-                     PlaceholderText="Custom model name" Width="330" />
-            <Button x:Uid="ModelDialog_PullCustom" Content="Download" Click="OnPullCustomModel" />
-        </StackPanel>
+                     PlaceholderText="Ollama library model name (e.g. phi3:medium)" />
+            <Button Grid.Column="1" Click="OnPullCustomModel"
+                    x:Uid="ModelDialog_PullCustomBtn"
+                    ToolTipService.ToolTip="Download"
+                    Style="{StaticResource SubtleButtonStyle}"
+                    Padding="6" VerticalAlignment="Center">
+                <FontIcon Glyph="&#xE896;" FontSize="14" />
+            </Button>
+        </Grid>
+
+        <!-- Download hint -->
+        <TextBlock x:Uid="ModelDialog_DownloadHint"
+                   Text="Selected models will start downloading after this dialog is closed."
+                   FontSize="12" Opacity="0.6" TextWrapping="Wrap" />
+
+        <!-- VRAM warning tip -->
+        <TeachingTip x:Name="VramWarningTip"
+                     x:Uid="ModelDialog_VramWarningTip"
+                     Title="Insufficient VRAM"
+                     Subtitle="This model may not run properly due to insufficient VRAM."
+                     ActionButtonClick="OnVramWarningConfirm"
+                     CloseButtonClick="OnVramWarningCancel"
+                     IsLightDismissEnabled="False"
+                     PreferredPlacement="Left">
+            <TeachingTip.ActionButtonContent>
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <FontIcon Glyph="&#xE896;" FontSize="12" />
+                    <TextBlock x:Uid="ModelDialog_VramWarningContinueText" Text="Download Anyway" />
+                </StackPanel>
+            </TeachingTip.ActionButtonContent>
+        </TeachingTip>
     </StackPanel>
 </local:ThemedContentDialog>

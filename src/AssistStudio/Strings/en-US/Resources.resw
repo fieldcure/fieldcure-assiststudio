@@ -379,26 +379,71 @@
   <data name="ModelDialog_LocalModels.Text" xml:space="preserve">
     <value>Local Models</value>
   </data>
+  <data name="ModelDialog_LocalModelsSection.Header" xml:space="preserve">
+    <value>Local Models</value>
+  </data>
   <data name="ModelDialog_NoLocalModels.Text" xml:space="preserve">
-    <value>No models downloaded yet.</value>
+    <value>No models downloaded yet. Download from the list below.</value>
   </data>
   <data name="ModelDialog_AvailableModels.Text" xml:space="preserve">
-    <value>Available Models</value>
+    <value>Recommended Models</value>
+  </data>
+  <data name="ModelDialog_AvailableModelsSection.Header" xml:space="preserve">
+    <value>Recommended Models</value>
   </data>
   <data name="ModelDialog_Delete.Content" xml:space="preserve">
     <value>Delete</value>
+  </data>
+  <data name="ModelDialog_DeleteTooltip" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="ModelDialog_DownloadTooltip" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="ModelDialog_PullCustomBtn.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="ModelDialog_DeleteConfirmTitle" xml:space="preserve">
+    <value>Delete Model</value>
+  </data>
+  <data name="ModelDialog_DeleteConfirmMessage" xml:space="preserve">
+    <value>Are you sure you want to delete "{0}"? You will need to download it again.</value>
+  </data>
+  <data name="ModelDialog_Cancel" xml:space="preserve">
+    <value>Cancel</value>
   </data>
   <data name="ModelDialog_Pull.Content" xml:space="preserve">
     <value>Download</value>
   </data>
   <data name="ModelDialog_CustomModel.PlaceholderText" xml:space="preserve">
-    <value>Custom model name</value>
+    <value>Ollama library model name (e.g. phi3:medium)</value>
   </data>
   <data name="ModelDialog_PullCustom.Content" xml:space="preserve">
     <value>Download</value>
   </data>
   <data name="ModelDialog_Queued" xml:space="preserve">
     <value>Queued</value>
+  </data>
+  <data name="ModelDialog_DownloadHint.Text" xml:space="preserve">
+    <value>Selected models will start downloading after this dialog is closed.</value>
+  </data>
+  <data name="ModelDialog_VramWarningTitle" xml:space="preserve">
+    <value>Insufficient VRAM</value>
+  </data>
+  <data name="ModelDialog_VramWarningMessage" xml:space="preserve">
+    <value>This model may not run properly due to insufficient VRAM. Do you want to download it anyway?</value>
+  </data>
+  <data name="ModelDialog_VramWarningContinue" xml:space="preserve">
+    <value>Download Anyway</value>
+  </data>
+  <data name="ModelDialog_VramWarningTip.Title" xml:space="preserve">
+    <value>Insufficient VRAM</value>
+  </data>
+  <data name="ModelDialog_VramWarningTip.Subtitle" xml:space="preserve">
+    <value>This model may not run properly due to insufficient VRAM.</value>
+  </data>
+  <data name="ModelDialog_VramWarningContinueText.Text" xml:space="preserve">
+    <value>Download Anyway</value>
   </data>
   <data name="Tab_NewConversation" xml:space="preserve">
     <value>Untitled</value>

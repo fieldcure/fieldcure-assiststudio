@@ -379,26 +379,71 @@
   <data name="ModelDialog_LocalModels.Text" xml:space="preserve">
     <value>로컬 모델</value>
   </data>
+  <data name="ModelDialog_LocalModelsSection.Header" xml:space="preserve">
+    <value>로컬 모델</value>
+  </data>
   <data name="ModelDialog_NoLocalModels.Text" xml:space="preserve">
-    <value>다운로드된 모델이 없습니다.</value>
+    <value>다운로드된 모델이 없습니다. 아래 목록에서 모델을 다운로드하세요.</value>
   </data>
   <data name="ModelDialog_AvailableModels.Text" xml:space="preserve">
-    <value>사용 가능한 모델</value>
+    <value>추천 모델</value>
+  </data>
+  <data name="ModelDialog_AvailableModelsSection.Header" xml:space="preserve">
+    <value>추천 모델</value>
   </data>
   <data name="ModelDialog_Delete.Content" xml:space="preserve">
     <value>삭제</value>
+  </data>
+  <data name="ModelDialog_DeleteTooltip" xml:space="preserve">
+    <value>삭제</value>
+  </data>
+  <data name="ModelDialog_DownloadTooltip" xml:space="preserve">
+    <value>다운로드</value>
+  </data>
+  <data name="ModelDialog_PullCustomBtn.ToolTipService.ToolTip" xml:space="preserve">
+    <value>다운로드</value>
+  </data>
+  <data name="ModelDialog_DeleteConfirmTitle" xml:space="preserve">
+    <value>모델 삭제</value>
+  </data>
+  <data name="ModelDialog_DeleteConfirmMessage" xml:space="preserve">
+    <value>"{0}"을(를) 삭제하시겠습니까? 다시 다운로드해야 합니다.</value>
+  </data>
+  <data name="ModelDialog_Cancel" xml:space="preserve">
+    <value>취소</value>
   </data>
   <data name="ModelDialog_Pull.Content" xml:space="preserve">
     <value>다운로드</value>
   </data>
   <data name="ModelDialog_CustomModel.PlaceholderText" xml:space="preserve">
-    <value>사용자 지정 모델 이름</value>
+    <value>Ollama 라이브러리 모델명 (예: phi3:medium)</value>
   </data>
   <data name="ModelDialog_PullCustom.Content" xml:space="preserve">
     <value>다운로드</value>
   </data>
   <data name="ModelDialog_Queued" xml:space="preserve">
     <value>대기 중</value>
+  </data>
+  <data name="ModelDialog_DownloadHint.Text" xml:space="preserve">
+    <value>선택한 모델은 이 창을 닫은 후 다운로드가 시작됩니다.</value>
+  </data>
+  <data name="ModelDialog_VramWarningTitle" xml:space="preserve">
+    <value>VRAM 부족</value>
+  </data>
+  <data name="ModelDialog_VramWarningMessage" xml:space="preserve">
+    <value>VRAM이 부족하여 이 모델이 정상적으로 실행되지 않을 수 있습니다. 계속 다운로드하시겠습니까?</value>
+  </data>
+  <data name="ModelDialog_VramWarningContinue" xml:space="preserve">
+    <value>계속 다운로드</value>
+  </data>
+  <data name="ModelDialog_VramWarningTip.Title" xml:space="preserve">
+    <value>VRAM 부족</value>
+  </data>
+  <data name="ModelDialog_VramWarningTip.Subtitle" xml:space="preserve">
+    <value>VRAM이 부족하여 이 모델이 정상적으로 실행되지 않을 수 있습니다.</value>
+  </data>
+  <data name="ModelDialog_VramWarningContinueText.Text" xml:space="preserve">
+    <value>계속 다운로드</value>
   </data>
   <data name="Tab_NewConversation" xml:space="preserve">
     <value>새 대화</value>
