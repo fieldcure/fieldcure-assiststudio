@@ -449,13 +449,17 @@ public sealed partial class MainWindow : Window
         var idx = 1;
         foreach (var filePath in recentPaths)
         {
-            var name = Path.GetFileNameWithoutExtension(filePath);
             var modified = File.GetLastWriteTime(filePath).ToString("g");
             var item = new MenuFlyoutItem
             {
-                Text = $"{idx}  {name}",
+                Text = PathFormatter.FormatForMenu(idx, filePath),
             };
-            ToolTipService.SetToolTip(item, $"{filePath}\n{modified}");
+            var toolTip = new ToolTip
+            {
+                Content = $"{filePath}\n{modified}",
+                Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
+            };
+            ToolTipService.SetToolTip(item, toolTip);
 
             var path = filePath; // capture for lambda
             item.Click += async (_, _) =>
@@ -479,7 +483,6 @@ public sealed partial class MainWindow : Window
         var clearItem = new MenuFlyoutItem
         {
             Text = loader2.GetString("Menu_ClearRecentHistory"),
-            Icon = new FontIcon { Glyph = "\xE74D" },
         };
         clearItem.Click += (_, _) =>
         {
