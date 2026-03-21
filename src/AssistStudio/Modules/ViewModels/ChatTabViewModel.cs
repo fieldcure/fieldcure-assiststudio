@@ -587,6 +587,14 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         IsDirty = true;
     }
 
+    /// <summary>
+    /// Marks the conversation as dirty when the user switches branches.
+    /// </summary>
+    public void OnBranchChanged(object? _sender, EventArgs _e)
+    {
+        IsDirty = true;
+    }
+
     #endregion
 
     #region Private Methods

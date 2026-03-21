@@ -85,6 +85,7 @@ public sealed partial class ChatTabView : UserControl
         Panel.TitleGenerated += vm.OnTitleGenerated;
         Panel.MessageAdded += vm.OnMessageAdded;
         Panel.TitleEditRequested += vm.OnTitleEditRequested;
+        Panel.BranchChanged += vm.OnBranchChanged;
     }
 
     /// <summary>
@@ -97,6 +98,7 @@ public sealed partial class ChatTabView : UserControl
         Panel.TitleGenerated -= vm.OnTitleGenerated;
         Panel.MessageAdded -= vm.OnMessageAdded;
         Panel.TitleEditRequested -= vm.OnTitleEditRequested;
+        Panel.BranchChanged -= vm.OnBranchChanged;
     }
 
     #endregion
