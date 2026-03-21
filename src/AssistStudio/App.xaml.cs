@@ -1,4 +1,6 @@
-﻿using AssistStudio.Helpers;
+using System.Runtime.InteropServices;
+using System.Web;
+using AssistStudio.Helpers;
 using AssistStudio.Mcp;
 using FieldCure.AssistStudio.Helpers;
 using Microsoft.UI.Dispatching;
@@ -11,7 +13,8 @@ using WindowHelper = FieldCure.AssistStudio.Controls.Helpers.WindowHelper;
 namespace AssistStudio;
 
 /// <summary>
-/// Application entry point that manages the main window lifecycle and file activation handling.
+/// Application entry point that manages the main window lifecycle, file activation,
+/// and protocol activation (<c>assiststudio://</c>) handling.
 /// </summary>
 public partial class App : Application
 {
@@ -65,15 +68,9 @@ public partial class App : Application
         MainWindow.Activate();
         LoggingService.LogInfo("[App] MainWindow activated");
 
-        // Handle file activation on cold start
+        // Handle cold-start activation (file or protocol)
         var activatedArgs = AppInstance.GetCurrent().GetActivatedEventArgs();
-        if (activatedArgs.Kind == ExtendedActivationKind.File &&
-            activatedArgs.Data is IFileActivatedEventArgs fileArgs &&
-            fileArgs.Files.Count > 0)
-        {
-            LoggingService.LogInfo($"[App] Cold-start file activation: {fileArgs.Files[0].Path}");
-            MainWindow.OpenFileFromActivation(fileArgs.Files[0].Path);
-        }
+        HandleActivation(activatedArgs);
 
         // Listen for redirected activations (app already running)
         AppInstance.GetCurrent().Activated += OnActivated;
@@ -84,23 +81,114 @@ public partial class App : Application
     #region Event Handlers
 
     /// <summary>
-    /// Handles redirected activation events when the app is already running and a file is opened.
+    /// Handles redirected activation events when the app is already running.
     /// </summary>
     private void OnActivated(object? sender, AppActivationArguments args)
     {
-        if (args.Kind == ExtendedActivationKind.File &&
-            args.Data is IFileActivatedEventArgs fileArgs &&
-            fileArgs.Files.Count > 0)
+        LoggingService.LogInfo($"[App] Redirected activation: {args.Kind}");
+        HandleActivation(args);
+    }
+
+    #endregion
+
+    #region Activation Handling
+
+    /// <summary>
+    /// Processes activation arguments from protocol, file, or launch activation.
+    /// Called both on initial launch and when redirected from another instance.
+    /// </summary>
+    private void HandleActivation(AppActivationArguments args)
+    {
+        switch (args.Kind)
         {
-            var filePath = fileArgs.Files[0].Path;
-            LoggingService.LogInfo($"[App] Redirected file activation: {filePath}");
-            MainWindow?.DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Normal, () =>
-            {
-                MainWindow?.OpenFileFromActivation(filePath);
-                MainWindow?.Activate(); // Bring to front
-            });
+            case ExtendedActivationKind.File:
+                if (args.Data is IFileActivatedEventArgs fileArgs && fileArgs.Files.Count > 0)
+                {
+                    LoggingService.LogInfo($"[App] File activation: {fileArgs.Files[0].Path}");
+                    OpenFileOnUiThread(fileArgs.Files[0].Path);
+                }
+                break;
+
+            case ExtendedActivationKind.Protocol:
+                if (args.Data is IProtocolActivatedEventArgs protocolArgs)
+                {
+                    LoggingService.LogInfo($"[App] Protocol activation: {protocolArgs.Uri}");
+                    HandleProtocolActivation(protocolArgs.Uri);
+                }
+                break;
+
+            case ExtendedActivationKind.Launch:
+                // Normal launch — nothing special
+                break;
         }
     }
+
+    /// <summary>
+    /// Handles activation via <c>assiststudio://</c> protocol URI.
+    /// Bare URI brings the window to front; <c>assiststudio://open?file=...</c> opens a file.
+    /// </summary>
+    private void HandleProtocolActivation(Uri uri)
+    {
+        if (uri.Host.Equals("open", StringComparison.OrdinalIgnoreCase))
+        {
+            var query = HttpUtility.ParseQueryString(uri.Query);
+            var filePath = query["file"];
+            if (!string.IsNullOrEmpty(filePath))
+            {
+                OpenFileOnUiThread(filePath);
+                return;
+            }
+        }
+
+        // assiststudio:// (bare) or unrecognized command — bring window to front
+        BringWindowToFront();
+    }
+
+    /// <summary>
+    /// Opens a conversation file on the UI thread, bringing the window to front.
+    /// </summary>
+    private void OpenFileOnUiThread(string filePath)
+    {
+        if (!File.Exists(filePath) ||
+            !filePath.EndsWith(ConversationManager.FileExtension, StringComparison.OrdinalIgnoreCase))
+        {
+            LoggingService.LogWarning($"[App] Invalid activation file: {filePath}");
+            return;
+        }
+
+        MainWindow?.DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Normal, () =>
+        {
+            MainWindow?.OpenFileFromActivation(filePath);
+            BringWindowToFrontCore();
+        });
+    }
+
+    /// <summary>
+    /// Brings the main window to the foreground, restoring it if minimized.
+    /// </summary>
+    private void BringWindowToFront()
+    {
+        MainWindow?.DispatcherQueue.TryEnqueue(BringWindowToFrontCore);
+    }
+
+    /// <summary>
+    /// Core implementation for bringing the window to front. Must be called on the UI thread.
+    /// </summary>
+    private void BringWindowToFrontCore()
+    {
+        if (MainWindow is null) return;
+        MainWindow.Activate();
+
+        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(MainWindow);
+        ShowWindow(hwnd, 9); // SW_RESTORE
+        SetForegroundWindow(hwnd);
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool ShowWindow(nint hWnd, int nCmdShow);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(nint hWnd);
 
     #endregion
 
