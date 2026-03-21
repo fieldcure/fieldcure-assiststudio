@@ -102,7 +102,9 @@ internal sealed class TabContextFlyout : MenuFlyout
     private MenuFlyoutItem CloseSaved => _closeSaved ??= CreateItem(
         Res.GetString("TabContext_CloseSaved"), async () =>
         {
-            var saved = _viewModel.Tabs.Where(t => !t.IsDirty).ToList();
+            var saved = _viewModel.Tabs
+                .Where(t => !t.IsDirty && t.GetMessages().Count > 0)
+                .ToList();
             foreach (var tab in saved)
                 _viewModel.CloseTab(tab);
             if (_viewModel.Tabs.Count == 0)
