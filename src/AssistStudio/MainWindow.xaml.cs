@@ -359,7 +359,7 @@ public sealed partial class MainWindow : Window
         InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
         picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
         picker.SuggestedFileName = tab.Title;
-        picker.FileTypeChoices.Add("AssistStudio Conversation", [ConversationManager.FileExtension]);
+        picker.FileTypeChoices.Add("AssistStudio Document", [ConversationManager.FileExtension]);
 
         var file = await picker.PickSaveFileAsync();
         if (file is null) return false;
