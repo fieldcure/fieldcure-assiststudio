@@ -210,6 +210,18 @@ public class McpServerRegistry : IAsyncDisposable
                 c => (IReadOnlyList<IAssistTool>)c.Tools.Cast<IAssistTool>().ToList());
     }
 
+    /// <summary>
+    /// Kills all MCP server connections immediately without awaiting graceful shutdown.
+    /// Intended for app exit only.
+    /// </summary>
+    public void ForceKillAll()
+    {
+        LoggingService.LogInfo($"[MCP] ForceKillAll: {_connections.Count} connections");
+        foreach (var conn in _connections)
+            conn.ForceKill();
+        _connections.Clear();
+    }
+
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {

@@ -689,21 +689,19 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// Gracefully shuts down all MCP server connections before app exit.
     /// </summary>
-    private async Task ShutdownMcpServersAsync()
+    private Task ShutdownMcpServersAsync()
     {
         try
         {
-            var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
-            NotificationCenter.Instance.Post(loader.GetString("Mcp_Disconnecting"), durationMs: 30000);
-
-            LoggingService.LogInfo("[App] Shutting down MCP servers...");
-            await App.McpRegistry.DisposeAsync();
-            LoggingService.LogInfo("[App] MCP servers shut down.");
+            LoggingService.LogInfo("[App] Force-killing MCP servers...");
+            App.McpRegistry.ForceKillAll();
+            LoggingService.LogInfo("[App] MCP servers killed.");
         }
         catch (Exception ex)
         {
             LoggingService.LogError($"[App] MCP shutdown error: {ex.Message}");
         }
+        return Task.CompletedTask;
     }
 
     #endregion

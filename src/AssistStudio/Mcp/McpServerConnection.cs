@@ -162,6 +162,27 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
         LoggingService.LogInfo($"[MCP] Disconnected: {Config.Name}");
     }
 
+    /// <summary>
+    /// Immediately kills the MCP server process without waiting for graceful shutdown.
+    /// Use only during app exit where speed matters over cleanup.
+    /// </summary>
+    public void ForceKill()
+    {
+        if (_client is not null)
+        {
+            try
+            {
+                _ = _client.DisposeAsync();
+            }
+            catch { }
+
+            _client = null;
+        }
+
+        Tools = [];
+        State = McpConnectionState.Disconnected;
+    }
+
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
