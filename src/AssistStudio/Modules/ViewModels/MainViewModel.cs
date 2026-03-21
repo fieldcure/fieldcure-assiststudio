@@ -360,8 +360,24 @@ public partial class MainViewModel : ObservableObject
         foreach (var msg in messages.Where(m => !activePath.Contains(m.Id)))
             vm.RegisterBranchMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId, msg.Id, msg.ParentId, msg.ToolCalls, msg.ToolCallId);
 
-        // Second pass: add active path messages (registers in tree + adds to _messages)
-        foreach (var msg in messages.Where(m => activePath.Contains(m.Id)))
+        // Second pass: add active path messages in tree-walk order (parent→child chain)
+        // File order may differ from active path order when branches are interleaved.
+        var messageById = messages.Where(m => activePath.Contains(m.Id)).ToDictionary(m => m.Id!);
+        var ordered = new List<SavedMessage>();
+        var walkKey = activePath.First()!;
+        while (messageById.TryGetValue(walkKey, out var msg))
+        {
+            ordered.Add(msg);
+            // Follow ActiveChildId to next message, or find child in childrenMap
+            if (msg.ActiveChildId is not null && messageById.ContainsKey(msg.ActiveChildId))
+                walkKey = msg.ActiveChildId;
+            else if (childrenMap.TryGetValue(msg.Id!, out var children))
+                walkKey = children.FirstOrDefault(c => activePath.Contains(c.Id))?.Id ?? "";
+            else
+                break;
+        }
+
+        foreach (var msg in ordered)
             vm.AddRestoredMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId, msg.Id, msg.ParentId, msg.ToolCalls, msg.ToolCallId);
     }
 

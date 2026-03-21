@@ -369,6 +369,11 @@ public sealed partial class ChatPanel : Control
     private bool _isInitialized;
 
     /// <summary>
+    /// Whether restored messages have already been rendered (prevents duplicate rendering).
+    /// </summary>
+    private bool _hasRenderedRestored;
+
+    /// <summary>
     /// Whether a conversation title has already been auto-generated.
     /// </summary>
     private bool _titleGenerated;
@@ -1811,7 +1816,8 @@ public sealed partial class ChatPanel : Control
     /// </summary>
     public async Task RenderRestoredMessagesAsync()
     {
-        if (!_isInitialized || _messages.Count == 0) return;
+        if (!_isInitialized || _messages.Count == 0 || _hasRenderedRestored) return;
+        _hasRenderedRestored = true;
 
         DiagnosticLogger.LogInfo($"[Chat] RenderRestoredMessages: {_messages.Count} messages");
         SwitchToChatLayout();
