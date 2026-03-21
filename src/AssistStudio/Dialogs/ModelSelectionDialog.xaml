@@ -67,7 +67,7 @@
                                              Fill="{ThemeResource AccentFillColorDefaultBrush}" />
                                     <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" />
                                     <TextBlock Grid.Column="2" Text="{Binding Size}" VerticalAlignment="Center" Opacity="0.6" />
-                                    <Button Grid.Column="3" Tag="{Binding Name}" Click="OnDeleteModel"
+                                    <Button Grid.Column="3" x:Uid="ModelDialog_DeleteBtn" Tag="{Binding Name}" Click="OnDeleteModel"
                                             ToolTipService.ToolTip="{Binding DeleteTooltip}"
                                             Style="{StaticResource SubtleButtonStyle}"
                                             Padding="6" VerticalAlignment="Center">
@@ -114,7 +114,7 @@
                                     </StackPanel>
                                     <TextBlock Grid.Column="2" Text="{Binding EstimatedSize}" VerticalAlignment="Center"
                                                Opacity="0.6" FontSize="12" />
-                                    <Button Grid.Column="3" Tag="{Binding Name}" Click="OnPullModel"
+                                    <Button Grid.Column="3" x:Uid="ModelDialog_DownloadBtn" Tag="{Binding Name}" Click="OnPullModel"
                                             ToolTipService.ToolTip="{Binding DownloadTooltip}"
                                             Style="{StaticResource SubtleButtonStyle}"
                                             Padding="6" VerticalAlignment="Center">

@@ -238,16 +238,19 @@
 
                                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="2">
                                     <Button x:Name="PART_AttachButton"
+                                            x:Uid="InputContainer_Attach"
                                             Style="{StaticResource SubtleButtonStyle}"
                                             Padding="6">
                                         <FontIcon Glyph="&#xE710;" FontSize="14" />
                                     </Button>
                                     <Button x:Name="PART_SummarizeButton"
+                                            x:Uid="InputContainer_Summarize"
                                             Style="{StaticResource SubtleButtonStyle}"
                                             Padding="6">
                                         <FontIcon Glyph="&#xEB78;" FontSize="14" />
                                     </Button>
                                     <Button x:Name="PART_ToolButton"
+                                            x:Uid="InputContainer_Tools"
                                             Style="{StaticResource SubtleButtonStyle}"
                                             Padding="6"
                                             Visibility="Collapsed">
@@ -271,6 +274,7 @@
                                               Padding="8,4" />
                                     <!-- Send button (visible when idle) -->
                                     <Button x:Name="PART_SendButton"
+                                            x:Uid="InputContainer_Send"
                                             Style="{StaticResource SubtleButtonStyle}"
                                             VerticalAlignment="Center"
                                             Padding="6">
@@ -278,6 +282,7 @@
                                     </Button>
                                     <!-- Stop button (visible when streaming) -->
                                     <Button x:Name="PART_StopButton"
+                                            x:Uid="InputContainer_Stop"
                                             Style="{StaticResource SubtleButtonStyle}"
                                             VerticalAlignment="Center"
                                             Padding="6"
@@ -330,6 +335,7 @@
                                                VerticalAlignment="Center" />
                                 </StackPanel>
                                 <Button x:Name="PART_ExpandButton"
+                                        x:Uid="ToolApproval_Expand"
                                         Grid.Column="2"
                                         Style="{StaticResource SubtleButtonStyle}"
                                         Padding="6"
@@ -409,12 +415,14 @@
                                                MaxLines="1"
                                                VerticalAlignment="Center" />
                                     <Button x:Name="PART_TitleEditButton"
+                                            x:Uid="ChatPanel_EditTitle"
                                             Style="{StaticResource SubtleButtonStyle}"
                                             Padding="4"
                                             VerticalAlignment="Center">
                                         <FontIcon Glyph="&#xE70F;" FontSize="12" />
                                     </Button>
                                     <Button x:Name="PART_TitleRefreshButton"
+                                            x:Uid="ChatPanel_RefreshTitle"
                                             Style="{StaticResource SubtleButtonStyle}"
                                             Padding="4"
                                             VerticalAlignment="Center">

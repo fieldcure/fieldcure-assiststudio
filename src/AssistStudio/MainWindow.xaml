@@ -59,6 +59,7 @@
                             </Grid.ColumnDefinitions>
 
                             <Button x:Name="MainMenuButton"
+                                    x:Uid="MainMenu"
                                     Grid.Column="1"
                                     IsTabStop="False"
                                     Width="42"

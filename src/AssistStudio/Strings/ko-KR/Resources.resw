@@ -639,4 +639,50 @@
   <data name="Mcp_Disconnecting" xml:space="preserve">
     <value>MCP 서버 연결을 해제하고 있습니다. 잠시 기다려 주세요...</value>
   </data>
+  <!-- Accessibility -->
+  <data name="MainMenu.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>메뉴</value>
+  </data>
+  <data name="McpCard_Edit.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>서버 편집</value>
+  </data>
+  <data name="McpCard_Edit.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>편집</value>
+  </data>
+  <data name="McpCard_Reconnect.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>서버 재연결</value>
+  </data>
+  <data name="McpCard_Reconnect.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>재연결</value>
+  </data>
+  <data name="McpCard_Delete.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>서버 제거</value>
+  </data>
+  <data name="McpCard_Delete.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>제거</value>
+  </data>
+  <data name="ModelDialog_DeleteBtn.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>모델 삭제</value>
+  </data>
+  <data name="ModelDialog_DeleteBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>삭제</value>
+  </data>
+  <data name="ModelDialog_DownloadBtn.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>모델 다운로드</value>
+  </data>
+  <data name="ModelDialog_DownloadBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>다운로드</value>
+  </data>
+  <data name="Profiles_AddProfile.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>프로필 추가</value>
+  </data>
+  <data name="Profiles_DeleteProfile.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>프로필 삭제</value>
+  </data>
+  <data name="Models_RemoveKey.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>API 키 삭제</value>
+  </data>
+  <data name="Models_RefreshStatus.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>상태 확인</value>
+  </data>
 </root>

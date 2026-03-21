@@ -156,4 +156,41 @@
   <data name="Chat_SearchCloseButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Close search bar</value>
   </data>
+  <!-- Accessibility -->
+  <data name="InputContainer_Attach.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Attach file</value>
+  </data>
+  <data name="InputContainer_Summarize.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Summarize conversation</value>
+  </data>
+  <data name="InputContainer_Tools.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Tools</value>
+  </data>
+  <data name="InputContainer_Send.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Send message</value>
+  </data>
+  <data name="InputContainer_Stop.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Stop generating</value>
+  </data>
+  <data name="ChatPanel_EditTitle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Edit title</value>
+  </data>
+  <data name="ChatPanel_RefreshTitle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Regenerate title</value>
+  </data>
+  <data name="ToolApproval_Expand.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Toggle details</value>
+  </data>
+  <data name="Chat_SearchPrevButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Previous result</value>
+  </data>
+  <data name="Chat_SearchNextButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Next result</value>
+  </data>
+  <data name="Chat_SearchCloseButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Close search</value>
+  </data>
+  <data name="Attachment_RemoveTooltip" xml:space="preserve">
+    <value>Remove attachment</value>
+  </data>
 </root>

@@ -48,16 +48,19 @@
                 <StackPanel Orientation="Horizontal" Spacing="4"
                             HorizontalAlignment="Right">
                     <Button x:Name="EditButton"
+                            x:Uid="McpCard_Edit"
                             Style="{ThemeResource SubtleButtonStyle}"
                             Padding="6" Click="EditButton_Click">
                         <FontIcon Glyph="&#xE70F;" FontSize="14" />
                     </Button>
                     <Button x:Name="ReconnectButton"
+                            x:Uid="McpCard_Reconnect"
                             Style="{ThemeResource SubtleButtonStyle}"
                             Padding="6" Click="ReconnectButton_Click">
                         <FontIcon Glyph="&#xE72C;" FontSize="14" />
                     </Button>
                     <Button x:Name="DeleteButton"
+                            x:Uid="McpCard_Delete"
                             Style="{ThemeResource SubtleButtonStyle}"
                             Padding="6" Click="DeleteButton_Click">
                         <FontIcon Glyph="&#xE74D;" FontSize="14" />

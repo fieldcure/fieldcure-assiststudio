@@ -156,4 +156,41 @@
   <data name="Chat_SearchCloseButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>검색 바 닫기</value>
   </data>
+  <!-- Accessibility -->
+  <data name="InputContainer_Attach.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>파일 첨부</value>
+  </data>
+  <data name="InputContainer_Summarize.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>대화 요약</value>
+  </data>
+  <data name="InputContainer_Tools.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>도구</value>
+  </data>
+  <data name="InputContainer_Send.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>메시지 전송</value>
+  </data>
+  <data name="InputContainer_Stop.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>생성 중지</value>
+  </data>
+  <data name="ChatPanel_EditTitle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>제목 편집</value>
+  </data>
+  <data name="ChatPanel_RefreshTitle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>제목 재생성</value>
+  </data>
+  <data name="ToolApproval_Expand.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>상세 보기</value>
+  </data>
+  <data name="Chat_SearchPrevButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>이전 결과</value>
+  </data>
+  <data name="Chat_SearchNextButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>다음 결과</value>
+  </data>
+  <data name="Chat_SearchCloseButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>검색 닫기</value>
+  </data>
+  <data name="Attachment_RemoveTooltip" xml:space="preserve">
+    <value>첨부 파일 제거</value>
+  </data>
 </root>

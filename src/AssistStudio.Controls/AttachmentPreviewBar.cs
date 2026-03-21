@@ -2,8 +2,10 @@
 using System.Collections.Specialized;
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Imaging;
+using Windows.ApplicationModel.Resources;
 
 namespace FieldCure.AssistStudio.Controls;
 
@@ -14,6 +16,9 @@ namespace FieldCure.AssistStudio.Controls;
 public sealed partial class AttachmentPreviewBar : Control
 {
     #region Fields
+
+    /// <summary>Resource loader for localized strings in this library.</summary>
+    private static readonly ResourceLoader Res = new("AssistStudio.Controls/Resources");
 
     /// <summary>
     /// The observable collection backing the displayed attachments.
@@ -249,6 +254,7 @@ public sealed partial class AttachmentPreviewBar : Control
             Opacity = 0,
             Tag = attachment
         };
+        AutomationProperties.SetName(removeButton, Res.GetString("Attachment_RemoveTooltip"));
         removeButton.Click += OnRemoveClick;
         container.Children.Add(removeButton);
 

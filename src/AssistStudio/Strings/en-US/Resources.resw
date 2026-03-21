@@ -639,4 +639,50 @@
   <data name="Mcp_Disconnecting" xml:space="preserve">
     <value>Disconnecting MCP servers, please wait...</value>
   </data>
+  <!-- Accessibility -->
+  <data name="MainMenu.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Menu</value>
+  </data>
+  <data name="McpCard_Edit.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Edit server</value>
+  </data>
+  <data name="McpCard_Edit.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="McpCard_Reconnect.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Reconnect server</value>
+  </data>
+  <data name="McpCard_Reconnect.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Reconnect</value>
+  </data>
+  <data name="McpCard_Delete.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Remove server</value>
+  </data>
+  <data name="McpCard_Delete.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="ModelDialog_DeleteBtn.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Delete model</value>
+  </data>
+  <data name="ModelDialog_DeleteBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="ModelDialog_DownloadBtn.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Download model</value>
+  </data>
+  <data name="ModelDialog_DownloadBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="Profiles_AddProfile.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Add profile</value>
+  </data>
+  <data name="Profiles_DeleteProfile.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Delete profile</value>
+  </data>
+  <data name="Models_RemoveKey.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Remove API key</value>
+  </data>
+  <data name="Models_RefreshStatus.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Check status</value>
+  </data>
 </root>
