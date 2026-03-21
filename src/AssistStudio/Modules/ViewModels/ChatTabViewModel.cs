@@ -333,6 +333,15 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
+    /// Gets the ID of the first message on the active path (root-level active child).
+    /// Used to restore the correct branch when the first message has been edited.
+    /// </summary>
+    public string? GetActiveRootChildId()
+    {
+        return Panel?.GetMessages().FirstOrDefault()?.Id;
+    }
+
+    /// <summary>
     /// Applies a visual theme to the chat panel.
     /// </summary>
     public void ApplyTheme(ChatTheme theme) => Theme = theme;
@@ -566,6 +575,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         if (result == ContentDialogResult.Primary && !string.IsNullOrWhiteSpace(input.Text))
         {
             Title = input.Text.Trim();
+            IsDirty = true;
         }
     }
 

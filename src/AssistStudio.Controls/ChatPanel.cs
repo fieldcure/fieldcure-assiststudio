@@ -936,7 +936,7 @@ public sealed partial class ChatPanel : Control
     /// </summary>
     public void RegisterBranchMessage(ChatMessage msg)
     {
-        RegisterInTree(msg);
+        RegisterInTree(msg, updateActiveChild: false);
     }
 
     /// <summary>
@@ -1352,6 +1352,10 @@ public sealed partial class ChatPanel : Control
         if (newIndex < 0 || newIndex >= siblings.Count) return;
         var target = siblings[newIndex];
 
+        // Update parent's ActiveChildId to track the user's branch selection
+        var parent = _messages.FirstOrDefault(m => m.Id == current.ParentId);
+        if (parent is not null) parent.ActiveChildId = target.Id;
+
         // Truncate active path from current message's position
         var idx = _messages.IndexOf(current);
         if (idx < 0) return;
@@ -1595,8 +1599,11 @@ public sealed partial class ChatPanel : Control
 
     /// <summary>
     /// Registers a message in the conversation tree.
+    /// When <paramref name="updateActiveChild"/> is <c>true</c>, the parent message's
+    /// <see cref="ChatMessage.ActiveChildId"/> is set to this message so that
+    /// save/restore preserves the user's branch selection.
     /// </summary>
-    private void RegisterInTree(ChatMessage msg)
+    private void RegisterInTree(ChatMessage msg, bool updateActiveChild = true)
     {
         var key = msg.ParentId ?? TreeRootKey;
         if (!_childrenMap.TryGetValue(key, out var siblings))
@@ -1611,6 +1618,13 @@ public sealed partial class ChatPanel : Control
         }
         foreach (var s in siblings)
             s.SiblingCount = siblings.Count;
+
+        // Update the parent's active child pointer when on the active path
+        if (updateActiveChild && msg.ParentId is not null)
+        {
+            var parent = _messages.FirstOrDefault(m => m.Id == msg.ParentId);
+            if (parent is not null) parent.ActiveChildId = msg.Id;
+        }
     }
 
     /// <summary>

@@ -150,6 +150,14 @@ public partial class ChatMessage : INotifyPropertyChanged
     [JsonIgnore]
     public int SiblingIndex { get; set; }
 
+    /// <summary>
+    /// The ID of the currently active child in a branch.
+    /// Used to preserve the user's branch selection across save/load.
+    /// Computed at runtime, not serialized by Core.
+    /// </summary>
+    [JsonIgnore]
+    public string? ActiveChildId { get; set; }
+
     #endregion
 
     #region INotifyPropertyChanged

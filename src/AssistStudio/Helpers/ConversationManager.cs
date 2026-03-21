@@ -46,14 +46,15 @@ public static class ConversationManager
     public static async Task SaveConversationAsync(
         string tabName,
         string? providerPresetName,
-        IReadOnlyList<ChatMessage> messages)
+        IReadOnlyList<ChatMessage> messages,
+        string? activeRootChildId = null)
     {
         EnsureInitialized();
         if (messages.Count == 0) return;
 
         var fileName = SanitizeFileName(tabName) + FileExtension;
         var filePath = Path.Combine(_conversationsFolder, fileName);
-        await SaveToFileAsync(filePath, tabName, providerPresetName, messages);
+        await SaveToFileAsync(filePath, tabName, providerPresetName, messages, activeRootChildId);
     }
 
     /// <summary>
@@ -63,7 +64,8 @@ public static class ConversationManager
         string filePath,
         string tabName,
         string? providerPresetName,
-        IReadOnlyList<ChatMessage> messages)
+        IReadOnlyList<ChatMessage> messages,
+        string? activeRootChildId = null)
     {
         if (messages.Count == 0) return;
 
@@ -71,6 +73,7 @@ public static class ConversationManager
         {
             TabName = tabName,
             ProviderPresetName = providerPresetName,
+            ActiveRootChildId = activeRootChildId,
             SavedAt = DateTime.UtcNow,
             Messages = messages.Select(m => new SavedMessage
             {
@@ -83,6 +86,7 @@ public static class ConversationManager
                 ToolCalls = m.ToolCalls,
                 ToolCallId = m.ToolCallId,
                 ParentId = m.ParentId,
+                ActiveChildId = m.ActiveChildId,
             }).ToList(),
         };
 

@@ -34,6 +34,9 @@ public class ConversationData
     /// <summary>The list of messages in the conversation.</summary>
     public List<SavedMessage> Messages { get; set; } = [];
 
+    /// <summary>The ID of the active root-level child message. Used when the first message has branches.</summary>
+    public string? ActiveRootChildId { get; set; }
+
     #endregion
 }
 
@@ -70,6 +73,9 @@ public class SavedMessage
 
     /// <summary>The parent message ID in the conversation tree. Null for the first message.</summary>
     public string? ParentId { get; set; }
+
+    /// <summary>The ID of the active child at this branch point. Null if linear or last child is active.</summary>
+    public string? ActiveChildId { get; set; }
 
     #endregion
 }

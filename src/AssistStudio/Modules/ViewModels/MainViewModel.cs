@@ -172,7 +172,7 @@ public partial class MainViewModel : ObservableObject
         }
 
         // Restore messages with tree reconstruction
-        RestoreConversationTree(vm, data.Messages);
+        RestoreConversationTree(vm, data.Messages, data.ActiveRootChildId);
 
         vm.Title = data.TabName;
         vm.HasBeenSaved = true;
@@ -198,10 +198,11 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
+            var rootChildId = tab.GetActiveRootChildId();
             if (tab.FilePath is not null)
-                await ConversationManager.SaveToFileAsync(tab.FilePath, tabName, presetName, messages);
+                await ConversationManager.SaveToFileAsync(tab.FilePath, tabName, presetName, messages, rootChildId);
             else
-                await ConversationManager.SaveConversationAsync(tabName, presetName, messages);
+                await ConversationManager.SaveConversationAsync(tabName, presetName, messages, rootChildId);
             tab.IsDirty = false;
         }
         catch (Exception ex) { LoggingService.LogException(ex); }
@@ -302,7 +303,7 @@ public partial class MainViewModel : ObservableObject
     /// Restores a conversation tree from saved messages.
     /// Determines the active path (root → last leaf) and registers branch messages in the tree only.
     /// </summary>
-    private static void RestoreConversationTree(ChatTabViewModel vm, List<SavedMessage> messages)
+    private static void RestoreConversationTree(ChatTabViewModel vm, List<SavedMessage> messages, string? activeRootChildId = null)
     {
         if (messages.Count == 0) return;
 
@@ -331,14 +332,28 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        // Walk from root following last child (most recent branch) to build active path
+        // Build a lookup for ActiveChildId hints saved per message
+        var activeChildHints = messages
+            .Where(m => m.ActiveChildId is not null)
+            .ToDictionary(m => m.Id!, m => m.ActiveChildId!);
+
+        // Walk from root following ActiveChildId hints to build active path
         var activePath = new HashSet<string?>();
         var currentKey = rootKey;
+        // For root level, use ActiveRootChildId from ConversationData
+        string? rootHint = activeRootChildId;
+
         while (childrenMap.TryGetValue(currentKey, out var children) && children.Count > 0)
         {
-            var last = children[^1]; // most recent branch
-            activePath.Add(last.Id);
-            currentKey = last.Id ?? rootKey;
+            SavedMessage next;
+            if (currentKey == rootKey && rootHint is not null)
+                next = children.FirstOrDefault(c => c.Id == rootHint) ?? children[^1];
+            else if (activeChildHints.TryGetValue(currentKey, out var hintId))
+                next = children.FirstOrDefault(c => c.Id == hintId) ?? children[^1];
+            else
+                next = children[^1];
+            activePath.Add(next.Id);
+            currentKey = next.Id ?? rootKey;
         }
 
         // First pass: register branch-only messages in the tree (not on the active path)
