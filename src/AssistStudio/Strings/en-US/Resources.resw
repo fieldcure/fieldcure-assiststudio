@@ -639,6 +639,31 @@
   <data name="Mcp_Disconnecting" xml:space="preserve">
     <value>Disconnecting MCP servers, please wait...</value>
   </data>
+  <!-- Tab Context Menu -->
+  <data name="TabContext_Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="TabContext_CloseOthers" xml:space="preserve">
+    <value>Close Others</value>
+  </data>
+  <data name="TabContext_CloseRight" xml:space="preserve">
+    <value>Close to the Right</value>
+  </data>
+  <data name="TabContext_CloseSaved" xml:space="preserve">
+    <value>Close Saved</value>
+  </data>
+  <data name="TabContext_CopyFullPath" xml:space="preserve">
+    <value>Copy Full Path</value>
+  </data>
+  <data name="TabContext_OpenFolder" xml:space="preserve">
+    <value>Open Containing Folder</value>
+  </data>
+  <data name="TabContext_Rename" xml:space="preserve">
+    <value>Rename</value>
+  </data>
+  <data name="TabContext_RenameDialog" xml:space="preserve">
+    <value>Rename File</value>
+  </data>
   <!-- Accessibility -->
   <data name="MainMenu.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Menu</value>

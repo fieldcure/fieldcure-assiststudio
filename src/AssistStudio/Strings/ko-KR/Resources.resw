@@ -639,6 +639,31 @@
   <data name="Mcp_Disconnecting" xml:space="preserve">
     <value>MCP 서버 연결을 해제하고 있습니다. 잠시 기다려 주세요...</value>
   </data>
+  <!-- Tab Context Menu -->
+  <data name="TabContext_Close" xml:space="preserve">
+    <value>닫기</value>
+  </data>
+  <data name="TabContext_CloseOthers" xml:space="preserve">
+    <value>다른 탭 닫기</value>
+  </data>
+  <data name="TabContext_CloseRight" xml:space="preserve">
+    <value>오른쪽 탭 닫기</value>
+  </data>
+  <data name="TabContext_CloseSaved" xml:space="preserve">
+    <value>저장된 탭 닫기</value>
+  </data>
+  <data name="TabContext_CopyFullPath" xml:space="preserve">
+    <value>전체 경로 복사</value>
+  </data>
+  <data name="TabContext_OpenFolder" xml:space="preserve">
+    <value>폴더 열기</value>
+  </data>
+  <data name="TabContext_Rename" xml:space="preserve">
+    <value>이름 바꾸기</value>
+  </data>
+  <data name="TabContext_RenameDialog" xml:space="preserve">
+    <value>파일 이름 변경</value>
+  </data>
   <!-- Accessibility -->
   <data name="MainMenu.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>메뉴</value>

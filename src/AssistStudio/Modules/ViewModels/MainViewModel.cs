@@ -306,20 +306,7 @@ public partial class MainViewModel : ObservableObject
     {
         if (messages.Count == 0) return;
 
-        // Check if any message has branching (multiple children for same parent)
-        var hasBranching = messages
-            .GroupBy(m => m.ParentId ?? "")
-            .Any(g => g.Count() > 1);
-
-        if (!hasBranching)
-        {
-            // Simple linear conversation — add all as active path
-            foreach (var msg in messages)
-                vm.AddRestoredMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId, msg.Id, msg.ParentId, msg.ToolCalls, msg.ToolCallId);
-            return;
-        }
-
-        // Build parent→children map to find the active path
+        // Build parent→children map
         var childrenMap = new Dictionary<string, List<SavedMessage>>();
         var rootKey = "";
         foreach (var msg in messages)
@@ -331,6 +318,17 @@ public partial class MainViewModel : ObservableObject
                 childrenMap[key] = list;
             }
             list.Add(msg);
+        }
+
+        // Branching = any parent has multiple children (edit created a branch).
+        var hasBranching = childrenMap.Any(kv => kv.Value.Count > 1);
+
+        if (!hasBranching)
+        {
+            // Linear conversation — add all as active path in file order
+            foreach (var msg in messages)
+                vm.AddRestoredMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId, msg.Id, msg.ParentId, msg.ToolCalls, msg.ToolCallId);
+            return;
         }
 
         // Walk from root following last child (most recent branch) to build active path

@@ -504,6 +504,70 @@ public sealed partial class MainWindow : Window
     #region Tab Management
 
     /// <summary>
+    /// Attaches a <see cref="Controls.TabContextFlyout"/> to the TabViewItem when it loads.
+    /// </summary>
+    private void OnTabViewItemLoaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is not TabViewItem item) return;
+        if (item.ContextFlyout is Controls.TabContextFlyout) return; // already attached
+
+        item.ContextFlyout = new Controls.TabContextFlyout(item, ViewModel, CloseTabFromContextMenuAsync, CloseAppAsync);
+    }
+
+    /// <summary>
+    /// Closes a single tab with save prompt if dirty. Used by <see cref="Controls.TabContextFlyout"/>.
+    /// </summary>
+    private async Task CloseTabFromContextMenuAsync(ChatTabViewModel tab)
+    {
+        if (tab.IsDirty && tab.GetMessages().Count > 0)
+        {
+            var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
+            var dialog = new ThemedContentDialog
+            {
+                Title = loader.GetString("Dialog_SaveConversation"),
+                Content = loader.GetString("Dialog_SaveConversationContent"),
+                PrimaryButtonText = loader.GetString("Dialog_Save"),
+                SecondaryButtonText = loader.GetString("Dialog_DontSave"),
+                CloseButtonText = loader.GetString("Dialog_Cancel"),
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = Content.XamlRoot,
+            };
+
+            var result = await dialog.ShowAsync();
+            if (result == ContentDialogResult.None) return; // Cancel
+
+            if (result == ContentDialogResult.Primary) // Save
+            {
+                if (tab.FilePath is not null)
+                {
+                    await ConversationManager.SaveToFileAsync(
+                        tab.FilePath, tab.Title, tab.CurrentPreset?.Name, tab.GetAllMessages());
+                    tab.IsDirty = false;
+                }
+                else
+                {
+                    if (!await SaveAsAsync(tab)) return;
+                }
+            }
+        }
+
+        ViewModel.CloseTab(tab);
+
+        if (ViewModel.Tabs.Count == 0)
+            await CloseAppAsync();
+    }
+
+    /// <summary>
+    /// Shuts down MCP servers and closes the app. Called when the last tab is closed.
+    /// </summary>
+    private async Task CloseAppAsync()
+    {
+        await ShutdownMcpServersAsync();
+        _isClosing = true;
+        Close();
+    }
+
+    /// <summary>
     /// Handles the TabView add-tab button click to create a new conversation tab.
     /// </summary>
     private void OnAddTab(TabView sender, object args)

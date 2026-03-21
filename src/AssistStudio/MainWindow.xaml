@@ -44,7 +44,8 @@
                     <TabView.TabItemTemplate>
                         <DataTemplate x:DataType="vm:ChatTabViewModel">
                             <TabViewItem Header="{x:Bind TabHeader, Mode=OneWay}"
-                                         IconSource="{x:Bind TabIconSource, Mode=OneWay}">
+                                         IconSource="{x:Bind TabIconSource, Mode=OneWay}"
+                                         Loaded="OnTabViewItemLoaded">
                                 <views:ChatTabView ViewModel="{x:Bind}" />
                             </TabViewItem>
                         </DataTemplate>
