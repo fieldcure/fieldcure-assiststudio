@@ -550,6 +550,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     {
         LoggingService.LogInfo($"[Tab] Title generated: {title}");
         Title = title;
+        IsDirty = true;
     }
 
     /// <summary>

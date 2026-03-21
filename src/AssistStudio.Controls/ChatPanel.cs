@@ -193,16 +193,9 @@ public sealed partial class ChatPanel : Control
         if (d is ChatPanel panel)
         {
             var title = e.NewValue as string;
-            var hasTitle = !string.IsNullOrEmpty(title);
             if (panel._titleText is not null)
                 panel._titleText.Text = title ?? "";
-            if (panel._titleBar is not null)
-                panel._titleBar.Visibility = hasTitle
-                    ? Microsoft.UI.Xaml.Visibility.Visible
-                    : Microsoft.UI.Xaml.Visibility.Collapsed;
-
-            if (hasTitle)
-                panel.UpdateRefreshTooltip();
+            panel.UpdateRefreshTooltip();
         }
     }
 
@@ -861,6 +854,10 @@ public sealed partial class ChatPanel : Control
         // Set initial background to match CSS --bg-primary (before WebView2 loads)
         if (_rootGrid is not null)
             _rootGrid.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(LightBg);
+
+        // Push title text (may have been set before template was applied)
+        if (_titleText is not null && !string.IsNullOrEmpty(Title))
+            _titleText.Text = Title;
 
         // Attach event handlers and sync current property values
         if (_inputArea is not null)
