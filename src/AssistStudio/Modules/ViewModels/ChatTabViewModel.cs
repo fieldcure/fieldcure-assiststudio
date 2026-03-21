@@ -264,7 +264,13 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         {
             panel.AddRestoredMessage(role, content, providerName, modelId, id, parentId, toolCalls, toolCallId);
         }
+        var hadPending = _pendingMessages.Count > 0;
         _pendingMessages.Clear();
+
+        // If OnLoaded already ran (WebView2 initialized) but _messages was empty at that time,
+        // we need to render the messages that were just flushed.
+        if (hadPending)
+            _ = panel.RenderRestoredMessagesAsync();
 
         if (FocusPendingOnAttach)
         {
