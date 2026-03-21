@@ -966,6 +966,11 @@ public sealed partial class ChatPanel : Control
     }
 
     /// <summary>
+    /// Sets keyboard focus to the message input text box.
+    /// </summary>
+    public void FocusInput() => _inputArea?.FocusInput();
+
+    /// <summary>
     /// Clears all messages and resets the chat panel to its empty state.
     /// </summary>
     public async void ClearConversation()
@@ -1072,7 +1077,7 @@ public sealed partial class ChatPanel : Control
             // Warm up the WebView2 internal HWND so accelerator keys
             // and focus work immediately (without waiting for user click).
             _chatWebView.Focus(FocusState.Programmatic);
-            _inputArea?.Focus(FocusState.Programmatic);
+            _inputArea?.FocusInput();
 
             // Listen for theme changes
             ActualThemeChanged += async (_, _) => await ApplyThemeAsync();

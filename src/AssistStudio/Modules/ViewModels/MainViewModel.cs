@@ -434,5 +434,24 @@ public partial class MainViewModel : ObservableObject
         return GetActiveProfile()?.Text ?? AppSettings.SystemPrompt;
     }
 
+    /// <summary>
+    /// Called when the selected tab changes. Focuses the input text box of the new tab.
+    /// </summary>
+    partial void OnSelectedTabChanged(ChatTabViewModel? value)
+    {
+        if (value is null) return;
+
+        if (value.Panel is not null)
+        {
+            value.Panel.DispatcherQueue?.TryEnqueue(
+                Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+                () => value.Panel?.FocusInput());
+        }
+        else
+        {
+            value.FocusPendingOnAttach = true;
+        }
+    }
+
     #endregion
 }

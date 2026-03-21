@@ -150,7 +150,13 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Reference to the ChatPanel, set by <see cref="AttachPanel"/> after the View is created.
     /// </summary>
-    private ChatPanel? _panel;
+    internal ChatPanel? Panel { get; private set; }
+
+    /// <summary>
+    /// When <c>true</c>, <see cref="AttachPanel"/> will focus the input on attach.
+    /// Set by <see cref="MainViewModel"/> when a tab is selected before its panel is ready.
+    /// </summary>
+    internal bool FocusPendingOnAttach { get; set; }
 
     /// <summary>
     /// Messages queued before the ChatPanel is available (during conversation loading).
@@ -237,7 +243,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// </summary>
     public void AttachPanel(ChatPanel panel)
     {
-        _panel = panel;
+        Panel = panel;
         LoggingService.LogInfo($"[Tab] Panel attached: {Title}, pending={_pendingMessages.Count}");
 
         // Relay keyboard shortcut from WebView2 (separate HWND)
@@ -259,6 +265,14 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             panel.AddRestoredMessage(role, content, providerName, modelId, id, parentId, toolCalls, toolCallId);
         }
         _pendingMessages.Clear();
+
+        if (FocusPendingOnAttach)
+        {
+            FocusPendingOnAttach = false;
+            panel.DispatcherQueue?.TryEnqueue(
+                Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+                () => panel.FocusInput());
+        }
     }
 
     #endregion
@@ -273,8 +287,8 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         string? id = null, string? parentId = null,
         IReadOnlyList<ToolCall>? toolCalls = null, string? toolCallId = null)
     {
-        if (_panel is not null)
-            _panel.AddRestoredMessage(role, content, providerName, providerModelId, id, parentId, toolCalls, toolCallId);
+        if (Panel is not null)
+            Panel.AddRestoredMessage(role, content, providerName, providerModelId, id, parentId, toolCalls, toolCallId);
         else
             _pendingMessages.Add((role, content, providerName, providerModelId, id, parentId, toolCalls, toolCallId));
     }
@@ -287,12 +301,12 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         string? id = null, string? parentId = null,
         IReadOnlyList<ToolCall>? toolCalls = null, string? toolCallId = null)
     {
-        if (_panel is not null)
+        if (Panel is not null)
         {
             var msg = id is not null
                 ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId }
                 : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId };
-            _panel.RegisterBranchMessage(msg);
+            Panel.RegisterBranchMessage(msg);
         }
         else
         {
@@ -306,7 +320,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// <returns>A read-only list of chat messages.</returns>
     public IReadOnlyList<ChatMessage> GetMessages()
     {
-        return _panel?.GetMessages() ?? [];
+        return Panel?.GetMessages() ?? [];
     }
 
     /// <summary>
@@ -315,7 +329,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// </summary>
     public IReadOnlyList<ChatMessage> GetAllMessages()
     {
-        return _panel?.GetAllMessages() ?? [];
+        return Panel?.GetAllMessages() ?? [];
     }
 
     /// <summary>
@@ -352,7 +366,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         else
         {
             // Tab with history: keep current profile but sync tool settings from saved data
-            var current = _panel?.SelectedProfile;
+            var current = Panel?.SelectedProfile;
             if (current is not null)
             {
                 var updated = profiles.FirstOrDefault(p => p.Name == current.Name);
@@ -361,12 +375,12 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                     current.ToolNames = updated.ToolNames;
                     current.UseSearchTools = updated.UseSearchTools;
                     ResolveTools(current);
-                    if (_panel is not null)
+                    if (Panel is not null)
                     {
-                        _panel.DispatcherQueue.TryEnqueue(() =>
+                        Panel.DispatcherQueue.TryEnqueue(() =>
                         {
-                            _panel.RegisteredTools = [];
-                            _panel.RegisteredTools = RegisteredTools;
+                            Panel.RegisteredTools = [];
+                            Panel.RegisteredTools = RegisteredTools;
                         });
                     }
                 }
@@ -485,7 +499,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// </summary>
     public void RefreshTools()
     {
-        var profile = _panel?.SelectedProfile;
+        var profile = Panel?.SelectedProfile;
         if (profile is null)
         {
             LoggingService.LogInfo("[Settings] RefreshTools: profile is null, skipping");
@@ -509,12 +523,12 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         LoggingService.LogInfo($"[Settings] RefreshTools resolved: {RegisteredTools.Count} tools — [{string.Join(", ", RegisteredTools.Select(t => t.Name))}]");
 
         // Force push to ChatPanel on UI thread
-        if (_panel is not null)
+        if (Panel is not null)
         {
-            _panel.DispatcherQueue.TryEnqueue(() =>
+            Panel.DispatcherQueue.TryEnqueue(() =>
             {
-                _panel.RegisteredTools = [];
-                _panel.RegisteredTools = RegisteredTools;
+                Panel.RegisteredTools = [];
+                Panel.RegisteredTools = RegisteredTools;
                 LoggingService.LogInfo("[Settings] RefreshTools pushed to ChatPanel");
             });
         }
@@ -534,7 +548,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// </summary>
     public async void OnTitleEditRequested(object? _sender, string currentTitle)
     {
-        if (_panel is null) return;
+        if (Panel is null) return;
 
         var input = new TextBox { Text = currentTitle, SelectionStart = currentTitle.Length };
         var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
@@ -545,7 +559,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             PrimaryButtonText = loader.GetString("Dialog_OK"),
             CloseButtonText = loader.GetString("Dialog_Cancel"),
             DefaultButton = ContentDialogButton.Primary,
-            XamlRoot = _panel.XamlRoot,
+            XamlRoot = Panel.XamlRoot,
         };
 
         var result = await dialog.ShowAsync();
