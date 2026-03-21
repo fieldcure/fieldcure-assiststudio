@@ -111,14 +111,13 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
             }
 
             var mcpTools = await _client.ListToolsAsync(cancellationToken: ct);
-            Tools = mcpTools
+            Tools = [.. mcpTools
                 .Select(t => new McpToolAdapter(
                     name: t.Name,
                     description: t.Description ?? string.Empty,
                     parameterSchema: t.JsonSchema.GetRawText(),
                     executeFunc: (args, token) => InvokeMcpToolAsync(t, args, token))
-                { ServerName = Config.Name })
-                .ToList();
+                { ServerName = Config.Name })];
 
             State = McpConnectionState.Connected;
             LoggingService.LogInfo($"[MCP] Connected: {Config.Name}, tools={Tools.Count}");

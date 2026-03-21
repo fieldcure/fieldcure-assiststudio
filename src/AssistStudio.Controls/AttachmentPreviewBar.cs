@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml;
@@ -11,7 +11,7 @@ namespace FieldCure.AssistStudio.Controls;
 /// A templated control that displays a horizontal preview bar of file and image attachments.
 /// Default style is defined in Generic.xaml.
 /// </summary>
-public sealed class AttachmentPreviewBar : Control
+public sealed partial class AttachmentPreviewBar : Control
 {
     #region Fields
 
@@ -176,7 +176,7 @@ public sealed class AttachmentPreviewBar : Control
     /// <summary>
     /// Creates a visual preview element for the given attachment, including a thumbnail and a remove button overlay.
     /// </summary>
-    private UIElement CreatePreviewItem(ChatAttachment attachment)
+    private Grid CreatePreviewItem(ChatAttachment attachment)
     {
         var size = ThumbnailSize;
         var container = new Grid

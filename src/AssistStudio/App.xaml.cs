@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.Windows.AppLifecycle;
 using Windows.ApplicationModel.Activation;
 using Windows.Storage;
+using WindowHelper = FieldCure.AssistStudio.Controls.Helpers.WindowHelper;
 
 namespace AssistStudio;
 
@@ -60,7 +61,7 @@ public partial class App : Application
 
         MainWindow = new MainWindow();
 
-        FieldCure.AssistStudio.Controls.WindowHelper.TrackWindow(MainWindow);
+        WindowHelper.TrackWindow(MainWindow);
         MainWindow.Activate();
         LoggingService.LogInfo("[App] MainWindow activated");
 

@@ -1,6 +1,6 @@
-using Microsoft.UI.Xaml;
+﻿using Microsoft.UI.Xaml;
 
-namespace FieldCure.AssistStudio.Controls;
+namespace FieldCure.AssistStudio.Controls.Helpers;
 
 /// <summary>
 /// Helper to track active windows for FileOpenPicker initialization.

@@ -1,9 +1,10 @@
 ﻿using System.Collections;
 using System.Collections.ObjectModel;
+using System.Text.RegularExpressions;
 using FieldCure.AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
 using FieldCure.AssistStudio.Providers;
-using FieldCure.AssistStudio.Rendering;
+using FieldCure.AssistStudio.Controls.Rendering;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Windows.ApplicationModel.DataTransfer;
@@ -926,7 +927,7 @@ public sealed partial class ChatPanel : Control
     public IReadOnlyList<ChatMessage> GetAllMessages()
     {
         if (_childrenMap.Count == 0) return _messages;
-        return _childrenMap.Values.SelectMany(v => v).Distinct().ToList();
+        return [.. _childrenMap.Values.SelectMany(v => v).Distinct()];
     }
 
     /// <summary>
@@ -1049,9 +1050,8 @@ public sealed partial class ChatPanel : Control
                         msg.Id, msg.ProviderName, msg.ProviderModelId);
 
                     // Restore tool block indicators from [Tool: ...] markers in content
-                    var toolMarkers = System.Text.RegularExpressions.Regex.Matches(
-                        msg.Content ?? "", @"\[Tool:\s*([^\]]+)\]");
-                    foreach (System.Text.RegularExpressions.Match m in toolMarkers)
+                    var toolMarkers = ToolMarkerRegex().Matches(msg.Content ?? "");
+                    foreach (Match m in toolMarkers)
                     {
                         var toolName = m.Groups[1].Value.Trim();
                         var displayName = RegisteredTools
@@ -1072,8 +1072,7 @@ public sealed partial class ChatPanel : Control
             // Warm up the WebView2 internal HWND so accelerator keys
             // and focus work immediately (without waiting for user click).
             _chatWebView.Focus(FocusState.Programmatic);
-            if (_inputArea is not null)
-                _inputArea.Focus(FocusState.Programmatic);
+            _inputArea?.Focus(FocusState.Programmatic);
 
             // Listen for theme changes
             ActualThemeChanged += async (_, _) => await ApplyThemeAsync();
@@ -2289,6 +2288,14 @@ public sealed partial class ChatPanel : Control
             _searchCount.Text = string.Empty;
         }
     }
+
+    #endregion
+
+    #region Generated Regex
+
+    /// <summary>Matches [Tool: ...] markers in assistant message content.</summary>
+    [GeneratedRegex(@"\[Tool:\s*([^\]]+)\]")]
+    private static partial Regex ToolMarkerRegex();
 
     #endregion
 }

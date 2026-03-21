@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -9,14 +9,14 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.Web.WebView2.Core;
 using Windows.ApplicationModel.DataTransfer;
 
-namespace FieldCure.AssistStudio.Rendering;
+namespace FieldCure.AssistStudio.Controls.Rendering;
 
 /// <summary>
 /// Renders chat messages inside a WebView2 control using an embedded HTML/JS chat UI.
 /// Handles message lifecycle (append, stream tokens, finalize), theming, locale strings,
 /// debug data, and WebView-to-host message routing.
 /// </summary>
-internal class WebViewChatRenderer
+internal partial class WebViewChatRenderer
 {
     #region Fields
 
@@ -585,7 +585,7 @@ internal class WebViewChatRenderer
         var css = LoadEmbeddedResource("katex.min.css");
 
         // Replace font url(fonts/KaTeX_XXX.woff2) with base64 data URIs
-        css = Regex.Replace(css, @"url\(fonts/(KaTeX_[^)]+\.woff2)\)", match =>
+        css = KatexWoff2Regex().Replace(css, match =>
         {
             var fileName = match.Groups[1].Value;
             var fontBytes = LoadEmbeddedBinaryResource(fileName);
@@ -594,8 +594,8 @@ internal class WebViewChatRenderer
         });
 
         // Strip .woff and .ttf src alternatives (woff2 is sufficient for WebView2)
-        css = Regex.Replace(css, @",url\(fonts/[^)]+\.woff\)\s*format\(""woff""\)", "");
-        css = Regex.Replace(css, @",url\(fonts/[^)]+\.ttf\)\s*format\(""truetype""\)", "");
+        css = KatexWoffRegex().Replace(css, "");
+        css = KatexTtfRegex().Replace(css, "");
 
         var escapedCss = JsonSerializer.Serialize(css);
         var script = "(function() { var s = document.createElement('style'); s.textContent = " +
@@ -665,6 +665,22 @@ internal class WebViewChatRenderer
     /// JSON-escapes a string value for safe interpolation into JavaScript code.
     /// </summary>
     private static string Js(string value) => JsonSerializer.Serialize(value);
+
+    #endregion
+
+    #region Generated Regex
+
+    /// <summary>Matches KaTeX woff2 font URLs for base64 embedding.</summary>
+    [GeneratedRegex(@"url\(fonts/(KaTeX_[^)]+\.woff2)\)")]
+    private static partial Regex KatexWoff2Regex();
+
+    /// <summary>Matches KaTeX woff font src alternatives to strip.</summary>
+    [GeneratedRegex(@",url\(fonts/[^)]+\.woff\)\s*format\(""woff""\)")]
+    private static partial Regex KatexWoffRegex();
+
+    /// <summary>Matches KaTeX ttf font src alternatives to strip.</summary>
+    [GeneratedRegex(@",url\(fonts/[^)]+\.ttf\)\s*format\(""truetype""\)")]
+    private static partial Regex KatexTtfRegex();
 
     #endregion
 }

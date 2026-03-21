@@ -1,4 +1,5 @@
 ﻿using DocumentFormat.OpenXml.Packaging;
+using FieldCure.AssistStudio.Controls.Helpers;
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -1286,7 +1287,7 @@ public sealed partial class InputContainer : Control
 
         var tools = AvailableTools;
         // Initialize the enabled set from all tools if needed
-        _enabledToolSet ??= new HashSet<string>(tools.Select(t => t.Name));
+        _enabledToolSet ??= [.. tools.Select(t => t.Name)];
 
         if (checkBox.IsChecked == true)
             _enabledToolSet.Add(toolName);
