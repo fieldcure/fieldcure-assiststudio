@@ -1,5 +1,44 @@
 ﻿# Release Notes — AssistStudio App
 
+## [0.7.0] - 2026-03-21
+
+### Added
+- Extended thinking support with per-provider toggle in Models settings
+- MCP (Model Context Protocol) integration: server registry, connect page, edit dialog, and graceful shutdown
+- `search_tools` meta-tool for token-efficient tool selection with large tool sets
+- Conversation branching with tree-based edit flow and branch navigator
+- `Ctrl+F` conversation search with highlight and navigation
+- `CollapsibleSection` control for grouping Models page providers and ProfilesPage tools
+- `ThemedContentDialog` base class for theme-aware dialogs
+- `NotificationCenter` with slide-in/out animated InfoBar notifications
+- Comprehensive structured logging across all subsystems
+- Per-provider `MaxTokens` setting on Models page
+- `UrlFetchTool` for web page content extraction
+- Shimmer loading placeholders in ModelSelectionDialog
+- MCP tool grouping on ProfilesPage with filter and tool counts
+- Open Logs Folder button on Advanced settings page
+- MCP server status notifications (connect/disconnect)
+- Recent conversations menu styled like VS Recent Files
+
+### Changed
+- Settings panel refactored to Frame-based navigation with AppSettings events
+- ProfilesPage UI improved: ComboBox selection, auto-height instructions, tool counts
+- Ollama terminology unified (Pull → Download), download survives page navigation
+- Conversation file extension renamed from `.astx` to `.astd` (AssistStudio Document)
+- File picker label unified to "AssistStudio Document"
+- `ConversationManager` and `AppJsonContext` moved from Core NuGet to App layer
+- `SearchFilesTool` made async with cancellation support
+- Helpers and Tools moved from Modules/ to standard root-level folders
+
+### Fixed
+- Conversation branch restoration losing messages and navigator state
+- Tool calling conversation restoration showing blank on reopen
+- Recent conversations MRU ordering on selection
+- WebView2 clipboard shortcuts and streaming CSS styles
+- Ollama status check deferred on Models page entry
+
+---
+
 ## [0.6.0] - 2026-03-17
 
 ### Added

@@ -1,5 +1,31 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Core
 
+## [0.7.0] - 2026-03-21
+
+### Added
+- Extended thinking support with `ThinkingOverride` and per-provider `ThinkingCapability` architecture
+- `StreamEvent` replaces raw `string` in `IAiProvider.StreamAsync` (`IAsyncEnumerable<StreamEvent>`)
+- Streaming tool call accumulation via `StreamToolCallAccumulator`
+- Ollama `<think>` tag parsing into `ThinkingDelta` stream events
+- `UrlFetchTool` built-in tool for web page content extraction
+- `McpServerConfig` and `McpToolAdapter` for MCP (Model Context Protocol) integration
+- `search_tools` meta-tool support with dynamic MCP metadata injection
+- `DiagnosticLogger` structured logging hooks (`OnInfo`, `OnWarning`, `OnException`)
+- `ModelCompatibility` helper for provider-specific feature detection
+- `ContextProvider` delegate and `WorkspaceContext` model for tool context injection
+- `ConversationToolState` model for tracking tool state across conversation turns
+
+### Changed
+- **Breaking:** `IAiProvider.StreamAsync` returns `IAsyncEnumerable<StreamEvent>` instead of `IAsyncEnumerable<string>`
+- Providers implement proper `IDisposable` pattern (CA1816)
+- Ollama remote host UX improved with timeout, error messages, and custom URL support
+- Conversation file extension renamed from `.astx` to `.astd` (AssistStudio Document)
+
+### Removed
+- `ConversationManager` and `AppJsonContext` moved to App layer (not part of NuGet package)
+
+---
+
 ## [0.6.0] - 2026-03-17
 
 ### Added

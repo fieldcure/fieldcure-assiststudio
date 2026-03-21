@@ -1,5 +1,38 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Controls.WinUI
 
+## [0.7.0] - 2026-03-21
+
+### Added
+- Extended thinking UI with collapsible left-bar styled thinking blocks
+- Streaming tool call display as themed blocks with tool name labels
+- Progressive streaming render (tokens displayed as they arrive, markdown finalized on complete)
+- Tool toggle UI in `InputContainer` with select all/deselect all and `search_tools` policy support
+- Conversation branching with tree-based edit flow and branch navigator
+- `Ctrl+F` conversation search with highlight and prev/next navigation
+- Shimmer loading placeholder control
+- `IsReadOnly`, `ShowTitleBar`, `AllowAttachments`, `EmptyStateContent`, `FontFamily`, `FontSize` dependency properties on `ChatPanel`
+- `RegisteredTools`, `WorkspaceContext`, `ContextProvider`, `UtilityProvider` properties on `ChatPanel`
+- `KeyboardShortcutPressed` event on `ChatPanel`
+- MCP server disconnect notification on app exit
+
+### Changed
+- **Breaking:** `IAiProvider.StreamAsync` now returns `IAsyncEnumerable<StreamEvent>` (consumers must update)
+- Controls RootNamespace changed from `FieldCure.AssistStudio` to `FieldCure.AssistStudio.Controls`
+- `SubtleButtonStyle` aligned with WinAppSDK 1.8 built-in specification
+- Chat font size increased for readability; input area sizing improved
+- Edit/resend button renamed to "Send" with settings hint
+- `GeneratedRegex` source generator used for all regex patterns (SYSLIB1045)
+- `CreatePreviewItem` return type narrowed from `UIElement` to `Grid` (CA1859)
+
+### Fixed
+- Stream cancellation now finalizes message (removes blinking cursor)
+- WebView2 clipboard shortcuts (`Ctrl+C/V/X`) and streaming CSS styles
+- Conversation branch restoration losing messages and navigator state
+- Tool calling conversation restoration showing blank on reopen
+- Post-stream input focus restored automatically
+
+---
+
 ## [0.6.0] - 2026-03-17
 
 ### Added
