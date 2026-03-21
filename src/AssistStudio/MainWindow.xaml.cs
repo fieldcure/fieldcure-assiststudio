@@ -329,6 +329,7 @@ public sealed partial class MainWindow : Window
             LoggingService.LogInfo($"[File] Save: {Path.GetFileName(tab.FilePath)}, messages={messages.Count}");
             await ConversationManager.SaveToFileAsync(tab.FilePath, tab.Title, tab.CurrentPreset?.Name, messages);
             tab.IsDirty = false;
+            AppSettings.AddRecentFile(tab.FilePath);
         }
         else
         {
@@ -393,6 +394,7 @@ public sealed partial class MainWindow : Window
             {
                 await ConversationManager.SaveToFileAsync(tab.FilePath, tab.Title, tab.CurrentPreset?.Name, messages);
                 tab.IsDirty = false;
+                AppSettings.AddRecentFile(tab.FilePath);
             }
             else
             {
