@@ -1,5 +1,4 @@
-﻿using FieldCure.AssistStudio.Helpers;
-using FieldCure.AssistStudio.Models;
+﻿using FieldCure.AssistStudio.Models;
 using System.Collections.ObjectModel;
 using System.Text.Json;
 using Windows.Storage;

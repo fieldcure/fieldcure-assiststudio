@@ -1,7 +1,8 @@
-﻿using FieldCure.AssistStudio.Models;
 using System.Text.Json.Serialization;
+using AssistStudio.Models;
+using FieldCure.AssistStudio.Models;
 
-namespace FieldCure.AssistStudio.Helpers;
+namespace AssistStudio.Helpers;
 
 /// <summary>
 /// Source-generated JSON serializer context for trim-safe serialization.
