@@ -34,7 +34,8 @@ $NuGetSource = 'https://api.nuget.org/v3/index.json'
 
 $Projects = @(
     'src\AssistStudio.Core\AssistStudio.Core.csproj',
-    'src\AssistStudio.Controls\AssistStudio.Controls.csproj'
+    'src\AssistStudio.Controls\AssistStudio.Controls.csproj',
+    'src\DocumentParsers\DocumentParsers.csproj'
 )
 
 # --- Clean artifacts ---

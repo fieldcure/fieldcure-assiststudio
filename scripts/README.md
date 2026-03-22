@@ -1,45 +1,46 @@
-# Scripts — 관리자 전용
+# Scripts — Maintainers Only
 
 ## publish-nuget.ps1
 
-NuGet 패키지 빌드, 코드 서명, 배포를 자동화하는 스크립트입니다.
+Automates NuGet package build, code signing, and publishing.
 
-### 사전 준비
+### Prerequisites
 
-- GlobalSign EV 코드 서명 USB 동글 연결
-- NuGet.org API Key ([nuget.org/account/apikeys](https://www.nuget.org/account/apikeys)에서 발급)
+- GlobalSign EV code signing USB dongle connected
+- NuGet.org API Key (issue one at [nuget.org/account/apikeys](https://www.nuget.org/account/apikeys))
 
-### 사용법
+### Usage
 
 ```powershell
-# pack → sign → push (전체)
+# pack → sign → push (full pipeline)
 .\scripts\publish-nuget.ps1 -NuGetApiKey <key>
 
-# 환경변수로 API Key 설정 후 실행
+# Set API key via environment variable
 $env:NUGET_API_KEY = '<key>'
 .\scripts\publish-nuget.ps1
 
-# pack → sign만 (배포 전 확인용)
+# pack → sign only (pre-publish verification)
 .\scripts\publish-nuget.ps1 -SkipPush
 
-# pack만 (빌드 확인, USB 동글 없이 가능)
+# pack only (build check, no USB dongle needed)
 .\scripts\publish-nuget.ps1 -SkipSign -SkipPush
 ```
 
-### 대상 패키지
+### Target Packages
 
-| PackageId | 프로젝트 |
+| PackageId | Project |
 |---|---|
 | `FieldCure.AssistStudio.Core` | src/AssistStudio.Core |
 | `FieldCure.AssistStudio.Controls.WinUI` | src/AssistStudio.Controls |
+| `FieldCure.DocumentParsers` | src/DocumentParsers |
 
-### 서명 인증서
+### Signing Certificate
 
-- **발급자**: GlobalSign
-- **주체**: Fieldcure Co., Ltd.
-- **방식**: USB 토큰 (EV Code Signing)
-- **타임스탬프**: GlobalSign TSA
+- **Issuer**: GlobalSign
+- **Subject**: Fieldcure Co., Ltd.
+- **Method**: USB token (EV Code Signing)
+- **Timestamp**: GlobalSign TSA
 
-### 출력
+### Output
 
-빌드된 `.nupkg` 파일은 `artifacts/` 폴더에 생성됩니다.
+Built `.nupkg` files are placed in the `artifacts/` folder.
