@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>12</LangVersion>
+    <Version>0.1.0</Version>
     <AssemblyName>FieldCure.DocumentParsers</AssemblyName>
     <RootNamespace>FieldCure.DocumentParsers</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
