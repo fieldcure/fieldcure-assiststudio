@@ -1,38 +1,39 @@
 # Scripts — Maintainers Only
 
-## publish-nuget.ps1
+## Publish Scripts
 
-Automates NuGet package build, code signing, and publishing.
+Two separate scripts for independent release cycles. Both share common logic from `nuget-common.ps1`.
 
-### Prerequisites
-
-- GlobalSign EV code signing USB dongle connected
-- NuGet.org API Key (issue one at [nuget.org/account/apikeys](https://www.nuget.org/account/apikeys))
-
-### Usage
+### publish-nuget.ps1 — AssistStudio (Core + Controls)
 
 ```powershell
-# pack → sign → push (full pipeline)
-.\scripts\publish-nuget.ps1 -NuGetApiKey <key>
-
-# Set API key via environment variable
-$env:NUGET_API_KEY = '<key>'
-.\scripts\publish-nuget.ps1
-
-# pack → sign only (pre-publish verification)
-.\scripts\publish-nuget.ps1 -SkipPush
-
-# pack only (build check, no USB dongle needed)
-.\scripts\publish-nuget.ps1 -SkipSign -SkipPush
+.\scripts\publish-nuget.ps1 -NuGetApiKey <key>   # pack → sign → push
+.\scripts\publish-nuget.ps1 -SkipPush             # pack → sign only
+.\scripts\publish-nuget.ps1 -SkipSign -SkipPush   # pack only
 ```
-
-### Target Packages
 
 | PackageId | Project |
 |---|---|
 | `FieldCure.AssistStudio.Core` | src/AssistStudio.Core |
 | `FieldCure.AssistStudio.Controls.WinUI` | src/AssistStudio.Controls |
+
+### publish-parsers.ps1 — DocumentParsers
+
+```powershell
+.\scripts\publish-parsers.ps1 -NuGetApiKey <key>   # pack → sign → push
+.\scripts\publish-parsers.ps1 -SkipPush             # pack → sign only
+.\scripts\publish-parsers.ps1 -SkipSign -SkipPush   # pack only
+```
+
+| PackageId | Project |
+|---|---|
 | `FieldCure.DocumentParsers` | src/DocumentParsers |
+
+### Prerequisites
+
+- GlobalSign EV code signing USB dongle connected
+- NuGet.org API Key ([nuget.org/account/apikeys](https://www.nuget.org/account/apikeys))
+- Alternatively, set `$env:NUGET_API_KEY` instead of passing `-NuGetApiKey`
 
 ### Signing Certificate
 
