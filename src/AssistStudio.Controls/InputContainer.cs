@@ -1,5 +1,5 @@
-﻿using DocumentFormat.OpenXml.Packaging;
-using FieldCure.AssistStudio.Controls.Helpers;
+﻿using FieldCure.AssistStudio.Controls.Helpers;
+using FieldCure.DocumentParsers;
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -39,7 +39,7 @@ public sealed partial class InputContainer : Control
     /// <summary>
     /// Set of file extensions recognized as document attachments requiring text extraction.
     /// </summary>
-    private static readonly HashSet<string> DocumentExtensions = [".pdf", ".docx"];
+    private static readonly HashSet<string> DocumentExtensions = [".pdf", ".docx", ".hwpx"];
 
     #endregion
 
@@ -1083,15 +1083,19 @@ public sealed partial class InputContainer : Control
                 };
             }
 
-            // DOCX: always text-extract (no provider supports native DOCX)
-            var extractedText = ExtractTextFromDocx(data);
-            return new ChatAttachment
+            // Structured documents (DOCX, HWPX, etc.): extract text via DocumentParserFactory
+            var parser = DocumentParserFactory.GetParser(ext);
+            if (parser is not null)
             {
-                FileName = file.Name,
-                Type = AttachmentType.TextFile,
-                Data = Encoding.UTF8.GetBytes(extractedText),
-                MimeType = "text/plain"
-            };
+                var extractedText = parser.ExtractText(data);
+                return new ChatAttachment
+                {
+                    FileName = file.Name,
+                    Type = AttachmentType.TextFile,
+                    Data = Encoding.UTF8.GetBytes(extractedText),
+                    MimeType = "text/plain"
+                };
+            }
         }
 
         return new ChatAttachment
@@ -1101,24 +1105,6 @@ public sealed partial class InputContainer : Control
             Data = data,
             MimeType = isImage ? GetImageMimeType(ext) : "text/plain"
         };
-    }
-
-    /// <summary>
-    /// Extracts plain text content from a DOCX file byte array using Open XML SDK.
-    /// </summary>
-    private static string ExtractTextFromDocx(byte[] data)
-    {
-        using var stream = new MemoryStream(data);
-        using var doc = WordprocessingDocument.Open(stream, false);
-        var body = doc.MainDocumentPart?.Document?.Body;
-        if (body is null) return "";
-        var sb = new StringBuilder();
-        foreach (var paragraph in body.Elements<DocumentFormat.OpenXml.Wordprocessing.Paragraph>())
-        {
-            if (sb.Length > 0) sb.AppendLine();
-            sb.Append(paragraph.InnerText);
-        }
-        return sb.ToString();
     }
 
     /// <summary>
