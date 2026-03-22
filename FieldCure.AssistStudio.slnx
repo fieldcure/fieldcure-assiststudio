@@ -9,6 +9,7 @@
     <File Path="RELEASENOTES.App.md" />
     <File Path="RELEASENOTES.Controls.md" />
     <File Path="RELEASENOTES.Core.md" />
+    <File Path="RELEASENOTES.DocumentParsers.md" />
   </Folder>
 
   <Folder Name="/src/">

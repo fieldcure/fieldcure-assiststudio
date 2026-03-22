@@ -1,5 +1,22 @@
 ﻿# Release Notes — AssistStudio App
 
+## [0.8.0] - 2026-03-22
+
+### Added
+- Protocol activation via `assiststudio://` URI scheme
+
+### Changed
+- Document parsers extracted to independent `FieldCure.DocumentParsers` package
+
+### Fixed
+- Active path message ordering in branch restoration
+- Race condition in conversation restore rendering
+- Title bar visibility and dirty tracking on conversation operations
+- Conversation marked dirty on branch switch and title edit
+- Fire-and-forget MCP server kill for fast app exit
+
+---
+
 ## [0.7.0] - 2026-03-21
 
 ### Added

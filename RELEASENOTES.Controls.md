@@ -1,5 +1,16 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Controls.WinUI
 
+## [0.8.0] - 2026-03-22
+
+### Changed
+- Document parser code extracted from `InputContainer` to `FieldCure.DocumentParsers` package
+- `DocumentExtensions` now dynamically derived from `DocumentParserFactory.SupportedExtensions` — new parsers are auto-registered
+
+### Fixed
+- HWPX table extraction failing due to nested element structure (`hp:p > hp:run > hp:tbl`)
+
+---
+
 ## [0.7.0] - 2026-03-21
 
 ### Added

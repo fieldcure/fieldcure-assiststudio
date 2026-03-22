@@ -21,6 +21,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageTags>document;parser;docx;hwpx;text-extraction;rag</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageReleaseNotes>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)\..\..\RELEASENOTES.DocumentParsers.md'))</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

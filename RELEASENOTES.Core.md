@@ -1,5 +1,17 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Core
 
+## [0.8.0] - 2026-03-22
+
+### Added
+- `FieldCure.DocumentParsers` extracted as independent NuGet package (`v0.1.0`)
+- `DocumentParserFactory.SupportedExtensions` for dynamic extension discovery
+
+### Changed
+- Document parsing moved from `AssistStudio.Controls` to `FieldCure.DocumentParsers` package
+- Core now references `DocumentParsers` project for document text extraction
+
+---
+
 ## [0.7.0] - 2026-03-21
 
 ### Added
