@@ -41,4 +41,8 @@
     <PackageReference Include="System.Management" Version="9.*" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\DocumentParsers\DocumentParsers.csproj" />
+  </ItemGroup>
+
 </Project>
