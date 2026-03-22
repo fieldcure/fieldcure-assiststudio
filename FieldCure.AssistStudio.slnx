@@ -43,6 +43,12 @@
       <Configuration Solution="Release|x64" Project="Release|AnyCPU" />
       <Configuration Solution="Release|arm64" Project="Release|AnyCPU" />
     </Project>
+    <Project Path="src/DocumentParsers.Tests/DocumentParsers.Tests.csproj">
+      <Configuration Solution="Debug|x64" Project="Debug|AnyCPU" />
+      <Configuration Solution="Debug|arm64" Project="Debug|AnyCPU" />
+      <Configuration Solution="Release|x64" Project="Release|AnyCPU" />
+      <Configuration Solution="Release|arm64" Project="Release|AnyCPU" />
+    </Project>
   </Folder>
 
 </Solution>
