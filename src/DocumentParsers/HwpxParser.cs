@@ -52,8 +52,8 @@ public sealed class HwpxParser : IDocumentParser
 
     /// <summary>
     /// Processes block-level elements (paragraphs and tables) from a parent HWPX element.
-    /// Only processes direct child p and tbl elements to avoid duplicating text
-    /// from table cells (which also contain p elements).
+    /// In HWPX, tables (hp:tbl) are embedded inside paragraphs (hp:p > hp:run > hp:tbl),
+    /// so paragraphs are checked for embedded tables as well.
     /// </summary>
     private static void ProcessBlockElements(XElement parent, StringBuilder sb)
     {
@@ -63,17 +63,46 @@ public sealed class HwpxParser : IDocumentParser
 
             if (localName == "p")
             {
-                // Paragraph: concatenate all hp:t text within runs
-                var paraText = ExtractParagraphText(child);
-                if (!string.IsNullOrWhiteSpace(paraText))
+                // Check for embedded tables inside this paragraph (hp:p > hp:run > hp:tbl)
+                var embeddedTables = child.Descendants()
+                    .Where(e => e.Name.LocalName == "tbl")
+                    .ToList();
+
+                if (embeddedTables.Count > 0)
                 {
-                    if (sb.Length > 0) sb.AppendLine();
-                    sb.Append(paraText);
+                    // Extract paragraph text (excluding table cell text)
+                    var paraText = ExtractParagraphTextExcludingTables(child);
+                    if (!string.IsNullOrWhiteSpace(paraText))
+                    {
+                        if (sb.Length > 0) sb.AppendLine();
+                        sb.Append(paraText);
+                    }
+
+                    // Then render each embedded table
+                    foreach (var tbl in embeddedTables)
+                    {
+                        var tableText = ConvertTableToMarkdown(tbl);
+                        if (!string.IsNullOrEmpty(tableText))
+                        {
+                            if (sb.Length > 0) { sb.AppendLine(); sb.AppendLine(); }
+                            sb.Append(tableText);
+                        }
+                    }
+                }
+                else
+                {
+                    // Simple paragraph: concatenate all hp:t text within runs
+                    var paraText = ExtractParagraphText(child);
+                    if (!string.IsNullOrWhiteSpace(paraText))
+                    {
+                        if (sb.Length > 0) sb.AppendLine();
+                        sb.Append(paraText);
+                    }
                 }
             }
             else if (localName == "tbl")
             {
-                // Table: convert to markdown format
+                // Standalone table (direct child)
                 var tableText = ConvertTableToMarkdown(child);
                 if (!string.IsNullOrEmpty(tableText))
                 {
@@ -105,6 +134,26 @@ public sealed class HwpxParser : IDocumentParser
     }
 
     /// <summary>
+    /// Extracts text from a paragraph while excluding any text that belongs to embedded tables.
+    /// This prevents table cell text from being duplicated outside the markdown table.
+    /// </summary>
+    private static string ExtractParagraphTextExcludingTables(XElement paragraph)
+    {
+        // Collect all tbl elements to build an exclusion set
+        var tableElements = new HashSet<XElement>(
+            paragraph.Descendants().Where(e => e.Name.LocalName == "tbl"));
+
+        var textNodes = paragraph.Descendants()
+            .Where(e => e.Name.LocalName == "t"
+                     && !e.Ancestors().Any(a => tableElements.Contains(a)));
+
+        var sb = new StringBuilder();
+        foreach (var t in textNodes)
+            sb.Append(t.Value);
+        return sb.ToString();
+    }
+
+    /// <summary>
     /// Converts an HWPX table element (hp:tbl) to a markdown-formatted table string.
     /// The first row is treated as the header row.
     /// </summary>
@@ -125,8 +174,8 @@ public sealed class HwpxParser : IDocumentParser
                 .Where(e => e.Name.LocalName == "tc")
                 .Select(tc =>
                 {
-                    // A cell may contain multiple paragraphs — join with space
-                    var cellParagraphs = tc.Elements()
+                    // A cell may contain paragraphs at any depth (e.g. tc > subList > p in HWPX)
+                    var cellParagraphs = tc.Descendants()
                         .Where(e => e.Name.LocalName == "p")
                         .Select(ExtractParagraphText)
                         .Where(t => !string.IsNullOrEmpty(t));
