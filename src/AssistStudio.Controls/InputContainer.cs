@@ -38,8 +38,10 @@ public sealed partial class InputContainer : Control
 
     /// <summary>
     /// Set of file extensions recognized as document attachments requiring text extraction.
+    /// Includes PDF (handled natively) and all extensions supported by DocumentParserFactory.
     /// </summary>
-    private static readonly HashSet<string> DocumentExtensions = [".pdf", ".docx", ".hwpx"];
+    private static readonly HashSet<string> DocumentExtensions =
+        [".pdf", .. DocumentParserFactory.SupportedExtensions];
 
     #endregion
 
