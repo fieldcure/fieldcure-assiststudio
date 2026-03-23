@@ -386,28 +386,20 @@
             <Setter.Value>
                 <ControlTemplate TargetType="local:ChatPanel">
                     <Grid x:Name="PART_RootGrid" AllowDrop="True">
-                        <!-- Empty state: input centered vertically -->
-                        <Grid x:Name="PART_EmptyStatePanel"
-                              VerticalAlignment="Center"
-                              HorizontalAlignment="Stretch"
-                              Padding="24">
-                            <StackPanel x:Name="PART_EmptyStateContent" VerticalAlignment="Center" MaxWidth="680">
-                                <local:InputContainer x:Name="PART_InputArea"
-                                                      HorizontalAlignment="Stretch"
-                                                      Placeholder="{TemplateBinding Placeholder}" />
-                            </StackPanel>
-                        </Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
 
-                        <!-- Chat layout (initially collapsed) -->
-                        <Grid x:Name="PART_ChatLayout" Visibility="Collapsed">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="*" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-
-                            <StackPanel x:Name="PART_TitleBar" Grid.Row="0">
-                                <StackPanel Orientation="Horizontal" Spacing="8" Padding="20,14,20,10">
+                        <!-- Title bar: always visible -->
+                        <StackPanel x:Name="PART_TitleBar" Grid.Row="0">
+                            <Grid Padding="20,14,20,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <!-- Left: title + edit/refresh -->
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
                                     <TextBlock x:Name="PART_TitleText"
                                                Style="{StaticResource SubtitleTextBlockStyle}"
                                                FontWeight="SemiBold"
@@ -428,30 +420,53 @@
                                             VerticalAlignment="Center">
                                         <FontIcon Glyph="&#xE777;" FontSize="12" />
                                     </Button>
-                                    <Button x:Name="PART_TitleFolderButton"
-                                            ToolTipService.ToolTip="Workspace Folders"
-                                            Style="{StaticResource SubtleButtonStyle}"
-                                            Padding="4"
-                                            VerticalAlignment="Center">
-                                        <Grid>
-                                            <FontIcon Glyph="&#xE8B7;" FontSize="12" />
-                                            <TextBlock x:Name="PART_FolderBadge"
-                                                       FontSize="9"
-                                                       FontWeight="Bold"
-                                                       HorizontalAlignment="Right"
-                                                       VerticalAlignment="Top"
-                                                       Margin="8,-4,-4,0"
-                                                       Visibility="Collapsed" />
-                                        </Grid>
-                                    </Button>
                                 </StackPanel>
-                                <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
-                            </StackPanel>
+                                <!-- Right: folder button -->
+                                <Button x:Name="PART_TitleFolderButton"
+                                        Grid.Column="1"
+                                        ToolTipService.ToolTip="Workspace Folders"
+                                        Style="{StaticResource SubtleButtonStyle}"
+                                        Padding="4"
+                                        VerticalAlignment="Center">
+                                    <Grid>
+                                        <FontIcon Glyph="&#xE8B7;" FontSize="12" />
+                                        <TextBlock x:Name="PART_FolderBadge"
+                                                   FontSize="9"
+                                                   FontWeight="Bold"
+                                                   HorizontalAlignment="Right"
+                                                   VerticalAlignment="Top"
+                                                   Margin="8,-4,-4,0"
+                                                   Visibility="Collapsed" />
+                                    </Grid>
+                                </Button>
+                            </Grid>
+                            <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                        </StackPanel>
 
-                            <WebView2 x:Name="PART_ChatWebView" Grid.Row="1" DefaultBackgroundColor="Transparent" IsTabStop="False" />
+                        <!-- Empty state: input centered vertically -->
+                        <Grid x:Name="PART_EmptyStatePanel"
+                              Grid.Row="1"
+                              VerticalAlignment="Center"
+                              HorizontalAlignment="Stretch"
+                              Padding="24">
+                            <StackPanel x:Name="PART_EmptyStateContent" VerticalAlignment="Center" MaxWidth="680">
+                                <local:InputContainer x:Name="PART_InputArea"
+                                                      HorizontalAlignment="Stretch"
+                                                      Placeholder="{TemplateBinding Placeholder}" />
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Chat layout (initially collapsed) -->
+                        <Grid x:Name="PART_ChatLayout" Grid.Row="1" Visibility="Collapsed">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <WebView2 x:Name="PART_ChatWebView" Grid.Row="0" DefaultBackgroundColor="Transparent" IsTabStop="False" />
 
                             <!-- Search bar overlay (right-aligned in WebView2 area) -->
-                            <Border x:Name="PART_SearchBar" Grid.Row="1"
+                            <Border x:Name="PART_SearchBar" Grid.Row="0"
                                     VerticalAlignment="Top"
                                     HorizontalAlignment="Right"
                                     Margin="0,8,28,0"
@@ -514,7 +529,7 @@
                             </Border>
 
                             <!-- Tool approval panel (shown in place of InputContainer when confirmation needed) -->
-                            <local:ToolApprovalPanel x:Name="PART_ToolApprovalPanel" Grid.Row="2" />
+                            <local:ToolApprovalPanel x:Name="PART_ToolApprovalPanel" Grid.Row="1" />
                         </Grid>
                     </Grid>
                 </ControlTemplate>
