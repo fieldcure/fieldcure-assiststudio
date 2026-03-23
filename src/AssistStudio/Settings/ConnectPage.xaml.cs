@@ -370,15 +370,19 @@ public sealed partial class ConnectPage : Page
             XamlRoot = XamlRoot,
         };
 
-        // Validate command against built-in servers in real time
+        // Validate name and command against built-in servers in real time
         if (!isEdit)
         {
-            commandBox.TextChanged += (_, _) =>
+            void ValidateBuiltIn()
             {
-                var isBuiltIn = BuiltInServerHelper.IsBuiltInCommand(commandBox.Text.Trim());
+                var isBuiltIn = BuiltInServerHelper.IsBuiltInCommand(nameBox.Text.Trim())
+                    || BuiltInServerHelper.IsBuiltInCommand(commandBox.Text.Trim());
                 builtInWarning.Visibility = isBuiltIn ? Visibility.Visible : Visibility.Collapsed;
                 dialog.IsPrimaryButtonEnabled = !isBuiltIn;
-            };
+            }
+
+            nameBox.TextChanged += (_, _) => ValidateBuiltIn();
+            commandBox.TextChanged += (_, _) => ValidateBuiltIn();
 
             transportCombo.SelectionChanged += (_, _) =>
             {
@@ -482,7 +486,8 @@ public sealed partial class ConnectPage : Page
             foreach (var config in configs)
             {
                 if (existingNames.Contains(config.Name)) continue;
-                if (BuiltInServerHelper.IsBuiltInCommand(config.Command)) continue;
+                if (BuiltInServerHelper.IsBuiltInCommand(config.Command)
+                    || BuiltInServerHelper.IsBuiltInCommand(config.Name)) continue;
 
                 _registry?.AddWithoutConnect(config);
                 existingNames.Add(config.Name);
