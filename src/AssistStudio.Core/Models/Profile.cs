@@ -30,5 +30,12 @@ public class Profile
     /// </summary>
     public bool UseSearchTools { get; set; }
 
+    /// <summary>
+    /// Server IDs enabled for this profile (e.g., "builtin_filesystem", "github_abc123").
+    /// When non-empty, only tools from these servers are discoverable via search_tools.
+    /// Empty means no servers selected (built-in tools only).
+    /// </summary>
+    public List<string> EnabledServers { get; set; } = [];
+
     #endregion
 }

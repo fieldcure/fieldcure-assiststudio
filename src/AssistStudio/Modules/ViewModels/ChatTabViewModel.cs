@@ -636,62 +636,58 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     #region Private Methods
 
     /// <summary>
-    /// Resolves registered tools from both built-in (ToolRegistry) and MCP sources.
-    /// If the profile has specific tool names, filters by those names.
-    /// Otherwise, includes all built-in tools.
+    /// Resolves registered tools using server-level selection.
+    /// Built-in tools (run_command, fetch_url) are always included.
+    /// File tools (read_file, write_file, search_files) are included only when Filesystem MCP is inactive.
+    /// All MCP tools are discovered via search_tools meta-tool, not registered individually.
     /// </summary>
     private void ResolveTools(Profile? profile)
     {
-        if (profile is null || (profile.ToolNames.Count == 0 && !profile.UseSearchTools))
+        var tools = new List<IAssistTool>();
+
+        // 1. Always include: run_command, fetch_url
+        tools.AddRange(ToolRegistry.Resolve(["run_command", "fetch_url"]));
+
+        // 2. Conditional: file tools — only when Filesystem MCP is not active for this profile
+        var filesystemConn = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.FilesystemKey);
+        var filesystemActiveInProfile = filesystemConn?.IsConnected == true
+            && (profile?.EnabledServers.Contains($"builtin_{BuiltInServerHelper.FilesystemKey}") ?? false);
+
+        if (!filesystemActiveInProfile)
         {
-            RegisteredTools = [];
-            return;
+            tools.AddRange(ToolRegistry.Resolve(["read_file", "write_file", "search_files"]));
         }
 
-        // Check if the built-in Filesystem MCP server is active
-        var filesystemConn = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.FilesystemKey);
-        var filesystemActive = filesystemConn?.IsConnected == true;
-
-        // Get built-in tools matching profile's tool names (exclude search_tools, handled below)
-        // When Filesystem MCP is active, suppress overlapping built-in tools
-        var builtIn = ToolRegistry.Resolve(profile.ToolNames)
-            .Where(t => t.Name != "search_tools")
-            .Where(t => !filesystemActive || !BuiltInServerHelper.SuppressedBuiltInToolNames.Contains(t.Name))
-            .ToList();
-
-        // Get profile-selected MCP tools + built-in server tools
-        // Built-in server tools are always included when the server is active
-        var mcpTools = App.McpRegistry.AllTools
-            .Where(t => profile.ToolNames.Contains(t.Name) || t.OverrideRequiresConfirmation.HasValue)
-            .Cast<IAssistTool>()
-            .ToList();
-
-        // Policy: UseSearchTools ON, or selected MCP tools > 10 → replace MCP tools with search_tools
+        // 3. search_tools — always included, scoped to profile's enabled servers
         var searchTool = ToolRegistry.Resolve(["search_tools"]).FirstOrDefault();
-        if (searchTool is not null && (profile.UseSearchTools || mcpTools.Count > 10))
+        if (searchTool is not null)
         {
-            // Configure search scope
-            if (searchTool is ISearchToolScope scoped)
+            // Determine which servers are enabled in the profile
+            var enabledServerIds = profile?.EnabledServers ?? [];
+
+            if (enabledServerIds.Count > 0 && searchTool is ISearchToolScope scoped)
             {
-                scoped.AllowedToolNames = profile.UseSearchTools
-                    ? null  // Search all MCP tools
-                    : mcpTools.Select(t => t.Name).ToHashSet();
+                // Scope search to tools from enabled servers only
+                var allowedToolNames = App.McpRegistry.AllTools
+                    .Where(t => enabledServerIds.Contains(
+                        App.McpRegistry.Connections
+                            .FirstOrDefault(c => c.Tools.Contains(t))?.Config.Id ?? ""))
+                    .Select(t => t.Name)
+                    .ToHashSet();
+
+                scoped.AllowedToolNames = allowedToolNames.Count > 0 ? allowedToolNames : null;
+            }
+            else if (searchTool is ISearchToolScope scopedEmpty)
+            {
+                scopedEmpty.AllowedToolNames = enabledServerIds.Count == 0
+                    ? new HashSet<string>()  // No servers → no MCP tools discoverable
+                    : null;
             }
 
-            // Replace MCP tools with search_tools meta-tool
-            builtIn.Add(searchTool);
-            RegisteredTools = builtIn;
-            return;
+            tools.Add(searchTool);
         }
 
-        if (mcpTools.Count == 0)
-        {
-            RegisteredTools = builtIn;
-            return;
-        }
-
-        // Combine using ToolResolver to handle name conflicts
-        RegisteredTools = ToolResolver.Resolve(builtIn, mcpTools, conversationState: null);
+        RegisteredTools = tools;
     }
 
     /// <summary>
