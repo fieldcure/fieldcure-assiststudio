@@ -121,22 +121,20 @@ public sealed partial class McpServerCard : UserControl
         var toolsLabel = _loader.GetString("Connect_Tools");
         var builtInLabel = _loader.GetString("Connect_BuiltIn");
 
+        // Built-in badge in title row
+        BuiltInBadge.Visibility = config.IsBuiltIn ? Visibility.Visible : Visibility.Collapsed;
+        BuiltInText.Text = builtInLabel;
+
         string detailText;
         if (config.IsBuiltIn)
         {
             if (connection.IsConnected)
             {
-                // Active connection: "built-in · N tools"
-                detailText = $"{builtInLabel} · {connection.Tools.Count} {toolsLabel}";
-            }
-            else if (!string.IsNullOrEmpty(config.Description))
-            {
-                // Placeholder: description already contains formatted 2-line text
-                detailText = config.Description;
+                detailText = $"{connection.Tools.Count} {toolsLabel}";
             }
             else
             {
-                detailText = builtInLabel;
+                detailText = config.Description ?? "";
             }
         }
         else
