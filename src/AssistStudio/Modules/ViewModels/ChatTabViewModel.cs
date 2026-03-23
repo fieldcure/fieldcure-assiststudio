@@ -263,6 +263,20 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         Panel = panel;
         LoggingService.LogInfo($"[Tab] Panel attached: {Title}, pending={_pendingMessages.Count}");
 
+        // Initialize workspace folders:
+        // 1. Per-conversation overrides (loaded conversations)
+        // 2. Profile defaults (new conversations)
+        if (_builtInServers is not null
+            && _builtInServers.TryGetValue(BuiltInServerHelper.FilesystemKey, out var savedConfig)
+            && savedConfig.Folders.Count > 0)
+        {
+            panel.WorkspaceFolders = savedConfig.Folders;
+        }
+        else if (SelectedProfile?.WorkspaceFolders is { Count: > 0 } profileFolders)
+        {
+            panel.WorkspaceFolders = [.. profileFolders];
+        }
+
         // Relay keyboard shortcut from WebView2 (separate HWND)
         panel.KeyboardShortcutPressed += (s, e) => KeyboardShortcutPressed?.Invoke(s, e);
 
@@ -513,12 +527,29 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Handles profile changes by updating the system prompt and registered tools.
+    /// Handles profile changes by updating the system prompt, workspace folders, and registered tools.
     /// </summary>
-    public void OnProfileChanged(object? _sender, Profile profile)
+    public async void OnProfileChanged(object? _sender, Profile profile)
     {
         LoggingService.LogInfo($"[Tab] Profile changed: {profile.Name}");
         SystemPrompt = profile.Text;
+
+        // Update workspace folders: conversation override takes precedence over profile defaults
+        if (_builtInServers is null && Panel is not null)
+        {
+            var profileFolders = profile.WorkspaceFolders;
+            Panel.WorkspaceFolders = profileFolders.Count > 0 ? [.. profileFolders] : null;
+
+            // Reconnect Filesystem MCP with new folders
+            var filesystemId = $"builtin_{BuiltInServerHelper.FilesystemKey}";
+            var isEnabled = profile.EnabledServers.Contains(filesystemId) && profileFolders.Count > 0;
+            var config = new BuiltInServerConfig
+            {
+                IsEnabled = isEnabled,
+                Folders = [.. profileFolders],
+            };
+            await App.McpRegistry.ConnectBuiltInAsync(BuiltInServerHelper.FilesystemKey, config);
+        }
 
         // Resolve tools from both built-in and MCP sources
         ResolveTools(profile);

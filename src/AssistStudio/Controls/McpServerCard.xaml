@@ -35,7 +35,7 @@
                 <TextBlock x:Name="DetailText"
                            Style="{ThemeResource CaptionTextBlockStyle}"
                            Opacity="0.6"
-                           TextTrimming="CharacterEllipsis"
+                           TextWrapping="Wrap"
                            MaxWidth="500" />
             </StackPanel>
 

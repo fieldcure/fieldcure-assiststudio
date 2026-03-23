@@ -37,5 +37,11 @@ public class Profile
     /// </summary>
     public List<string> EnabledServers { get; set; } = [];
 
+    /// <summary>
+    /// Default workspace folders for this profile.
+    /// Used as the initial folder list when creating a new conversation with this profile.
+    /// </summary>
+    public List<string> WorkspaceFolders { get; set; } = [];
+
     #endregion
 }

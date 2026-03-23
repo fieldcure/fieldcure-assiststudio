@@ -118,19 +118,41 @@ public sealed partial class McpServerCard : UserControl
         TransportText.Text = config.TransportType.ToString();
 
         // Detail text
-        var detailText = config.TransportType == McpTransportType.Stdio
-            ? $"{config.Command} {string.Join(" ", config.Arguments ?? [])}"
-            : config.Url ?? "";
-
         var toolsLabel = _loader.GetString("Connect_Tools");
-        var toolCount = connection.IsConnected ? $" · {connection.Tools.Count} {toolsLabel}" : "";
-        var errorText = connection.State == McpConnectionState.Error ? $" · {connection.ErrorMessage}" : "";
-        DetailText.Text = detailText + toolCount + errorText;
+        var builtInLabel = _loader.GetString("Connect_BuiltIn");
+
+        string detailText;
+        if (config.IsBuiltIn)
+        {
+            // Line 1: description (or "N tools" if connected)
+            // Line 2: "built-in · N tools" (or just "built-in")
+            var toolInfo = connection.IsConnected
+                ? $"{builtInLabel} · {connection.Tools.Count} {toolsLabel}"
+                : builtInLabel;
+            var desc = !connection.IsConnected && !string.IsNullOrEmpty(config.Description)
+                ? config.Description + "\n"
+                : "";
+            detailText = desc + toolInfo;
+        }
+        else
+        {
+            var cmdText = config.TransportType == McpTransportType.Stdio
+                ? $"{config.Command} {string.Join(" ", config.Arguments ?? [])}"
+                : config.Url ?? "";
+            var toolCount = connection.IsConnected ? $" · {connection.Tools.Count} {toolsLabel}" : "";
+            var errorText = connection.State == McpConnectionState.Error ? $" · {connection.ErrorMessage}" : "";
+            detailText = cmdText + toolCount + errorText;
+        }
+        DetailText.Text = detailText;
 
         // Toggle state (suppress event to avoid re-entry)
         _suppressToggleEvent = true;
         EnableToggle.IsOn = config.IsEnabled;
         _suppressToggleEvent = false;
+
+        // Built-in servers: hide edit and delete (managed via Profile settings)
+        EditButton.Visibility = config.IsBuiltIn ? Visibility.Collapsed : Visibility.Visible;
+        DeleteButton.Visibility = config.IsBuiltIn ? Visibility.Collapsed : Visibility.Visible;
 
         // Tooltips
         ToolTipService.SetToolTip(EditButton, _loader.GetString("Connect_Edit"));

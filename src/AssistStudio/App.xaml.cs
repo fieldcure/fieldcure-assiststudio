@@ -201,6 +201,9 @@ public partial class App : Application
     {
         try
         {
+            // Ensure built-in server tools are installed via dotnet tool
+            await BuiltInServerHelper.EnsureInstalledAsync();
+
             var configs = await AppSettings.LoadMcpServersAsync();
             LoggingService.LogInfo($"[App] Initializing MCP servers ({configs.Count} configs)");
             if (configs.Count > 0)

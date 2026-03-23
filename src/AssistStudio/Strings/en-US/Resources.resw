@@ -612,6 +612,42 @@
   <data name="Connect_Servers" xml:space="preserve">
     <value>servers</value>
   </data>
+  <data name="Connect_BuiltIn" xml:space="preserve">
+    <value>Built-in</value>
+  </data>
+  <data name="Connect_FilesystemNeedsFolders" xml:space="preserve">
+    <value>Configure workspace folders in Profile settings.</value>
+  </data>
+  <data name="BuiltIn_InstallSuccess" xml:space="preserve">
+    <value>{0} server installed</value>
+  </data>
+  <data name="BuiltIn_InstallSuccessMessage" xml:space="preserve">
+    <value>Configure workspace folders in Profile settings.</value>
+  </data>
+  <data name="BuiltIn_Installing" xml:space="preserve">
+    <value>Installing FieldCure.Mcp.Filesystem v{0}…</value>
+  </data>
+  <data name="BuiltIn_Updating" xml:space="preserve">
+    <value>Updating FieldCure.Mcp.Filesystem v{0} → v{1}…</value>
+  </data>
+  <data name="BuiltIn_Updated" xml:space="preserve">
+    <value>FieldCure.Mcp.Filesystem updated v{0} → v{1}</value>
+  </data>
+  <data name="BuiltIn_InstallFailed" xml:space="preserve">
+    <value>Failed to install {0}</value>
+  </data>
+  <data name="BuiltIn_InstallFailedMessage" xml:space="preserve">
+    <value>Check your internet connection and try again.</value>
+  </data>
+  <data name="Profiles_WorkspaceFolderHint" xml:space="preserve">
+    <value>Default workspace folders for this profile.</value>
+  </data>
+  <data name="Profiles_WorkspaceFolderEmpty" xml:space="preserve">
+    <value>(no folders)</value>
+  </data>
+  <data name="Profiles_WorkspaceAddFolder" xml:space="preserve">
+    <value>Add Folder</value>
+  </data>
   <data name="Mcp_ServersConnected" xml:space="preserve">
     <value>{0} MCP server(s) connected</value>
   </data>

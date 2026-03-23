@@ -239,8 +239,28 @@ public sealed partial class ConnectPage : Page
             return;
         }
 
-        ServerListControl.ItemsSource = _registry.Connections;
-        EmptyStateText.Visibility = _registry.Connections.Count == 0
+        // Build display list: always include built-in servers (even if not connected)
+        var displayList = new List<McpServerConnection>(_registry.Connections);
+
+        // Ensure Filesystem built-in server is always visible (RAG hidden until ready)
+        var fsId = $"builtin_{BuiltInServerHelper.FilesystemKey}";
+        if (!displayList.Any(c => c.Config.Id == fsId))
+        {
+            var placeholderConfig = new McpServerConfig
+            {
+                Id = fsId,
+                Name = BuiltInServerHelper.FilesystemPackageId,
+                TransportType = McpTransportType.Stdio,
+                Command = BuiltInServerHelper.GetServerExePath(BuiltInServerHelper.FilesystemKey),
+                IsBuiltIn = true,
+                IsEnabled = false,
+                Description = _loader.GetString("Connect_FilesystemNeedsFolders"),
+            };
+            displayList.Insert(0, new McpServerConnection(placeholderConfig));
+        }
+
+        ServerListControl.ItemsSource = displayList;
+        EmptyStateText.Visibility = displayList.Count == 0
             ? Visibility.Visible
             : Visibility.Collapsed;
     }
