@@ -246,6 +246,12 @@ public static class AppSettings
     #region Profile Methods
 
     /// <summary>
+    /// Returns the static default for a built-in profile by name, or <c>null</c> if not found.
+    /// </summary>
+    public static Profile? GetBuiltInDefaults(string name)
+        => BuiltInProfiles.FirstOrDefault(p => p.Name == name);
+
+    /// <summary>
     /// Loads all profiles, combining built-in profiles with user-created custom profiles from storage.
     /// </summary>
     /// <returns>A list of all available profiles.</returns>

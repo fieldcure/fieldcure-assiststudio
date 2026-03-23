@@ -71,6 +71,11 @@ public sealed partial class ProfilesPage : Page
         }
         _suppressEvents = false;
 
+        // Set reset button tooltip (localized)
+        var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
+        ToolTipService.SetToolTip(ResetProfileButton, loader.GetString("Profiles_ResetProfile"));
+        ToolTipService.SetPlacement(ResetProfileButton, Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse);
+
         LoadSelectedProfile();
     }
 
@@ -256,6 +261,26 @@ public sealed partial class ProfilesPage : Page
     /// <summary>
     /// Handles the delete profile button click to remove the currently selected custom profile.
     /// </summary>
+    private void OnResetProfileClicked(object sender, RoutedEventArgs e)
+    {
+        if (ProfileCombo.SelectedItem is not Profile profile) return;
+        if (!profile.IsBuiltIn) return;
+
+        // Find the static default for this built-in profile
+        var defaults = AppSettings.GetBuiltInDefaults(profile.Name);
+        if (defaults is null) return;
+
+        profile.Text = defaults.Text;
+        profile.ToolNames = [.. defaults.ToolNames];
+        profile.UseSearchTools = defaults.UseSearchTools;
+        profile.EnabledServers = [.. defaults.EnabledServers];
+        profile.PreferredProviderType = defaults.PreferredProviderType;
+        profile.PreferredModelId = defaults.PreferredModelId;
+
+        LoadSelectedProfile();
+        SaveAll();
+    }
+
     private void OnDeleteProfileClicked(object sender, RoutedEventArgs e)
     {
         if (ProfileCombo.SelectedItem is not Profile profile) return;
@@ -310,7 +335,8 @@ public sealed partial class ProfilesPage : Page
         ProfileNameBox.Visibility = profile.IsBuiltIn ? Visibility.Collapsed : Visibility.Visible;
         ProfileNameBox.Text = profile.Name;
 
-        // Show delete button only for custom profiles
+        // Show reset for built-in, delete for custom
+        ResetProfileButton.Visibility = profile.IsBuiltIn ? Visibility.Visible : Visibility.Collapsed;
         DeleteProfileButton.Visibility = profile.IsBuiltIn ? Visibility.Collapsed : Visibility.Visible;
 
         SystemPromptBox.Text = profile.Text;

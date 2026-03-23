@@ -183,6 +183,9 @@
   <data name="Profiles_DeleteProfile.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Delete</value>
   </data>
+  <data name="Profiles_ResetProfile" xml:space="preserve">
+    <value>Reset to defaults</value>
+  </data>
   <data name="Profiles_ProfileName.Header" xml:space="preserve">
     <value>Name</value>
   </data>
