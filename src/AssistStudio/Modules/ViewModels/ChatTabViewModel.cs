@@ -313,6 +313,17 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         if (hadPending)
             _ = panel.RenderRestoredMessagesAsync();
 
+        // Force-push tools after template is applied (DispatcherQueue ensures _inputArea is ready)
+        if (RegisteredTools.Count > 0)
+        {
+            var tools = RegisteredTools;
+            panel.DispatcherQueue?.TryEnqueue(() =>
+            {
+                panel.RegisteredTools = [];
+                panel.RegisteredTools = tools;
+            });
+        }
+
         if (FocusPendingOnAttach)
         {
             FocusPendingOnAttach = false;
