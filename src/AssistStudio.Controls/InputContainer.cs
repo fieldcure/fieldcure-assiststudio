@@ -470,6 +470,8 @@ public sealed partial class InputContainer : Control
             SetTooltip(_attachButton, loader.GetString("InputContainer_AttachTooltip"));
             SetTooltip(_stopButton, loader.GetString("InputContainer_StopTooltip"));
             SetTooltip(_sendButton, loader.GetString("InputContainer_SendTooltip"));
+            SetTooltip(_toolButton, loader.GetString("InputContainer_ToolsTooltip"));
+            SetTooltip(_summarizeButton, loader.GetString("InputContainer_SummarizeTooltip"));
         }
         catch { /* Resource not found — tooltips will be empty */ }
 
@@ -493,8 +495,10 @@ public sealed partial class InputContainer : Control
         }
 
         // Apply initial visibility for ShowSummarizeButton / ShowAttachButton
-        if (_summarizeButton is not null)
-            _summarizeButton.Visibility = ShowSummarizeButton ? Visibility.Visible : Visibility.Collapsed;
+        // Note: Summarize visibility is driven by ApplySummarizeVisualState (IsSummarizeEnabled);
+        // only override here if the consumer explicitly hid it via ShowSummarizeButton=false.
+        if (_summarizeButton is not null && !ShowSummarizeButton)
+            _summarizeButton.Visibility = Visibility.Collapsed;
         if (_attachButton is not null)
             _attachButton.Visibility = ShowAttachButton ? Visibility.Visible : Visibility.Collapsed;
 
@@ -874,7 +878,8 @@ public sealed partial class InputContainer : Control
     {
         if (d is InputContainer self && self._summarizeButton is not null)
         {
-            self._summarizeButton.Visibility = (bool)e.NewValue
+            // Only show if both ShowSummarizeButton and IsSummarizeEnabled are true
+            self._summarizeButton.Visibility = (bool)e.NewValue && self.IsSummarizeEnabled
                 ? Visibility.Visible
                 : Visibility.Collapsed;
         }
@@ -977,7 +982,7 @@ public sealed partial class InputContainer : Control
     private void ApplySummarizeVisualState(bool enabled)
     {
         if (_summarizeButton is null) return;
-        _summarizeButton.Opacity = enabled ? 1.0 : 0.4;
+        _summarizeButton.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
     }
 
     /// <summary>
@@ -985,14 +990,12 @@ public sealed partial class InputContainer : Control
     /// </summary>
     private void UpdateSummarizeTooltip(bool canSummarize)
     {
-        if (_summarizeButton is null) return;
+        if (_summarizeButton is null || !canSummarize) return;
         try
         {
             var loader = new Windows.ApplicationModel.Resources.ResourceLoader(
                 "AssistStudio.Controls/Resources");
-            var text = canSummarize
-                ? loader.GetString("InputContainer_SummarizeTooltip")
-                : loader.GetString("InputContainer_SummarizeDisabledTooltip");
+            var text = loader.GetString("InputContainer_SummarizeTooltip");
             SetTooltip(_summarizeButton, text);
         }
         catch { /* Resource not found */ }
@@ -1259,9 +1262,9 @@ public sealed partial class InputContainer : Control
         var panel = new StackPanel { Spacing = 4 };
         var allCheckBoxes = new List<CheckBox>();
 
-        // --- Built-in tools ---
+        // --- Built-in tools (hide meta-tools like search_tools) ---
         var enabledToolSet = EnabledToolNames?.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        foreach (var tool in tools)
+        foreach (var tool in tools.Where(t => t.Name != "search_tools"))
         {
             var cb = new CheckBox
             {

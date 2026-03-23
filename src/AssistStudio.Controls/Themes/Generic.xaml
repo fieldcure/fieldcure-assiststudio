@@ -243,18 +243,18 @@
                                             Padding="6">
                                         <FontIcon Glyph="&#xE710;" FontSize="14" />
                                     </Button>
-                                    <Button x:Name="PART_SummarizeButton"
-                                            x:Uid="InputContainer_Summarize"
-                                            Style="{StaticResource SubtleButtonStyle}"
-                                            Padding="6">
-                                        <FontIcon Glyph="&#xEB78;" FontSize="14" />
-                                    </Button>
                                     <Button x:Name="PART_ToolButton"
                                             x:Uid="InputContainer_Tools"
                                             Style="{StaticResource SubtleButtonStyle}"
                                             Padding="6"
                                             Visibility="Collapsed">
                                         <FontIcon Glyph="&#xE90F;" FontSize="14" />
+                                    </Button>
+                                    <Button x:Name="PART_SummarizeButton"
+                                            x:Uid="InputContainer_Summarize"
+                                            Style="{StaticResource SubtleButtonStyle}"
+                                            Padding="6">
+                                        <FontIcon Glyph="&#xEB78;" FontSize="14" />
                                     </Button>
                                 </StackPanel>
 
