@@ -164,6 +164,11 @@ public sealed partial class ChatPanel : Control
         DependencyProperty.Register(nameof(WorkspaceFolders), typeof(IReadOnlyList<string>), typeof(ChatPanel),
             new PropertyMetadata(null, OnWorkspaceFoldersChanged));
 
+    /// <summary>Identifies the <see cref="IsWorkspaceEnabled"/> dependency property.</summary>
+    public static readonly DependencyProperty IsWorkspaceEnabledProperty =
+        DependencyProperty.Register(nameof(IsWorkspaceEnabled), typeof(bool), typeof(ChatPanel),
+            new PropertyMetadata(true, OnIsWorkspaceEnabledChanged));
+
     /// <summary>Identifies the <see cref="AllowAttachments"/> dependency property.</summary>
     public static readonly DependencyProperty AllowAttachmentsProperty =
         DependencyProperty.Register(nameof(AllowAttachments), typeof(bool), typeof(ChatPanel),
@@ -362,6 +367,17 @@ public sealed partial class ChatPanel : Control
         if (d is ChatPanel panel)
         {
             panel.UpdateFolderButtonBadge();
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="IsWorkspaceEnabled"/> changes to update the folder button appearance.
+    /// </summary>
+    private static void OnIsWorkspaceEnabledChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel)
+        {
+            panel.UpdateFolderButtonAppearance();
         }
     }
 
@@ -661,6 +677,16 @@ public sealed partial class ChatPanel : Control
     {
         get => (IReadOnlyList<string>?)GetValue(WorkspaceFoldersProperty);
         set => SetValue(WorkspaceFoldersProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets whether the Workspace capability is enabled in the current profile.
+    /// When false, the folder flyout is read-only and grayed out.
+    /// </summary>
+    public bool IsWorkspaceEnabled
+    {
+        get => (bool)GetValue(IsWorkspaceEnabledProperty);
+        set => SetValue(IsWorkspaceEnabledProperty, value);
     }
 
     /// <summary>
@@ -1027,6 +1053,7 @@ public sealed partial class ChatPanel : Control
         }
 
         UpdateFolderButtonBadge();
+        UpdateFolderButtonAppearance();
         UpdateTitleDisplay();
 
         // Subscribe to Loaded for WebView2 initialization
@@ -1671,6 +1698,7 @@ public sealed partial class ChatPanel : Control
     {
         var panel = new StackPanel { Spacing = 4, MinWidth = 300 };
         var folders = WorkspaceFolders?.ToList() ?? [];
+        var isEnabled = IsWorkspaceEnabled;
         var secondaryBrush = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
 
         Windows.ApplicationModel.Resources.ResourceLoader? loader = null;
@@ -1702,6 +1730,7 @@ public sealed partial class ChatPanel : Control
             Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
             Padding = new Thickness(6, 2, 6, 2),
             VerticalAlignment = VerticalAlignment.Center,
+            IsEnabled = isEnabled,
         };
         var addContent = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
         addContent.Children.Add(new FontIcon { Glyph = "\xE710", FontSize = 10 });
@@ -1715,6 +1744,19 @@ public sealed partial class ChatPanel : Control
         headerRow.Children.Add(addButton);
 
         panel.Children.Add(headerRow);
+
+        // Disabled warning when profile doesn't have Workspace enabled
+        if (!isEnabled)
+        {
+            panel.Children.Add(new TextBlock
+            {
+                Text = loader?.GetString("Folder_DisabledHint") ?? "Enable Workspace in your profile to use these folders.",
+                Foreground = secondaryBrush,
+                FontSize = 12,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 0, 0, 4),
+            });
+        }
 
         // Folder list or empty state
         if (folders.Count == 0)
@@ -1747,6 +1789,7 @@ public sealed partial class ChatPanel : Control
                     TextTrimming = TextTrimming.CharacterEllipsis,
                     FontSize = 12,
                     Margin = new Thickness(8, 0, 0, 0),
+                    Opacity = isEnabled ? 1.0 : 0.5,
                 };
                 Grid.SetColumn(folderText, 0);
                 row.Children.Add(folderText);
@@ -1758,6 +1801,7 @@ public sealed partial class ChatPanel : Control
                     Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
                     Padding = new Thickness(4),
                     VerticalAlignment = VerticalAlignment.Center,
+                    IsEnabled = isEnabled,
                 };
                 removeButton.Click += (s, e) =>
                 {
@@ -1825,6 +1869,19 @@ public sealed partial class ChatPanel : Control
         var count = WorkspaceFolders?.Count ?? 0;
         _folderBadge.Text = count > 0 ? count.ToString() : "";
         _folderBadge.Visibility = count > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>
+    /// Updates the folder button foreground color based on workspace capability.
+    /// Accent color when enabled, gray when disabled.
+    /// </summary>
+    private void UpdateFolderButtonAppearance()
+    {
+        if (_titleFolderButton is null) return;
+
+        _titleFolderButton.Foreground = IsWorkspaceEnabled
+            ? (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"]
+            : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorDisabledBrush"];
     }
 
     /// <summary>

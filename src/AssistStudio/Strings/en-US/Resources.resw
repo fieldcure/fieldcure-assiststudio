@@ -648,14 +648,8 @@
   <data name="BuiltIn_InstallFailedMessage" xml:space="preserve">
     <value>Check your internet connection and try again.</value>
   </data>
-  <data name="Profiles_WorkspaceFolderHint" xml:space="preserve">
-    <value>Default workspace folders for this profile.</value>
-  </data>
-  <data name="Profiles_WorkspaceFolderEmpty" xml:space="preserve">
-    <value>(no folders)</value>
-  </data>
-  <data name="Profiles_WorkspaceAddFolder" xml:space="preserve">
-    <value>Add Folder</value>
+  <data name="Profiles_WorkspaceHint" xml:space="preserve">
+    <value>Add workspace folders in conversations.</value>
   </data>
   <data name="Mcp_ServersConnected" xml:space="preserve">
     <value>{0} MCP server(s) connected</value>

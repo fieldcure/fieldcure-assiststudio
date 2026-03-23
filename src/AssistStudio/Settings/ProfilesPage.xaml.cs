@@ -220,7 +220,7 @@ public sealed partial class ProfilesPage : Page
     /// <summary>
     /// Handles server checkbox checked/unchecked events with Workspace suppress logic.
     /// </summary>
-    private async void OnServerChecked(object sender, RoutedEventArgs e)
+    private void OnServerChecked(object sender, RoutedEventArgs e)
     {
         if (_suppressEvents) return;
         if (ProfileCombo.SelectedItem is not Profile profile) return;
@@ -240,7 +240,6 @@ public sealed partial class ProfilesPage : Page
         if (serverId == $"builtin_{BuiltInServerHelper.FilesystemKey}")
         {
             ApplyFilesystemSuppress(profile, cb.IsChecked == true);
-            await SyncWorkspaceFoldersAsync(profile);
         }
 
         SaveAll();
@@ -498,11 +497,17 @@ public sealed partial class ProfilesPage : Page
 
                 ToolsPanel.Children.Add(row);
 
-                // Workspace (filesystem): add folder management below the checkbox
+                // Workspace (filesystem): show hint that folders are managed per conversation
                 if (conn.Config.Id == filesystemId)
                 {
-                    var folderPanel = BuildWorkspaceFolderPanel(profile, loader);
-                    ToolsPanel.Children.Add(folderPanel);
+                    ToolsPanel.Children.Add(new TextBlock
+                    {
+                        Text = loader.GetString("Profiles_WorkspaceHint"),
+                        Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                        TextWrapping = TextWrapping.Wrap,
+                        Opacity = 0.5,
+                        Margin = new Thickness(28, 0, 0, 4),
+                    });
                 }
             }
 
@@ -534,26 +539,6 @@ public sealed partial class ProfilesPage : Page
     }
 
     /// <summary>
-    /// Syncs the Workspace (filesystem) MCP server connection with the profile's folder list.
-    /// Connects/updates the server if the profile has folders and Workspace is enabled,
-    /// or disconnects if folders are empty.
-    /// </summary>
-    private static async Task SyncWorkspaceFoldersAsync(Profile profile)
-    {
-        var filesystemId = $"builtin_{BuiltInServerHelper.FilesystemKey}";
-        var isEnabled = profile.EnabledServers.Contains(filesystemId)
-            && profile.WorkspaceFolders.Count > 0;
-
-        var config = new BuiltInServerConfig
-        {
-            IsEnabled = isEnabled,
-            Folders = [.. profile.WorkspaceFolders],
-        };
-
-        await App.McpRegistry.ConnectBuiltInAsync(BuiltInServerHelper.FilesystemKey, config);
-    }
-
-    /// <summary>
     /// Suppresses or restores file tool checkboxes when the Workspace (filesystem) server is toggled.
     /// When suppressed, read_file/write_file/search_files are unchecked and grayed out.
     /// </summary>
@@ -577,122 +562,6 @@ public sealed partial class ProfilesPage : Page
             }
         }
         _suppressEvents = false;
-    }
-
-    /// <summary>
-    /// Builds the workspace folder management panel shown below the Workspace (filesystem) server checkbox.
-    /// </summary>
-    private StackPanel BuildWorkspaceFolderPanel(Profile profile, Windows.ApplicationModel.Resources.ResourceLoader loader)
-    {
-        var panel = new StackPanel
-        {
-            Spacing = 4,
-            Margin = new Thickness(28, 0, 0, 4), // Indent under the checkbox
-        };
-
-        var secondaryBrush = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
-
-        // Folder list or empty state
-        if (profile.WorkspaceFolders.Count == 0)
-        {
-            panel.Children.Add(new TextBlock
-            {
-                Text = loader.GetString("Profiles_WorkspaceFolderEmpty"),
-                Foreground = secondaryBrush,
-                FontSize = 12,
-            });
-        }
-        else
-        {
-            foreach (var folder in profile.WorkspaceFolders.ToList())
-            {
-                var row = new Grid
-                {
-                    ColumnDefinitions =
-                    {
-                        new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                        new ColumnDefinition { Width = GridLength.Auto },
-                    },
-                };
-
-                row.Children.Add(new TextBlock
-                {
-                    Text = folder,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    TextTrimming = TextTrimming.CharacterEllipsis,
-                    FontSize = 12,
-                });
-
-                var removeBtn = new Button
-                {
-                    Content = new FontIcon { Glyph = "\xE711", FontSize = 10 },
-                    Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
-                    Padding = new Thickness(4),
-                    VerticalAlignment = VerticalAlignment.Center,
-                };
-                var capturedFolder = folder;
-                removeBtn.Click += async (_, _) =>
-                {
-                    profile.WorkspaceFolders.Remove(capturedFolder);
-                    SaveAll();
-                    await SyncWorkspaceFoldersAsync(profile);
-                    PopulateToolsPanel(profile);
-                };
-                Grid.SetColumn(removeBtn, 1);
-                row.Children.Add(removeBtn);
-
-                panel.Children.Add(row);
-            }
-        }
-
-        // Add folder button
-        var addButton = new Button
-        {
-            Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
-            Padding = new Thickness(6, 2, 6, 2),
-        };
-        var addContent = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
-        addContent.Children.Add(new FontIcon { Glyph = "\xE710", FontSize = 10 });
-        addContent.Children.Add(new TextBlock
-        {
-            Text = loader.GetString("Profiles_WorkspaceAddFolder"),
-            FontSize = 12,
-        });
-        addButton.Content = addContent;
-        addButton.Click += async (_, _) =>
-        {
-            var picker = new Windows.Storage.Pickers.FolderPicker();
-            picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
-            picker.FileTypeFilter.Add("*");
-
-            var window = (App.Current as App)?.MainWindow;
-            if (window is null) return;
-            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
-            WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
-
-            var picked = await picker.PickSingleFolderAsync();
-            if (picked is null) return;
-
-            if (!profile.WorkspaceFolders.Contains(picked.Path, StringComparer.OrdinalIgnoreCase))
-            {
-                profile.WorkspaceFolders.Add(picked.Path);
-                SaveAll();
-                await SyncWorkspaceFoldersAsync(profile);
-                PopulateToolsPanel(profile);
-            }
-        };
-        panel.Children.Add(addButton);
-
-        // Hint
-        panel.Children.Add(new TextBlock
-        {
-            Text = loader.GetString("Profiles_WorkspaceFolderHint"),
-            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-            TextWrapping = TextWrapping.Wrap,
-            Opacity = 0.5,
-        });
-
-        return panel;
     }
 
     /// <summary>

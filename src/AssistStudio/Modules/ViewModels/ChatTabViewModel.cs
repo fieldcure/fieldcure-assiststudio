@@ -275,19 +275,17 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         Panel = panel;
         LoggingService.LogInfo($"[Tab] Panel attached: {Title}, pending={_pendingMessages.Count}");
 
-        // Initialize workspace folders:
-        // 1. Per-conversation overrides (loaded conversations)
-        // 2. Profile defaults (new conversations)
+        // Initialize workspace folders from per-conversation data (folders belong to conversation, not profile)
         if (_builtInServers is not null
             && _builtInServers.TryGetValue(BuiltInServerHelper.FilesystemKey, out var savedConfig)
             && savedConfig.Folders.Count > 0)
         {
             panel.WorkspaceFolders = savedConfig.Folders;
         }
-        else if (SelectedProfile?.WorkspaceFolders is { Count: > 0 } profileFolders)
-        {
-            panel.WorkspaceFolders = [.. profileFolders];
-        }
+
+        // Set workspace capability based on profile
+        var filesystemServerId = $"builtin_{BuiltInServerHelper.FilesystemKey}";
+        panel.IsWorkspaceEnabled = SelectedProfile?.EnabledServers.Contains(filesystemServerId) ?? false;
 
         // Relay keyboard shortcut from WebView2 (separate HWND)
         panel.KeyboardShortcutPressed += (s, e) => KeyboardShortcutPressed?.Invoke(s, e);
@@ -553,14 +551,30 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         LoggingService.LogInfo($"[Tab] Profile changed: {profile.Name}");
         SystemPrompt = profile.Text;
 
-        // Update workspace folders: conversation override takes precedence over profile defaults
-        if (_builtInServers is null && Panel is not null)
-        {
-            var profileFolders = profile.WorkspaceFolders;
-            Panel.WorkspaceFolders = profileFolders.Count > 0 ? [.. profileFolders] : null;
+        // Update workspace capability: profile decides if filesystem is enabled
+        var filesystemServerId = $"builtin_{BuiltInServerHelper.FilesystemKey}";
+        var isWorkspaceEnabled = profile.EnabledServers.Contains(filesystemServerId);
 
-            // Profile switch = full reconnect with new folder set
-            await ConnectFilesystemAsync(profileFolders);
+        if (Panel is not null)
+        {
+            Panel.IsWorkspaceEnabled = isWorkspaceEnabled;
+
+            if (!isWorkspaceEnabled)
+            {
+                // Workspace disabled: disconnect server but preserve folder data
+                if (_filesystemConnection is not null)
+                {
+                    await App.McpRegistry.RemoveAsync(_filesystemConnection);
+                    _filesystemConnection = null;
+                }
+            }
+            else
+            {
+                // Workspace enabled: reconnect if conversation has folders
+                var folders = Panel.WorkspaceFolders;
+                if (folders is { Count: > 0 })
+                    await ConnectFilesystemAsync(folders);
+            }
         }
 
         // Resolve tools from both built-in and MCP sources
@@ -670,21 +684,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// </summary>
     public async void OnWorkspaceFoldersChanged(object? _sender, IReadOnlyList<string> folders)
     {
-        // Already connected → roots notification only (no process restart)
-        if (_filesystemConnection is not null && _filesystemConnection.IsConnected && folders.Count > 0)
-        {
-            await _filesystemConnection.UpdateWorkspaceFoldersAsync(folders);
-        }
-        else
-        {
-            // First connection or all folders removed
-            await ConnectFilesystemAsync(folders);
-        }
-
-        ResolveTools(Panel?.SelectedProfile);
-        IsDirty = true;
-
-        // Store for conversation save
+        // Save folder data to conversation (folders belong to conversation, not profile)
         var config = new BuiltInServerConfig
         {
             IsEnabled = folders.Count > 0,
@@ -693,6 +693,27 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         _builtInServers = folders.Count > 0
             ? new Dictionary<string, BuiltInServerConfig> { [BuiltInServerHelper.FilesystemKey] = config }
             : null;
+        IsDirty = true;
+
+        // Only connect/update server if profile has Workspace enabled
+        var filesystemServerId = $"builtin_{BuiltInServerHelper.FilesystemKey}";
+        var isWorkspaceEnabled = Panel?.SelectedProfile?.EnabledServers.Contains(filesystemServerId) ?? false;
+
+        if (isWorkspaceEnabled)
+        {
+            // Already connected → roots notification only (no process restart)
+            if (_filesystemConnection is not null && _filesystemConnection.IsConnected && folders.Count > 0)
+            {
+                await _filesystemConnection.UpdateWorkspaceFoldersAsync(folders);
+            }
+            else
+            {
+                // First connection or all folders removed
+                await ConnectFilesystemAsync(folders);
+            }
+        }
+
+        ResolveTools(Panel?.SelectedProfile);
     }
 
     /// <summary>
