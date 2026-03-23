@@ -1294,7 +1294,7 @@ public sealed partial class InputContainer : Control
 
         if (hasServers)
         {
-            foreach (var server in servers)
+            foreach (var server in servers!)
             {
                 var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
 
