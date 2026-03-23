@@ -112,6 +112,16 @@ public sealed partial class InputContainer : Control
         DependencyProperty.Register(nameof(EnabledToolNames), typeof(IReadOnlyList<string>), typeof(InputContainer),
             new PropertyMetadata(null));
 
+    /// <summary>Identifies the <see cref="AvailableServers"/> dependency property.</summary>
+    public static readonly DependencyProperty AvailableServersProperty =
+        DependencyProperty.Register(nameof(AvailableServers), typeof(IReadOnlyList<ServerInfo>), typeof(InputContainer),
+            new PropertyMetadata(null, OnAvailableServersChanged));
+
+    /// <summary>Identifies the <see cref="EnabledServerIds"/> dependency property.</summary>
+    public static readonly DependencyProperty EnabledServerIdsProperty =
+        DependencyProperty.Register(nameof(EnabledServerIds), typeof(IReadOnlyList<string>), typeof(InputContainer),
+            new PropertyMetadata(null, OnEnabledServerIdsChanged));
+
     #endregion
 
     #region Fields
@@ -342,6 +352,24 @@ public sealed partial class InputContainer : Control
         set => SetValue(EnabledToolNamesProperty, value);
     }
 
+    /// <summary>
+    /// Gets or sets the list of available servers for the server toggle flyout.
+    /// </summary>
+    public IReadOnlyList<ServerInfo>? AvailableServers
+    {
+        get => (IReadOnlyList<ServerInfo>?)GetValue(AvailableServersProperty);
+        set => SetValue(AvailableServersProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the list of enabled server IDs.
+    /// </summary>
+    public IReadOnlyList<string>? EnabledServerIds
+    {
+        get => (IReadOnlyList<string>?)GetValue(EnabledServerIdsProperty);
+        set => SetValue(EnabledServerIdsProperty, value);
+    }
+
     #endregion
 
     #region Events
@@ -365,6 +393,12 @@ public sealed partial class InputContainer : Control
     /// Occurs when the user clicks the summarize button.
     /// </summary>
     public event EventHandler? SummarizeRequested;
+
+    /// <summary>
+    /// Occurs when the user toggles a server in the server flyout.
+    /// The event argument contains the updated list of enabled server IDs.
+    /// </summary>
+    public event EventHandler<IReadOnlyList<string>>? EnabledServersChanged;
 
     /// <summary>
     /// Occurs when the user clicks the stop button to cancel the current streaming response.
@@ -412,7 +446,13 @@ public sealed partial class InputContainer : Control
         _containerBorder = GetTemplateChild("PART_ContainerBorder") as Border;
         _toolButton = GetTemplateChild("PART_ToolButton") as Button;
         if (_toolButton is not null)
-            _toolButton.Click += (_, _) => BuildToolFlyout();
+            _toolButton.Click += (_, _) =>
+            {
+                if (AvailableServers is { Count: > 0 })
+                    BuildServerFlyout();
+                else
+                    BuildToolFlyout();
+            };
 
         // Apply ThemeShadow in code (XAML compiler crashes with ThemeShadow in ControlTemplate.Resources)
         if (_containerBorder is not null)
@@ -903,6 +943,23 @@ public sealed partial class InputContainer : Control
         }
     }
 
+    /// <summary>
+    /// Called when <see cref="AvailableServers"/> changes to update the tool button visibility.
+    /// </summary>
+    private static void OnAvailableServersChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is InputContainer self)
+            self.UpdateToolButtonVisibility();
+    }
+
+    /// <summary>
+    /// Called when <see cref="EnabledServerIds"/> changes.
+    /// </summary>
+    private static void OnEnabledServerIdsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        // No-op — state is pushed from outside, flyout rebuilds on open
+    }
+
     private static void OnSelectedProfileChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is InputContainer self)
@@ -1166,7 +1223,134 @@ public sealed partial class InputContainer : Control
     private void UpdateToolButtonVisibility()
     {
         if (_toolButton is null) return;
-        _toolButton.Visibility = AvailableTools.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        var hasServers = AvailableServers is { Count: > 0 };
+        var hasTools = AvailableTools.Count > 0;
+        _toolButton.Visibility = hasServers || hasTools ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>
+    /// Builds the server-level toggle flyout from <see cref="AvailableServers"/>.
+    /// Each server is shown as a checkbox with connection status indicator.
+    /// </summary>
+    private void BuildServerFlyout()
+    {
+        if (_toolButton is null) return;
+
+        var servers = AvailableServers;
+        if (servers is not { Count: > 0 })
+        {
+            // Fallback to tool-level flyout if no servers
+            BuildToolFlyout();
+            return;
+        }
+
+        _toolButton.Visibility = Visibility.Visible;
+
+        var enabledSet = EnabledServerIds?.ToHashSet(StringComparer.OrdinalIgnoreCase)
+            ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        Windows.ApplicationModel.Resources.ResourceLoader? res = null;
+        try { res = new Windows.ApplicationModel.Resources.ResourceLoader("AssistStudio.Controls/Resources"); }
+        catch { /* keep defaults */ }
+
+        var panel = new StackPanel { Spacing = 4 };
+
+        foreach (var server in servers)
+        {
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+
+            // Connection status dot
+            var dot = new Microsoft.UI.Xaml.Shapes.Ellipse
+            {
+                Width = 6, Height = 6,
+                Fill = server.IsConnected
+                    ? new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.LimeGreen)
+                    : new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            row.Children.Add(dot);
+
+            var checkBox = new CheckBox
+            {
+                Content = server.DisplayName,
+                IsChecked = enabledSet.Contains(server.Id),
+                Tag = server.Id,
+                MinWidth = 0,
+                IsEnabled = server.IsConnected,
+            };
+            checkBox.Checked += ServerCheckBox_Changed;
+            checkBox.Unchecked += ServerCheckBox_Changed;
+            row.Children.Add(checkBox);
+
+            panel.Children.Add(row);
+        }
+
+        // Separator + Toggle all
+        var allChecked = servers.All(s => enabledSet.Contains(s.Id));
+        var footer = new StackPanel { Spacing = 4, Padding = new Thickness(4, 0, 4, 4) };
+        footer.Children.Add(new Microsoft.UI.Xaml.Shapes.Rectangle
+        {
+            Height = 1,
+            Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
+            Opacity = 0.3,
+            Margin = new Thickness(0, 2, 0, 2),
+        });
+
+        var selectLabel = res?.GetString("InputContainer_SelectAll") ?? "Select all";
+        var deselectLabel = res?.GetString("InputContainer_DeselectAll") ?? "Deselect all";
+
+        var toggleLink = new HyperlinkButton
+        {
+            Content = allChecked ? deselectLabel : selectLabel,
+            Padding = new Thickness(0),
+            FontSize = 12,
+        };
+        toggleLink.Click += (_, _) =>
+        {
+            var nowAllChecked = servers.All(s => enabledSet.Contains(s.Id));
+            foreach (var child in panel.Children)
+            {
+                if (child is StackPanel row)
+                {
+                    var cb = row.Children.OfType<CheckBox>().FirstOrDefault();
+                    if (cb is not null && cb.IsEnabled)
+                        cb.IsChecked = !nowAllChecked;
+                }
+            }
+        };
+        footer.Children.Add(toggleLink);
+
+        var outerPanel = new StackPanel { Padding = new Thickness(4) };
+        outerPanel.Children.Add(new ScrollViewer
+        {
+            Content = panel,
+            MaxHeight = 400,
+            Padding = new Thickness(0, 0, 8, 0),
+        });
+        outerPanel.Children.Add(footer);
+
+        _toolButton.Flyout = new Flyout
+        {
+            Content = outerPanel,
+            Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedLeft,
+        };
+    }
+
+    /// <summary>
+    /// Handles server checkbox toggle to update <see cref="EnabledServerIds"/>.
+    /// </summary>
+    private void ServerCheckBox_Changed(object sender, RoutedEventArgs e)
+    {
+        if (sender is not CheckBox cb || cb.Tag is not string serverId) return;
+
+        var current = EnabledServerIds?.ToList() ?? [];
+        if (cb.IsChecked == true && !current.Contains(serverId, StringComparer.OrdinalIgnoreCase))
+            current.Add(serverId);
+        else if (cb.IsChecked == false)
+            current.RemoveAll(s => s.Equals(serverId, StringComparison.OrdinalIgnoreCase));
+
+        EnabledServerIds = current;
+        EnabledServersChanged?.Invoke(this, current);
     }
 
     /// <summary>

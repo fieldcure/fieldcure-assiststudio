@@ -88,6 +88,7 @@ public sealed partial class ChatTabView : UserControl
         Panel.BranchChanged += vm.OnBranchChanged;
         Panel.WorkspaceFoldersChanged += vm.OnWorkspaceFoldersChanged;
         Panel.WorkspaceFolderAddRequested += OnWorkspaceFolderAddRequested;
+        Panel.EnabledServersChanged += vm.OnEnabledServersChanged;
     }
 
     /// <summary>
@@ -103,6 +104,7 @@ public sealed partial class ChatTabView : UserControl
         Panel.BranchChanged -= vm.OnBranchChanged;
         Panel.WorkspaceFoldersChanged -= vm.OnWorkspaceFoldersChanged;
         Panel.WorkspaceFolderAddRequested -= OnWorkspaceFolderAddRequested;
+        Panel.EnabledServersChanged -= vm.OnEnabledServersChanged;
     }
 
     /// <summary>

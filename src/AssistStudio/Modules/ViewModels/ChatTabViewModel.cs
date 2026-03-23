@@ -110,6 +110,16 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// </summary>
     [ObservableProperty] private IReadOnlyList<IAssistTool> _registeredTools = [];
 
+    /// <summary>
+    /// Available servers for the tool flyout. Built from McpRegistry connections.
+    /// </summary>
+    [ObservableProperty] private IReadOnlyList<FieldCure.AssistStudio.Controls.ServerInfo> _availableServers = [];
+
+    /// <summary>
+    /// Currently enabled server IDs (from profile + runtime toggles).
+    /// </summary>
+    [ObservableProperty] private IReadOnlyList<string> _enabledServerIds = [];
+
     #endregion
 
     #region Properties
@@ -594,6 +604,23 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
+    /// Handles server toggle changes from the tool flyout.
+    /// Updates the profile's enabled servers and re-resolves tools.
+    /// </summary>
+    public void OnEnabledServersChanged(object? _sender, IReadOnlyList<string> serverIds)
+    {
+        var profile = Panel?.SelectedProfile;
+        if (profile is not null)
+        {
+            profile.EnabledServers = [.. serverIds];
+            AppSettings.SaveCustomProfiles(AppSettings.LoadProfiles()
+                .Select(p => p.Name == profile.Name ? profile : p));
+        }
+
+        ResolveTools(profile);
+    }
+
+    /// <summary>
     /// Handles workspace folder changes from the title bar flyout.
     /// Updates the built-in Filesystem MCP server and re-resolves tools.
     /// </summary>
@@ -688,6 +715,14 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         }
 
         RegisteredTools = tools;
+
+        // Update server list for the tool flyout UI
+        AvailableServers = App.McpRegistry.Connections
+            .Select(c => new FieldCure.AssistStudio.Controls.ServerInfo(
+                c.Config.Id, c.Config.Name, c.IsConnected, c.Config.IsBuiltIn))
+            .ToList();
+
+        EnabledServerIds = profile?.EnabledServers ?? [];
     }
 
     /// <summary>

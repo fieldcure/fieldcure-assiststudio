@@ -149,6 +149,16 @@ public sealed partial class ChatPanel : Control
         DependencyProperty.Register(nameof(ShowTitleBar), typeof(bool), typeof(ChatPanel),
             new PropertyMetadata(true, OnShowTitleBarChanged));
 
+    /// <summary>Identifies the <see cref="AvailableServers"/> dependency property.</summary>
+    public static readonly DependencyProperty AvailableServersProperty =
+        DependencyProperty.Register(nameof(AvailableServers), typeof(IReadOnlyList<ServerInfo>), typeof(ChatPanel),
+            new PropertyMetadata(null, OnAvailableServersChanged));
+
+    /// <summary>Identifies the <see cref="EnabledServerIds"/> dependency property.</summary>
+    public static readonly DependencyProperty EnabledServerIdsProperty =
+        DependencyProperty.Register(nameof(EnabledServerIds), typeof(IReadOnlyList<string>), typeof(ChatPanel),
+            new PropertyMetadata(null, OnEnabledServerIdsChanged));
+
     /// <summary>Identifies the <see cref="WorkspaceFolders"/> dependency property.</summary>
     public static readonly DependencyProperty WorkspaceFoldersProperty =
         DependencyProperty.Register(nameof(WorkspaceFolders), typeof(IReadOnlyList<string>), typeof(ChatPanel),
@@ -324,6 +334,24 @@ public sealed partial class ChatPanel : Control
                 ? Visibility.Visible
                 : Visibility.Collapsed;
         }
+    }
+
+    /// <summary>
+    /// Called when <see cref="AvailableServers"/> changes to sync to the input area.
+    /// </summary>
+    private static void OnAvailableServersChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && panel._inputArea is not null)
+            panel._inputArea.AvailableServers = panel.AvailableServers;
+    }
+
+    /// <summary>
+    /// Called when <see cref="EnabledServerIds"/> changes to sync to the input area.
+    /// </summary>
+    private static void OnEnabledServerIdsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && panel._inputArea is not null)
+            panel._inputArea.EnabledServerIds = panel.EnabledServerIds;
     }
 
     /// <summary>
@@ -608,6 +636,24 @@ public sealed partial class ChatPanel : Control
     }
 
     /// <summary>
+    /// Gets or sets the list of available servers for the tool flyout.
+    /// </summary>
+    public IReadOnlyList<ServerInfo>? AvailableServers
+    {
+        get => (IReadOnlyList<ServerInfo>?)GetValue(AvailableServersProperty);
+        set => SetValue(AvailableServersProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the list of enabled server IDs for the tool flyout.
+    /// </summary>
+    public IReadOnlyList<string>? EnabledServerIds
+    {
+        get => (IReadOnlyList<string>?)GetValue(EnabledServerIdsProperty);
+        set => SetValue(EnabledServerIdsProperty, value);
+    }
+
+    /// <summary>
     /// Gets or sets the workspace folder paths for the current conversation.
     /// When folders are present, the built-in Filesystem MCP server is activated.
     /// </summary>
@@ -767,6 +813,12 @@ public sealed partial class ChatPanel : Control
     public event EventHandler<IReadOnlyList<string>>? WorkspaceFoldersChanged;
 
     /// <summary>
+    /// Occurs when the user toggles servers in the tool flyout.
+    /// The event argument contains the updated list of enabled server IDs.
+    /// </summary>
+    public event EventHandler<IReadOnlyList<string>>? EnabledServersChanged;
+
+    /// <summary>
     /// Occurs when the user clicks "Add Folder" in the workspace folders flyout.
     /// The App layer should handle this to show a FolderPicker and update <see cref="WorkspaceFolders"/>.
     /// </summary>
@@ -916,6 +968,7 @@ public sealed partial class ChatPanel : Control
             _inputArea.ProfileChanged += OnInputProfileChanged;
             _inputArea.StopRequested += OnStopRequested;
             _inputArea.SummarizeRequested += OnInputSummarizeRequested;
+            _inputArea.EnabledServersChanged += (s, ids) => EnabledServersChanged?.Invoke(this, ids);
 
             // Push current values (may have been set before template was applied)
             if (AvailablePresets is { } presets)
@@ -932,6 +985,8 @@ public sealed partial class ChatPanel : Control
 
             // Sync tools and visibility settings
             _inputArea.AvailableTools = RegisteredTools;
+            _inputArea.AvailableServers = AvailableServers;
+            _inputArea.EnabledServerIds = EnabledServerIds;
             _inputArea.ShowAttachButton = AllowAttachments;
             if (IsReadOnly)
                 _inputArea.Visibility = Visibility.Collapsed;
