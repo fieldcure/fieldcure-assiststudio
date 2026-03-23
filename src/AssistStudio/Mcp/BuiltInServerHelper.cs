@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml.Controls;
@@ -360,7 +360,7 @@ public static class BuiltInServerHelper
     /// </summary>
     public static bool? GetRequiresConfirmation(string toolName)
     {
-        return ReadOnlyToolNames.Contains(toolName) ? false : true;
+        return !ReadOnlyToolNames.Contains(toolName);
     }
 
     /// <summary>

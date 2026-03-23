@@ -38,10 +38,9 @@ public class McpServerRegistry : IAsyncDisposable
     /// Gets all available MCP tools across all connected and enabled servers.
     /// </summary>
     public IReadOnlyList<McpToolAdapter> AllTools
-        => _connections
+        => [.. _connections
             .Where(c => c.IsConnected && c.Config.IsEnabled)
-            .SelectMany(c => c.Tools)
-            .ToList();
+            .SelectMany(c => c.Tools)];
 
     #endregion
 
@@ -214,7 +213,7 @@ public class McpServerRegistry : IAsyncDisposable
             .Where(c => c.IsConnected && c.Config.IsEnabled)
             .ToDictionary(
                 c => c.Config.Name,
-                c => (IReadOnlyList<IAssistTool>)c.Tools.Cast<IAssistTool>().ToList());
+                c => (IReadOnlyList<IAssistTool>)[.. c.Tools.Cast<IAssistTool>()]);
     }
 
     /// <summary>

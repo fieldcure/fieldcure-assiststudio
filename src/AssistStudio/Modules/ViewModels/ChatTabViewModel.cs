@@ -442,14 +442,11 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                     current.ToolNames = updated.ToolNames;
                     current.UseSearchTools = updated.UseSearchTools;
                     ResolveTools(current);
-                    if (Panel is not null)
-                    {
-                        Panel.DispatcherQueue.TryEnqueue(() =>
+                    Panel?.DispatcherQueue.TryEnqueue(() =>
                         {
                             Panel.RegisteredTools = [];
                             Panel.RegisteredTools = RegisteredTools;
                         });
-                    }
                 }
             }
         }
@@ -623,15 +620,12 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         LoggingService.LogInfo($"[Settings] RefreshTools resolved: {RegisteredTools.Count} tools — [{string.Join(", ", RegisteredTools.Select(t => t.Name))}]");
 
         // Force push to ChatPanel on UI thread
-        if (Panel is not null)
-        {
-            Panel.DispatcherQueue.TryEnqueue(() =>
+        Panel?.DispatcherQueue.TryEnqueue(() =>
             {
                 Panel.RegisteredTools = [];
                 Panel.RegisteredTools = RegisteredTools;
                 LoggingService.LogInfo("[Settings] RefreshTools pushed to ChatPanel");
             });
-        }
     }
 
     /// <summary>
@@ -837,11 +831,10 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         RegisteredTools = tools;
 
         // Update server list for the tool flyout UI (filtered by profile's enabled servers)
-        AvailableServers = App.McpRegistry.Connections
+        AvailableServers = [.. App.McpRegistry.Connections
             .Where(c => effectiveServerIds.Contains(c.Config.Id))
             .Select(c => new FieldCure.AssistStudio.Controls.ServerInfo(
-                c.Config.Id, c.Config.Name, c.IsConnected, c.Config.IsBuiltIn))
-            .ToList();
+                c.Config.Id, c.Config.Name, c.IsConnected, c.Config.IsBuiltIn))];
 
         EnabledServerIds = enabledServerIds;
     }

@@ -689,7 +689,7 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// Gracefully shuts down all MCP server connections before app exit.
     /// </summary>
-    private async Task ShutdownMcpServersAsync()
+    private static async Task ShutdownMcpServersAsync()
     {
         try
         {

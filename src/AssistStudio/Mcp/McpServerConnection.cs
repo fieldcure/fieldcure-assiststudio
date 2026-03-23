@@ -39,7 +39,7 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
     private McpConnectionState _state = McpConnectionState.Disconnected;
     private string? _errorMessage;
     private IReadOnlyList<McpToolAdapter> _tools = [];
-    private readonly object _rootsLock = new();
+    private readonly Lock _rootsLock = new();
     private List<string> _currentFolders = [];
 
     #endregion
