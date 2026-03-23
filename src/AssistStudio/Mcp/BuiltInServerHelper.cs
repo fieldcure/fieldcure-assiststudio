@@ -373,5 +373,18 @@ public static class BuiltInServerHelper
             : serverKey;
     }
 
+    /// <summary>
+    /// Returns <see langword="true"/> if the given command matches a built-in server executable.
+    /// Used to prevent users from manually adding a server that duplicates a built-in one.
+    /// </summary>
+    public static bool IsBuiltInCommand(string? command)
+    {
+        if (string.IsNullOrWhiteSpace(command)) return false;
+
+        var fileName = Path.GetFileNameWithoutExtension(command);
+        return ServerDefinitions.Values.Any(d =>
+            d.ExeName.Equals(fileName, StringComparison.OrdinalIgnoreCase));
+    }
+
     #endregion // Private Helpers
 }

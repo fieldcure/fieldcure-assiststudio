@@ -56,6 +56,16 @@ public sealed partial class ConnectPage : Page
         var config = await ShowServerDialogAsync(null);
         if (config is null) return;
 
+        // Block duplicate of built-in server
+        if (BuiltInServerHelper.IsBuiltInCommand(config.Command))
+        {
+            NotificationCenter.Instance.Post(
+                InfoBarSeverity.Warning,
+                _loader.GetString("Connect_BuiltInDuplicate"),
+                string.Empty, 4000);
+            return;
+        }
+
         _registry?.AddWithoutConnect(config);
         await SaveAndRefreshAsync();
         LoggingService.LogInfo($"[MCP] Server added: {config.Name} ({config.TransportType})");
@@ -461,6 +471,7 @@ public sealed partial class ConnectPage : Page
             foreach (var config in configs)
             {
                 if (existingNames.Contains(config.Name)) continue;
+                if (BuiltInServerHelper.IsBuiltInCommand(config.Command)) continue;
 
                 _registry?.AddWithoutConnect(config);
                 existingNames.Add(config.Name);

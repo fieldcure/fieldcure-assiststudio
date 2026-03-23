@@ -621,6 +621,9 @@
   <data name="Connect_FilesystemActiveInstances" xml:space="preserve">
     <value>Managed per conversation. {0} active instance(s).</value>
   </data>
+  <data name="Connect_BuiltInDuplicate" xml:space="preserve">
+    <value>This server is already managed as a built-in server.</value>
+  </data>
   <data name="BuiltIn_InstallSuccess" xml:space="preserve">
     <value>{0} server installed</value>
   </data>
