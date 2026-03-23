@@ -110,6 +110,19 @@ public class SearchToolsTool : IAssistTool, ISearchToolScope
             .Where(c => c.IsConnected && c.Config.IsEnabled)
             .ToList();
 
+        // Filter to servers whose tools are in the allowed set (profile-scoped)
+        if (AllowedToolNames is { Count: > 0 })
+        {
+            connected = connected
+                .Where(c => c.Tools.Any(t => AllowedToolNames.Contains(t.Name)))
+                .ToList();
+        }
+        else if (AllowedToolNames is { Count: 0 })
+        {
+            // Empty set = no servers allowed
+            return baseDesc;
+        }
+
         if (connected.Count == 0)
             return baseDesc;
 
@@ -119,7 +132,11 @@ public class SearchToolsTool : IAssistTool, ISearchToolScope
 
         foreach (var conn in connected)
         {
-            sb.Append($"- {conn.Config.Name} ({conn.Tools.Count} tools)");
+            var toolCount = AllowedToolNames is not null
+                ? conn.Tools.Count(t => AllowedToolNames.Contains(t.Name))
+                : conn.Tools.Count;
+
+            sb.Append($"- {conn.Config.Name} ({toolCount} tools)");
             if (!string.IsNullOrWhiteSpace(conn.Config.Description))
                 sb.Append($": {conn.Config.Description}");
             sb.AppendLine();
