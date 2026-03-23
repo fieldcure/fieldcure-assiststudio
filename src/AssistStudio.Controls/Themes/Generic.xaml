@@ -424,7 +424,6 @@
                                 <!-- Right: folder button -->
                                 <Button x:Name="PART_TitleFolderButton"
                                         Grid.Column="1"
-                                        ToolTipService.ToolTip="Workspace Folders"
                                         Style="{StaticResource SubtleButtonStyle}"
                                         Padding="4"
                                         VerticalAlignment="Center">

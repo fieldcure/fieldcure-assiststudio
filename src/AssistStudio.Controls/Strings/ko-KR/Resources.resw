@@ -193,4 +193,16 @@
   <data name="Attachment_RemoveTooltip" xml:space="preserve">
     <value>첨부 파일 제거</value>
   </data>
+  <data name="Folder_Tooltip" xml:space="preserve">
+    <value>작업 폴더</value>
+  </data>
+  <data name="Folder_Header" xml:space="preserve">
+    <value>작업 폴더</value>
+  </data>
+  <data name="Folder_AddButton" xml:space="preserve">
+    <value>폴더 추가</value>
+  </data>
+  <data name="Folder_Empty" xml:space="preserve">
+    <value>(비어 있음)</value>
+  </data>
 </root>

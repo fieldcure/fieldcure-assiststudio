@@ -958,7 +958,18 @@ public sealed partial class ChatPanel : Control
         if (_titleRefreshButton is not null)
             _titleRefreshButton.Click += OnTitleRefreshClick;
         if (_titleFolderButton is not null)
+        {
             _titleFolderButton.Click += OnTitleFolderClick;
+            try
+            {
+                var folderLoader = new Windows.ApplicationModel.Resources.ResourceLoader("AssistStudio.Controls/Resources");
+                ToolTipService.SetToolTip(_titleFolderButton, folderLoader.GetString("Folder_Tooltip"));
+            }
+            catch
+            {
+                ToolTipService.SetToolTip(_titleFolderButton, "Workspace Folders");
+            }
+        }
 
         UpdateFolderButtonBadge();
 
@@ -1602,16 +1613,62 @@ public sealed partial class ChatPanel : Control
     /// </summary>
     private Flyout BuildFolderFlyout()
     {
-        var panel = new StackPanel { Spacing = 4, MinWidth = 280 };
+        var panel = new StackPanel { Spacing = 4, MinWidth = 300 };
         var folders = WorkspaceFolders?.ToList() ?? [];
+        var secondaryBrush = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
 
+        Windows.ApplicationModel.Resources.ResourceLoader? loader = null;
+        try { loader = new Windows.ApplicationModel.Resources.ResourceLoader("AssistStudio.Controls/Resources"); }
+        catch { /* fallback to English */ }
+
+        // Header row: "Workspace Folders" + [+ Add Folder] button
+        var headerRow = new Grid
+        {
+            ColumnDefinitions =
+            {
+                new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
+                new ColumnDefinition { Width = GridLength.Auto },
+            },
+            Margin = new Thickness(0, 0, 0, 4),
+        };
+
+        var headerText = new TextBlock
+        {
+            Text = loader?.GetString("Folder_Header") ?? "Workspace Folders",
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        Grid.SetColumn(headerText, 0);
+        headerRow.Children.Add(headerText);
+
+        var addButton = new Button
+        {
+            Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
+            Padding = new Thickness(6, 2, 6, 2),
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        var addContent = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
+        addContent.Children.Add(new FontIcon { Glyph = "\xE710", FontSize = 10 });
+        addContent.Children.Add(new TextBlock { Text = loader?.GetString("Folder_AddButton") ?? "Add Folder", FontSize = 12 });
+        addButton.Content = addContent;
+        addButton.Click += (s, e) =>
+        {
+            WorkspaceFolderAddRequested?.Invoke(this, EventArgs.Empty);
+        };
+        Grid.SetColumn(addButton, 1);
+        headerRow.Children.Add(addButton);
+
+        panel.Children.Add(headerRow);
+
+        // Folder list or empty state
         if (folders.Count == 0)
         {
             panel.Children.Add(new TextBlock
             {
-                Text = "No workspace folders set.",
-                Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
-                Margin = new Thickness(0, 0, 0, 4),
+                Text = loader?.GetString("Folder_Empty") ?? "(empty)",
+                Foreground = secondaryBrush,
+                FontSize = 12,
+                Margin = new Thickness(8, 0, 0, 0),
             });
         }
         else
@@ -1632,7 +1689,8 @@ public sealed partial class ChatPanel : Control
                     Text = folder,
                     VerticalAlignment = VerticalAlignment.Center,
                     TextTrimming = TextTrimming.CharacterEllipsis,
-                    MaxWidth = 240,
+                    FontSize = 12,
+                    Margin = new Thickness(8, 0, 0, 0),
                 };
                 Grid.SetColumn(folderText, 0);
                 row.Children.Add(folderText);
@@ -1640,7 +1698,7 @@ public sealed partial class ChatPanel : Control
                 var capturedFolder = folder;
                 var removeButton = new Button
                 {
-                    Content = new FontIcon { Glyph = "\xE711", FontSize = 10 },
+                    Content = new FontIcon { Glyph = "\xE74D", FontSize = 10 },
                     Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
                     Padding = new Thickness(4),
                     VerticalAlignment = VerticalAlignment.Center,
@@ -1650,12 +1708,6 @@ public sealed partial class ChatPanel : Control
                     var updated = folders.Where(f => f != capturedFolder).ToList();
                     WorkspaceFolders = updated.Count > 0 ? updated : null;
                     WorkspaceFoldersChanged?.Invoke(this, updated);
-                    // Rebuild flyout to reflect changes
-                    if (s is FrameworkElement fe && fe.Parent is FrameworkElement parent)
-                    {
-                        var f = parent.Tag as Flyout;
-                        f?.Hide();
-                    }
                 };
                 Grid.SetColumn(removeButton, 1);
                 row.Children.Add(removeButton);
@@ -1664,35 +1716,7 @@ public sealed partial class ChatPanel : Control
             }
         }
 
-        // Separator
-        panel.Children.Add(new Border
-        {
-            Height = 1,
-            Background = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["DividerStrokeColorDefaultBrush"],
-            Margin = new Thickness(0, 4, 0, 4),
-        });
-
-        // Add folder button
-        var addButton = new Button
-        {
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            HorizontalContentAlignment = HorizontalAlignment.Left,
-        };
-        var addContent = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        addContent.Children.Add(new FontIcon { Glyph = "\xE8F4", FontSize = 14 });
-        addContent.Children.Add(new TextBlock { Text = "Add Folder..." });
-        addButton.Content = addContent;
-        addButton.Click += (s, e) =>
-        {
-            WorkspaceFolderAddRequested?.Invoke(this, EventArgs.Empty);
-        };
-        panel.Children.Add(addButton);
-
-        var flyout = new Flyout
-        {
-            Content = panel,
-        };
-        return flyout;
+        return new Flyout { Content = panel };
     }
 
     /// <summary>
