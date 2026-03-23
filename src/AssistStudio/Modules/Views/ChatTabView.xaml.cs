@@ -86,6 +86,8 @@ public sealed partial class ChatTabView : UserControl
         Panel.MessageAdded += vm.OnMessageAdded;
         Panel.TitleEditRequested += vm.OnTitleEditRequested;
         Panel.BranchChanged += vm.OnBranchChanged;
+        Panel.WorkspaceFoldersChanged += vm.OnWorkspaceFoldersChanged;
+        Panel.WorkspaceFolderAddRequested += OnWorkspaceFolderAddRequested;
     }
 
     /// <summary>
@@ -99,6 +101,37 @@ public sealed partial class ChatTabView : UserControl
         Panel.MessageAdded -= vm.OnMessageAdded;
         Panel.TitleEditRequested -= vm.OnTitleEditRequested;
         Panel.BranchChanged -= vm.OnBranchChanged;
+        Panel.WorkspaceFoldersChanged -= vm.OnWorkspaceFoldersChanged;
+        Panel.WorkspaceFolderAddRequested -= OnWorkspaceFolderAddRequested;
+    }
+
+    /// <summary>
+    /// Handles the "Add Folder" request by opening a FolderPicker and updating the ChatPanel.
+    /// </summary>
+    private async void OnWorkspaceFolderAddRequested(object? sender, EventArgs e)
+    {
+        var picker = new Windows.Storage.Pickers.FolderPicker();
+        picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
+        picker.FileTypeFilter.Add("*");
+
+        var window = (App.Current as App)?.MainWindow;
+        if (window is null) return;
+        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+
+        var folder = await picker.PickSingleFolderAsync();
+        if (folder is null) return;
+
+        var current = Panel.WorkspaceFolders?.ToList() ?? [];
+        if (!current.Contains(folder.Path, StringComparer.OrdinalIgnoreCase))
+        {
+            current.Add(folder.Path);
+            Panel.WorkspaceFolders = current;
+
+            // Notify ViewModel
+            if (DataContext is ChatTabViewModel vm)
+                vm.OnWorkspaceFoldersChanged(this, current);
+        }
     }
 
     #endregion

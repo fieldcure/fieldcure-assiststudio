@@ -428,6 +428,22 @@
                                             VerticalAlignment="Center">
                                         <FontIcon Glyph="&#xE777;" FontSize="12" />
                                     </Button>
+                                    <Button x:Name="PART_TitleFolderButton"
+                                            ToolTipService.ToolTip="Workspace Folders"
+                                            Style="{StaticResource SubtleButtonStyle}"
+                                            Padding="4"
+                                            VerticalAlignment="Center">
+                                        <Grid>
+                                            <FontIcon Glyph="&#xE8B7;" FontSize="12" />
+                                            <TextBlock x:Name="PART_FolderBadge"
+                                                       FontSize="9"
+                                                       FontWeight="Bold"
+                                                       HorizontalAlignment="Right"
+                                                       VerticalAlignment="Top"
+                                                       Margin="8,-4,-4,0"
+                                                       Visibility="Collapsed" />
+                                        </Grid>
+                                    </Button>
                                 </StackPanel>
                                 <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
                             </StackPanel>

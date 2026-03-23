@@ -149,6 +149,11 @@ public sealed partial class ChatPanel : Control
         DependencyProperty.Register(nameof(ShowTitleBar), typeof(bool), typeof(ChatPanel),
             new PropertyMetadata(true, OnShowTitleBarChanged));
 
+    /// <summary>Identifies the <see cref="WorkspaceFolders"/> dependency property.</summary>
+    public static readonly DependencyProperty WorkspaceFoldersProperty =
+        DependencyProperty.Register(nameof(WorkspaceFolders), typeof(IReadOnlyList<string>), typeof(ChatPanel),
+            new PropertyMetadata(null, OnWorkspaceFoldersChanged));
+
     /// <summary>Identifies the <see cref="AllowAttachments"/> dependency property.</summary>
     public static readonly DependencyProperty AllowAttachmentsProperty =
         DependencyProperty.Register(nameof(AllowAttachments), typeof(bool), typeof(ChatPanel),
@@ -324,6 +329,17 @@ public sealed partial class ChatPanel : Control
     }
 
     /// <summary>
+    /// Called when <see cref="WorkspaceFolders"/> changes to update the folder button badge.
+    /// </summary>
+    private static void OnWorkspaceFoldersChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel)
+        {
+            panel.UpdateFolderButtonBadge();
+        }
+    }
+
+    /// <summary>
     /// Called when <see cref="AllowAttachments"/> changes to show or hide the attach button.
     /// </summary>
     private static void OnAllowAttachmentsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -440,6 +456,8 @@ public sealed partial class ChatPanel : Control
     /// The button that triggers title regeneration.
     /// </summary>
     private Button? _titleRefreshButton;
+    private Button? _titleFolderButton;
+    private TextBlock? _folderBadge;
 
     /// <summary>
     /// The WebView2 control used to render chat messages as HTML.
@@ -590,6 +608,16 @@ public sealed partial class ChatPanel : Control
     }
 
     /// <summary>
+    /// Gets or sets the workspace folder paths for the current conversation.
+    /// When folders are present, the built-in Filesystem MCP server is activated.
+    /// </summary>
+    public IReadOnlyList<string>? WorkspaceFolders
+    {
+        get => (IReadOnlyList<string>?)GetValue(WorkspaceFoldersProperty);
+        set => SetValue(WorkspaceFoldersProperty, value);
+    }
+
+    /// <summary>
     /// Gets or sets whether file attachments are allowed.
     /// </summary>
     public bool AllowAttachments
@@ -733,6 +761,18 @@ public sealed partial class ChatPanel : Control
     public event EventHandler<string>? TitleEditRequested;
 
     /// <summary>
+    /// Occurs when the user adds or removes workspace folders via the title bar flyout.
+    /// The event argument contains the updated folder list.
+    /// </summary>
+    public event EventHandler<IReadOnlyList<string>>? WorkspaceFoldersChanged;
+
+    /// <summary>
+    /// Occurs when the user clicks "Add Folder" in the workspace folders flyout.
+    /// The App layer should handle this to show a FolderPicker and update <see cref="WorkspaceFolders"/>.
+    /// </summary>
+    public event EventHandler? WorkspaceFolderAddRequested;
+
+    /// <summary>
     /// Occurs when a keyboard shortcut is pressed inside the WebView2 that should be handled by the host.
     /// </summary>
     public event EventHandler<string>? KeyboardShortcutPressed;
@@ -796,6 +836,8 @@ public sealed partial class ChatPanel : Control
             _titleEditButton.Click -= OnTitleEditClick;
         if (_titleRefreshButton is not null)
             _titleRefreshButton.Click -= OnTitleRefreshClick;
+        if (_titleFolderButton is not null)
+            _titleFolderButton.Click -= OnTitleFolderClick;
 
         // Get template parts
         _rootGrid = GetTemplateChild("PART_RootGrid") as Grid;
@@ -807,6 +849,8 @@ public sealed partial class ChatPanel : Control
         _titleText = GetTemplateChild("PART_TitleText") as TextBlock;
         _titleEditButton = GetTemplateChild("PART_TitleEditButton") as Button;
         _titleRefreshButton = GetTemplateChild("PART_TitleRefreshButton") as Button;
+        _titleFolderButton = GetTemplateChild("PART_TitleFolderButton") as Button;
+        _folderBadge = GetTemplateChild("PART_FolderBadge") as TextBlock;
         _chatWebView = GetTemplateChild("PART_ChatWebView") as WebView2;
         _approvalPanel = GetTemplateChild("PART_ToolApprovalPanel") as ToolApprovalPanel;
 
@@ -913,6 +957,10 @@ public sealed partial class ChatPanel : Control
         }
         if (_titleRefreshButton is not null)
             _titleRefreshButton.Click += OnTitleRefreshClick;
+        if (_titleFolderButton is not null)
+            _titleFolderButton.Click += OnTitleFolderClick;
+
+        UpdateFolderButtonBadge();
 
         // Subscribe to Loaded for WebView2 initialization
         Loaded += OnLoaded;
@@ -1534,6 +1582,129 @@ public sealed partial class ChatPanel : Control
     private async void OnTitleRefreshClick(object sender, RoutedEventArgs e)
     {
         await RegenerateTitleAsync();
+    }
+
+    /// <summary>
+    /// Handles the title folder button click to show the workspace folders flyout.
+    /// </summary>
+    private void OnTitleFolderClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button) return;
+        var flyout = BuildFolderFlyout();
+        flyout.ShowAt(button, new Microsoft.UI.Xaml.Controls.Primitives.FlyoutShowOptions
+        {
+            Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedLeft,
+        });
+    }
+
+    /// <summary>
+    /// Builds the folder management flyout UI with current folders, remove buttons, and an add button.
+    /// </summary>
+    private Flyout BuildFolderFlyout()
+    {
+        var panel = new StackPanel { Spacing = 4, MinWidth = 280 };
+        var folders = WorkspaceFolders?.ToList() ?? [];
+
+        if (folders.Count == 0)
+        {
+            panel.Children.Add(new TextBlock
+            {
+                Text = "No workspace folders set.",
+                Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
+                Margin = new Thickness(0, 0, 0, 4),
+            });
+        }
+        else
+        {
+            foreach (var folder in folders)
+            {
+                var row = new Grid
+                {
+                    ColumnDefinitions =
+                    {
+                        new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
+                        new ColumnDefinition { Width = GridLength.Auto },
+                    },
+                };
+
+                var folderText = new TextBlock
+                {
+                    Text = folder,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    MaxWidth = 240,
+                };
+                Grid.SetColumn(folderText, 0);
+                row.Children.Add(folderText);
+
+                var capturedFolder = folder;
+                var removeButton = new Button
+                {
+                    Content = new FontIcon { Glyph = "\xE711", FontSize = 10 },
+                    Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
+                    Padding = new Thickness(4),
+                    VerticalAlignment = VerticalAlignment.Center,
+                };
+                removeButton.Click += (s, e) =>
+                {
+                    var updated = folders.Where(f => f != capturedFolder).ToList();
+                    WorkspaceFolders = updated.Count > 0 ? updated : null;
+                    WorkspaceFoldersChanged?.Invoke(this, updated);
+                    // Rebuild flyout to reflect changes
+                    if (s is FrameworkElement fe && fe.Parent is FrameworkElement parent)
+                    {
+                        var f = parent.Tag as Flyout;
+                        f?.Hide();
+                    }
+                };
+                Grid.SetColumn(removeButton, 1);
+                row.Children.Add(removeButton);
+
+                panel.Children.Add(row);
+            }
+        }
+
+        // Separator
+        panel.Children.Add(new Border
+        {
+            Height = 1,
+            Background = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["DividerStrokeColorDefaultBrush"],
+            Margin = new Thickness(0, 4, 0, 4),
+        });
+
+        // Add folder button
+        var addButton = new Button
+        {
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Left,
+        };
+        var addContent = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        addContent.Children.Add(new FontIcon { Glyph = "\xE8F4", FontSize = 14 });
+        addContent.Children.Add(new TextBlock { Text = "Add Folder..." });
+        addButton.Content = addContent;
+        addButton.Click += (s, e) =>
+        {
+            WorkspaceFolderAddRequested?.Invoke(this, EventArgs.Empty);
+        };
+        panel.Children.Add(addButton);
+
+        var flyout = new Flyout
+        {
+            Content = panel,
+        };
+        return flyout;
+    }
+
+    /// <summary>
+    /// Updates the folder button badge to show the current folder count.
+    /// </summary>
+    private void UpdateFolderButtonBadge()
+    {
+        if (_folderBadge is null) return;
+
+        var count = WorkspaceFolders?.Count ?? 0;
+        _folderBadge.Text = count > 0 ? count.ToString() : "";
+        _folderBadge.Visibility = count > 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     /// <summary>

@@ -40,6 +40,12 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// </summary>
     [ObservableProperty] private string? _filePath;
 
+    /// <summary>
+    /// Built-in server configurations for this conversation.
+    /// Null means use AppSettings defaults.
+    /// </summary>
+    private Dictionary<string, BuiltInServerConfig>? _builtInServers;
+
     #endregion
 
     #region Observable Fields — ChatPanel bindings
@@ -585,6 +591,28 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             Title = input.Text.Trim();
             IsDirty = true;
         }
+    }
+
+    /// <summary>
+    /// Handles workspace folder changes from the title bar flyout.
+    /// Updates the built-in Filesystem MCP server and re-resolves tools.
+    /// </summary>
+    public async void OnWorkspaceFoldersChanged(object? _sender, IReadOnlyList<string> folders)
+    {
+        var config = new BuiltInServerConfig
+        {
+            IsEnabled = folders.Count > 0,
+            Folders = [.. folders],
+        };
+
+        await App.McpRegistry.UpdateBuiltInAsync(BuiltInServerHelper.FilesystemKey, config);
+        ResolveTools(Panel?.SelectedProfile);
+        IsDirty = true;
+
+        // Store for conversation save
+        _builtInServers = folders.Count > 0
+            ? new Dictionary<string, BuiltInServerConfig> { [BuiltInServerHelper.FilesystemKey] = config }
+            : null;
     }
 
     /// <summary>
