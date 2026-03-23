@@ -370,19 +370,35 @@ public sealed partial class ConnectPage : Page
             XamlRoot = XamlRoot,
         };
 
-        // Validate name and command against built-in servers in real time
+        // Real-time validation: required fields + built-in server guard
         if (!isEdit)
         {
-            void ValidateBuiltIn()
+            dialog.IsPrimaryButtonEnabled = false;
+
+            void Validate()
             {
-                var isBuiltIn = BuiltInServerHelper.IsBuiltInCommand(nameBox.Text.Trim())
+                var name = nameBox.Text.Trim();
+                var isStdioMode = transportCombo.SelectedIndex == 0;
+                var endpoint = isStdioMode ? commandBox.Text.Trim() : urlBox.Text.Trim();
+
+                // Required: name + command/url
+                if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(endpoint))
+                {
+                    builtInWarning.Visibility = Visibility.Collapsed;
+                    dialog.IsPrimaryButtonEnabled = false;
+                    return;
+                }
+
+                // Built-in server guard
+                var isBuiltIn = BuiltInServerHelper.IsBuiltInCommand(name)
                     || BuiltInServerHelper.IsBuiltInCommand(commandBox.Text.Trim());
                 builtInWarning.Visibility = isBuiltIn ? Visibility.Visible : Visibility.Collapsed;
                 dialog.IsPrimaryButtonEnabled = !isBuiltIn;
             }
 
-            nameBox.TextChanged += (_, _) => ValidateBuiltIn();
-            commandBox.TextChanged += (_, _) => ValidateBuiltIn();
+            nameBox.TextChanged += (_, _) => Validate();
+            commandBox.TextChanged += (_, _) => Validate();
+            urlBox.TextChanged += (_, _) => Validate();
 
             transportCombo.SelectionChanged += (_, _) =>
             {
@@ -390,6 +406,7 @@ public sealed partial class ConnectPage : Page
                 commandBox.Visibility = stdio ? Visibility.Visible : Visibility.Collapsed;
                 argsBox.Visibility = stdio ? Visibility.Visible : Visibility.Collapsed;
                 urlBox.Visibility = stdio ? Visibility.Collapsed : Visibility.Visible;
+                Validate();
             };
         }
 
