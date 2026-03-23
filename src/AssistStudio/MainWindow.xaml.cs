@@ -567,6 +567,7 @@ public sealed partial class MainWindow : Window
         await ShutdownMcpServersAsync();
         _isClosing = true;
         Close();
+        Environment.Exit(0);
     }
 
     /// <summary>
@@ -647,6 +648,7 @@ public sealed partial class MainWindow : Window
             await ShutdownMcpServersAsync();
             _isClosing = true;
             Close();
+            Environment.Exit(0);
             return;
         }
 
@@ -684,6 +686,7 @@ public sealed partial class MainWindow : Window
         await ShutdownMcpServersAsync();
         _isClosing = true;
         Close();
+        Environment.Exit(0);
     }
 
     /// <summary>
