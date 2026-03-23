@@ -150,9 +150,10 @@ public sealed partial class McpServerCard : UserControl
         EnableToggle.IsOn = config.IsEnabled;
         _suppressToggleEvent = false;
 
-        // Built-in servers: hide edit and delete (managed via Profile settings)
+        // Built-in servers: hide edit, delete, and toggle (managed via Profile settings)
         EditButton.Visibility = config.IsBuiltIn ? Visibility.Collapsed : Visibility.Visible;
         DeleteButton.Visibility = config.IsBuiltIn ? Visibility.Collapsed : Visibility.Visible;
+        EnableToggle.Visibility = config.IsBuiltIn ? Visibility.Collapsed : Visibility.Visible;
 
         // Tooltips
         ToolTipService.SetToolTip(EditButton, _loader.GetString("Connect_Edit"));

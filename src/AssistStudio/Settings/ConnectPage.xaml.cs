@@ -103,20 +103,6 @@ public sealed partial class ConnectPage : Page
 
         LoggingService.LogInfo($"[MCP] Toggle: {connection.Config.Name} → {(connection.Config.IsEnabled ? "enabled" : "disabled")}");
 
-        // Built-in servers: save state only, actual connection is managed by Profile folder settings
-        if (connection.Config.IsBuiltIn)
-        {
-            var configs = AppSettings.BuiltInServers;
-            var key = connection.Config.Id.Replace("builtin_", "");
-            if (configs.TryGetValue(key, out var builtInConfig))
-            {
-                builtInConfig.IsEnabled = connection.Config.IsEnabled;
-                AppSettings.BuiltInServers = configs;
-            }
-            RefreshServerList();
-            return;
-        }
-
         if (connection.Config.IsEnabled && !connection.IsConnected)
         {
             try { await _registry.ReconnectAsync(connection); }
