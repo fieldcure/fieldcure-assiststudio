@@ -1044,11 +1044,11 @@ public sealed partial class ChatPanel : Control
             try
             {
                 var folderLoader = new Windows.ApplicationModel.Resources.ResourceLoader("AssistStudio.Controls/Resources");
-                ToolTipService.SetToolTip(_titleFolderButton, folderLoader.GetString("Folder_Tooltip"));
+                SetBottomRightToolTip(_titleFolderButton, folderLoader.GetString("Folder_Tooltip"));
             }
             catch
             {
-                ToolTipService.SetToolTip(_titleFolderButton, "Workspace Folders");
+                SetBottomRightToolTip(_titleFolderButton, "Workspace Folders");
             }
         }
 

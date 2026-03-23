@@ -160,9 +160,18 @@ public sealed partial class McpServerCard : UserControl
         ReconnectButton.Visibility = config.IsBuiltIn ? Visibility.Collapsed : Visibility.Visible;
 
         // Tooltips
-        ToolTipService.SetToolTip(EditButton, _loader.GetString("Connect_Edit"));
-        ToolTipService.SetToolTip(ReconnectButton, _loader.GetString("Connect_Reconnect"));
-        ToolTipService.SetToolTip(DeleteButton, _loader.GetString("Connect_Remove"));
+        SetMouseToolTip(EditButton, _loader.GetString("Connect_Edit"));
+        SetMouseToolTip(ReconnectButton, _loader.GetString("Connect_Reconnect"));
+        SetMouseToolTip(DeleteButton, _loader.GetString("Connect_Remove"));
+    }
+
+    private static void SetMouseToolTip(FrameworkElement element, string text)
+    {
+        ToolTipService.SetToolTip(element, new ToolTip
+        {
+            Content = text,
+            Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
+        });
     }
 
     #endregion

@@ -68,7 +68,7 @@
                                            IsTextSelectionEnabled="True" />
                                 <Button Grid.Column="1"
                                         x:Uid="Models_RemoveKey"
-                                        ToolTipService.ToolTip="Remove Key"
+                                        ToolTipService.ToolTip="Remove Key" ToolTipService.Placement="Mouse"
                                         Click="OnRemoveClaudeKey" Padding="6,4">
                                     <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
                                               Glyph="&#xE74D;" FontSize="14" />
@@ -153,7 +153,7 @@
                                            IsTextSelectionEnabled="True" />
                                 <Button Grid.Column="1"
                                         x:Uid="Models_RemoveKey"
-                                        ToolTipService.ToolTip="Remove Key"
+                                        ToolTipService.ToolTip="Remove Key" ToolTipService.Placement="Mouse"
                                         Click="OnRemoveOpenAIKey" Padding="6,4">
                                     <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
                                               Glyph="&#xE74D;" FontSize="14" />
@@ -237,7 +237,7 @@
                                            IsTextSelectionEnabled="True" />
                                 <Button Grid.Column="1"
                                         x:Uid="Models_RemoveKey"
-                                        ToolTipService.ToolTip="Remove Key"
+                                        ToolTipService.ToolTip="Remove Key" ToolTipService.Placement="Mouse"
                                         Click="OnRemoveGeminiKey" Padding="6,4">
                                     <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
                                               Glyph="&#xE74D;" FontSize="14" />
@@ -321,7 +321,7 @@
                                            IsTextSelectionEnabled="True" />
                                 <Button Grid.Column="1"
                                         x:Uid="Models_RemoveKey"
-                                        ToolTipService.ToolTip="Remove Key"
+                                        ToolTipService.ToolTip="Remove Key" ToolTipService.Placement="Mouse"
                                         Click="OnRemoveGroqKey" Padding="6,4">
                                     <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
                                               Glyph="&#xE74D;" FontSize="14" />
@@ -401,7 +401,7 @@
                                 <Button x:Name="OllamaRefreshButton"
                                         Padding="4"
                                         x:Uid="Models_RefreshStatus"
-                                        ToolTipService.ToolTip="Check status"
+                                        ToolTipService.ToolTip="Check status" ToolTipService.Placement="Mouse"
                                         Click="OnCheckOllama">
                                     <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
                                               Glyph="&#xE72C;" FontSize="12" />

@@ -73,7 +73,7 @@
                     Margin="8,0,0,0"
                     VerticalAlignment="Center"
                     RenderTransformOrigin="0.5,0.5"
-                    ToolTipService.ToolTip="{x:Bind ToggleTooltip, Mode=OneWay}">
+                    ToolTipService.ToolTip="{x:Bind ToggleTooltip, Mode=OneWay}" ToolTipService.Placement="Mouse">
                     <FontIcon.RenderTransform>
                         <RotateTransform x:Name="IconRotation" Angle="{x:Bind InitialIconAngle}"/>
                     </FontIcon.RenderTransform>

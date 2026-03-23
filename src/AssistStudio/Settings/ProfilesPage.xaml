@@ -48,14 +48,14 @@
                         <Button x:Name="AddProfileButton" Grid.Column="1"
                                 x:Uid="Profiles_AddProfile"
                                 Click="OnAddProfileClicked"
-                                ToolTipService.ToolTip="Add profile"
+                                ToolTipService.ToolTip="Add profile" ToolTipService.Placement="Mouse"
                                 Padding="6">
                             <FontIcon Glyph="&#xE710;" FontSize="14" />
                         </Button>
                         <Button x:Name="DeleteProfileButton" Grid.Column="2"
                                 x:Uid="Profiles_DeleteProfile"
                                 Click="OnDeleteProfileClicked"
-                                ToolTipService.ToolTip="Delete"
+                                ToolTipService.ToolTip="Delete" ToolTipService.Placement="Mouse"
                                 Padding="6">
                             <FontIcon Glyph="&#xE74D;" FontSize="14" />
                         </Button>

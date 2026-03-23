@@ -68,7 +68,7 @@
                                     <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" />
                                     <TextBlock Grid.Column="2" Text="{Binding Size}" VerticalAlignment="Center" Opacity="0.6" />
                                     <Button Grid.Column="3" x:Uid="ModelDialog_DeleteBtn" Tag="{Binding Name}" Click="OnDeleteModel"
-                                            ToolTipService.ToolTip="{Binding DeleteTooltip}"
+                                            ToolTipService.ToolTip="{Binding DeleteTooltip}" ToolTipService.Placement="Mouse"
                                             Style="{StaticResource SubtleButtonStyle}"
                                             Padding="6" VerticalAlignment="Center">
                                         <FontIcon Glyph="&#xE74D;" FontSize="14" />
@@ -115,7 +115,7 @@
                                     <TextBlock Grid.Column="2" Text="{Binding EstimatedSize}" VerticalAlignment="Center"
                                                Opacity="0.6" FontSize="12" />
                                     <Button Grid.Column="3" x:Uid="ModelDialog_DownloadBtn" Tag="{Binding Name}" Click="OnPullModel"
-                                            ToolTipService.ToolTip="{Binding DownloadTooltip}"
+                                            ToolTipService.ToolTip="{Binding DownloadTooltip}" ToolTipService.Placement="Mouse"
                                             Style="{StaticResource SubtleButtonStyle}"
                                             Padding="6" VerticalAlignment="Center">
                                         <FontIcon Glyph="&#xE896;" FontSize="14" />
@@ -139,7 +139,7 @@
                      PlaceholderText="Ollama library model name (e.g. phi3:medium)" />
             <Button Grid.Column="1" Click="OnPullCustomModel"
                     x:Uid="ModelDialog_PullCustomBtn"
-                    ToolTipService.ToolTip="Download"
+                    ToolTipService.ToolTip="Download" ToolTipService.Placement="Mouse"
                     Style="{StaticResource SubtleButtonStyle}"
                     Padding="6" VerticalAlignment="Center">
                 <FontIcon Glyph="&#xE896;" FontSize="14" />
