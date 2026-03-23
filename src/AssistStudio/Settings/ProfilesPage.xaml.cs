@@ -74,6 +74,12 @@ public sealed partial class ProfilesPage : Page
         LoadSelectedProfile();
     }
 
+    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    {
+        base.OnNavigatedFrom(e);
+        UnsubscribeToolsPanelEvents();
+    }
+
     #endregion
 
     #region Event Handlers
@@ -273,6 +279,25 @@ public sealed partial class ProfilesPage : Page
     #region Private Methods
 
     /// <summary>
+    /// Unsubscribes Checked/Unchecked handlers from all CheckBoxes in the tools panel
+    /// to prevent leaked subscriptions when the panel is rebuilt or the page is left.
+    /// </summary>
+    private void UnsubscribeToolsPanelEvents()
+    {
+        foreach (var child in ToolsPanel.Children)
+        {
+            var cb = child as CheckBox
+                ?? (child as StackPanel)?.Children.OfType<CheckBox>().FirstOrDefault();
+            if (cb is null) continue;
+
+            cb.Checked -= OnToolChecked;
+            cb.Unchecked -= OnToolChecked;
+            cb.Checked -= OnServerChecked;
+            cb.Unchecked -= OnServerChecked;
+        }
+    }
+
+    /// <summary>
     /// Loads the currently selected profile's data into all editor fields.
     /// </summary>
     private void LoadSelectedProfile()
@@ -432,6 +457,7 @@ public sealed partial class ProfilesPage : Page
     /// </summary>
     private void PopulateToolsPanel(Profile profile)
     {
+        UnsubscribeToolsPanelEvents();
         ToolsPanel.Children.Clear();
         _builtInToolCheckBoxes.Clear();
         var loader = new Windows.ApplicationModel.Resources.ResourceLoader();

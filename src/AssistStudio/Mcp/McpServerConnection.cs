@@ -214,8 +214,9 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
     }
 
     /// <summary>
-    /// Immediately kills the MCP server process without waiting for graceful shutdown.
-    /// Use only during app exit where speed matters over cleanup.
+    /// Synchronous force-kill. Prefer <see cref="ForceKillAsync"/> when possible.
+    /// Fire-and-forgets DisposeAsync — caller is responsible for process-level cleanup
+    /// if orphaned SDK tasks keep the process alive.
     /// </summary>
     public void ForceKill()
     {
@@ -224,6 +225,28 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
             try
             {
                 _ = _client.DisposeAsync();
+            }
+            catch { }
+
+            _client = null;
+        }
+
+        Tools = [];
+        State = McpConnectionState.Disconnected;
+    }
+
+    /// <summary>
+    /// Asynchronously kills the MCP server process with a timeout-guarded dispose.
+    /// </summary>
+    public async ValueTask ForceKillAsync()
+    {
+        if (_client is not null)
+        {
+            try
+            {
+                // SDK ShutdownTimeout is 2 s; allow 1 s margin before giving up.
+                await _client.DisposeAsync().AsTask()
+                    .WaitAsync(TimeSpan.FromSeconds(3));
             }
             catch { }
 
@@ -258,7 +281,7 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
-        await DisconnectAsync();
+        await ForceKillAsync();
         GC.SuppressFinalize(this);
     }
 
@@ -276,6 +299,7 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
                 Arguments = Config.Arguments,
                 Name = Config.Name,
                 EnvironmentVariables = Config.EnvironmentVariables!,
+                ShutdownTimeout = TimeSpan.FromSeconds(2),
             }),
 
             McpTransportType.Http => new HttpClientTransport(new HttpClientTransportOptions

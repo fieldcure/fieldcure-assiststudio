@@ -304,6 +304,18 @@ public class McpServerRegistry : IAsyncDisposable
         _connections.Clear();
     }
 
+    /// <summary>
+    /// Asynchronously kills all MCP server connections with timeout-guarded dispose.
+    /// All connections are disposed in parallel (max 2 s total regardless of count).
+    /// Intended for app exit only.
+    /// </summary>
+    public async ValueTask ForceKillAllAsync()
+    {
+        LoggingService.LogInfo($"[MCP] ForceKillAllAsync: {_connections.Count} connections");
+        await Task.WhenAll(_connections.Select(c => c.ForceKillAsync().AsTask()));
+        _connections.Clear();
+    }
+
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {

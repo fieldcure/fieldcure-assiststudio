@@ -564,9 +564,8 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private async Task CloseAppAsync()
     {
+        _appWindow!.Hide();
         await ShutdownMcpServersAsync();
-        _isClosing = true;
-        Close();
         Environment.Exit(0);
     }
 
@@ -645,9 +644,8 @@ public sealed partial class MainWindow : Window
 
         if (dirtyTabs.Count == 0)
         {
+            _appWindow!.Hide();
             await ShutdownMcpServersAsync();
-            _isClosing = true;
-            Close();
             Environment.Exit(0);
             return;
         }
@@ -683,28 +681,27 @@ public sealed partial class MainWindow : Window
             }
         }
 
+        _appWindow!.Hide();
         await ShutdownMcpServersAsync();
-        _isClosing = true;
-        Close();
         Environment.Exit(0);
     }
 
     /// <summary>
     /// Gracefully shuts down all MCP server connections before app exit.
     /// </summary>
-    private Task ShutdownMcpServersAsync()
+    private async Task ShutdownMcpServersAsync()
     {
         try
         {
             LoggingService.LogInfo("[App] Force-killing MCP servers...");
-            App.McpRegistry.ForceKillAll();
+            await App.McpRegistry.ForceKillAllAsync().AsTask()
+                .WaitAsync(TimeSpan.FromSeconds(4));
             LoggingService.LogInfo("[App] MCP servers killed.");
         }
         catch (Exception ex)
         {
             LoggingService.LogError($"[App] MCP shutdown error: {ex.Message}");
         }
-        return Task.CompletedTask;
     }
 
     #endregion
