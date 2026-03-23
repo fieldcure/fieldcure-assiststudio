@@ -651,6 +651,9 @@
   <data name="Profiles_WorkspaceHint" xml:space="preserve">
     <value>Add workspace folders in conversations.</value>
   </data>
+  <data name="Profiles_WorkspaceSuppressHint" xml:space="preserve">
+    <value>Built-in file tools are automatically replaced when Workspace is enabled.</value>
+  </data>
   <data name="Mcp_ServersConnected" xml:space="preserve">
     <value>{0} MCP server(s) connected</value>
   </data>

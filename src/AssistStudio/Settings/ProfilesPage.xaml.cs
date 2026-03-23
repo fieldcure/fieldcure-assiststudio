@@ -236,10 +236,12 @@ public sealed partial class ProfilesPage : Page
             profile.EnabledServers.Remove(serverId);
         }
 
-        // Suppress/restore file tool checkboxes when Workspace (filesystem) toggled
+        // Workspace toggled: rebuild panel to update suppress state and hints
         if (serverId == $"builtin_{BuiltInServerHelper.FilesystemKey}")
         {
-            ApplyFilesystemSuppress(profile, cb.IsChecked == true);
+            SaveAll();
+            PopulateToolsPanel(profile);
+            return;
         }
 
         SaveAll();
@@ -453,73 +455,110 @@ public sealed partial class ProfilesPage : Page
         }
 
         // --- Servers ---
-        var servers = App.McpRegistry.Connections;
-        if (servers.Count > 0)
+        // Build server list: always include Workspace (filesystem), plus user-configured servers
+        var filesystemId = $"builtin_{BuiltInServerHelper.FilesystemKey}";
+        var userServers = App.McpRegistry.Connections
+            .Where(c => !c.Config.Id.StartsWith($"builtin_{BuiltInServerHelper.FilesystemKey}", StringComparison.Ordinal))
+            .ToList();
+        var hasServers = userServers.Count > 0;
+
+        // Separator (always shown — filesystem is always present)
+        ToolsPanel.Children.Add(new Microsoft.UI.Xaml.Shapes.Rectangle
         {
-            // Separator
-            ToolsPanel.Children.Add(new Microsoft.UI.Xaml.Shapes.Rectangle
+            Height = 1,
+            Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
+            Opacity = 0.3,
+            Margin = new Thickness(0, 4, 0, 4),
+        });
+
+        var enabledSet = profile.EnabledServers.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        // Workspace (filesystem) — always shown, not dependent on registry
+        {
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+
+            var dot = new Microsoft.UI.Xaml.Shapes.Ellipse
             {
-                Height = 1,
+                Width = 6, Height = 6,
                 Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
-                Opacity = 0.3,
-                Margin = new Thickness(0, 4, 0, 4),
-            });
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            row.Children.Add(dot);
 
-            var enabledSet = profile.EnabledServers.ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-            var filesystemId = $"builtin_{BuiltInServerHelper.FilesystemKey}";
-
-            foreach (var conn in servers)
+            var cb = new CheckBox
             {
-                var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+                Content = BuiltInServerHelper.FilesystemDisplayName,
+                Tag = filesystemId,
+                IsChecked = enabledSet.Contains(filesystemId),
+                MinWidth = 0,
+            };
+            cb.Checked += OnServerChecked;
+            cb.Unchecked += OnServerChecked;
+            row.Children.Add(cb);
 
-                // Connection status dot
-                var dot = new Microsoft.UI.Xaml.Shapes.Ellipse
-                {
-                    Width = 6, Height = 6,
-                    Fill = conn.IsConnected
-                        ? new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.LimeGreen)
-                        : new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
-                    VerticalAlignment = VerticalAlignment.Center,
-                };
-                row.Children.Add(dot);
+            ToolsPanel.Children.Add(row);
 
-                var cb = new CheckBox
-                {
-                    Content = conn.Config.Name,
-                    Tag = conn.Config.Id,
-                    IsChecked = enabledSet.Contains(conn.Config.Id),
-                    MinWidth = 0,
-                };
-                cb.Checked += OnServerChecked;
-                cb.Unchecked += OnServerChecked;
-                row.Children.Add(cb);
-
-                ToolsPanel.Children.Add(row);
-
-                // Workspace (filesystem): show hint that folders are managed per conversation
-                if (conn.Config.Id == filesystemId)
-                {
-                    ToolsPanel.Children.Add(new TextBlock
-                    {
-                        Text = loader.GetString("Profiles_WorkspaceHint"),
-                        Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-                        TextWrapping = TextWrapping.Wrap,
-                        Opacity = 0.5,
-                        Margin = new Thickness(28, 0, 0, 4),
-                    });
-                }
-            }
-
-            // Info hints
             ToolsPanel.Children.Add(new TextBlock
             {
-                Text = loader.GetString("Profiles_ToolsDefaultHint"),
+                Text = loader.GetString("Profiles_WorkspaceHint"),
+                Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                TextWrapping = TextWrapping.Wrap,
+                Opacity = 0.5,
+                Margin = new Thickness(28, 0, 0, 4),
+            });
+        }
+
+        // User-configured MCP servers
+        foreach (var conn in userServers)
+        {
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+
+            var dot = new Microsoft.UI.Xaml.Shapes.Ellipse
+            {
+                Width = 6, Height = 6,
+                Fill = conn.IsConnected
+                    ? new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.LimeGreen)
+                    : new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            row.Children.Add(dot);
+
+            var cb = new CheckBox
+            {
+                Content = conn.Config.Name,
+                Tag = conn.Config.Id,
+                IsChecked = enabledSet.Contains(conn.Config.Id),
+                MinWidth = 0,
+            };
+            cb.Checked += OnServerChecked;
+            cb.Unchecked += OnServerChecked;
+            row.Children.Add(cb);
+
+            ToolsPanel.Children.Add(row);
+        }
+
+        // Info hints
+        if (enabledSet.Contains(filesystemId))
+        {
+            ToolsPanel.Children.Add(new TextBlock
+            {
+                Text = loader.GetString("Profiles_WorkspaceSuppressHint"),
                 Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
                 TextWrapping = TextWrapping.Wrap,
                 Opacity = 0.5,
                 Margin = new Thickness(0, 4, 0, 0),
             });
+        }
+        ToolsPanel.Children.Add(new TextBlock
+        {
+            Text = loader.GetString("Profiles_ToolsDefaultHint"),
+            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+            TextWrapping = TextWrapping.Wrap,
+            Opacity = 0.5,
+            Margin = new Thickness(0, 4, 0, 0),
+        });
+        if (hasServers)
+        {
             ToolsPanel.Children.Add(new TextBlock
             {
                 Text = loader.GetString("Profiles_ServerToolsHint"),
