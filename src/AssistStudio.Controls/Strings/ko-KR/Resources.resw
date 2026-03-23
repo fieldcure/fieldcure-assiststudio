@@ -193,6 +193,9 @@
   <data name="Attachment_RemoveTooltip" xml:space="preserve">
     <value>첨부 파일 제거</value>
   </data>
+  <data name="ChatPanel_Greeting" xml:space="preserve">
+    <value>무엇을 도와드릴까요?</value>
+  </data>
   <data name="Folder_Tooltip" xml:space="preserve">
     <value>작업 폴더</value>
   </data>

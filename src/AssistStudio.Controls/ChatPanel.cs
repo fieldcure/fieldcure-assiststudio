@@ -197,9 +197,7 @@ public sealed partial class ChatPanel : Control
     {
         if (d is ChatPanel panel)
         {
-            var title = e.NewValue as string;
-            if (panel._titleText is not null)
-                panel._titleText.Text = title ?? "";
+            panel.UpdateTitleDisplay();
             panel.UpdateRefreshTooltip();
         }
     }
@@ -458,6 +456,8 @@ public sealed partial class ChatPanel : Control
     private Button? _titleRefreshButton;
     private Button? _titleFolderButton;
     private TextBlock? _folderBadge;
+    private bool _isConversationActive;
+    private string? _greetingText;
 
     /// <summary>
     /// The WebView2 control used to render chat messages as HTML.
@@ -972,6 +972,7 @@ public sealed partial class ChatPanel : Control
         }
 
         UpdateFolderButtonBadge();
+        UpdateTitleDisplay();
 
         // Subscribe to Loaded for WebView2 initialization
         Loaded += OnLoaded;
@@ -1720,6 +1721,46 @@ public sealed partial class ChatPanel : Control
     }
 
     /// <summary>
+    /// Updates the title text, showing a greeting when no conversation is active
+    /// or the actual title when a conversation has started.
+    /// Also toggles edit/refresh button visibility accordingly.
+    /// </summary>
+    private void UpdateTitleDisplay()
+    {
+        if (_titleText is null) return;
+
+        if (_isConversationActive)
+        {
+            _titleText.Text = Title ?? "";
+            if (_titleEditButton is not null) _titleEditButton.Visibility = Visibility.Visible;
+            if (_titleRefreshButton is not null) _titleRefreshButton.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            _greetingText ??= LoadGreeting();
+            _titleText.Text = _greetingText;
+            if (_titleEditButton is not null) _titleEditButton.Visibility = Visibility.Collapsed;
+            if (_titleRefreshButton is not null) _titleRefreshButton.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    /// <summary>
+    /// Loads the greeting text from resources.
+    /// </summary>
+    private static string LoadGreeting()
+    {
+        try
+        {
+            var loader = new Windows.ApplicationModel.Resources.ResourceLoader("AssistStudio.Controls/Resources");
+            return loader.GetString("ChatPanel_Greeting");
+        }
+        catch
+        {
+            return "How can I help you today?";
+        }
+    }
+
+    /// <summary>
     /// Updates the folder button badge to show the current folder count.
     /// </summary>
     private void UpdateFolderButtonBadge()
@@ -2064,6 +2105,9 @@ public sealed partial class ChatPanel : Control
 
         _emptyStatePanel.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
         _chatLayout.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+
+        _isConversationActive = true;
+        UpdateTitleDisplay();
 
         // Move InputArea from EmptyStatePanel into ChatLayout as Row 2
         _emptyStateContent.Children.Remove(_inputArea);

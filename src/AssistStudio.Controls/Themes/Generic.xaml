@@ -460,6 +460,7 @@
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="*" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
                             <WebView2 x:Name="PART_ChatWebView" Grid.Row="0" DefaultBackgroundColor="Transparent" IsTabStop="False" />

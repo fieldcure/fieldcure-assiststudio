@@ -193,6 +193,9 @@
   <data name="Attachment_RemoveTooltip" xml:space="preserve">
     <value>Remove attachment</value>
   </data>
+  <data name="ChatPanel_Greeting" xml:space="preserve">
+    <value>How can I help you today?</value>
+  </data>
   <data name="Folder_Tooltip" xml:space="preserve">
     <value>Workspace Folders</value>
   </data>
