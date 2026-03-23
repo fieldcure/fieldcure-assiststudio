@@ -124,15 +124,20 @@ public sealed partial class McpServerCard : UserControl
         string detailText;
         if (config.IsBuiltIn)
         {
-            // Line 1: description (or "N tools" if connected)
-            // Line 2: "built-in · N tools" (or just "built-in")
-            var toolInfo = connection.IsConnected
-                ? $"{builtInLabel} · {connection.Tools.Count} {toolsLabel}"
-                : builtInLabel;
-            var desc = !connection.IsConnected && !string.IsNullOrEmpty(config.Description)
-                ? config.Description + "\n"
-                : "";
-            detailText = desc + toolInfo;
+            if (connection.IsConnected)
+            {
+                // Active connection: "built-in · N tools"
+                detailText = $"{builtInLabel} · {connection.Tools.Count} {toolsLabel}";
+            }
+            else if (!string.IsNullOrEmpty(config.Description))
+            {
+                // Placeholder: description already contains formatted 2-line text
+                detailText = config.Description;
+            }
+            else
+            {
+                detailText = builtInLabel;
+            }
         }
         else
         {

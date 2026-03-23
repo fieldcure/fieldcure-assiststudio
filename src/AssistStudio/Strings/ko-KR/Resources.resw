@@ -619,7 +619,10 @@
     <value>대화에서 작업 폴더를 추가하면 활성화됩니다.</value>
   </data>
   <data name="Connect_FilesystemActiveInstances" xml:space="preserve">
-    <value>대화별로 관리됩니다. 활성 인스턴스 {0}개.</value>
+    <value>대화별로 관리됩니다.</value>
+  </data>
+  <data name="Connect_FilesystemActiveCount" xml:space="preserve">
+    <value>활성 인스턴스 {0}개</value>
   </data>
   <data name="Connect_BuiltInDuplicate" xml:space="preserve">
     <value>이 서버는 이미 내장 서버로 관리되고 있습니다.</value>

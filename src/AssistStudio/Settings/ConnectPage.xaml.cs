@@ -259,8 +259,8 @@ public sealed partial class ConnectPage : Page
             IsBuiltIn = true,
             IsEnabled = false,
             Description = activeTabCount > 0
-                ? string.Format(_loader.GetString("Connect_FilesystemActiveInstances"), activeTabCount)
-                : _loader.GetString("Connect_FilesystemNeedsFolders"),
+                ? $"{_loader.GetString("Connect_FilesystemActiveInstances")}\n{_loader.GetString("Connect_BuiltIn")} · {string.Format(_loader.GetString("Connect_FilesystemActiveCount"), activeTabCount)}"
+                : $"{_loader.GetString("Connect_FilesystemNeedsFolders")}\n{_loader.GetString("Connect_BuiltIn")}",
         };
         displayList.Insert(0, new McpServerConnection(placeholderConfig));
 
