@@ -616,13 +616,16 @@
     <value>Built-in</value>
   </data>
   <data name="Connect_FilesystemNeedsFolders" xml:space="preserve">
-    <value>Configure workspace folders in Profile settings.</value>
+    <value>Add workspace folders in a conversation to activate.</value>
+  </data>
+  <data name="Connect_FilesystemActiveInstances" xml:space="preserve">
+    <value>Managed per conversation. {0} active instance(s).</value>
   </data>
   <data name="BuiltIn_InstallSuccess" xml:space="preserve">
     <value>{0} server installed</value>
   </data>
   <data name="BuiltIn_InstallSuccessMessage" xml:space="preserve">
-    <value>Configure workspace folders in Profile settings.</value>
+    <value>Add workspace folders in a conversation to start using it.</value>
   </data>
   <data name="BuiltIn_Installing" xml:space="preserve">
     <value>Installing FieldCure.Mcp.Filesystem v{0}…</value>

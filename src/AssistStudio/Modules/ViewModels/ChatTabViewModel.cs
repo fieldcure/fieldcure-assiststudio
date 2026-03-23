@@ -46,6 +46,18 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// </summary>
     private Dictionary<string, BuiltInServerConfig>? _builtInServers;
 
+    /// <summary>
+    /// Unique identifier for this tab, used to differentiate per-tab MCP connections.
+    /// </summary>
+    public string Id { get; } = Guid.NewGuid().ToString("N")[..8];
+
+    /// <summary>
+    /// Per-tab Filesystem MCP server connection.
+    /// Each tab owns its own server instance with independent folder access.
+    /// Null if the profile/conversation has no workspace folders configured.
+    /// </summary>
+    private McpServerConnection? _filesystemConnection;
+
     #endregion
 
     #region Observable Fields — ChatPanel bindings
@@ -491,6 +503,13 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     {
         GC.SuppressFinalize(this);
 
+        // Disconnect per-tab filesystem server
+        if (_filesystemConnection is not null)
+        {
+            _ = App.McpRegistry.RemoveAsync(_filesystemConnection);
+            _filesystemConnection = null;
+        }
+
         if (AppTasksProvider is IDisposable utilDisposable)
         {
             utilDisposable.Dispose();
@@ -540,15 +559,8 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             var profileFolders = profile.WorkspaceFolders;
             Panel.WorkspaceFolders = profileFolders.Count > 0 ? [.. profileFolders] : null;
 
-            // Reconnect Filesystem MCP with new folders
-            var filesystemId = $"builtin_{BuiltInServerHelper.FilesystemKey}";
-            var isEnabled = profile.EnabledServers.Contains(filesystemId) && profileFolders.Count > 0;
-            var config = new BuiltInServerConfig
-            {
-                IsEnabled = isEnabled,
-                Folders = [.. profileFolders],
-            };
-            await App.McpRegistry.ConnectBuiltInAsync(BuiltInServerHelper.FilesystemKey, config);
+            // Profile switch = full reconnect with new folder set
+            await ConnectFilesystemAsync(profileFolders);
         }
 
         // Resolve tools from both built-in and MCP sources
@@ -653,21 +665,31 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// Handles workspace folder changes from the title bar flyout.
-    /// Updates the built-in Filesystem MCP server and re-resolves tools.
+    /// If the per-tab Filesystem server is already connected, updates folders via
+    /// roots protocol (no process restart). Otherwise connects a new server instance.
     /// </summary>
     public async void OnWorkspaceFoldersChanged(object? _sender, IReadOnlyList<string> folders)
     {
+        // Already connected → roots notification only (no process restart)
+        if (_filesystemConnection is not null && _filesystemConnection.IsConnected && folders.Count > 0)
+        {
+            await _filesystemConnection.UpdateWorkspaceFoldersAsync(folders);
+        }
+        else
+        {
+            // First connection or all folders removed
+            await ConnectFilesystemAsync(folders);
+        }
+
+        ResolveTools(Panel?.SelectedProfile);
+        IsDirty = true;
+
+        // Store for conversation save
         var config = new BuiltInServerConfig
         {
             IsEnabled = folders.Count > 0,
             Folders = [.. folders],
         };
-
-        await App.McpRegistry.UpdateBuiltInAsync(BuiltInServerHelper.FilesystemKey, config);
-        ResolveTools(Panel?.SelectedProfile);
-        IsDirty = true;
-
-        // Store for conversation save
         _builtInServers = folders.Count > 0
             ? new Dictionary<string, BuiltInServerConfig> { [BuiltInServerHelper.FilesystemKey] = config }
             : null;
@@ -694,6 +716,33 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     #region Private Methods
 
     /// <summary>
+    /// Connects (or reconnects) the per-tab Filesystem MCP server with the given folders.
+    /// If already connected, disconnects first. If no folders, just disconnects.
+    /// </summary>
+    private async Task ConnectFilesystemAsync(IReadOnlyList<string> folders)
+    {
+        // Disconnect existing per-tab filesystem server
+        if (_filesystemConnection is not null)
+        {
+            await App.McpRegistry.RemoveAsync(_filesystemConnection);
+            _filesystemConnection = null;
+        }
+
+        if (folders.Count == 0) return;
+
+        var mcpConfig = BuiltInServerHelper.CreateMcpServerConfig(
+            BuiltInServerHelper.FilesystemKey,
+            new BuiltInServerConfig { IsEnabled = true, Folders = [.. folders] });
+        if (mcpConfig is null) return;
+
+        // Unique ID per tab to allow multiple filesystem instances in the registry
+        mcpConfig.Id = $"builtin_{BuiltInServerHelper.FilesystemKey}_{Id}";
+
+        _filesystemConnection = await App.McpRegistry.AddAndConnectAsync(
+            mcpConfig, supportsRoots: true);
+    }
+
+    /// <summary>
     /// Resolves registered tools using server-level selection.
     /// Built-in tools (run_command, fetch_url) are always included.
     /// File tools (read_file, write_file, search_files) are included only when Filesystem MCP is inactive.
@@ -705,7 +754,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         var profileToolNames = profile?.ToolNames ?? [];
 
         // 1. Built-in tools filtered by profile selection
-        var filesystemConn = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.FilesystemKey);
+        var filesystemConn = _filesystemConnection;
         var filesystemActiveInProfile = filesystemConn?.IsConnected == true
             && (profile?.EnabledServers.Contains($"builtin_{BuiltInServerHelper.FilesystemKey}") ?? false);
 
@@ -722,7 +771,16 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 
         // 2. search_tools — only when profile has enabled servers
         var enabledServerIds = profile?.EnabledServers ?? [];
-        if (enabledServerIds.Count > 0)
+
+        // Map "builtin_filesystem" to the per-tab connection ID so filtering works
+        var effectiveServerIds = enabledServerIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (_filesystemConnection is not null
+            && effectiveServerIds.Contains($"builtin_{BuiltInServerHelper.FilesystemKey}"))
+        {
+            effectiveServerIds.Add(_filesystemConnection.Config.Id);
+        }
+
+        if (effectiveServerIds.Count > 0)
         {
             var searchTool = ToolRegistry.Resolve(["search_tools"]).FirstOrDefault();
             if (searchTool is not null)
@@ -731,7 +789,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                 {
                     // Scope search to tools from enabled servers only
                     var allowedToolNames = App.McpRegistry.AllTools
-                        .Where(t => enabledServerIds.Contains(
+                        .Where(t => effectiveServerIds.Contains(
                             App.McpRegistry.Connections
                                 .FirstOrDefault(c => c.Tools.Contains(t))?.Config.Id ?? ""))
                         .Select(t => t.Name)
@@ -747,16 +805,13 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         RegisteredTools = tools;
 
         // Update server list for the tool flyout UI (filtered by profile's enabled servers)
-        var profileServers = profile?.EnabledServers ?? [];
-        var profileServerSet = profileServers.ToHashSet(StringComparer.OrdinalIgnoreCase);
-
         AvailableServers = App.McpRegistry.Connections
-            .Where(c => profileServerSet.Contains(c.Config.Id))
+            .Where(c => effectiveServerIds.Contains(c.Config.Id))
             .Select(c => new FieldCure.AssistStudio.Controls.ServerInfo(
                 c.Config.Id, c.Config.Name, c.IsConnected, c.Config.IsBuiltIn))
             .ToList();
 
-        EnabledServerIds = profileServers;
+        EnabledServerIds = enabledServerIds;
     }
 
     /// <summary>

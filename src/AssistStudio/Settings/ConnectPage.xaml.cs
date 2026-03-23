@@ -239,25 +239,28 @@ public sealed partial class ConnectPage : Page
             return;
         }
 
-        // Build display list: always include built-in servers (even if not connected)
-        var displayList = new List<McpServerConnection>(_registry.Connections);
+        // Build display list: exclude per-tab filesystem connections (managed by tabs, not here)
+        var fsPrefix = $"builtin_{BuiltInServerHelper.FilesystemKey}";
+        var displayList = _registry.Connections
+            .Where(c => !c.Config.Id.StartsWith(fsPrefix, StringComparison.Ordinal))
+            .ToList();
 
-        // Ensure Filesystem built-in server is always visible (RAG hidden until ready)
-        var fsId = $"builtin_{BuiltInServerHelper.FilesystemKey}";
-        if (!displayList.Any(c => c.Config.Id == fsId))
+        // Always show Filesystem as an info-only placeholder (RAG hidden until ready)
+        var activeTabCount = _registry.Connections
+            .Count(c => c.Config.Id.StartsWith(fsPrefix, StringComparison.Ordinal) && c.IsConnected);
+        var placeholderConfig = new McpServerConfig
         {
-            var placeholderConfig = new McpServerConfig
-            {
-                Id = fsId,
-                Name = BuiltInServerHelper.FilesystemPackageId,
-                TransportType = McpTransportType.Stdio,
-                Command = BuiltInServerHelper.GetServerExePath(BuiltInServerHelper.FilesystemKey),
-                IsBuiltIn = true,
-                IsEnabled = false,
-                Description = _loader.GetString("Connect_FilesystemNeedsFolders"),
-            };
-            displayList.Insert(0, new McpServerConnection(placeholderConfig));
-        }
+            Id = fsPrefix,
+            Name = BuiltInServerHelper.FilesystemDisplayName,
+            TransportType = McpTransportType.Stdio,
+            Command = BuiltInServerHelper.GetServerExePath(BuiltInServerHelper.FilesystemKey),
+            IsBuiltIn = true,
+            IsEnabled = false,
+            Description = activeTabCount > 0
+                ? string.Format(_loader.GetString("Connect_FilesystemActiveInstances"), activeTabCount)
+                : _loader.GetString("Connect_FilesystemNeedsFolders"),
+        };
+        displayList.Insert(0, new McpServerConnection(placeholderConfig));
 
         ServerListControl.ItemsSource = displayList;
         EmptyStateText.Visibility = displayList.Count == 0
@@ -486,7 +489,11 @@ public sealed partial class ConnectPage : Page
     {
         if (_registry is null) return;
 
-        var configs = _registry.Connections.Select(c => c.Config).ToList();
+        // Only save user-configured servers (exclude built-in and per-tab connections)
+        var configs = _registry.Connections
+            .Where(c => !c.Config.IsBuiltIn)
+            .Select(c => c.Config)
+            .ToList();
         await AppSettings.SaveMcpServersAsync(configs);
         RefreshServerList();
     }

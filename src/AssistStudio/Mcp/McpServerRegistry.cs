@@ -78,7 +78,7 @@ public class McpServerRegistry : IAsyncDisposable
         {
             try
             {
-                await AddAndConnectAsync(config, ct);
+                await AddAndConnectAsync(config, ct: ct);
             }
             catch (Exception ex)
             {
@@ -110,15 +110,22 @@ public class McpServerRegistry : IAsyncDisposable
     /// <summary>
     /// Connects to an MCP server and adds it to the registry.
     /// </summary>
+    /// <param name="config">Server configuration.</param>
+    /// <param name="supportsRoots">
+    /// When <see langword="true"/>, the connection declares MCP roots capability
+    /// so the server can dynamically request folder updates without restarting.
+    /// </param>
+    /// <param name="ct">Cancellation token.</param>
     public async Task<McpServerConnection> AddAndConnectAsync(
         McpServerConfig config,
+        bool supportsRoots = false,
         CancellationToken ct = default)
     {
         LoggingService.LogInfo($"[MCP] AddAndConnect: {config.Name}");
         await _lock.WaitAsync(ct);
         try
         {
-            var connection = new McpServerConnection(config);
+            var connection = new McpServerConnection(config) { SupportsRoots = supportsRoots };
             _connections.Add(connection);
 
             try

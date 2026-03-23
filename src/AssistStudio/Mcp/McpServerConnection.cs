@@ -4,6 +4,7 @@ using System.Text.Json;
 using AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
 using ModelContextProtocol.Client;
+using ModelContextProtocol.Protocol;
 
 namespace AssistStudio.Mcp;
 
@@ -38,6 +39,8 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
     private McpConnectionState _state = McpConnectionState.Disconnected;
     private string? _errorMessage;
     private IReadOnlyList<McpToolAdapter> _tools = [];
+    private readonly object _rootsLock = new();
+    private List<string> _currentFolders = [];
 
     #endregion
 
@@ -86,6 +89,13 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
     /// <summary>Gets whether this connection is active.</summary>
     public bool IsConnected => State == McpConnectionState.Connected;
 
+    /// <summary>
+    /// Gets whether this connection uses MCP roots protocol for dynamic folder updates.
+    /// When <see langword="true"/>, the client declares roots capability and registers
+    /// a handler that returns the current folder list on demand.
+    /// </summary>
+    public bool SupportsRoots { get; init; }
+
     #endregion
 
     #region Methods
@@ -102,7 +112,43 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
         try
         {
             var transport = CreateTransport();
-            _client = await McpClient.CreateAsync(transport, cancellationToken: ct);
+
+            McpClientOptions? options = null;
+            if (SupportsRoots)
+            {
+                lock (_rootsLock)
+                {
+                    _currentFolders = [.. Config.Arguments ?? []];
+                }
+
+                options = new McpClientOptions
+                {
+                    Capabilities = new ClientCapabilities
+                    {
+                        Roots = new() { ListChanged = true }
+                    },
+                    Handlers = new McpClientHandlers
+                    {
+                        RootsHandler = (_, _) =>
+                        {
+                            lock (_rootsLock)
+                            {
+                                var roots = _currentFolders
+                                    .Select(f => new Root
+                                    {
+                                        Uri = new Uri(f).AbsoluteUri,
+                                        Name = Path.GetFileName(f)
+                                    })
+                                    .ToList();
+                                return new ValueTask<ListRootsResult>(
+                                    new ListRootsResult { Roots = roots });
+                            }
+                        }
+                    }
+                };
+            }
+
+            _client = await McpClient.CreateAsync(transport, options, cancellationToken: ct);
 
             // Auto-fill description from server's self-reported info
             if (string.IsNullOrWhiteSpace(Config.Description) && _client.ServerInfo is { } serverInfo)
@@ -186,6 +232,27 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
 
         Tools = [];
         State = McpConnectionState.Disconnected;
+    }
+
+    /// <summary>
+    /// Updates the workspace folders and notifies the server via roots protocol.
+    /// The server will request the new folder list via <c>roots/list</c> and update
+    /// its path validator without restarting.
+    /// </summary>
+    /// <param name="folders">The new folder list to expose to the server.</param>
+    /// <param name="ct">Cancellation token.</param>
+    public async Task UpdateWorkspaceFoldersAsync(IReadOnlyList<string> folders, CancellationToken ct = default)
+    {
+        if (!SupportsRoots || _client is null || State != McpConnectionState.Connected)
+            return;
+
+        lock (_rootsLock)
+        {
+            _currentFolders = [.. folders];
+        }
+
+        LoggingService.LogInfo($"[MCP] Roots updated: {folders.Count} folders");
+        await _client.SendNotificationAsync("notifications/roots/list_changed", ct);
     }
 
     /// <inheritdoc />
