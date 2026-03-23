@@ -5,8 +5,10 @@ using AssistStudio.Mcp;
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using Windows.ApplicationModel.Resources;
+using Windows.UI;
 
 namespace AssistStudio.Settings;
 
@@ -55,16 +57,6 @@ public sealed partial class ConnectPage : Page
     {
         var config = await ShowServerDialogAsync(null);
         if (config is null) return;
-
-        // Block duplicate of built-in server
-        if (BuiltInServerHelper.IsBuiltInCommand(config.Command))
-        {
-            NotificationCenter.Instance.Post(
-                InfoBarSeverity.Warning,
-                _loader.GetString("Connect_BuiltInDuplicate"),
-                string.Empty, 4000);
-            return;
-        }
 
         _registry?.AddWithoutConnect(config);
         await SaveAndRefreshAsync();
@@ -357,8 +349,37 @@ public sealed partial class ConnectPage : Page
             Text = envText,
         };
 
+        // Warning text for built-in command conflict
+        var builtInWarning = new TextBlock
+        {
+            Text = _loader.GetString("Connect_BuiltInDuplicate"),
+            Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 244, 67, 54)),
+            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+            Visibility = Visibility.Collapsed,
+            TextWrapping = TextWrapping.Wrap,
+        };
+
+        var dialog = new ThemedContentDialog
+        {
+            Title = isEdit
+                ? _loader.GetString("Connect_EditServerDialog")
+                : _loader.GetString("Connect_AddServerDialog"),
+            PrimaryButtonText = _loader.GetString("Dialog_OK"),
+            CloseButtonText = _loader.GetString("Dialog_Cancel"),
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = XamlRoot,
+        };
+
+        // Validate command against built-in servers in real time
         if (!isEdit)
         {
+            commandBox.TextChanged += (_, _) =>
+            {
+                var isBuiltIn = BuiltInServerHelper.IsBuiltInCommand(commandBox.Text.Trim());
+                builtInWarning.Visibility = isBuiltIn ? Visibility.Visible : Visibility.Collapsed;
+                dialog.IsPrimaryButtonEnabled = !isBuiltIn;
+            };
+
             transportCombo.SelectionChanged += (_, _) =>
             {
                 var stdio = transportCombo.SelectedIndex == 0;
@@ -373,21 +394,11 @@ public sealed partial class ConnectPage : Page
         panel.Children.Add(descriptionBox);
         panel.Children.Add(transportCombo);
         panel.Children.Add(commandBox);
+        panel.Children.Add(builtInWarning);
         panel.Children.Add(argsBox);
         panel.Children.Add(urlBox);
         panel.Children.Add(envBox);
-
-        var dialog = new ThemedContentDialog
-        {
-            Title = isEdit
-                ? _loader.GetString("Connect_EditServerDialog")
-                : _loader.GetString("Connect_AddServerDialog"),
-            Content = panel,
-            PrimaryButtonText = _loader.GetString("Dialog_OK"),
-            CloseButtonText = _loader.GetString("Dialog_Cancel"),
-            DefaultButton = ContentDialogButton.Primary,
-            XamlRoot = XamlRoot,
-        };
+        dialog.Content = panel;
 
         if (await dialog.ShowAsync() != ContentDialogResult.Primary)
             return null;
