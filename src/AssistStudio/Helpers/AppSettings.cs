@@ -427,6 +427,44 @@ public static class AppSettings
 
     #endregion
 
+    #region Built-in Server Methods
+
+    /// <summary>
+    /// Raised when built-in server configurations change.
+    /// </summary>
+    public static event EventHandler? BuiltInServersChanged;
+
+    /// <summary>
+    /// Gets or sets the default built-in MCP server configurations.
+    /// Applied to all new conversations unless overridden per-conversation.
+    /// </summary>
+    public static Dictionary<string, BuiltInServerConfig> BuiltInServers
+    {
+        get
+        {
+            var json = Settings.Values["BuiltInServers"] as string;
+            if (!string.IsNullOrEmpty(json))
+            {
+                try
+                {
+                    return JsonSerializer.Deserialize(json,
+                        AppJsonContext.Default.DictionaryStringBuiltInServerConfig) ?? Mcp.BuiltInServerHelper.GetDefaults();
+                }
+                catch { /* fall through */ }
+            }
+            return Mcp.BuiltInServerHelper.GetDefaults();
+        }
+        set
+        {
+            var json = JsonSerializer.Serialize(value,
+                AppJsonContext.Default.DictionaryStringBuiltInServerConfig);
+            Settings.Values["BuiltInServers"] = json;
+            BuiltInServersChanged?.Invoke(null, EventArgs.Empty);
+        }
+    }
+
+    #endregion
+
     #region MCP Server Methods
 
     /// <summary>

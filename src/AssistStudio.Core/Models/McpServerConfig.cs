@@ -75,5 +75,12 @@ public class McpServerConfig
     /// <summary>Whether this server is enabled.</summary>
     public bool IsEnabled { get; set; } = true;
 
+    /// <summary>
+    /// Indicates whether this is a built-in server (e.g., Filesystem, RAG).
+    /// Built-in servers are managed by the app and not persisted to mcp_servers.json.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsBuiltIn { get; set; }
+
     #endregion
 }

@@ -65,7 +65,8 @@ public static class ConversationManager
         string tabName,
         string? providerPresetName,
         IReadOnlyList<ChatMessage> messages,
-        string? activeRootChildId = null)
+        string? activeRootChildId = null,
+        Dictionary<string, BuiltInServerConfig>? builtInServers = null)
     {
         if (messages.Count == 0) return;
 
@@ -74,6 +75,7 @@ public static class ConversationManager
             TabName = tabName,
             ProviderPresetName = providerPresetName,
             ActiveRootChildId = activeRootChildId,
+            BuiltInServers = builtInServers,
             SavedAt = DateTime.UtcNow,
             Messages = messages.Select(m => new SavedMessage
             {

@@ -66,8 +66,12 @@ public class McpToolAdapter : IAssistTool
     public string ParameterSchema { get; }
 
     /// <inheritdoc />
-    /// <remarks>MCP tools are external and always require user approval.</remarks>
-    public bool RequiresConfirmation => true;
+    /// <remarks>
+    /// External MCP tools always require user approval.
+    /// Built-in server tools use <see cref="OverrideRequiresConfirmation"/>
+    /// to allow read-only tools without approval.
+    /// </remarks>
+    public bool RequiresConfirmation => OverrideRequiresConfirmation ?? true;
 
     /// <inheritdoc />
     public Task<string> ExecuteAsync(JsonElement parameters, CancellationToken ct = default)
@@ -82,6 +86,13 @@ public class McpToolAdapter : IAssistTool
     /// Used for UI grouping and <c>ToolApprovalPanel</c> display.
     /// </summary>
     public string ServerName { get; init; } = "";
+
+    /// <summary>
+    /// Gets an optional override for <see cref="RequiresConfirmation"/>.
+    /// When set, this value takes precedence over the default (<see langword="true"/>).
+    /// Used by built-in servers to allow read-only tools without user approval.
+    /// </summary>
+    public bool? OverrideRequiresConfirmation { get; init; }
 
     #endregion
 }

@@ -1,5 +1,6 @@
 ﻿using AssistStudio.Dialogs;
 using AssistStudio.Helpers;
+using AssistStudio.Mcp;
 using AssistStudio.Tools;
 using CommunityToolkit.Mvvm.ComponentModel;
 using FieldCure.AssistStudio.Controls;
@@ -619,14 +620,21 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             return;
         }
 
+        // Check if the built-in Filesystem MCP server is active
+        var filesystemConn = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.FilesystemKey);
+        var filesystemActive = filesystemConn?.IsConnected == true;
+
         // Get built-in tools matching profile's tool names (exclude search_tools, handled below)
+        // When Filesystem MCP is active, suppress overlapping built-in tools
         var builtIn = ToolRegistry.Resolve(profile.ToolNames)
             .Where(t => t.Name != "search_tools")
+            .Where(t => !filesystemActive || !BuiltInServerHelper.SuppressedBuiltInToolNames.Contains(t.Name))
             .ToList();
 
-        // Get profile-selected MCP tools
+        // Get profile-selected MCP tools + built-in server tools
+        // Built-in server tools are always included when the server is active
         var mcpTools = App.McpRegistry.AllTools
-            .Where(t => profile.ToolNames.Contains(t.Name))
+            .Where(t => profile.ToolNames.Contains(t.Name) || t.OverrideRequiresConfirmation.HasValue)
             .Cast<IAssistTool>()
             .ToList();
 

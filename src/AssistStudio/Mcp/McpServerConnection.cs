@@ -117,7 +117,12 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
                     description: t.Description ?? string.Empty,
                     parameterSchema: t.JsonSchema.GetRawText(),
                     executeFunc: (args, token) => InvokeMcpToolAsync(t, args, token))
-                { ServerName = Config.Name })];
+                {
+                    ServerName = Config.Name,
+                    OverrideRequiresConfirmation = Config.IsBuiltIn
+                        ? BuiltInServerHelper.GetRequiresConfirmation(t.Name)
+                        : null,
+                })];
 
             State = McpConnectionState.Connected;
             LoggingService.LogInfo($"[MCP] Connected: {Config.Name}, tools={Tools.Count}");

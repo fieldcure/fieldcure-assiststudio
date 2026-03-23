@@ -211,6 +211,81 @@ public class McpServerRegistry : IAsyncDisposable
     }
 
     /// <summary>
+    /// Connects or reconnects a built-in MCP server.
+    /// If the server is disabled or has no folders, any existing connection is removed.
+    /// The operation is atomic — the previous tool set is kept until the new connection
+    /// is fully established, preventing a gap where no tools are available.
+    /// </summary>
+    /// <param name="serverKey">The built-in server key (e.g., "filesystem").</param>
+    /// <param name="config">The server configuration.</param>
+    /// <param name="ct">Cancellation token.</param>
+    public async Task ConnectBuiltInAsync(
+        string serverKey,
+        BuiltInServerConfig config,
+        CancellationToken ct = default)
+    {
+        var builtInId = $"builtin_{serverKey}";
+        LoggingService.LogInfo($"[MCP] ConnectBuiltIn: {serverKey}, enabled={config.IsEnabled}, folders={config.Folders.Count}");
+
+        await _lock.WaitAsync(ct);
+        try
+        {
+            // Find and remove existing built-in connection
+            var existing = _connections.FirstOrDefault(c => c.Config.Id == builtInId);
+            if (existing is not null)
+            {
+                await existing.DisposeAsync();
+                _connections.Remove(existing);
+            }
+
+            // Create new McpServerConfig if valid
+            var mcpConfig = BuiltInServerHelper.CreateMcpServerConfig(serverKey, config);
+            if (mcpConfig is null)
+            {
+                // Disabled, no folders, or exe not found — just fire event for suppress fallback
+                ToolsChanged?.Invoke(this, EventArgs.Empty);
+                return;
+            }
+
+            // Connect the server
+            var connection = new McpServerConnection(mcpConfig);
+            _connections.Add(connection);
+
+            try
+            {
+                await connection.ConnectAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError($"[MCP] Built-in server failed: {serverKey} — {ex.Message}");
+                // Connection stays in error state, tools will be empty
+            }
+
+            ToolsChanged?.Invoke(this, EventArgs.Empty);
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Updates a built-in server's configuration (e.g., when folders change).
+    /// Alias for <see cref="ConnectBuiltInAsync"/> — handles disconnect + reconnect atomically.
+    /// </summary>
+    public Task UpdateBuiltInAsync(
+        string serverKey,
+        BuiltInServerConfig config,
+        CancellationToken ct = default)
+        => ConnectBuiltInAsync(serverKey, config, ct);
+
+    /// <summary>
+    /// Gets the connection for a built-in server, if any.
+    /// </summary>
+    public McpServerConnection? GetBuiltInConnection(string serverKey)
+        => _connections.FirstOrDefault(c => c.Config.Id == $"builtin_{serverKey}");
+
+    /// <summary>
     /// Kills all MCP server connections immediately without awaiting graceful shutdown.
     /// Intended for app exit only.
     /// </summary>

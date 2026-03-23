@@ -18,6 +18,7 @@ namespace AssistStudio.Helpers;
 [JsonSerializable(typeof(Dictionary<string, string>))]
 [JsonSerializable(typeof(IDictionary<string, string>))]
 [JsonSerializable(typeof(List<McpServerConfig>))]
+[JsonSerializable(typeof(Dictionary<string, BuiltInServerConfig>))]
 public partial class AppJsonContext : JsonSerializerContext
 {
 }

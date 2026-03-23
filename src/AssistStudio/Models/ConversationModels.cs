@@ -37,6 +37,13 @@ public class ConversationData
     /// <summary>The ID of the active root-level child message. Used when the first message has branches.</summary>
     public string? ActiveRootChildId { get; set; }
 
+    /// <summary>
+    /// Gets or sets the built-in MCP server configurations for this conversation.
+    /// Keys: "filesystem", "rag", etc.
+    /// Null means use defaults from App Settings.
+    /// </summary>
+    public Dictionary<string, BuiltInServerConfig>? BuiltInServers { get; set; }
+
     #endregion
 }
 

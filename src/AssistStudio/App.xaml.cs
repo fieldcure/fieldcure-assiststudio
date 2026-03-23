@@ -209,6 +209,14 @@ public partial class App : Application
                 foreach (var error in errors)
                     LoggingService.LogWarning($"MCP connect failed: {error}");
             }
+
+            // Connect built-in servers
+            var builtInConfigs = AppSettings.BuiltInServers;
+            foreach (var (key, config) in builtInConfigs)
+            {
+                if (config.IsEnabled && config.Folders.Count > 0)
+                    await McpRegistry.ConnectBuiltInAsync(key, config);
+            }
         }
         catch (Exception ex)
         {
