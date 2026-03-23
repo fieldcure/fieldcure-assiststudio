@@ -1196,14 +1196,13 @@ public sealed partial class InputContainer : Control
     }
 
     /// <summary>
-    /// Updates the tool button visibility based on whether tools are available.
+    /// Updates the tool button visibility. Always visible so users can see the empty state
+    /// message when no tools or servers are enabled in the profile.
     /// </summary>
     private void UpdateToolButtonVisibility()
     {
         if (_toolButton is null) return;
-        var hasServers = AvailableServers is { Count: > 0 };
-        var hasTools = AvailableTools.Count > 0;
-        _toolButton.Visibility = hasServers || hasTools ? Visibility.Visible : Visibility.Collapsed;
+        _toolButton.Visibility = Visibility.Visible;
     }
 
     /// <summary>
