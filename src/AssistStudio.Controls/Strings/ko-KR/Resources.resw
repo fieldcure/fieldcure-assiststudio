@@ -126,6 +126,10 @@
   <data name="InputContainer_DeselectAll" xml:space="preserve">
     <value>모두 해제</value>
   </data>
+  <data name="InputContainer_NoToolsEnabled" xml:space="preserve">
+    <value>사용할 도구나 서버가 없습니다.
+프로필 설정에서 추가하세요.</value>
+  </data>
   <data name="ChatPanel_EditTitleTooltip" xml:space="preserve">
     <value>제목 편집</value>
   </data>

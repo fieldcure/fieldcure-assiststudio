@@ -1,13 +1,12 @@
 using AssistStudio.Dialogs;
 using AssistStudio.Helpers;
+using AssistStudio.Mcp;
 using AssistStudio.Tools;
-using AssistStudio.Controls;
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Navigation;
-using System.Globalization;
 
 namespace AssistStudio.Settings;
 
@@ -30,9 +29,9 @@ public sealed partial class ProfilesPage : Page
     private bool _suppressEvents;
 
     /// <summary>
-    /// Maps each tool CollapsibleSection to its list of CheckBoxes for count updates.
+    /// Built-in tool checkboxes for suppress logic (file tools grayed out when Workspace active).
     /// </summary>
-    private readonly Dictionary<CollapsibleSection, List<CheckBox>> _toolSections = [];
+    private readonly List<CheckBox> _builtInToolCheckBoxes = [];
 
     #endregion
 
@@ -197,7 +196,7 @@ public sealed partial class ProfilesPage : Page
     }
 
     /// <summary>
-    /// Handles tool checkbox checked/unchecked events and updates section subheaders.
+    /// Handles built-in tool checkbox checked/unchecked events.
     /// </summary>
     private void OnToolChecked(object sender, RoutedEventArgs e)
     {
@@ -215,15 +214,32 @@ public sealed partial class ProfilesPage : Page
             profile.ToolNames.Remove(toolName);
         }
 
-        // Update the parent section's subheader count
-        foreach (var (section, checkBoxes) in _toolSections)
+        SaveAll();
+    }
+
+    /// <summary>
+    /// Handles server checkbox checked/unchecked events with Workspace suppress logic.
+    /// </summary>
+    private void OnServerChecked(object sender, RoutedEventArgs e)
+    {
+        if (_suppressEvents) return;
+        if (ProfileCombo.SelectedItem is not Profile profile) return;
+        if (sender is not CheckBox cb || cb.Tag is not string serverId) return;
+
+        if (cb.IsChecked == true)
         {
-            if (checkBoxes.Contains(cb))
-            {
-                var selected = checkBoxes.Count(c => c.IsChecked == true);
-                section.SubHeader = $"{selected}/{checkBoxes.Count}";
-                break;
-            }
+            if (!profile.EnabledServers.Contains(serverId))
+                profile.EnabledServers.Add(serverId);
+        }
+        else
+        {
+            profile.EnabledServers.Remove(serverId);
+        }
+
+        // Suppress/restore file tool checkboxes when Workspace (filesystem) toggled
+        if (serverId == $"builtin_{BuiltInServerHelper.FilesystemKey}")
+        {
+            ApplyFilesystemSuppress(profile, cb.IsChecked == true);
         }
 
         SaveAll();
@@ -410,184 +426,127 @@ public sealed partial class ProfilesPage : Page
     }
 
     /// <summary>
-    /// Populates the tools panel with checkboxes for each registered tool.
+    /// Populates the tools panel with built-in tool checkboxes and server toggle checkboxes.
     /// </summary>
     private void PopulateToolsPanel(Profile profile)
     {
         ToolsPanel.Children.Clear();
-        _toolSections.Clear();
+        _builtInToolCheckBoxes.Clear();
         var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
-        var hasAnyTool = false;
 
-        // --- Built-in tools (exclude search_tools, shown in Extended section) ---
+        // --- Built-in tools (exclude search_tools) ---
         var builtInTools = ToolRegistry.All.Where(t => t.Name != "search_tools").ToList();
-        if (builtInTools.Count > 0)
+        foreach (var tool in builtInTools)
         {
-            hasAnyTool = true;
-            var builtInPanel = new StackPanel { Spacing = 2 };
-            var builtInCheckBoxes = new List<CheckBox>();
-            foreach (var tool in builtInTools)
+            var localizedName = loader.GetString($"Tool_{tool.Name}");
+            var cb = new CheckBox
             {
-                var localizedName = loader.GetString($"Tool_{tool.Name}");
-                var cb = new CheckBox
-                {
-                    Content = string.IsNullOrEmpty(localizedName) ? tool.DisplayName : localizedName,
-                    Tag = tool.Name,
-                    IsChecked = profile.ToolNames.Contains(tool.Name),
-                };
-                cb.Checked += OnToolChecked;
-                cb.Unchecked += OnToolChecked;
-                builtInPanel.Children.Add(cb);
-                builtInCheckBoxes.Add(cb);
-            }
-            var selectedCount = builtInCheckBoxes.Count(c => c.IsChecked == true);
-            var builtInSection = new CollapsibleSection
-            {
-                Header = loader.GetString("Profiles_BuiltInTools"),
-                SubHeader = $"{selectedCount}/{builtInTools.Count}",
-                Body = builtInPanel,
-                ContentSpacing = 4,
-                IsExpanded = true,
+                Content = string.IsNullOrEmpty(localizedName) ? tool.DisplayName : localizedName,
+                Tag = tool.Name,
+                IsChecked = profile.ToolNames.Contains(tool.Name),
+                MinWidth = 0,
             };
-            _toolSections[builtInSection] = builtInCheckBoxes;
-            ToolsPanel.Children.Add(builtInSection);
+            cb.Checked += OnToolChecked;
+            cb.Unchecked += OnToolChecked;
+            ToolsPanel.Children.Add(cb);
+            _builtInToolCheckBoxes.Add(cb);
         }
 
-        // --- Extended tools (Search Tools toggle) ---
-        var extPanel = new StackPanel { Spacing = 4 };
-        var searchToolsCb = new CheckBox
+        // --- Servers ---
+        var servers = App.McpRegistry.Connections;
+        if (servers.Count > 0)
         {
-            Content = loader.GetString("Profiles_SearchToolsName"),
-            IsChecked = profile.UseSearchTools,
-            MinWidth = 0,
-        };
-        extPanel.Children.Add(searchToolsCb);
-        extPanel.Children.Add(new TextBlock
-        {
-            Text = loader.GetString("Profiles_SearchToolsDesc"),
-            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-            TextWrapping = TextWrapping.Wrap,
-            Opacity = 0.7,
-        });
-        var extSection = new CollapsibleSection
-        {
-            Header = loader.GetString("Profiles_ExtendedTools"),
-            SubHeader = profile.UseSearchTools ? "1/1" : "0/1",
-            Body = extPanel,
-            ContentSpacing = 4,
-            IsExpanded = true,
-        };
-        ToolsPanel.Children.Add(extSection);
-
-        // --- MCP tools grouped by server ---
-        var mcpSections = new List<CollapsibleSection>();
-        var filterPlaceholder = loader.GetString("Profiles_FilterToolsPlaceholder");
-        var mcpToolsByServer = App.McpRegistry.GetToolsByServer();
-        foreach (var (serverName, serverTools) in mcpToolsByServer)
-        {
-            if (serverTools.Count == 0) continue;
-            hasAnyTool = true;
-            var toolsPanel = new StackPanel { Spacing = 2 };
-            var mcpCheckBoxes = new List<CheckBox>();
-            foreach (var tool in serverTools)
+            // Separator
+            ToolsPanel.Children.Add(new Microsoft.UI.Xaml.Shapes.Rectangle
             {
+                Height = 1,
+                Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
+                Opacity = 0.3,
+                Margin = new Thickness(0, 4, 0, 4),
+            });
+
+            var enabledSet = profile.EnabledServers.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var conn in servers)
+            {
+                var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+
+                // Connection status dot
+                var dot = new Microsoft.UI.Xaml.Shapes.Ellipse
+                {
+                    Width = 6, Height = 6,
+                    Fill = conn.IsConnected
+                        ? new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.LimeGreen)
+                        : new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
+                    VerticalAlignment = VerticalAlignment.Center,
+                };
+                row.Children.Add(dot);
+
                 var cb = new CheckBox
                 {
-                    Content = HumanizeName(tool.Name),
-                    Tag = tool.Name,
-                    IsChecked = profile.ToolNames.Contains(tool.Name),
+                    Content = conn.Config.Name,
+                    Tag = conn.Config.Id,
+                    IsChecked = enabledSet.Contains(conn.Config.Id),
+                    MinWidth = 0,
                 };
-                cb.Checked += OnToolChecked;
-                cb.Unchecked += OnToolChecked;
-                toolsPanel.Children.Add(cb);
-                mcpCheckBoxes.Add(cb);
+                cb.Checked += OnServerChecked;
+                cb.Unchecked += OnServerChecked;
+                row.Children.Add(cb);
+
+                ToolsPanel.Children.Add(row);
             }
 
-            // Wrap with filter box + tools list
-            var filterBox = new AutoSuggestBox
-            {
-                PlaceholderText = filterPlaceholder,
-                QueryIcon = new SymbolIcon(Symbol.Find),
-                Margin = new Thickness(0, 0, 0, 4),
-            };
-            filterBox.TextChanged += (sender, _) =>
-            {
-                var query = sender.Text.Trim();
-                foreach (var child in toolsPanel.Children)
-                {
-                    if (child is CheckBox cb)
-                    {
-                        cb.Visibility = string.IsNullOrEmpty(query)
-                            || cb.Content?.ToString()?.Contains(query, StringComparison.OrdinalIgnoreCase) == true
-                            ? Visibility.Visible
-                            : Visibility.Collapsed;
-                    }
-                }
-            };
-
-            var bodyPanel = new StackPanel { Spacing = 4 };
-            bodyPanel.Children.Add(filterBox);
-            bodyPanel.Children.Add(toolsPanel);
-
-            var mcpSelectedCount = mcpCheckBoxes.Count(c => c.IsChecked == true);
-            var section = new CollapsibleSection
-            {
-                Header = serverName,
-                SubHeader = $"{mcpSelectedCount}/{serverTools.Count}",
-                Body = bodyPanel,
-                ContentSpacing = 4,
-                IsExpanded = false,
-                Visibility = profile.UseSearchTools ? Visibility.Collapsed : Visibility.Visible,
-            };
-            _toolSections[section] = mcpCheckBoxes;
-            mcpSections.Add(section);
-            ToolsPanel.Children.Add(section);
-        }
-
-        // Toggle MCP sections visibility when Search Tools changes
-        searchToolsCb.Checked += (_, _) =>
-        {
-            profile.UseSearchTools = true;
-            extSection.SubHeader = "1/1";
-            foreach (var s in mcpSections) s.Visibility = Visibility.Collapsed;
-            System.Diagnostics.Debug.WriteLine($"[SearchTools] Checked: profile={profile.Name}, UseSearchTools={profile.UseSearchTools}, IsBuiltIn={profile.IsBuiltIn}");
-            SaveAll();
-            // Verify save round-trip
-            var reloaded = AppSettings.LoadProfiles().FirstOrDefault(p => p.Name == profile.Name);
-            System.Diagnostics.Debug.WriteLine($"[SearchTools] After reload: UseSearchTools={reloaded?.UseSearchTools}");
-        };
-        searchToolsCb.Unchecked += (_, _) =>
-        {
-            profile.UseSearchTools = false;
-            extSection.SubHeader = "0/1";
-            foreach (var s in mcpSections) s.Visibility = Visibility.Visible;
-            SaveAll();
-        };
-
-        if (!hasAnyTool)
-        {
+            // Info hints
             ToolsPanel.Children.Add(new TextBlock
             {
-                Text = loader.GetString("Profiles_NoToolsRegistered"),
+                Text = loader.GetString("Profiles_ToolsDefaultHint"),
+                Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                TextWrapping = TextWrapping.Wrap,
                 Opacity = 0.5,
-                FontSize = 12,
+                Margin = new Thickness(0, 4, 0, 0),
             });
+            ToolsPanel.Children.Add(new TextBlock
+            {
+                Text = loader.GetString("Profiles_ServerToolsHint"),
+                Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                TextWrapping = TextWrapping.Wrap,
+                Opacity = 0.5,
+                Margin = new Thickness(0, 4, 0, 0),
+            });
+        }
+
+        // Apply suppress if Workspace (filesystem) is currently enabled
+        var filesystemId = $"builtin_{BuiltInServerHelper.FilesystemKey}";
+        if (profile.EnabledServers.Contains(filesystemId))
+        {
+            ApplyFilesystemSuppress(profile, suppress: true);
         }
     }
 
     /// <summary>
-    /// Converts a snake_case or kebab-case tool name to a human-readable Title Case string.
-    /// Example: "create_document" → "Create Document", "list-repos" → "List Repos".
+    /// Suppresses or restores file tool checkboxes when the Workspace (filesystem) server is toggled.
+    /// When suppressed, read_file/write_file/search_files are unchecked and grayed out.
     /// </summary>
-    private static string HumanizeName(string name)
+    private void ApplyFilesystemSuppress(Profile profile, bool suppress)
     {
-        if (string.IsNullOrEmpty(name)) return name;
-        // Remove server prefix if present (e.g., "github/list_repos" → "list_repos")
-        var slashIndex = name.IndexOf('/');
-        if (slashIndex >= 0 && slashIndex < name.Length - 1)
-            name = name[(slashIndex + 1)..];
-        return CultureInfo.CurrentCulture.TextInfo.ToTitleCase(
-            name.Replace('_', ' ').Replace('-', ' '));
+        _suppressEvents = true;
+        foreach (var cb in _builtInToolCheckBoxes)
+        {
+            if (cb.Tag is string toolName && BuiltInServerHelper.SuppressedBuiltInToolNames.Contains(toolName))
+            {
+                if (suppress)
+                {
+                    cb.IsChecked = false;
+                    cb.IsEnabled = false;
+                }
+                else
+                {
+                    cb.IsEnabled = true;
+                    cb.IsChecked = profile.ToolNames.Contains(toolName);
+                }
+            }
+        }
+        _suppressEvents = false;
     }
 
     /// <summary>

@@ -151,11 +151,6 @@ public sealed partial class InputContainer : Control
     /// </summary>
     private double? _pendingMinHeight;
 
-    /// <summary>
-    /// Internal set of enabled tool names for the tool toggle flyout.
-    /// </summary>
-    private HashSet<string>? _enabledToolSet;
-
     #endregion
 
     #region Template Parts
@@ -209,13 +204,6 @@ public sealed partial class InputContainer : Control
     /// The button that opens the tool toggle flyout.
     /// </summary>
     private Button? _toolButton;
-
-    /// <summary>
-    /// The "Select all / Deselect all" toggle link in the tool flyout.
-    /// </summary>
-    private HyperlinkButton? _toolToggleLink;
-    private string _selectAllLabel = "Select all";
-    private string _deselectAllLabel = "Deselect all";
 
     #endregion
 
@@ -446,13 +434,7 @@ public sealed partial class InputContainer : Control
         _containerBorder = GetTemplateChild("PART_ContainerBorder") as Border;
         _toolButton = GetTemplateChild("PART_ToolButton") as Button;
         if (_toolButton is not null)
-            _toolButton.Click += (_, _) =>
-            {
-                if (AvailableServers is { Count: > 0 })
-                    BuildServerFlyout();
-                else
-                    BuildToolFlyout();
-            };
+            _toolButton.Click += (_, _) => BuildToolsFlyout();
 
         // Apply ThemeShadow in code (XAML compiler crashes with ThemeShadow in ControlTemplate.Resources)
         if (_containerBorder is not null)
@@ -515,9 +497,6 @@ public sealed partial class InputContainer : Control
             _summarizeButton.Visibility = ShowSummarizeButton ? Visibility.Visible : Visibility.Collapsed;
         if (_attachButton is not null)
             _attachButton.Visibility = ShowAttachButton ? Visibility.Visible : Visibility.Collapsed;
-
-        // Build tool flyout if tools are available
-        BuildToolFlyout();
 
         // Update Send button when attachments change
         if (_previewBar is not null)
@@ -936,8 +915,7 @@ public sealed partial class InputContainer : Control
     {
         if (d is InputContainer self)
         {
-            // Reset enabled set — all tools enabled by default
-            self._enabledToolSet = null;
+            // Reset — all tools enabled by default
             self.EnabledToolNames = null;
             self.UpdateToolButtonVisibility();
         }
@@ -1229,64 +1207,126 @@ public sealed partial class InputContainer : Control
     }
 
     /// <summary>
-    /// Builds the server-level toggle flyout from <see cref="AvailableServers"/>.
-    /// Each server is shown as a checkbox with connection status indicator.
+    /// Builds the unified tools flyout showing built-in tool toggles and server toggles
+    /// at the same level, separated by a divider. Shows an empty state message when
+    /// neither tools nor servers are enabled in the profile.
     /// </summary>
-    private void BuildServerFlyout()
+    private void BuildToolsFlyout()
     {
         if (_toolButton is null) return;
 
+        var tools = AvailableTools;
         var servers = AvailableServers;
-        if (servers is not { Count: > 0 })
+        var hasTools = tools.Count > 0;
+        var hasServers = servers is { Count: > 0 };
+
+        // Empty state: neither tools nor servers enabled
+        if (!hasTools && !hasServers)
         {
-            // Fallback to tool-level flyout if no servers
-            BuildToolFlyout();
+            Windows.ApplicationModel.Resources.ResourceLoader? emptyRes = null;
+            try { emptyRes = new Windows.ApplicationModel.Resources.ResourceLoader("AssistStudio.Controls/Resources"); }
+            catch { /* keep defaults */ }
+
+            var emptyPanel = new StackPanel
+            {
+                Spacing = 4,
+                Padding = new Thickness(8),
+                MaxWidth = 240,
+            };
+            emptyPanel.Children.Add(new TextBlock
+            {
+                Text = emptyRes?.GetString("InputContainer_NoToolsEnabled")
+                    ?? "No tools or servers enabled.\nAdd them in Profile settings.",
+                TextWrapping = TextWrapping.Wrap,
+                Opacity = 0.6,
+                FontSize = 12,
+            });
+
+            _toolButton.Visibility = Visibility.Visible;
+            _toolButton.Flyout = new Flyout
+            {
+                Content = emptyPanel,
+                Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedLeft,
+            };
             return;
         }
 
         _toolButton.Visibility = Visibility.Visible;
-
-        var enabledSet = EnabledServerIds?.ToHashSet(StringComparer.OrdinalIgnoreCase)
-            ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         Windows.ApplicationModel.Resources.ResourceLoader? res = null;
         try { res = new Windows.ApplicationModel.Resources.ResourceLoader("AssistStudio.Controls/Resources"); }
         catch { /* keep defaults */ }
 
         var panel = new StackPanel { Spacing = 4 };
+        var allCheckBoxes = new List<CheckBox>();
 
-        foreach (var server in servers)
+        // --- Built-in tools ---
+        var enabledToolSet = EnabledToolNames?.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var tool in tools)
         {
-            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-
-            // Connection status dot
-            var dot = new Microsoft.UI.Xaml.Shapes.Ellipse
+            var cb = new CheckBox
             {
-                Width = 6, Height = 6,
-                Fill = server.IsConnected
-                    ? new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.LimeGreen)
-                    : new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
-                VerticalAlignment = VerticalAlignment.Center,
-            };
-            row.Children.Add(dot);
-
-            var checkBox = new CheckBox
-            {
-                Content = server.DisplayName,
-                IsChecked = enabledSet.Contains(server.Id),
-                Tag = server.Id,
+                Content = tool.DisplayName,
+                IsChecked = enabledToolSet is null || enabledToolSet.Contains(tool.Name),
+                Tag = tool.Name,
                 MinWidth = 0,
-                IsEnabled = server.IsConnected,
             };
-            checkBox.Checked += ServerCheckBox_Changed;
-            checkBox.Unchecked += ServerCheckBox_Changed;
-            row.Children.Add(checkBox);
-
-            panel.Children.Add(row);
+            cb.Checked += ToolCheckBox_Changed;
+            cb.Unchecked += ToolCheckBox_Changed;
+            panel.Children.Add(cb);
+            allCheckBoxes.Add(cb);
         }
 
-        // Separator + Toggle all
-        var allChecked = servers.All(s => enabledSet.Contains(s.Id));
+        // --- Separator (only if both sections present) ---
+        if (hasTools && hasServers)
+        {
+            panel.Children.Add(new Microsoft.UI.Xaml.Shapes.Rectangle
+            {
+                Height = 1,
+                Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
+                Opacity = 0.3,
+                Margin = new Thickness(0, 2, 0, 2),
+            });
+        }
+
+        // --- Servers ---
+        var enabledServerSet = EnabledServerIds?.ToHashSet(StringComparer.OrdinalIgnoreCase)
+            ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        if (hasServers)
+        {
+            foreach (var server in servers)
+            {
+                var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+
+                var dot = new Microsoft.UI.Xaml.Shapes.Ellipse
+                {
+                    Width = 6, Height = 6,
+                    Fill = server.IsConnected
+                        ? new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.LimeGreen)
+                        : new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
+                    VerticalAlignment = VerticalAlignment.Center,
+                };
+                row.Children.Add(dot);
+
+                var cb = new CheckBox
+                {
+                    Content = server.DisplayName,
+                    IsChecked = enabledServerSet.Contains(server.Id),
+                    Tag = server.Id,
+                    MinWidth = 0,
+                    IsEnabled = server.IsConnected,
+                };
+                cb.Checked += ServerCheckBox_Changed;
+                cb.Unchecked += ServerCheckBox_Changed;
+                row.Children.Add(cb);
+                allCheckBoxes.Add(cb);
+
+                panel.Children.Add(row);
+            }
+        }
+
+        // --- Footer: Separator + Toggle all ---
         var footer = new StackPanel { Spacing = 4, Padding = new Thickness(4, 0, 4, 4) };
         footer.Children.Add(new Microsoft.UI.Xaml.Shapes.Rectangle
         {
@@ -1298,6 +1338,7 @@ public sealed partial class InputContainer : Control
 
         var selectLabel = res?.GetString("InputContainer_SelectAll") ?? "Select all";
         var deselectLabel = res?.GetString("InputContainer_DeselectAll") ?? "Deselect all";
+        var allChecked = allCheckBoxes.All(c => c.IsChecked == true);
 
         var toggleLink = new HyperlinkButton
         {
@@ -1307,15 +1348,11 @@ public sealed partial class InputContainer : Control
         };
         toggleLink.Click += (_, _) =>
         {
-            var nowAllChecked = servers.All(s => enabledSet.Contains(s.Id));
-            foreach (var child in panel.Children)
+            var nowAllChecked = allCheckBoxes.All(c => c.IsChecked == true);
+            foreach (var cb in allCheckBoxes)
             {
-                if (child is StackPanel row)
-                {
-                    var cb = row.Children.OfType<CheckBox>().FirstOrDefault();
-                    if (cb is not null && cb.IsEnabled)
-                        cb.IsChecked = !nowAllChecked;
-                }
+                if (cb.IsEnabled)
+                    cb.IsChecked = !nowAllChecked;
             }
         };
         footer.Children.Add(toggleLink);
@@ -1337,6 +1374,25 @@ public sealed partial class InputContainer : Control
     }
 
     /// <summary>
+    /// Handles built-in tool checkbox toggle to update <see cref="EnabledToolNames"/>.
+    /// </summary>
+    private void ToolCheckBox_Changed(object sender, RoutedEventArgs e)
+    {
+        if (sender is not CheckBox cb || cb.Tag is not string toolName) return;
+
+        var tools = AvailableTools;
+        var current = EnabledToolNames?.ToHashSet(StringComparer.OrdinalIgnoreCase)
+            ?? [.. tools.Select(t => t.Name)];
+
+        if (cb.IsChecked == true)
+            current.Add(toolName);
+        else
+            current.Remove(toolName);
+
+        EnabledToolNames = current.Count == tools.Count ? null : [.. current];
+    }
+
+    /// <summary>
     /// Handles server checkbox toggle to update <see cref="EnabledServerIds"/>.
     /// </summary>
     private void ServerCheckBox_Changed(object sender, RoutedEventArgs e)
@@ -1351,128 +1407,6 @@ public sealed partial class InputContainer : Control
 
         EnabledServerIds = current;
         EnabledServersChanged?.Invoke(this, current);
-    }
-
-    /// <summary>
-    /// Builds the tool toggle flyout from current <see cref="AvailableTools"/>.
-    /// Called each time the tool button is clicked to ensure fresh data.
-    /// </summary>
-    private void BuildToolFlyout()
-    {
-        if (_toolButton is null) return;
-
-        var tools = AvailableTools;
-        if (tools.Count == 0)
-        {
-            _toolButton.Visibility = Visibility.Collapsed;
-            _toolButton.Flyout = null;
-            return;
-        }
-
-        _toolButton.Visibility = Visibility.Visible;
-
-        var panel = new StackPanel { Spacing = 4 };
-
-        foreach (var tool in tools)
-        {
-            var checkBox = new CheckBox
-            {
-                Content = tool.DisplayName,
-                IsChecked = _enabledToolSet is null || _enabledToolSet.Contains(tool.Name),
-                Tag = tool.Name,
-                MinWidth = 0
-            };
-            checkBox.Checked += ToolCheckBox_Changed;
-            checkBox.Unchecked += ToolCheckBox_Changed;
-            panel.Children.Add(checkBox);
-        }
-
-        // Separator + Toggle all link at bottom
-        var allChecked = _enabledToolSet is null || _enabledToolSet.Count == tools.Count;
-        try
-        {
-            var res = new Windows.ApplicationModel.Resources.ResourceLoader(
-                "AssistStudio.Controls/Resources");
-            _selectAllLabel = res.GetString("InputContainer_SelectAll");
-            _deselectAllLabel = res.GetString("InputContainer_DeselectAll");
-        }
-        catch { /* keep defaults */ }
-
-        var footer = new StackPanel { Spacing = 4, Padding = new Thickness(4, 0, 4, 4) };
-        footer.Children.Add(new Microsoft.UI.Xaml.Shapes.Rectangle
-        {
-            Height = 1,
-            Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
-            Opacity = 0.3,
-            Margin = new Thickness(0, 2, 0, 2),
-        });
-
-        _toolToggleLink = new HyperlinkButton
-        {
-            Content = allChecked ? _deselectAllLabel : _selectAllLabel,
-            Padding = new Thickness(0),
-            FontSize = 12,
-        };
-        _toolToggleLink.Click += (_, _) =>
-        {
-            var nowAllChecked = _enabledToolSet is null || _enabledToolSet.Count == tools.Count;
-            foreach (var child in panel.Children)
-            {
-                if (child is CheckBox cb)
-                    cb.IsChecked = !nowAllChecked;
-            }
-        };
-        footer.Children.Add(_toolToggleLink);
-
-        var outerPanel = new StackPanel { Padding = new Thickness(4) };
-        outerPanel.Children.Add(new ScrollViewer
-        {
-            Content = panel,
-            MaxHeight = 400,
-            Padding = new Thickness(0, 0, 8, 0),
-        });
-        outerPanel.Children.Add(footer);
-
-        var flyout = new Flyout
-        {
-            Content = outerPanel,
-            Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedLeft
-        };
-        _toolButton.Flyout = flyout;
-
-        // Apply tooltip
-        try
-        {
-            var loader = new Windows.ApplicationModel.Resources.ResourceLoader(
-                "AssistStudio.Controls/Resources");
-            SetTooltip(_toolButton, loader.GetString("InputContainer_ToolsTooltip"));
-        }
-        catch { /* Resource not found */ }
-    }
-
-    /// <summary>
-    /// Handles tool checkbox toggle to update <see cref="EnabledToolNames"/>.
-    /// </summary>
-    private void ToolCheckBox_Changed(object sender, RoutedEventArgs e)
-    {
-        if (sender is not CheckBox checkBox || checkBox.Tag is not string toolName) return;
-
-        var tools = AvailableTools;
-        // Initialize the enabled set from all tools if needed
-        _enabledToolSet ??= [.. tools.Select(t => t.Name)];
-
-        if (checkBox.IsChecked == true)
-            _enabledToolSet.Add(toolName);
-        else
-            _enabledToolSet.Remove(toolName);
-
-        // If all enabled, set null (meaning "all"); otherwise publish the list
-        var nowAll = _enabledToolSet.Count == tools.Count;
-        EnabledToolNames = nowAll ? null : _enabledToolSet.ToList();
-
-        // Sync toggle link label
-        if (_toolToggleLink is not null)
-            _toolToggleLink.Content = nowAll ? _deselectAllLabel : _selectAllLabel;
     }
 
     #endregion

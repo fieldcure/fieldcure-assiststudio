@@ -202,19 +202,13 @@
     <value>Desired model</value>
   </data>
   <data name="Profiles_DesiredTools.Text" xml:space="preserve">
-    <value>Desired tools</value>
+    <value>Tools &amp; Servers</value>
   </data>
-  <data name="Profiles_ToolsWarning.Text" xml:space="preserve">
-    <value>Tool support depends on the selected model.</value>
+  <data name="Profiles_ToolsDefaultHint" xml:space="preserve">
+    <value>Selected tools and servers will be the default for new conversations.</value>
   </data>
-  <data name="Profiles_ExtendedTools" xml:space="preserve">
-    <value>Extended Tools</value>
-  </data>
-  <data name="Profiles_SearchToolsName" xml:space="preserve">
-    <value>Search Tools</value>
-  </data>
-  <data name="Profiles_SearchToolsDesc" xml:space="preserve">
-    <value>Sends a single search_tools meta-tool instead of individual MCP tool definitions. Automatically activates when selected MCP tools exceed 10.</value>
+  <data name="Profiles_ServerToolsHint" xml:space="preserve">
+    <value>Server tools are automatically discovered and used by AI.</value>
   </data>
   <data name="Profiles_AnyProvider" xml:space="preserve">
     <value>Any provider</value>
@@ -463,15 +457,6 @@
   </data>
   <data name="Tool_fetch_url" xml:space="preserve">
     <value>Fetch URL</value>
-  </data>
-  <data name="Profiles_NoToolsRegistered" xml:space="preserve">
-    <value>No tools registered.</value>
-  </data>
-  <data name="Profiles_BuiltInTools" xml:space="preserve">
-    <value>Built-in</value>
-  </data>
-  <data name="Profiles_FilterToolsPlaceholder" xml:space="preserve">
-    <value>Filter tools...</value>
   </data>
   <!-- CollapsibleSection -->
   <data name="CollapsibleSection_CollapseTooltip" xml:space="preserve">

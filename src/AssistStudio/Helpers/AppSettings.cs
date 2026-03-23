@@ -251,6 +251,7 @@ public static class AppSettings
             PreferredModelId = p.PreferredModelId,
             ToolNames = [.. p.ToolNames],
             UseSearchTools = p.UseSearchTools,
+            EnabledServers = [.. p.EnabledServers],
         }).ToList();
 
         // Apply saved overrides for built-in profiles (tool settings etc.)
@@ -267,6 +268,7 @@ public static class AppSettings
                     {
                         target.ToolNames = ov.ToolNames;
                         target.UseSearchTools = ov.UseSearchTools;
+                        target.EnabledServers = ov.EnabledServers;
                     }
                 }
             }
@@ -302,7 +304,7 @@ public static class AppSettings
         // Save tool overrides for built-in profiles
         var builtInOverrides = all
             .Where(p => p.IsBuiltIn)
-            .Select(p => new Profile { Name = p.Name, ToolNames = p.ToolNames, UseSearchTools = p.UseSearchTools })
+            .Select(p => new Profile { Name = p.Name, ToolNames = p.ToolNames, UseSearchTools = p.UseSearchTools, EnabledServers = p.EnabledServers })
             .ToList();
         var ovJson = JsonSerializer.Serialize(builtInOverrides, AppJsonContext.Default.ListProfile);
         Settings.Values["BuiltInProfileOverrides"] = ovJson;

@@ -202,19 +202,13 @@
     <value>선호 모델</value>
   </data>
   <data name="Profiles_DesiredTools.Text" xml:space="preserve">
-    <value>선호 도구</value>
+    <value>도구 및 서버</value>
   </data>
-  <data name="Profiles_ToolsWarning.Text" xml:space="preserve">
-    <value>도구 지원 여부는 선택한 모델에 따라 다릅니다.</value>
+  <data name="Profiles_ToolsDefaultHint" xml:space="preserve">
+    <value>여기서 선택한 도구와 서버가 새 대화의 기본값이 됩니다.</value>
   </data>
-  <data name="Profiles_ExtendedTools" xml:space="preserve">
-    <value>확장 도구</value>
-  </data>
-  <data name="Profiles_SearchToolsName" xml:space="preserve">
-    <value>Search Tools</value>
-  </data>
-  <data name="Profiles_SearchToolsDesc" xml:space="preserve">
-    <value>개별 MCP 도구 정의 대신 search_tools 메타 도구 하나만 전송합니다. 선택된 MCP 도구가 10개를 초과하면 자동으로 활성화됩니다.</value>
+  <data name="Profiles_ServerToolsHint" xml:space="preserve">
+    <value>서버의 도구는 AI가 자동으로 검색하여 사용합니다.</value>
   </data>
   <data name="Profiles_AnyProvider" xml:space="preserve">
     <value>모든 프로바이더</value>
@@ -463,15 +457,6 @@
   </data>
   <data name="Tool_fetch_url" xml:space="preserve">
     <value>URL 가져오기</value>
-  </data>
-  <data name="Profiles_NoToolsRegistered" xml:space="preserve">
-    <value>등록된 도구가 없습니다.</value>
-  </data>
-  <data name="Profiles_BuiltInTools" xml:space="preserve">
-    <value>기본 제공</value>
-  </data>
-  <data name="Profiles_FilterToolsPlaceholder" xml:space="preserve">
-    <value>도구 검색...</value>
   </data>
   <!-- CollapsibleSection -->
   <data name="CollapsibleSection_CollapseTooltip" xml:space="preserve">

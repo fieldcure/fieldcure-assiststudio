@@ -126,6 +126,10 @@
   <data name="InputContainer_DeselectAll" xml:space="preserve">
     <value>Deselect all</value>
   </data>
+  <data name="InputContainer_NoToolsEnabled" xml:space="preserve">
+    <value>No tools or servers enabled.
+Add them in Profile settings.</value>
+  </data>
   <data name="ChatPanel_EditTitleTooltip" xml:space="preserve">
     <value>Edit title</value>
   </data>

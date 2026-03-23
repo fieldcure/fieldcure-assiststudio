@@ -94,14 +94,10 @@
                               IsEnabled="False"
                               SelectionChanged="OnModelChanged" />
 
-                    <!-- Desired Tools -->
+                    <!-- Tools & Servers -->
                     <StackPanel Spacing="4">
-                        <TextBlock x:Uid="Profiles_DesiredTools" Text="Desired tools"
+                        <TextBlock x:Uid="Profiles_DesiredTools" Text="Tools &amp; Servers"
                                    Style="{StaticResource BodyStrongTextBlockStyle}" />
-                        <TextBlock x:Uid="Profiles_ToolsWarning"
-                                   Style="{StaticResource CaptionTextBlockStyle}"
-                                   Foreground="{ThemeResource SystemFillColorCautionBrush}"
-                                   TextWrapping="Wrap" />
                         <StackPanel x:Name="ToolsPanel" Spacing="4" />
                     </StackPanel>
                 </StackPanel>

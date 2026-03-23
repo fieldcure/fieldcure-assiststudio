@@ -671,58 +671,61 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     private void ResolveTools(Profile? profile)
     {
         var tools = new List<IAssistTool>();
+        var profileToolNames = profile?.ToolNames ?? [];
 
-        // 1. Always include: run_command, fetch_url
-        tools.AddRange(ToolRegistry.Resolve(["run_command", "fetch_url"]));
-
-        // 2. Conditional: file tools — only when Filesystem MCP is not active for this profile
+        // 1. Built-in tools filtered by profile selection
         var filesystemConn = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.FilesystemKey);
         var filesystemActiveInProfile = filesystemConn?.IsConnected == true
             && (profile?.EnabledServers.Contains($"builtin_{BuiltInServerHelper.FilesystemKey}") ?? false);
 
-        if (!filesystemActiveInProfile)
+        foreach (var toolName in new[] { "run_command", "fetch_url", "read_file", "write_file", "search_files" })
         {
-            tools.AddRange(ToolRegistry.Resolve(["read_file", "write_file", "search_files"]));
+            if (!profileToolNames.Contains(toolName)) continue;
+
+            // File tools suppressed when Filesystem MCP is active
+            if (filesystemActiveInProfile && BuiltInServerHelper.SuppressedBuiltInToolNames.Contains(toolName))
+                continue;
+
+            tools.AddRange(ToolRegistry.Resolve([toolName]));
         }
 
-        // 3. search_tools — always included, scoped to profile's enabled servers
-        var searchTool = ToolRegistry.Resolve(["search_tools"]).FirstOrDefault();
-        if (searchTool is not null)
+        // 2. search_tools — only when profile has enabled servers
+        var enabledServerIds = profile?.EnabledServers ?? [];
+        if (enabledServerIds.Count > 0)
         {
-            // Determine which servers are enabled in the profile
-            var enabledServerIds = profile?.EnabledServers ?? [];
-
-            if (enabledServerIds.Count > 0 && searchTool is ISearchToolScope scoped)
+            var searchTool = ToolRegistry.Resolve(["search_tools"]).FirstOrDefault();
+            if (searchTool is not null)
             {
-                // Scope search to tools from enabled servers only
-                var allowedToolNames = App.McpRegistry.AllTools
-                    .Where(t => enabledServerIds.Contains(
-                        App.McpRegistry.Connections
-                            .FirstOrDefault(c => c.Tools.Contains(t))?.Config.Id ?? ""))
-                    .Select(t => t.Name)
-                    .ToHashSet();
+                if (searchTool is ISearchToolScope scoped)
+                {
+                    // Scope search to tools from enabled servers only
+                    var allowedToolNames = App.McpRegistry.AllTools
+                        .Where(t => enabledServerIds.Contains(
+                            App.McpRegistry.Connections
+                                .FirstOrDefault(c => c.Tools.Contains(t))?.Config.Id ?? ""))
+                        .Select(t => t.Name)
+                        .ToHashSet();
 
-                scoped.AllowedToolNames = allowedToolNames.Count > 0 ? allowedToolNames : null;
-            }
-            else if (searchTool is ISearchToolScope scopedEmpty)
-            {
-                scopedEmpty.AllowedToolNames = enabledServerIds.Count == 0
-                    ? new HashSet<string>()  // No servers → no MCP tools discoverable
-                    : null;
-            }
+                    scoped.AllowedToolNames = allowedToolNames.Count > 0 ? allowedToolNames : null;
+                }
 
-            tools.Add(searchTool);
+                tools.Add(searchTool);
+            }
         }
 
         RegisteredTools = tools;
 
-        // Update server list for the tool flyout UI
+        // Update server list for the tool flyout UI (filtered by profile's enabled servers)
+        var profileServers = profile?.EnabledServers ?? [];
+        var profileServerSet = profileServers.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         AvailableServers = App.McpRegistry.Connections
+            .Where(c => profileServerSet.Contains(c.Config.Id))
             .Select(c => new FieldCure.AssistStudio.Controls.ServerInfo(
                 c.Config.Id, c.Config.Name, c.IsConnected, c.Config.IsBuiltIn))
             .ToList();
 
-        EnabledServerIds = profile?.EnabledServers ?? [];
+        EnabledServerIds = profileServers;
     }
 
     /// <summary>
