@@ -1730,7 +1730,6 @@ public sealed partial class ChatPanel : Control
             Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
             Padding = new Thickness(6, 2, 6, 2),
             VerticalAlignment = VerticalAlignment.Center,
-            IsEnabled = isEnabled,
         };
         var addContent = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
         addContent.Children.Add(new FontIcon { Glyph = "\xE710", FontSize = 10 });
@@ -1801,7 +1800,6 @@ public sealed partial class ChatPanel : Control
                     Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
                     Padding = new Thickness(4),
                     VerticalAlignment = VerticalAlignment.Center,
-                    IsEnabled = isEnabled,
                 };
                 removeButton.Click += (s, e) =>
                 {
