@@ -566,7 +566,8 @@ public sealed partial class MainWindow : Window
     {
         _appWindow!.Hide();
         await ShutdownMcpServersAsync();
-        Environment.Exit(0);
+        LoggingService.LogInfo("[App] Exiting process...");
+        ExitProcess(0);
     }
 
     /// <summary>
@@ -646,7 +647,9 @@ public sealed partial class MainWindow : Window
         {
             _appWindow!.Hide();
             await ShutdownMcpServersAsync();
-            Environment.Exit(0);
+            LoggingService.LogInfo("[App] Calling Environment.Exit(0)...");
+            LoggingService.LogInfo("[App] Exiting process...");
+        ExitProcess(0);
             return;
         }
 
@@ -683,7 +686,8 @@ public sealed partial class MainWindow : Window
 
         _appWindow!.Hide();
         await ShutdownMcpServersAsync();
-        Environment.Exit(0);
+        LoggingService.LogInfo("[App] Exiting process...");
+        ExitProcess(0);
     }
 
     /// <summary>
@@ -711,6 +715,13 @@ public sealed partial class MainWindow : Window
             LoggingService.LogError($"[App] MCP shutdown error: {ex.GetType().Name}: {ex.Message}");
         }
     }
+
+    /// <summary>
+    /// Terminates the current process immediately, bypassing finalizers and
+    /// managed shutdown that can hang when MCP SDK background threads hold dead process handles.
+    /// </summary>
+    [System.Runtime.InteropServices.LibraryImport("kernel32.dll")]
+    private static partial void ExitProcess(uint uExitCode);
 
     #endregion
 

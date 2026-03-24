@@ -314,7 +314,7 @@ public sealed partial class AppTasksPage : Page
     /// For Ollama models: checks if downloaded, offers pull if not.
     /// For OpenAI models: applies immediately.
     /// </summary>
-    private async void OnEmbeddingModelSelected(object sender, RoutedEventArgs e)
+    private void OnEmbeddingModelSelected(object sender, RoutedEventArgs e)
     {
         if (_suppressEvents) return;
         if (sender is not RadioButton rb) return;
