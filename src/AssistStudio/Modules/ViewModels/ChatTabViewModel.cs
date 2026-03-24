@@ -294,10 +294,11 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             panel.WorkspaceFolders = savedConfig.Folders;
         }
 
-        // Initialize Knowledge Archive folder from per-conversation data
+        // Initialize Knowledge Archive folder from per-conversation data (skip if folder deleted)
         if (_builtInServers is not null
             && _builtInServers.TryGetValue(BuiltInServerHelper.RagKey, out var ragSavedConfig)
-            && ragSavedConfig.Folders.Count > 0)
+            && ragSavedConfig.Folders.Count > 0
+            && Directory.Exists(ragSavedConfig.Folders[0]))
         {
             panel.KnowledgeArchiveFolder = ragSavedConfig.Folders[0];
         }
@@ -924,6 +925,13 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// </summary>
     private async Task ConnectRagAsync(string folder)
     {
+        // Skip if folder no longer exists on disk
+        if (!Directory.Exists(folder))
+        {
+            LoggingService.LogWarning($"[Tab] Knowledge Archive folder not found: {folder}");
+            return;
+        }
+
         await DisconnectRagAsync();
 
         // Sync embedding env vars to vault
