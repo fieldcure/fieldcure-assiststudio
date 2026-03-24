@@ -852,6 +852,14 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             McpTools = [];
         }
 
+        // Set run_command default CWD to first workspace folder (always update, even if suppressed by MCP)
+        var runCmd = ToolRegistry.Resolve(["run_command"]).OfType<RunCommandTool>().FirstOrDefault();
+        if (runCmd is not null)
+        {
+            var folders = Panel?.WorkspaceFolders;
+            runCmd.DefaultWorkingDirectory = folders is { Count: > 0 } ? folders[0] : null;
+        }
+
         // Update server list for the tool flyout UI (filtered by profile's enabled servers)
         AvailableServers = [.. App.McpRegistry.Connections
             .Where(c => effectiveServerIds.Contains(c.Config.Id))

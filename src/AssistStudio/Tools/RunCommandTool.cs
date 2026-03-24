@@ -12,6 +12,12 @@ public class RunCommandTool : IAssistTool
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
     private const int MaxOutputBytes = 10 * 1024; // 10 KB per stream
 
+    /// <summary>
+    /// Default working directory used when the AI does not specify <c>working_directory</c>.
+    /// Typically set to the first workspace folder path.
+    /// </summary>
+    public string? DefaultWorkingDirectory { get; set; }
+
     #region IAssistTool Implementation
 
     /// <inheritdoc/>
@@ -47,6 +53,10 @@ public class RunCommandTool : IAssistTool
         var workingDir = parameters.TryGetProperty("working_directory", out var wdEl)
             ? wdEl.GetString()
             : null;
+
+        // Fall back to workspace folder when AI omits working_directory
+        if (string.IsNullOrEmpty(workingDir) && !string.IsNullOrEmpty(DefaultWorkingDirectory))
+            workingDir = DefaultWorkingDirectory;
 
         if (!string.IsNullOrEmpty(workingDir) && !Directory.Exists(workingDir))
             return JsonSerializer.Serialize(new { error = $"Working directory not found: {workingDir}" });

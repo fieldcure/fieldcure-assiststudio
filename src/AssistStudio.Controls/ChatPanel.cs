@@ -2593,6 +2593,16 @@ public sealed partial class ChatPanel : Control
             ? await WorkspaceContext.GetContextAsync()
             : null;
 
+        // Append workspace folder paths so the AI knows absolute paths
+        var folders = WorkspaceFolders;
+        if (folders is { Count: > 0 })
+        {
+            var folderSection = "\n\n## Workspace\nCurrent workspace directories:\n"
+                + string.Join("\n", folders.Select(f => $"- {f}"))
+                + "\n\nWhen using `run_command` without an explicit working_directory, default to the first workspace directory listed above.";
+            workspaceText = (workspaceText ?? "") + folderSection;
+        }
+
         var lastUserMsg = messages.LastOrDefault(m => m.Role == ChatRole.User)?.Content;
         var chunks = ContextProvider is not null && lastUserMsg is not null
             ? await ContextProvider.RetrieveAsync(lastUserMsg)
