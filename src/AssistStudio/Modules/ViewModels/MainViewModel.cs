@@ -174,6 +174,9 @@ public partial class MainViewModel : ObservableObject
         // Restore messages with tree reconstruction
         RestoreConversationTree(vm, data.Messages, data.ActiveRootChildId);
 
+        // Restore built-in server configs (workspace folders, knowledge archive)
+        vm.SetBuiltInServers(data.BuiltInServers);
+
         vm.Title = data.TabName;
         vm.HasBeenSaved = true;
         vm.FilePath = filePath;

@@ -423,6 +423,11 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     public Dictionary<string, BuiltInServerConfig>? GetBuiltInServers() => _builtInServers;
 
     /// <summary>
+    /// Sets the built-in server configurations (used when loading from .astd file).
+    /// </summary>
+    public void SetBuiltInServers(Dictionary<string, BuiltInServerConfig>? servers) => _builtInServers = servers;
+
+    /// <summary>
     /// Gets the ID of the first message on the active path (root-level active child).
     /// Used to restore the correct branch when the first message has been edited.
     /// </summary>
