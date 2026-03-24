@@ -1027,6 +1027,16 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             }
         }
 
+        // 3. Knowledge Archive tools — always directly exposed (not behind search_tools)
+        if (_ragConnection is not null && _ragConnection.IsConnected
+            && effectiveServerIds.Contains(_ragConnection.Config.Id))
+        {
+            foreach (var ragTool in _ragConnection.Tools)
+            {
+                tools.Add(ragTool);
+            }
+        }
+
         RegisteredTools = tools;
 
         // Collect MCP tools for execution (not sent in API tools array, discovered via search_tools)
