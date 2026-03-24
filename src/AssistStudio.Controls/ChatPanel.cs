@@ -177,7 +177,13 @@ public sealed partial class ChatPanel : Control
     /// <summary>Identifies the <see cref="KnowledgeArchiveFolder"/> dependency property.</summary>
     public static readonly DependencyProperty KnowledgeArchiveFolderProperty =
         DependencyProperty.Register(nameof(KnowledgeArchiveFolder), typeof(string), typeof(ChatPanel),
-            new PropertyMetadata(null));
+            new PropertyMetadata(null, OnKnowledgeArchiveFolderChanged));
+
+    private static void OnKnowledgeArchiveFolderChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel)
+            panel.UpdateFolderButtonBadge();
+    }
 
     /// <summary>Identifies the <see cref="IsKnowledgeArchiveEnabled"/> dependency property.</summary>
     public static readonly DependencyProperty IsKnowledgeArchiveEnabledProperty =
@@ -2068,11 +2074,18 @@ public sealed partial class ChatPanel : Control
     /// </summary>
     private void UpdateFolderButtonBadge()
     {
-        if (_folderBadge is null) return;
+        // Hide the numeric badge — use icon color to indicate folder state instead
+        if (_folderBadge is not null)
+            _folderBadge.Visibility = Visibility.Collapsed;
 
-        var count = WorkspaceFolders?.Count ?? 0;
-        _folderBadge.Text = count > 0 ? count.ToString() : "";
-        _folderBadge.Visibility = count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        if (_titleFolderButton is null) return;
+
+        var hasFolders = (WorkspaceFolders?.Count ?? 0) > 0
+            || !string.IsNullOrEmpty(KnowledgeArchiveFolder);
+
+        _titleFolderButton.Foreground = hasFolders
+            ? (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"]
+            : null; // inherit default
     }
 
     /// <summary>
@@ -2081,9 +2094,7 @@ public sealed partial class ChatPanel : Control
     /// </summary>
     private void UpdateFolderButtonAppearance()
     {
-        if (_titleFolderButton is null) return;
-
-        // No foreground override — inherits from parent, adapts to theme automatically
+        UpdateFolderButtonBadge();
     }
 
     /// <summary>
