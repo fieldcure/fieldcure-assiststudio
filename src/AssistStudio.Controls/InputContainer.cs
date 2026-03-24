@@ -1241,11 +1241,24 @@ public sealed partial class InputContainer : Control
 
         var tools = AvailableTools;
         var servers = AvailableServers;
-        var hasTools = tools.Count > 0;
         var hasServers = servers is { Count: > 0 };
 
+        // Server display names whose tools should be hidden from the individual list
+        // (controlled by the server checkbox instead)
+        var serverNames = hasServers
+            ? servers!.Select(s => s.DisplayName).ToHashSet(StringComparer.OrdinalIgnoreCase)
+            : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        bool IsVisibleTool(IAssistTool t) =>
+            t.Name != "search_tools"
+            && !(t is FieldCure.AssistStudio.Models.McpToolAdapter mcp
+                 && serverNames.Contains(mcp.ServerName));
+
+        var hasVisibleTools = tools.Any(IsVisibleTool);
+        var hasAnyToolsOrServers = tools.Count > 0 || hasServers;
+
         // Empty state: neither tools nor servers enabled
-        if (!hasTools && !hasServers)
+        if (!hasAnyToolsOrServers)
         {
             Windows.ApplicationModel.Resources.ResourceLoader? emptyRes = null;
             try { emptyRes = new Windows.ApplicationModel.Resources.ResourceLoader("AssistStudio.Controls/Resources"); }
@@ -1284,9 +1297,9 @@ public sealed partial class InputContainer : Control
         var panel = new StackPanel { Spacing = 4 };
         var allCheckBoxes = new List<CheckBox>();
 
-        // --- Built-in tools (hide meta-tools like search_tools) ---
+        // --- Built-in tools (hide meta-tools and server-owned tools already controlled by server checkbox) ---
         var enabledToolSet = EnabledToolNames?.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        foreach (var tool in tools.Where(t => t.Name != "search_tools"))
+        foreach (var tool in tools.Where(IsVisibleTool))
         {
             var cb = new CheckBox
             {
@@ -1302,7 +1315,7 @@ public sealed partial class InputContainer : Control
         }
 
         // --- Separator (only if both sections present) ---
-        if (hasTools && hasServers)
+        if (hasVisibleTools && hasServers)
         {
             panel.Children.Add(new Microsoft.UI.Xaml.Shapes.Rectangle
             {
