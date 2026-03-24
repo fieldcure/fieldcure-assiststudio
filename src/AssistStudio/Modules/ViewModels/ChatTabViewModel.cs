@@ -294,9 +294,21 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             panel.WorkspaceFolders = savedConfig.Folders;
         }
 
+        // Initialize Knowledge Archive folder from per-conversation data
+        if (_builtInServers is not null
+            && _builtInServers.TryGetValue(BuiltInServerHelper.RagKey, out var ragSavedConfig)
+            && ragSavedConfig.Folders.Count > 0)
+        {
+            panel.KnowledgeArchiveFolder = ragSavedConfig.Folders[0];
+        }
+
         // Set workspace capability based on profile
         var filesystemServerId = $"builtin_{BuiltInServerHelper.FilesystemKey}";
         panel.IsWorkspaceEnabled = SelectedProfile?.EnabledServers.Contains(filesystemServerId) ?? false;
+
+        // Set Knowledge Archive capability based on profile
+        var ragServerId = $"builtin_{BuiltInServerHelper.RagKey}";
+        panel.IsKnowledgeArchiveEnabled = SelectedProfile?.EnabledServers.Contains(ragServerId) ?? false;
 
         // Relay keyboard shortcut from WebView2 (separate HWND)
         panel.KeyboardShortcutPressed += (s, e) => KeyboardShortcutPressed?.Invoke(s, e);
@@ -402,6 +414,12 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     {
         return Panel?.GetAllMessages() ?? [];
     }
+
+    /// <summary>
+    /// Gets the built-in server configurations for this conversation (workspace folders, archive folder).
+    /// Used when saving the conversation to .astd file.
+    /// </summary>
+    public Dictionary<string, BuiltInServerConfig>? GetBuiltInServers() => _builtInServers;
 
     /// <summary>
     /// Gets the ID of the first message on the active path (root-level active child).

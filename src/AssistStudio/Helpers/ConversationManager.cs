@@ -47,14 +47,15 @@ public static class ConversationManager
         string tabName,
         string? providerPresetName,
         IReadOnlyList<ChatMessage> messages,
-        string? activeRootChildId = null)
+        string? activeRootChildId = null,
+        Dictionary<string, BuiltInServerConfig>? builtInServers = null)
     {
         EnsureInitialized();
         if (messages.Count == 0) return;
 
         var fileName = SanitizeFileName(tabName) + FileExtension;
         var filePath = Path.Combine(_conversationsFolder, fileName);
-        await SaveToFileAsync(filePath, tabName, providerPresetName, messages, activeRootChildId);
+        await SaveToFileAsync(filePath, tabName, providerPresetName, messages, activeRootChildId, builtInServers);
     }
 
     /// <summary>

@@ -199,10 +199,11 @@ public partial class MainViewModel : ObservableObject
         try
         {
             var rootChildId = tab.GetActiveRootChildId();
+            var builtInServers = tab.GetBuiltInServers();
             if (tab.FilePath is not null)
-                await ConversationManager.SaveToFileAsync(tab.FilePath, tabName, presetName, messages, rootChildId);
+                await ConversationManager.SaveToFileAsync(tab.FilePath, tabName, presetName, messages, rootChildId, builtInServers);
             else
-                await ConversationManager.SaveConversationAsync(tabName, presetName, messages, rootChildId);
+                await ConversationManager.SaveConversationAsync(tabName, presetName, messages, rootChildId, builtInServers);
             tab.IsDirty = false;
         }
         catch (Exception ex) { LoggingService.LogException(ex); }

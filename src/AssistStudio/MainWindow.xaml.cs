@@ -327,7 +327,7 @@ public sealed partial class MainWindow : Window
             var messages = tab.GetAllMessages();
             if (messages.Count == 0) return;
             LoggingService.LogInfo($"[File] Save: {Path.GetFileName(tab.FilePath)}, messages={messages.Count}");
-            await ConversationManager.SaveToFileAsync(tab.FilePath, tab.Title, tab.CurrentPreset?.Name, messages, tab.GetActiveRootChildId());
+            await ConversationManager.SaveToFileAsync(tab.FilePath, tab.Title, tab.CurrentPreset?.Name, messages, tab.GetActiveRootChildId(), tab.GetBuiltInServers());
             tab.IsDirty = false;
             AppSettings.AddRecentFile(tab.FilePath);
         }
@@ -369,7 +369,7 @@ public sealed partial class MainWindow : Window
         {
             var presetName = tab.CurrentPreset?.Name;
             LoggingService.LogInfo($"[File] SaveAs: {Path.GetFileName(file.Path)}, messages={messages.Count}");
-            await ConversationManager.SaveToFileAsync(file.Path, tab.Title, presetName, messages, tab.GetActiveRootChildId());
+            await ConversationManager.SaveToFileAsync(file.Path, tab.Title, presetName, messages, tab.GetActiveRootChildId(), tab.GetBuiltInServers());
             tab.FilePath = file.Path;
             tab.IsDirty = false;
             tab.HasBeenSaved = true;
@@ -392,7 +392,7 @@ public sealed partial class MainWindow : Window
 
             if (tab.FilePath is not null)
             {
-                await ConversationManager.SaveToFileAsync(tab.FilePath, tab.Title, tab.CurrentPreset?.Name, messages, tab.GetActiveRootChildId());
+                await ConversationManager.SaveToFileAsync(tab.FilePath, tab.Title, tab.CurrentPreset?.Name, messages, tab.GetActiveRootChildId(), tab.GetBuiltInServers());
                 tab.IsDirty = false;
                 AppSettings.AddRecentFile(tab.FilePath);
             }
@@ -543,7 +543,7 @@ public sealed partial class MainWindow : Window
                 if (tab.FilePath is not null)
                 {
                     await ConversationManager.SaveToFileAsync(
-                        tab.FilePath, tab.Title, tab.CurrentPreset?.Name, tab.GetAllMessages(), tab.GetActiveRootChildId());
+                        tab.FilePath, tab.Title, tab.CurrentPreset?.Name, tab.GetAllMessages(), tab.GetActiveRootChildId(), tab.GetBuiltInServers());
                     tab.IsDirty = false;
                 }
                 else
@@ -675,7 +675,7 @@ public sealed partial class MainWindow : Window
                 if (tab.FilePath is not null)
                 {
                     await ConversationManager.SaveToFileAsync(
-                        tab.FilePath, tab.Title, tab.CurrentPreset?.Name, tab.GetAllMessages(), tab.GetActiveRootChildId());
+                        tab.FilePath, tab.Title, tab.CurrentPreset?.Name, tab.GetAllMessages(), tab.GetActiveRootChildId(), tab.GetBuiltInServers());
                 }
                 else
                 {
