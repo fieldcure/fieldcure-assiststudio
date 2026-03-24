@@ -2020,15 +2020,7 @@ public sealed partial class ChatPanel : Control
             });
         }
 
-        var flyout = new Flyout { Content = panel };
-
-        // Match the app theme so the flyout isn't always light
-        if (ActualTheme == ElementTheme.Dark)
-            panel.RequestedTheme = ElementTheme.Dark;
-        else if (ActualTheme == ElementTheme.Light)
-            panel.RequestedTheme = ElementTheme.Light;
-
-        return flyout;
+        return new Flyout { Content = panel };
     }
 
     /// <summary>
@@ -2091,9 +2083,7 @@ public sealed partial class ChatPanel : Control
     {
         if (_titleFolderButton is null) return;
 
-        // Always use primary text color — the button is always functional
-        // (users can add folders regardless of profile workspace/archive setting)
-        _titleFolderButton.Foreground = null; // inherit from parent
+        // No foreground override — inherits from parent, adapts to theme automatically
     }
 
     /// <summary>
