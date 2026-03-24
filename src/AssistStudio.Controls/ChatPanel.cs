@@ -2876,7 +2876,8 @@ public sealed partial class ChatPanel : Control
         if (activeTools?.Any(t => t.Name == "search_documents") == true)
         {
             workspaceText = (workspaceText ?? "")
-                + "\n\n## Knowledge Archive\nUse `search_documents` to find relevant information before answering.";
+                + "\n\n## Knowledge Archive\nUse `search_documents` to find relevant information before answering."
+                + "\nIf initial search returns no results, retry with a lower threshold (e.g., 0.1) or different query terms.";
         }
 
         var lastUserMsg = messages.LastOrDefault(m => m.Role == ChatRole.User)?.Content;
