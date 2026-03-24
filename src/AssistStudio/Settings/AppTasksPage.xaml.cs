@@ -1,14 +1,18 @@
-﻿using AssistStudio.Helpers;
+using AssistStudio.Helpers;
+using AssistStudio.Mcp;
+using FieldCure.AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
+using FieldCure.AssistStudio.Providers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
+using Windows.ApplicationModel.Resources;
 
 namespace AssistStudio.Settings;
 
 /// <summary>
 /// Settings page for configuring app tasks behavior, including the model source,
-/// auto-title generation, and auto-summarization toggles.
+/// auto-title generation, auto-summarization toggles, and embedding model selection.
 /// </summary>
 public sealed partial class AppTasksPage : Page
 {
@@ -18,6 +22,8 @@ public sealed partial class AppTasksPage : Page
     /// Flag to suppress event handlers during programmatic UI updates.
     /// </summary>
     private bool _suppressEvents;
+
+    private readonly ResourceLoader _loader = new();
 
     #endregion
 
@@ -36,7 +42,7 @@ public sealed partial class AppTasksPage : Page
     #region Overrides
 
     /// <inheritdoc/>
-    protected override void OnNavigatedTo(NavigationEventArgs e)
+    protected override async void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
 
@@ -62,9 +68,8 @@ public sealed partial class AppTasksPage : Page
         AutoTitleToggle.IsOn = AppSettings.AppAutoTitle;
         AutoSummaryToggle.IsOn = AppSettings.AppAutoSummary;
 
-        // Load embedding settings
-        PopulateEmbeddingPresetCombo();
-        UpdateEmbeddingStatus();
+        // Embedding: check provider availability and restore selection
+        await InitializeEmbeddingSectionAsync();
 
         _suppressEvents = false;
     }
@@ -104,49 +109,149 @@ public sealed partial class AppTasksPage : Page
         }
     }
 
+    #endregion
+
+    #region Embedding
+
     /// <summary>
-    /// Populates the embedding preset combo with available presets,
-    /// excluding LM Studio (localhost:1234) and Claude (Anthropic) providers.
+    /// Initializes the embedding section: checks Ollama/OpenAI availability,
+    /// auto-selects best model if none saved, and restores saved selection.
     /// </summary>
-    private void PopulateEmbeddingPresetCombo()
+    private async Task InitializeEmbeddingSectionAsync()
     {
-        EmbeddingPresetCombo.Items.Clear();
-
-        // Only OpenAI-compatible embedding providers (exclude Claude, Gemini, LM Studio)
-        var presets = AppSettings.LoadPresets()
-            .Where(p => p.ProviderType is not "Claude" and not "Gemini"
-                && !(p.BaseUrl?.Contains("localhost:1234") ?? false))
-            .ToList();
-
-        var selectedName = AppSettings.EmbeddingPreset;
-        var selectedIndex = -1;
-
-        for (var i = 0; i < presets.Count; i++)
+        // 1. Restore saved selection immediately (no network wait)
+        var savedPreset = AppSettings.EmbeddingPreset;
+        if (!string.IsNullOrEmpty(savedPreset) && savedPreset.Contains('/'))
         {
-            EmbeddingPresetCombo.Items.Add(presets[i].Name);
-            if (presets[i].Name == selectedName)
-                selectedIndex = i;
+            RestoreEmbeddingSelection(savedPreset);
         }
 
-        if (selectedIndex >= 0)
-            EmbeddingPresetCombo.SelectedIndex = selectedIndex;
+        // 2. Check OpenAI API key availability (sync, no network)
+        var hasOpenAiKey = AppSettings.LoadPresets()
+            .Any(p => p.ProviderType is "OpenAI"
+                && !string.IsNullOrEmpty(p.ApiKey));
+        if (!hasOpenAiKey)
+        {
+            var openAiTooltip = new ToolTip
+            {
+                Content = _loader.GetString("Embedding_OpenAiKeyMissing"),
+                Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
+            };
+            foreach (var rb in new[] { RbEmbed3Small, RbEmbed3Large })
+            {
+                rb.IsEnabled = false;
+                ToolTipService.SetToolTip(rb, openAiTooltip);
+            }
+        }
+
+        // 3. Check Ollama server status (async, may take 2-3s if offline)
+        var ollamaRunning = await OllamaHelper.IsOllamaRunningAsync();
+        if (!ollamaRunning)
+        {
+            var ollamaTooltip = new ToolTip
+            {
+                Content = _loader.GetString("Embedding_OllamaNotRunning"),
+                Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
+            };
+            foreach (var rb in new[] { RbNomicV1, RbNomicV2, RbBgeM3 })
+            {
+                rb.IsEnabled = false;
+                ToolTipService.SetToolTip(rb, ollamaTooltip);
+            }
+        }
+
+        // 4. Auto-select only if no valid preset saved yet
+        if (string.IsNullOrEmpty(savedPreset) || !savedPreset.Contains('/'))
+        {
+            AppSettings.EmbeddingPreset = "";
+            await AutoSelectEmbeddingModelAsync(ollamaRunning, hasOpenAiKey);
+            RestoreEmbeddingSelection(AppSettings.EmbeddingPreset);
+        }
     }
 
     /// <summary>
-    /// Updates the embedding status text showing the current configuration.
+    /// Auto-selects the best available embedding model.
+    /// Priority: OpenAI > Ollama (bge-m3 > nomic-v2-moe > nomic) > None.
     /// </summary>
-    private void UpdateEmbeddingStatus()
+    private async Task AutoSelectEmbeddingModelAsync(bool ollamaRunning, bool hasOpenAiKey)
     {
-        var baseUrl = AppSettings.EmbeddingBaseUrl;
-        var model = AppSettings.EmbeddingModel;
-
-        if (string.IsNullOrEmpty(baseUrl) || string.IsNullOrEmpty(model))
+        // 1st: OpenAI if API key available
+        if (hasOpenAiKey)
         {
-            EmbeddingStatusText.Text = "";
+            ApplyEmbeddingSelection("openai/text-embedding-3-small");
+            return;
         }
-        else
+
+        // 2nd: Ollama with installed models
+        if (!ollamaRunning) return;
+
+        try
         {
-            EmbeddingStatusText.Text = $"{model}  ·  {baseUrl}";
+            using var manager = new OllamaModelManager("http://localhost:11434");
+            var installed = await manager.ListLocalModelsAsync();
+            var installedNames = installed.Select(m => m.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            string[] preferenceOrder = ["bge-m3", "nomic-embed-text-v2-moe", "nomic-embed-text"];
+            foreach (var model in preferenceOrder)
+            {
+                if (installedNames.Contains(model))
+                {
+                    ApplyEmbeddingSelection($"ollama/{model}");
+                    return;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggingService.LogWarning($"[Embedding] Auto-select failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Saves embedding settings from a preset tag (e.g., "ollama/bge-m3").
+    /// </summary>
+    private void ApplyEmbeddingSelection(string presetTag)
+    {
+        var parts = presetTag.Split('/');
+        if (parts.Length != 2) return;
+
+        var provider = parts[0];
+        var model = parts[1];
+
+        AppSettings.EmbeddingPreset = presetTag;
+        AppSettings.EmbeddingModel = model;
+
+        if (provider == "ollama")
+        {
+            AppSettings.EmbeddingBaseUrl = "http://localhost:11434";
+            PasswordVaultHelper.SaveMcpEnvVar("builtin_rag", "EMBEDDING_API_KEY", "");
+        }
+        else // openai
+        {
+            var openAiPreset = AppSettings.LoadPresets()
+                .FirstOrDefault(p => p.ProviderType is "OpenAI"
+                    && !string.IsNullOrEmpty(p.ApiKey));
+            AppSettings.EmbeddingBaseUrl = openAiPreset?.BaseUrl ?? "https://api.openai.com";
+            PasswordVaultHelper.SaveMcpEnvVar("builtin_rag", "EMBEDDING_API_KEY", openAiPreset?.ApiKey ?? "");
+        }
+    }
+
+    /// <summary>
+    /// Restores the radio button selection from a saved preset tag.
+    /// </summary>
+    private void RestoreEmbeddingSelection(string? presetTag)
+    {
+        if (string.IsNullOrEmpty(presetTag)) return;
+
+        // Find and check the matching radio button by Tag
+        RadioButton?[] allButtons = [RbNomicV1, RbNomicV2, RbBgeM3, RbEmbed3Small, RbEmbed3Large];
+        foreach (var rb in allButtons)
+        {
+            if (rb?.Tag as string == presetTag)
+            {
+                rb.IsChecked = true;
+                return;
+            }
         }
     }
 
@@ -200,87 +305,127 @@ public sealed partial class AppTasksPage : Page
     }
 
     /// <summary>
-    /// Handles embedding preset combo selection to update the base URL and API key.
+    /// Handles embedding model radio button selection.
+    /// For Ollama models: checks if downloaded, offers pull if not.
+    /// For OpenAI models: applies immediately.
     /// </summary>
-    private void OnEmbeddingPresetChanged(object sender, SelectionChangedEventArgs e)
+    private async void OnEmbeddingModelSelected(object sender, RoutedEventArgs e)
     {
         if (_suppressEvents) return;
+        if (sender is not RadioButton rb) return;
 
-        if (EmbeddingPresetCombo.SelectedItem is not string name) return;
+        var tag = rb.Tag?.ToString() ?? "";
+        var parts = tag.Split('/');
+        if (parts.Length != 2) return;
 
-        var preset = AppSettings.LoadPresets().FirstOrDefault(p => p.Name == name);
-        if (preset is null) return;
+        var provider = parts[0];
+        var model = parts[1];
+        var previousPreset = AppSettings.EmbeddingPreset;
 
-        // Claude and Gemini do not provide OpenAI-compatible embeddings
-        if (preset.ProviderType is "Claude" or "Gemini")
+        if (provider == "ollama")
         {
-            EmbeddingWarningText.Text = $"{preset.ProviderType} does not support OpenAI-compatible embeddings. Please select Ollama or OpenAI.";
-            EmbeddingWarningText.Visibility = Visibility.Visible;
-            return;
+            await HandleOllamaSelectionAsync(model, tag, rb);
+        }
+        else
+        {
+            HandleOpenAiSelection(model, tag);
         }
 
-        EmbeddingWarningText.Visibility = Visibility.Collapsed;
-
-        AppSettings.EmbeddingPreset = name;
-        AppSettings.EmbeddingBaseUrl = preset.BaseUrl ?? "";
-
-        // Store API key in vault for RAG server env var
-        PasswordVaultHelper.SaveMcpEnvVar("builtin_rag", "EMBEDDING_API_KEY", preset.ApiKey ?? "");
-
-        UpdateEmbeddingStatus();
+        // Show model change warning if Knowledge Archive is active and model changed
+        if (!string.IsNullOrEmpty(previousPreset) && previousPreset != AppSettings.EmbeddingPreset)
+        {
+            var builtIn = AppSettings.BuiltInServers;
+            var ragConfig = builtIn.GetValueOrDefault(BuiltInServerHelper.RagKey);
+            if (ragConfig is { IsEnabled: true, Folders.Count: > 0 })
+            {
+                ModelChangeWarning.IsOpen = true;
+            }
+        }
     }
 
     /// <summary>
-    /// Quick-selects an Ollama embedding model. The button Tag contains the model name.
+    /// Handles Ollama model selection — checks if model is downloaded, offers pull if not.
     /// </summary>
-    private void OnQuickSelectOllama(object sender, RoutedEventArgs e)
+    private async Task HandleOllamaSelectionAsync(string model, string tag, RadioButton rb)
     {
-        if (sender is not Button btn || btn.Tag is not string modelName) return;
+        try
+        {
+            using var manager = new OllamaModelManager("http://localhost:11434");
+            var installed = await manager.ListLocalModelsAsync();
+            var isDownloaded = installed.Any(m =>
+                m.Id.Equals(model, StringComparison.OrdinalIgnoreCase));
 
-        _suppressEvents = true;
-        EmbeddingPresetCombo.SelectedIndex = -1;
-        _suppressEvents = false;
+            if (!isDownloaded)
+            {
+                // Show download confirmation dialog
+                var dialog = new ContentDialog
+                {
+                    Title = _loader.GetString("Embedding_PullTitle"),
+                    Content = string.Format(_loader.GetString("Embedding_PullMessage"), model),
+                    PrimaryButtonText = _loader.GetString("Dialog_OK"),
+                    CloseButtonText = _loader.GetString("Dialog_Cancel"),
+                    DefaultButton = ContentDialogButton.Primary,
+                    XamlRoot = XamlRoot,
+                };
 
-        EmbeddingWarningText.Visibility = Visibility.Collapsed;
+                if (await dialog.ShowAsync() != ContentDialogResult.Primary)
+                {
+                    // Cancelled — restore previous selection
+                    _suppressEvents = true;
+                    RestoreEmbeddingSelection(AppSettings.EmbeddingPreset);
+                    _suppressEvents = false;
+                    return;
+                }
 
-        AppSettings.EmbeddingPreset = "Ollama";
-        AppSettings.EmbeddingBaseUrl = "http://localhost:11434";
-        AppSettings.EmbeddingModel = modelName;
-        PasswordVaultHelper.SaveMcpEnvVar("builtin_rag", "EMBEDDING_API_KEY", "");
+                // Pull model with notification
+                NotificationCenter.Instance.Post(
+                    InfoBarSeverity.Informational,
+                    string.Format(_loader.GetString("Embedding_Downloading"), model),
+                    string.Empty);
 
-        UpdateEmbeddingStatus();
+                try
+                {
+                    await manager.DownloadModelAsync(model);
+
+                    NotificationCenter.Instance.Post(
+                        InfoBarSeverity.Success,
+                        string.Format(_loader.GetString("Embedding_DownloadComplete"), model),
+                        string.Empty,
+                        5000);
+                }
+                catch (Exception ex)
+                {
+                    NotificationCenter.Instance.Post(
+                        InfoBarSeverity.Error,
+                        _loader.GetString("Embedding_DownloadFailed"),
+                        ex.Message,
+                        8000);
+
+                    // Restore previous selection
+                    _suppressEvents = true;
+                    RestoreEmbeddingSelection(AppSettings.EmbeddingPreset);
+                    _suppressEvents = false;
+                    return;
+                }
+            }
+
+            ApplyEmbeddingSelection(tag);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.LogError($"[Embedding] Ollama selection failed: {ex.Message}");
+            _suppressEvents = true;
+            RestoreEmbeddingSelection(AppSettings.EmbeddingPreset);
+            _suppressEvents = false;
+        }
     }
 
     /// <summary>
-    /// Quick-selects an OpenAI embedding model. Reuses the API key from an existing OpenAI preset.
+    /// Handles OpenAI model selection — applies immediately using existing API key.
     /// </summary>
-    private void OnQuickSelectOpenAi(object sender, RoutedEventArgs e)
+    private void HandleOpenAiSelection(string model, string tag)
     {
-        if (sender is not Button btn || btn.Tag is not string modelName) return;
-
-        // Find an existing OpenAI preset to get the API key
-        var openAiPreset = AppSettings.LoadPresets()
-            .FirstOrDefault(p => p.ProviderType is "OpenAI" && !string.IsNullOrEmpty(p.ApiKey));
-
-        if (openAiPreset is null)
-        {
-            EmbeddingWarningText.Text = "No OpenAI preset found. Add an OpenAI provider in Models first.";
-            EmbeddingWarningText.Visibility = Visibility.Visible;
-            return;
-        }
-
-        _suppressEvents = true;
-        EmbeddingPresetCombo.SelectedIndex = -1;
-        _suppressEvents = false;
-
-        EmbeddingWarningText.Visibility = Visibility.Collapsed;
-
-        AppSettings.EmbeddingPreset = "OpenAI";
-        AppSettings.EmbeddingBaseUrl = "https://api.openai.com";
-        AppSettings.EmbeddingModel = modelName;
-        PasswordVaultHelper.SaveMcpEnvVar("builtin_rag", "EMBEDDING_API_KEY", openAiPreset.ApiKey);
-
-        UpdateEmbeddingStatus();
+        ApplyEmbeddingSelection(tag);
     }
 
     #endregion

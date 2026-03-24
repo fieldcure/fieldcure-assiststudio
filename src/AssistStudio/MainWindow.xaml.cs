@@ -693,14 +693,22 @@ public sealed partial class MainWindow : Window
     {
         try
         {
-            LoggingService.LogInfo("[App] Force-killing MCP servers...");
+            var connections = App.McpRegistry.Connections;
+            var serverList = string.Join(", ", connections.Select(c =>
+                $"{c.Config.Name}({c.Config.Id}, {c.State})"));
+            LoggingService.LogInfo($"[App] Force-killing {connections.Count} MCP servers: [{serverList}]");
+
             await App.McpRegistry.ForceKillAllAsync().AsTask()
                 .WaitAsync(TimeSpan.FromSeconds(4));
             LoggingService.LogInfo("[App] MCP servers killed.");
         }
+        catch (TimeoutException)
+        {
+            LoggingService.LogWarning("[App] MCP shutdown timed out (4s) — forcing exit.");
+        }
         catch (Exception ex)
         {
-            LoggingService.LogError($"[App] MCP shutdown error: {ex.Message}");
+            LoggingService.LogError($"[App] MCP shutdown error: {ex.GetType().Name}: {ex.Message}");
         }
     }
 

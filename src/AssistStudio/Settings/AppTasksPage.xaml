@@ -69,63 +69,110 @@
                                   Toggled="OnAutoSummaryToggled" />
                 </StackPanel>
 
-                <!-- Embedding -->
+                <!-- Embedding Model -->
                 <StackPanel Spacing="12">
                     <TextBlock x:Uid="AppTasks_EmbeddingTitle" Text="Embedding"
                                Style="{StaticResource BodyStrongTextBlockStyle}" />
 
                     <TextBlock x:Uid="AppTasks_EmbeddingDescription"
-                               Text="Used for Knowledge Archive document indexing and search. Requires an OpenAI-compatible embedding API (Ollama, OpenAI, etc.)"
+                               Text="Used for Knowledge Archive document indexing and search. Requires an OpenAI-compatible embedding API."
                                Style="{StaticResource CaptionTextBlockStyle}"
                                TextWrapping="Wrap"
                                Opacity="0.7" />
 
-                    <ComboBox x:Name="EmbeddingPresetCombo"
-                              x:Uid="AppTasks_EmbeddingProvider"
-                              Header="Embedding provider"
-                              HorizontalAlignment="Stretch"
-                              SelectionChanged="OnEmbeddingPresetChanged" />
-
-                    <!-- Claude warning -->
-                    <TextBlock x:Name="EmbeddingWarningText"
-                               Foreground="{ThemeResource SystemControlErrorTextForegroundBrush}"
-                               Style="{StaticResource CaptionTextBlockStyle}"
-                               TextWrapping="Wrap"
-                               Visibility="Collapsed" />
-
-                    <!-- Quick select: Ollama -->
-                    <StackPanel Spacing="4">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <TextBlock Text="Ollama" VerticalAlignment="Center"
-                                       Style="{StaticResource CaptionTextBlockStyle}" Opacity="0.7" />
-                            <Button Content="nomic-embed-text" Click="OnQuickSelectOllama"
-                                    Tag="nomic-embed-text"
-                                    Style="{ThemeResource SubtleButtonStyle}" Padding="8,4" />
-                            <Button Content="mxbai-embed-large" Click="OnQuickSelectOllama"
-                                    Tag="mxbai-embed-large"
-                                    Style="{ThemeResource SubtleButtonStyle}" Padding="8,4" />
-                            <Button Content="bge-m3" Click="OnQuickSelectOllama"
-                                    Tag="bge-m3"
-                                    Style="{ThemeResource SubtleButtonStyle}" Padding="8,4" />
-                        </StackPanel>
-
-                        <!-- Quick select: OpenAI -->
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <TextBlock Text="OpenAI" VerticalAlignment="Center"
-                                       Style="{StaticResource CaptionTextBlockStyle}" Opacity="0.7" />
-                            <Button Content="text-embedding-3-small" Click="OnQuickSelectOpenAi"
-                                    Tag="text-embedding-3-small"
-                                    Style="{ThemeResource SubtleButtonStyle}" Padding="8,4" />
-                            <Button Content="text-embedding-ada-002" Click="OnQuickSelectOpenAi"
-                                    Tag="text-embedding-ada-002"
-                                    Style="{ThemeResource SubtleButtonStyle}" Padding="8,4" />
+                    <!-- Ollama group -->
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="Ollama" Opacity="0.6"
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Margin="0,4,0,2" />
+                        <StackPanel x:Name="OllamaGroup" Spacing="0">
+                            <RadioButton x:Name="RbNomicV1" Tag="ollama/nomic-embed-text"
+                                         GroupName="EmbeddingModel"
+                                         Click="OnEmbeddingModelSelected">
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <TextBlock Text="nomic-embed-text" />
+                                    <TextBlock Text="768" Opacity="0.5"
+                                               Style="{StaticResource CaptionTextBlockStyle}"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock Text="274MB" Opacity="0.5"
+                                               Style="{StaticResource CaptionTextBlockStyle}"
+                                               VerticalAlignment="Center" />
+                                </StackPanel>
+                            </RadioButton>
+                            <RadioButton x:Name="RbNomicV2" Tag="ollama/nomic-embed-text-v2-moe"
+                                         GroupName="EmbeddingModel"
+                                         Click="OnEmbeddingModelSelected">
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <TextBlock Text="nomic-embed-text-v2-moe" />
+                                    <TextBlock Text="768" Opacity="0.5"
+                                               Style="{StaticResource CaptionTextBlockStyle}"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock Text="1.9GB" Opacity="0.5"
+                                               Style="{StaticResource CaptionTextBlockStyle}"
+                                               VerticalAlignment="Center" />
+                                    <Border Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                            CornerRadius="4" Padding="6,2,6,2" VerticalAlignment="Center">
+                                        <TextBlock x:Uid="Embedding_Multilingual" Text="Multilingual"
+                                                   FontSize="11" Opacity="0.7" />
+                                    </Border>
+                                </StackPanel>
+                            </RadioButton>
+                            <RadioButton x:Name="RbBgeM3" Tag="ollama/bge-m3"
+                                         GroupName="EmbeddingModel"
+                                         Click="OnEmbeddingModelSelected">
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <TextBlock Text="bge-m3" />
+                                    <TextBlock Text="1024" Opacity="0.5"
+                                               Style="{StaticResource CaptionTextBlockStyle}"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock Text="1.2GB" Opacity="0.5"
+                                               Style="{StaticResource CaptionTextBlockStyle}"
+                                               VerticalAlignment="Center" />
+                                    <Border Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                            CornerRadius="4" Padding="6,2,6,2" VerticalAlignment="Center">
+                                        <TextBlock x:Uid="Embedding_Multilingual" Text="Multilingual"
+                                                   FontSize="11" Opacity="0.7" />
+                                    </Border>
+                                </StackPanel>
+                            </RadioButton>
                         </StackPanel>
                     </StackPanel>
 
-                    <!-- Current selection display -->
-                    <TextBlock x:Name="EmbeddingStatusText"
-                               Style="{StaticResource CaptionTextBlockStyle}"
-                               Opacity="0.5" />
+                    <!-- OpenAI group -->
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="OpenAI" Opacity="0.6"
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Margin="0,4,0,2" />
+                        <StackPanel x:Name="OpenAiGroup" Spacing="0">
+                            <RadioButton x:Name="RbEmbed3Small" Tag="openai/text-embedding-3-small"
+                                         GroupName="EmbeddingModel"
+                                         Click="OnEmbeddingModelSelected">
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <TextBlock Text="text-embedding-3-small" />
+                                    <TextBlock Text="1536" Opacity="0.5"
+                                               Style="{StaticResource CaptionTextBlockStyle}"
+                                               VerticalAlignment="Center" />
+                                </StackPanel>
+                            </RadioButton>
+                            <RadioButton x:Name="RbEmbed3Large" Tag="openai/text-embedding-3-large"
+                                         GroupName="EmbeddingModel"
+                                         Click="OnEmbeddingModelSelected">
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <TextBlock Text="text-embedding-3-large" />
+                                    <TextBlock Text="3072" Opacity="0.5"
+                                               Style="{StaticResource CaptionTextBlockStyle}"
+                                               VerticalAlignment="Center" />
+                                </StackPanel>
+                            </RadioButton>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Model change warning -->
+                    <InfoBar x:Name="ModelChangeWarning"
+                             x:Uid="Embedding_ModelChangeWarning"
+                             Severity="Warning"
+                             IsOpen="False"
+                             IsClosable="True" />
                 </StackPanel>
 
             </StackPanel>

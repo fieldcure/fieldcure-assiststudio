@@ -780,4 +780,34 @@
   <data name="Connect_EmbeddingSettings" xml:space="preserve">
     <value>Embedding settings</value>
   </data>
+  <data name="Embedding_OllamaNotRunning" xml:space="preserve">
+    <value>Ollama is not running. Start with: ollama serve</value>
+  </data>
+  <data name="Embedding_OpenAiKeyMissing" xml:space="preserve">
+    <value>Add an OpenAI API Key in Models first.</value>
+  </data>
+  <data name="Embedding_Multilingual.Text" xml:space="preserve">
+    <value>Multilingual</value>
+  </data>
+  <data name="Embedding_ModelChangeWarning.Title" xml:space="preserve">
+    <value>Re-indexing scheduled</value>
+  </data>
+  <data name="Embedding_ModelChangeWarning.Message" xml:space="preserve">
+    <value>The embedding model has changed. Documents will be re-indexed at the next conversation start.</value>
+  </data>
+  <data name="Embedding_PullTitle" xml:space="preserve">
+    <value>Download Model</value>
+  </data>
+  <data name="Embedding_PullMessage" xml:space="preserve">
+    <value>Download {0}? This will run: ollama pull {0}</value>
+  </data>
+  <data name="Embedding_Downloading" xml:space="preserve">
+    <value>{0} downloading…</value>
+  </data>
+  <data name="Embedding_DownloadComplete" xml:space="preserve">
+    <value>{0} ready</value>
+  </data>
+  <data name="Embedding_DownloadFailed" xml:space="preserve">
+    <value>Download failed</value>
+  </data>
 </root>

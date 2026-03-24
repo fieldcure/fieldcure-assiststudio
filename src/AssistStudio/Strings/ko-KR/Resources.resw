@@ -780,4 +780,34 @@
   <data name="Connect_EmbeddingSettings" xml:space="preserve">
     <value>임베딩 설정</value>
   </data>
+  <data name="Embedding_OllamaNotRunning" xml:space="preserve">
+    <value>Ollama가 실행되지 않습니다. ollama serve 명령으로 시작하세요.</value>
+  </data>
+  <data name="Embedding_OpenAiKeyMissing" xml:space="preserve">
+    <value>Models 페이지에서 OpenAI API Key를 먼저 등록하세요.</value>
+  </data>
+  <data name="Embedding_Multilingual.Text" xml:space="preserve">
+    <value>다국어</value>
+  </data>
+  <data name="Embedding_ModelChangeWarning.Title" xml:space="preserve">
+    <value>재인덱싱 예약됨</value>
+  </data>
+  <data name="Embedding_ModelChangeWarning.Message" xml:space="preserve">
+    <value>임베딩 모델이 변경되었습니다. 다음 대화 시작 시 자동으로 재인덱싱됩니다.</value>
+  </data>
+  <data name="Embedding_PullTitle" xml:space="preserve">
+    <value>모델 다운로드</value>
+  </data>
+  <data name="Embedding_PullMessage" xml:space="preserve">
+    <value>{0}을(를) 다운로드할까요? ollama pull {0} 명령이 실행됩니다.</value>
+  </data>
+  <data name="Embedding_Downloading" xml:space="preserve">
+    <value>{0} 다운로드 중…</value>
+  </data>
+  <data name="Embedding_DownloadComplete" xml:space="preserve">
+    <value>{0} 준비 완료</value>
+  </data>
+  <data name="Embedding_DownloadFailed" xml:space="preserve">
+    <value>다운로드 실패</value>
+  </data>
 </root>
