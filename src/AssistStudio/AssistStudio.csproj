@@ -14,7 +14,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Version>0.8.0</Version>
+    <Version>0.9.0</Version>
     <NoWarn>$(NoWarn);MVVMTK0045</NoWarn>
     <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
   </PropertyGroup>

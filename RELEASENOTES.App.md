@@ -1,5 +1,36 @@
 ﻿# Release Notes — AssistStudio App
 
+## [0.9.0] - 2026-03-24
+
+### Added
+- Built-in MCP server infrastructure with auto-install via `dotnet tool`
+- MCP Filesystem server bundled as built-in (auto-install/update on startup)
+- MCP Roots protocol support with per-tab filesystem instances
+- Workspace folders button in title bar with folder add/remove flyout
+- Workspace paths injected into system prompt and tool CWD
+- Profile-level server toggles (enable/disable MCP servers per profile)
+- Auto-enable MCP servers in tools flyout when they connect
+- Reset-to-defaults button for built-in profiles
+- `search_tools` meta-tool filtered by profile's enabled servers
+
+### Changed
+- Workspace folders refactored to conversation-only ownership
+- InputContainer buttons reordered, summarize hidden until needed, tooltips added
+- Built-in server card layout improved with 2-line formatting and title row badge
+- All tooltips set to `PlacementMode.Mouse` for consistent positioning
+
+### Fixed
+- MCP tools not executable after `search_tools` discovery
+- Tool buttons missing on new tabs (deferred push to DispatcherQueue)
+- MCP server orphan task hang on app exit (force process exit)
+- Filesystem crash on ConnectPage toggle without folders
+- Null reference in `BuildToolsFlyout` servers iteration
+- Tool result overflow truncated to prevent context overflow
+- Tool result size guard improved with binary detection and lower threshold
+- Analyzer messages: Lock type, static method, collection expressions
+
+---
+
 ## [0.8.0] - 2026-03-22
 
 ### Added

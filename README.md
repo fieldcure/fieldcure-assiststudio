@@ -24,6 +24,7 @@ AssistStudio is two things:
 - **Extended Thinking** — Per-provider thinking/reasoning support (Claude extended thinking, OpenAI o-series reasoning, Ollama think tags). Configurable via `ThinkingOverride` and `ThinkingBudget`.
 - **Conversation Branching** — Tree-based message editing with branch navigator (◀ 1/2 ▶). Edit any message to explore alternatives without losing history.
 - **MCP Integration** — Connect to MCP servers (Stdio / HTTP) to aggregate tools from any Model Context Protocol source. `McpToolAdapter` bridges MCP tools to the `IAssistTool` pipeline.
+- **Built-in MCP Servers** — Filesystem server ships as a built-in, auto-installed via `dotnet tool`. Per-tab instances with MCP Roots protocol support for dynamic workspace folder updates.
 - **Vision & Documents** — Attach images (PNG, JPG, WebP, GIF), PDFs, and DOCX files. Per-provider `PdfCapability` (Auto / TextExtraction / NativePdf / PageAsImage).
 - **Tool / Function Calling** — Define tools with `IAssistTool`. `ToolCallExecutor` orchestrates execution with confirmation flow. `ToolApprovalPanel` shows inline approval UI.
 - **Token Tracking** — Input/output token counts exposed after every request.
@@ -61,7 +62,7 @@ AssistStudio is two things:
                                    │ McpToolAdapter
 ┌──────────────────────────────────┼──────────────────┐
 │  AssistStudio (Workspace App)                       │
-│  WinUI 3 — MCP management · SearchTools · Profiles  │
+│  WinUI 3 — MCP · Built-in Servers · Profiles        │
 ├─────────────────────────────────────────────────────┤
 │  AssistStudio.Controls            ← NuGet package   │
 │  ChatPanel · Branching · ThinkingBlock · EditMode   │
@@ -270,6 +271,13 @@ The workspace app demonstrates full MCP (Model Context Protocol) integration:
 - **SearchToolsTool** — Meta-tool for searching across large MCP tool sets to save tokens
 
 MCP servers are configured with Stdio or HTTP transport and connected at app startup. Tools from all connected servers are aggregated and made available to providers.
+
+### Built-in MCP Servers
+
+The workspace app bundles MCP servers that are auto-installed and managed:
+
+- **Filesystem** (`FieldCure.Mcp.Filesystem`) — Secure file operations within workspace folders. Per-tab instances with MCP Roots protocol for dynamic folder updates.
+- **BuiltInServerHelper** — Auto-installs and updates built-in servers via `dotnet tool` on app startup. Read-only tools (read, list, search) skip user approval.
 
 ---
 

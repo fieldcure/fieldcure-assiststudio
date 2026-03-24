@@ -51,11 +51,19 @@ Connect to external MCP servers to extend AI capabilities with custom tools:
 - **Tool aggregation** — Tools from all connected servers appear alongside built-in tools
 - **Tool approval** — Tools that require confirmation show an inline approval panel before execution
 - **Search tools** — Meta-tool for efficiently searching across large tool sets
+- **Built-in servers** — Filesystem server auto-installed via `dotnet tool`, per-tab instances with MCP Roots protocol
+
+### Workspace Folders
+
+- **Per-conversation folders** — Each conversation tab has its own set of workspace folders
+- **Title bar folder button** — Add/remove folders from the title bar flyout
+- **System prompt injection** — Workspace folder paths are automatically injected into the system prompt
+- **Tool CWD** — File and command tools operate within workspace folder context
 
 ### Built-in Tools
 
 - **URL Fetch** — Extract web page content with SSRF protection
-- **File operations** — Read, write, and search files
+- **File operations** — Read, write, and search files (via MCP Filesystem)
 - **Command execution** — Run shell commands (with approval)
 - **Search Tools** — Find the right tool across large MCP tool sets
 
@@ -69,7 +77,7 @@ Connect to external MCP servers to extend AI capabilities with custom tools:
 
 - **Models** — Configure providers, API keys, model selection, Ollama model pulling
 - **Profiles** — Create and manage system prompt profiles with tool bindings
-- **Connect** — Add and manage MCP server connections
+- **Connect** — Add and manage MCP server connections (built-in and external)
 - **Personalization** — Light / Dark / System theme, language (English, Korean)
 - **Advanced** — Debug mode, conversation pruning, thinking budget, tool call limits
 

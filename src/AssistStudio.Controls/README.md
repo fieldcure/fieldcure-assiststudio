@@ -92,6 +92,7 @@ The main control. Provides message list (WebView2), input area, streaming, attac
 | `FontFamily` | `string` | Chat font family |
 | `FontSize` | `double` | Chat font size |
 | `EmptyStateContent` | `object` | Custom empty state UI |
+| `AvailableServers` | `IList<ServerInfo>` | MCP server status for tools flyout |
 
 **Events:** `PresetChanged`, `ProfileChanged`, `MessageAdded`, `TitleGenerated`, `TitleEditRequested`, `KeyboardShortcutPressed`
 

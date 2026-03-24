@@ -1,5 +1,17 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Core
 
+## [0.9.0] - 2026-03-24
+
+### Added
+- `BuiltInServerConfig` model for built-in MCP server configuration (enabled, folders)
+- `McpToolAdapter.ServerName` property for server-level tool grouping
+- `ToolResolver` server-level tool resolution with `search_tools` default
+
+### Changed
+- Tool resolution switched from tool-level to server-level toggles
+
+---
+
 ## [0.8.0] - 2026-03-22
 
 ### Added

@@ -1,5 +1,16 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Controls.WinUI
 
+## [0.9.0] - 2026-03-24
+
+### Added
+- `AvailableServers` property on `ChatPanel` for MCP server status display
+- `ServerInfo` model for lightweight server descriptor (Id, DisplayName, IsConnected, IsBuiltIn)
+
+### Changed
+- Tool flyout redesigned with server-level toggles replacing tool-level selection
+
+---
+
 ## [0.8.0] - 2026-03-22
 
 ### Changed

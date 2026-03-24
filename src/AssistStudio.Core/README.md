@@ -200,6 +200,7 @@ public class MyProvider : IAiProvider
 | `IWorkspaceContext` | Dynamic system prompt injection interface |
 | `IContextProvider` | RAG retrieval interface — returns `ContextChunk`s for a query |
 | `ContextChunk` | Retrieved context record — `Text`, `Source`, `Score` |
+| `BuiltInServerConfig` | Configuration for built-in MCP servers (enabled, folders) |
 | `ProviderFactory` | Create `IAiProvider` from a `ProviderPreset` |
 | `DiagnosticLogger` | Structured logging with `OnException`/`OnWarning`/`OnInfo` callbacks |
 | `ThinkingSupport` | Enum — `NotSupported`, `Optional`, `Required` |
