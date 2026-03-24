@@ -531,6 +531,20 @@ public sealed partial class ChatPanel : Control
     private Button? _titleRefreshButton;
     private Button? _titleFolderButton;
     private TextBlock? _folderBadge;
+
+    // Folder flyout parts (resolved lazily on first Flyout.Opening)
+    private Button? _folderAddButton;
+    private TextBlock? _folderDisabledHint;
+    private StackPanel? _folderList;
+    private TextBlock? _folderEmpty;
+    private Button? _archiveSetButton;
+    private TextBlock? _archiveDisabledHint;
+    private Grid? _archiveFolderRow;
+    private TextBlock? _archiveFolderText;
+    private Button? _archiveReindexButton;
+    private Button? _archiveRemoveButton;
+    private TextBlock? _archiveEmpty;
+
     private bool _isConversationActive;
     private string? _greetingText;
 
@@ -991,8 +1005,18 @@ public sealed partial class ChatPanel : Control
             _titleEditButton.Click -= OnTitleEditClick;
         if (_titleRefreshButton is not null)
             _titleRefreshButton.Click -= OnTitleRefreshClick;
-        if (_titleFolderButton is not null)
-            _titleFolderButton.Click -= OnTitleFolderClick;
+        // Reset folder flyout part references (will be re-resolved on next Flyout.Opening)
+        _folderAddButton = null;
+        _folderDisabledHint = null;
+        _folderList = null;
+        _folderEmpty = null;
+        _archiveSetButton = null;
+        _archiveDisabledHint = null;
+        _archiveFolderRow = null;
+        _archiveFolderText = null;
+        _archiveReindexButton = null;
+        _archiveRemoveButton = null;
+        _archiveEmpty = null;
 
         // Get template parts
         _rootGrid = GetTemplateChild("PART_RootGrid") as Grid;
@@ -1117,7 +1141,12 @@ public sealed partial class ChatPanel : Control
             _titleRefreshButton.Click += OnTitleRefreshClick;
         if (_titleFolderButton is not null)
         {
-            _titleFolderButton.Click += OnTitleFolderClick;
+            // Wire Flyout.Opening for lazy PART_ resolution and content population
+            if (_titleFolderButton.Flyout is Flyout folderFlyout)
+            {
+                folderFlyout.Opening += OnFolderFlyoutOpening;
+            }
+
             try
             {
                 var folderLoader = new Windows.ApplicationModel.Resources.ResourceLoader("AssistStudio.Controls/Resources");
@@ -1756,277 +1785,162 @@ public sealed partial class ChatPanel : Control
     }
 
     /// <summary>
-    /// Handles the title folder button click to show the workspace folders flyout.
+    /// Handles the folder flyout opening event.
+    /// Resolves PART_ elements on first open and populates dynamic content on every open.
     /// </summary>
-    private void OnTitleFolderClick(object sender, RoutedEventArgs e)
+    private void OnFolderFlyoutOpening(object? sender, object e)
     {
-        if (sender is not Button button) return;
-        var flyout = BuildFolderFlyout();
-        flyout.ShowAt(button, new Microsoft.UI.Xaml.Controls.Primitives.FlyoutShowOptions
+        if (sender is not Flyout flyout) return;
+
+        // Lazily resolve flyout PART_ elements on first open (VisualTree not available until flyout opens)
+        if (_folderAddButton is null && flyout.Content is FrameworkElement root)
         {
-            Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedLeft,
-        });
+            _folderAddButton = FindDescendantByName<Button>(root, "PART_FolderAddButton");
+            _folderDisabledHint = FindDescendantByName<TextBlock>(root, "PART_FolderDisabledHint");
+            _folderList = FindDescendantByName<StackPanel>(root, "PART_FolderList");
+            _folderEmpty = FindDescendantByName<TextBlock>(root, "PART_FolderEmpty");
+            _archiveSetButton = FindDescendantByName<Button>(root, "PART_ArchiveSetButton");
+            _archiveDisabledHint = FindDescendantByName<TextBlock>(root, "PART_ArchiveDisabledHint");
+            _archiveFolderRow = FindDescendantByName<Grid>(root, "PART_ArchiveFolderRow");
+            _archiveFolderText = FindDescendantByName<TextBlock>(root, "PART_ArchiveFolderText");
+            _archiveReindexButton = FindDescendantByName<Button>(root, "PART_ArchiveReindexButton");
+            _archiveRemoveButton = FindDescendantByName<Button>(root, "PART_ArchiveRemoveButton");
+            _archiveEmpty = FindDescendantByName<TextBlock>(root, "PART_ArchiveEmpty");
+
+            // Wire click handlers (once)
+            if (_folderAddButton is not null)
+                _folderAddButton.Click += (s, e2) => WorkspaceFolderAddRequested?.Invoke(this, EventArgs.Empty);
+            if (_archiveSetButton is not null)
+                _archiveSetButton.Click += (s, e2) => KnowledgeArchiveFolderAddRequested?.Invoke(this, EventArgs.Empty);
+            if (_archiveReindexButton is not null)
+            {
+                _archiveReindexButton.Click += (s, e2) => KnowledgeArchiveReindexRequested?.Invoke(this, EventArgs.Empty);
+                try
+                {
+                    var loader = new Windows.ApplicationModel.Resources.ResourceLoader("AssistStudio.Controls/Resources");
+                    SetBottomRightToolTip(_archiveReindexButton, loader.GetString("Folder_ReindexArchive"));
+                }
+                catch
+                {
+                    SetBottomRightToolTip(_archiveReindexButton, "Re-index documents");
+                }
+            }
+            if (_archiveRemoveButton is not null)
+                _archiveRemoveButton.Click += (s, e2) =>
+                {
+                    KnowledgeArchiveFolder = null;
+                    KnowledgeArchiveFolderChanged?.Invoke(this, null);
+                };
+        }
+
+        PopulateFolderFlyout();
     }
 
     /// <summary>
-    /// Builds the folder management flyout UI with current folders, remove buttons, and an add button.
+    /// Updates the folder flyout content based on current workspace folders and knowledge archive state.
+    /// Called on every Flyout.Opening event.
     /// </summary>
-    private Flyout BuildFolderFlyout()
+    private void PopulateFolderFlyout()
     {
-        var panel = new StackPanel { Spacing = 4, MinWidth = 300 };
+        if (_folderList is null) return;
+
         var folders = WorkspaceFolders?.ToList() ?? [];
         var isEnabled = IsWorkspaceEnabled;
-        var secondaryBrush = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
 
-        Windows.ApplicationModel.Resources.ResourceLoader? loader = null;
-        try { loader = new Windows.ApplicationModel.Resources.ResourceLoader("AssistStudio.Controls/Resources"); }
-        catch { /* fallback to English */ }
+        // Workspace section visibility
+        if (_folderDisabledHint is not null)
+            _folderDisabledHint.Visibility = isEnabled ? Visibility.Collapsed : Visibility.Visible;
+        if (_folderEmpty is not null)
+            _folderEmpty.Visibility = folders.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
-        // Header row: "Workspace Folders" + [+ Add Folder] button
-        var headerRow = new Grid
+        // Rebuild folder list items
+        _folderList.Children.Clear();
+        foreach (var folder in folders)
         {
-            ColumnDefinitions =
-            {
-                new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                new ColumnDefinition { Width = GridLength.Auto },
-            },
-            Margin = new Thickness(0, 0, 0, 4),
-        };
-
-        var headerText = new TextBlock
-        {
-            Text = loader?.GetString("Folder_Header") ?? "Workspace Folders",
-            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-            VerticalAlignment = VerticalAlignment.Center,
-        };
-        Grid.SetColumn(headerText, 0);
-        headerRow.Children.Add(headerText);
-
-        var addButton = new Button
-        {
-            Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
-            Padding = new Thickness(6, 2, 6, 2),
-            VerticalAlignment = VerticalAlignment.Center,
-        };
-        var addContent = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
-        addContent.Children.Add(new FontIcon { Glyph = "\xE710", FontSize = 10 });
-        addContent.Children.Add(new TextBlock { Text = loader?.GetString("Folder_AddButton") ?? "Add Folder", FontSize = 12 });
-        addButton.Content = addContent;
-        addButton.Click += (s, e) =>
-        {
-            WorkspaceFolderAddRequested?.Invoke(this, EventArgs.Empty);
-        };
-        Grid.SetColumn(addButton, 1);
-        headerRow.Children.Add(addButton);
-
-        panel.Children.Add(headerRow);
-
-        // Disabled warning when profile doesn't have Workspace enabled
-        if (!isEnabled)
-        {
-            panel.Children.Add(new TextBlock
-            {
-                Text = loader?.GetString("Folder_DisabledHint") ?? "Enable Workspace in your profile to use these folders.",
-                Foreground = secondaryBrush,
-                FontSize = 12,
-                TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 0, 0, 4),
-            });
-        }
-
-        // Folder list or empty state
-        if (folders.Count == 0)
-        {
-            panel.Children.Add(new TextBlock
-            {
-                Text = loader?.GetString("Folder_Empty") ?? "(empty)",
-                Foreground = secondaryBrush,
-                FontSize = 12,
-                Margin = new Thickness(8, 0, 0, 0),
-            });
-        }
-        else
-        {
-            foreach (var folder in folders)
-            {
-                var row = new Grid
-                {
-                    ColumnDefinitions =
-                    {
-                        new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                        new ColumnDefinition { Width = GridLength.Auto },
-                    },
-                };
-
-                var folderText = new TextBlock
-                {
-                    Text = folder,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    TextTrimming = TextTrimming.CharacterEllipsis,
-                    FontSize = 12,
-                    Margin = new Thickness(8, 0, 0, 0),
-                    Opacity = isEnabled ? 1.0 : 0.5,
-                };
-                Grid.SetColumn(folderText, 0);
-                row.Children.Add(folderText);
-
-                var capturedFolder = folder;
-                var removeButton = new Button
-                {
-                    Content = new FontIcon { Glyph = "\xE74D", FontSize = 10 },
-                    Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
-                    Padding = new Thickness(4),
-                    VerticalAlignment = VerticalAlignment.Center,
-                };
-                removeButton.Click += (s, e) =>
-                {
-                    var updated = folders.Where(f => f != capturedFolder).ToList();
-                    WorkspaceFolders = updated.Count > 0 ? updated : null;
-                    WorkspaceFoldersChanged?.Invoke(this, updated);
-                };
-                Grid.SetColumn(removeButton, 1);
-                row.Children.Add(removeButton);
-
-                panel.Children.Add(row);
-            }
-        }
-
-        // ── Divider ──
-        panel.Children.Add(new Microsoft.UI.Xaml.Shapes.Rectangle
-        {
-            Height = 1,
-            Fill = secondaryBrush,
-            Opacity = 0.3,
-            Margin = new Thickness(0, 8, 0, 4),
-        });
-
-        // ── Knowledge Archive section (single folder) ──
-        var archiveFolder = KnowledgeArchiveFolder;
-        var archiveEnabled = IsKnowledgeArchiveEnabled;
-
-        var archiveHeaderRow = new Grid
-        {
-            ColumnDefinitions =
-            {
-                new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                new ColumnDefinition { Width = GridLength.Auto },
-            },
-            Margin = new Thickness(0, 0, 0, 4),
-        };
-
-        var archiveHeaderText = new TextBlock
-        {
-            Text = loader?.GetString("Folder_ArchiveHeader") ?? "Knowledge Archive",
-            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-            VerticalAlignment = VerticalAlignment.Center,
-        };
-        Grid.SetColumn(archiveHeaderText, 0);
-        archiveHeaderRow.Children.Add(archiveHeaderText);
-
-        if (string.IsNullOrEmpty(archiveFolder))
-        {
-            // No folder — show "Set Folder" button
-            var setButton = new Button
-            {
-                Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
-                Padding = new Thickness(6, 2, 6, 2),
-                VerticalAlignment = VerticalAlignment.Center,
-            };
-            var setContent = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
-            setContent.Children.Add(new FontIcon { Glyph = "\xE710", FontSize = 10 });
-            setContent.Children.Add(new TextBlock { Text = loader?.GetString("Folder_SetArchive") ?? "Set Folder", FontSize = 12 });
-            setButton.Content = setContent;
-            setButton.Click += (s, e) => KnowledgeArchiveFolderAddRequested?.Invoke(this, EventArgs.Empty);
-            Grid.SetColumn(setButton, 1);
-            archiveHeaderRow.Children.Add(setButton);
-        }
-
-        panel.Children.Add(archiveHeaderRow);
-
-        if (!archiveEnabled && !string.IsNullOrEmpty(archiveFolder))
-        {
-            panel.Children.Add(new TextBlock
-            {
-                Text = loader?.GetString("Folder_ArchiveDisabledHint") ?? "Enable Knowledge Archive in your profile to use this folder.",
-                Foreground = secondaryBrush,
-                FontSize = 12,
-                TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 0, 0, 4),
-            });
-        }
-
-        if (!string.IsNullOrEmpty(archiveFolder))
-        {
-            var archiveRow = new Grid
+            var row = new Grid
             {
                 ColumnDefinitions =
                 {
                     new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
                     new ColumnDefinition { Width = GridLength.Auto },
-                    new ColumnDefinition { Width = GridLength.Auto },
                 },
             };
 
-            var archiveFolderText = new TextBlock
+            var folderText = new TextBlock
             {
-                Text = archiveFolder,
+                Text = folder,
                 VerticalAlignment = VerticalAlignment.Center,
                 TextTrimming = TextTrimming.CharacterEllipsis,
                 FontSize = 12,
                 Margin = new Thickness(8, 0, 0, 0),
-                Opacity = archiveEnabled ? 1.0 : 0.5,
+                Opacity = isEnabled ? 1.0 : 0.5,
             };
-            Grid.SetColumn(archiveFolderText, 0);
-            archiveRow.Children.Add(archiveFolderText);
+            Grid.SetColumn(folderText, 0);
+            row.Children.Add(folderText);
 
-            // Re-index button
-            var reindexButton = new Button
-            {
-                Content = new FontIcon { Glyph = "\xE72C", FontSize = 10 },
-                Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
-                Padding = new Thickness(4),
-                VerticalAlignment = VerticalAlignment.Center,
-                IsEnabled = archiveEnabled,
-            };
-            ToolTipService.SetToolTip(reindexButton, new ToolTip
-            {
-                Content = loader?.GetString("Folder_ReindexArchive") ?? "Re-index documents",
-                Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
-            });
-            reindexButton.Click += (s, e) => KnowledgeArchiveReindexRequested?.Invoke(this, EventArgs.Empty);
-            Grid.SetColumn(reindexButton, 1);
-            archiveRow.Children.Add(reindexButton);
-
-            // Remove button
-            var removeArchiveButton = new Button
+            var capturedFolder = folder;
+            var removeButton = new Button
             {
                 Content = new FontIcon { Glyph = "\xE74D", FontSize = 10 },
                 Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
                 Padding = new Thickness(4),
                 VerticalAlignment = VerticalAlignment.Center,
             };
-            removeArchiveButton.Click += (s, e) =>
+            removeButton.Click += (s, e) =>
             {
-                KnowledgeArchiveFolder = null;
-                KnowledgeArchiveFolderChanged?.Invoke(this, null);
+                var updated = folders.Where(f => f != capturedFolder).ToList();
+                WorkspaceFolders = updated.Count > 0 ? updated : null;
+                WorkspaceFoldersChanged?.Invoke(this, updated);
             };
-            Grid.SetColumn(removeArchiveButton, 2);
-            archiveRow.Children.Add(removeArchiveButton);
+            Grid.SetColumn(removeButton, 1);
+            row.Children.Add(removeButton);
 
-            panel.Children.Add(archiveRow);
+            _folderList.Children.Add(row);
         }
-        else
+
+        // Archive section
+        var archiveFolder = KnowledgeArchiveFolder;
+        var archiveEnabled = IsKnowledgeArchiveEnabled;
+
+        if (_archiveSetButton is not null)
+            _archiveSetButton.Visibility = string.IsNullOrEmpty(archiveFolder) ? Visibility.Visible : Visibility.Collapsed;
+        if (_archiveDisabledHint is not null)
+            _archiveDisabledHint.Visibility = (!archiveEnabled && !string.IsNullOrEmpty(archiveFolder))
+                ? Visibility.Visible : Visibility.Collapsed;
+        if (_archiveFolderRow is not null)
+            _archiveFolderRow.Visibility = !string.IsNullOrEmpty(archiveFolder) ? Visibility.Visible : Visibility.Collapsed;
+        if (_archiveEmpty is not null)
+            _archiveEmpty.Visibility = string.IsNullOrEmpty(archiveFolder) ? Visibility.Visible : Visibility.Collapsed;
+
+        if (!string.IsNullOrEmpty(archiveFolder))
         {
-            panel.Children.Add(new TextBlock
+            if (_archiveFolderText is not null)
             {
-                Text = loader?.GetString("Folder_Empty") ?? "(empty)",
-                Foreground = secondaryBrush,
-                FontSize = 12,
-                Margin = new Thickness(8, 0, 0, 0),
-            });
+                _archiveFolderText.Text = archiveFolder;
+                _archiveFolderText.Opacity = archiveEnabled ? 1.0 : 0.5;
+            }
+            if (_archiveReindexButton is not null)
+                _archiveReindexButton.IsEnabled = archiveEnabled;
         }
+    }
 
-        return new Flyout { Content = panel };
+    /// <summary>
+    /// Finds a descendant element by name using breadth-first traversal of the visual tree.
+    /// </summary>
+    private static T? FindDescendantByName<T>(DependencyObject parent, string name) where T : FrameworkElement
+    {
+        var count = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChildrenCount(parent);
+        for (var i = 0; i < count; i++)
+        {
+            var child = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChild(parent, i);
+            if (child is T typed && typed.Name == name)
+                return typed;
+
+            var result = FindDescendantByName<T>(child, name);
+            if (result is not null)
+                return result;
+        }
+        return null;
     }
 
     /// <summary>
@@ -2070,27 +1984,22 @@ public sealed partial class ChatPanel : Control
     }
 
     /// <summary>
-    /// Updates the folder button badge to show the current folder count.
+    /// Updates the folder button visual state to indicate whether any folders are configured.
+    /// Uses VisualStateManager so {ThemeResource} handles theme changes automatically.
     /// </summary>
     private void UpdateFolderButtonBadge()
     {
-        // Hide the numeric badge — use icon color to indicate folder state instead
         if (_folderBadge is not null)
             _folderBadge.Visibility = Visibility.Collapsed;
-
-        if (_titleFolderButton is null) return;
 
         var hasFolders = (WorkspaceFolders?.Count ?? 0) > 0
             || !string.IsNullOrEmpty(KnowledgeArchiveFolder);
 
-        _titleFolderButton.Foreground = hasFolders
-            ? (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"]
-            : null; // inherit default
+        VisualStateManager.GoToState(this, hasFolders ? "HasFolders" : "NoFolders", true);
     }
 
     /// <summary>
-    /// Updates the folder button foreground color based on workspace capability.
-    /// Accent color when enabled, gray when disabled.
+    /// Updates the folder button appearance based on current state.
     /// </summary>
     private void UpdateFolderButtonAppearance()
     {

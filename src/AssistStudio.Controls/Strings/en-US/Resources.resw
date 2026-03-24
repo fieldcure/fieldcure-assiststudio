@@ -227,4 +227,28 @@ Add them in Profile settings.</value>
   <data name="Folder_ReindexArchive" xml:space="preserve">
     <value>Re-index documents</value>
   </data>
+  <data name="FolderFlyout_Header.Text" xml:space="preserve">
+    <value>Workspace Folders</value>
+  </data>
+  <data name="FolderFlyout_AddButton.Text" xml:space="preserve">
+    <value>Add Folder</value>
+  </data>
+  <data name="FolderFlyout_Empty.Text" xml:space="preserve">
+    <value>(empty)</value>
+  </data>
+  <data name="FolderFlyout_DisabledHint.Text" xml:space="preserve">
+    <value>Enable Workspace in your profile to use these folders.</value>
+  </data>
+  <data name="FolderFlyout_ArchiveHeader.Text" xml:space="preserve">
+    <value>Knowledge Archive</value>
+  </data>
+  <data name="FolderFlyout_SetArchive.Text" xml:space="preserve">
+    <value>Set Folder</value>
+  </data>
+  <data name="FolderFlyout_ArchiveDisabledHint.Text" xml:space="preserve">
+    <value>Enable Knowledge Archive in your profile to use this folder.</value>
+  </data>
+  <data name="FolderFlyout_ArchiveEmpty.Text" xml:space="preserve">
+    <value>(empty)</value>
+  </data>
 </root>

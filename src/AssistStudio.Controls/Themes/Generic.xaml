@@ -386,6 +386,17 @@
             <Setter.Value>
                 <ControlTemplate TargetType="local:ChatPanel">
                     <Grid x:Name="PART_RootGrid" AllowDrop="True">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="FolderStates">
+                                <VisualState x:Name="NoFolders" />
+                                <VisualState x:Name="HasFolders">
+                                    <VisualState.Setters>
+                                        <Setter Target="PART_TitleFolderButton.Foreground"
+                                                Value="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
@@ -421,12 +432,127 @@
                                         <FontIcon Glyph="&#xE777;" FontSize="12" />
                                     </Button>
                                 </StackPanel>
-                                <!-- Right: folder button -->
+                                <!-- Right: folder button with flyout -->
                                 <Button x:Name="PART_TitleFolderButton"
                                         Grid.Column="1"
                                         Style="{StaticResource SubtleButtonStyle}"
                                         Padding="4"
                                         VerticalAlignment="Center">
+                                    <Button.Flyout>
+                                        <Flyout Placement="BottomEdgeAlignedLeft">
+                                            <StackPanel MinWidth="300" Spacing="4">
+                                                <!-- Workspace Folders header + Add button -->
+                                                <Grid Margin="0,0,0,4">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock x:Uid="FolderFlyout_Header"
+                                                               Text="Workspace Folders"
+                                                               FontWeight="SemiBold"
+                                                               VerticalAlignment="Center" />
+                                                    <Button x:Name="PART_FolderAddButton"
+                                                            Grid.Column="1"
+                                                            Style="{StaticResource SubtleButtonStyle}"
+                                                            Padding="6,2,6,2"
+                                                            VerticalAlignment="Center">
+                                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                                            <FontIcon Glyph="&#xE710;" FontSize="10" />
+                                                            <TextBlock x:Uid="FolderFlyout_AddButton"
+                                                                       Text="Add Folder" FontSize="12" />
+                                                        </StackPanel>
+                                                    </Button>
+                                                </Grid>
+
+                                                <!-- Workspace disabled hint -->
+                                                <TextBlock x:Name="PART_FolderDisabledHint"
+                                                           x:Uid="FolderFlyout_DisabledHint"
+                                                           Text="Enable Workspace in your profile to use these folders."
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                           FontSize="12" TextWrapping="Wrap"
+                                                           Margin="0,0,0,4" Visibility="Collapsed" />
+
+                                                <!-- Dynamic folder list (populated in code-behind) -->
+                                                <StackPanel x:Name="PART_FolderList" Spacing="2" />
+
+                                                <!-- Workspace empty state -->
+                                                <TextBlock x:Name="PART_FolderEmpty"
+                                                           x:Uid="FolderFlyout_Empty"
+                                                           Text="(empty)"
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                           FontSize="12" Margin="8,0,0,0" />
+
+                                                <!-- Divider -->
+                                                <Rectangle Height="1"
+                                                           Fill="{ThemeResource DividerStrokeColorDefaultBrush}"
+                                                           Opacity="0.3" Margin="0,8,0,4" />
+
+                                                <!-- Knowledge Archive header + Set button -->
+                                                <Grid Margin="0,0,0,4">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock x:Uid="FolderFlyout_ArchiveHeader"
+                                                               Text="Knowledge Archive"
+                                                               FontWeight="SemiBold"
+                                                               VerticalAlignment="Center" />
+                                                    <Button x:Name="PART_ArchiveSetButton"
+                                                            Grid.Column="1"
+                                                            Style="{StaticResource SubtleButtonStyle}"
+                                                            Padding="6,2,6,2"
+                                                            VerticalAlignment="Center"
+                                                            Visibility="Collapsed">
+                                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                                            <FontIcon Glyph="&#xE710;" FontSize="10" />
+                                                            <TextBlock x:Uid="FolderFlyout_SetArchive"
+                                                                       Text="Set Folder" FontSize="12" />
+                                                        </StackPanel>
+                                                    </Button>
+                                                </Grid>
+
+                                                <!-- Archive disabled hint -->
+                                                <TextBlock x:Name="PART_ArchiveDisabledHint"
+                                                           x:Uid="FolderFlyout_ArchiveDisabledHint"
+                                                           Text="Enable Knowledge Archive in your profile to use this folder."
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                           FontSize="12" TextWrapping="Wrap"
+                                                           Margin="0,0,0,4" Visibility="Collapsed" />
+
+                                                <!-- Archive folder row (path + reindex + remove) -->
+                                                <Grid x:Name="PART_ArchiveFolderRow" Visibility="Collapsed">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock x:Name="PART_ArchiveFolderText"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               FontSize="12" Margin="8,0,0,0"
+                                                               VerticalAlignment="Center" />
+                                                    <Button x:Name="PART_ArchiveReindexButton"
+                                                            Grid.Column="1"
+                                                            Style="{StaticResource SubtleButtonStyle}"
+                                                            Padding="4" VerticalAlignment="Center">
+                                                        <FontIcon Glyph="&#xE72C;" FontSize="10" />
+                                                    </Button>
+                                                    <Button x:Name="PART_ArchiveRemoveButton"
+                                                            Grid.Column="2"
+                                                            Style="{StaticResource SubtleButtonStyle}"
+                                                            Padding="4" VerticalAlignment="Center">
+                                                        <FontIcon Glyph="&#xE74D;" FontSize="10" />
+                                                    </Button>
+                                                </Grid>
+
+                                                <!-- Archive empty state -->
+                                                <TextBlock x:Name="PART_ArchiveEmpty"
+                                                           x:Uid="FolderFlyout_ArchiveEmpty"
+                                                           Text="(empty)"
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                           FontSize="12" Margin="8,0,0,0" />
+                                            </StackPanel>
+                                        </Flyout>
+                                    </Button.Flyout>
                                     <Grid>
                                         <FontIcon Glyph="&#xE8B7;" FontSize="12" />
                                         <TextBlock x:Name="PART_FolderBadge"

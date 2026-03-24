@@ -227,4 +227,28 @@
   <data name="Folder_ReindexArchive" xml:space="preserve">
     <value>문서 재인덱싱</value>
   </data>
+  <data name="FolderFlyout_Header.Text" xml:space="preserve">
+    <value>작업 폴더</value>
+  </data>
+  <data name="FolderFlyout_AddButton.Text" xml:space="preserve">
+    <value>폴더 추가</value>
+  </data>
+  <data name="FolderFlyout_Empty.Text" xml:space="preserve">
+    <value>(비어 있음)</value>
+  </data>
+  <data name="FolderFlyout_DisabledHint.Text" xml:space="preserve">
+    <value>프로필에서 Workspace를 활성화해야 이 폴더가 사용됩니다.</value>
+  </data>
+  <data name="FolderFlyout_ArchiveHeader.Text" xml:space="preserve">
+    <value>지식보관소</value>
+  </data>
+  <data name="FolderFlyout_SetArchive.Text" xml:space="preserve">
+    <value>폴더 지정</value>
+  </data>
+  <data name="FolderFlyout_ArchiveDisabledHint.Text" xml:space="preserve">
+    <value>프로필에서 지식보관소를 활성화해야 이 폴더가 사용됩니다.</value>
+  </data>
+  <data name="FolderFlyout_ArchiveEmpty.Text" xml:space="preserve">
+    <value>(비어 있음)</value>
+  </data>
 </root>
