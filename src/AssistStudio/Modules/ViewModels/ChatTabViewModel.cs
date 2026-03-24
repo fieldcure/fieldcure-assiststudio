@@ -866,7 +866,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             .Select(c => new ServerInfo(
                 c.Config.Id, c.Config.Name, c.IsConnected, c.Config.IsBuiltIn))];
 
-        EnabledServerIds = enabledServerIds;
+        EnabledServerIds = [.. effectiveServerIds];
     }
 
     /// <summary>

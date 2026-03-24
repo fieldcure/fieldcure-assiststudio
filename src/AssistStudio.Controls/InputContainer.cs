@@ -932,7 +932,29 @@ public sealed partial class InputContainer : Control
     private static void OnAvailableServersChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is InputContainer self)
+        {
+            // Auto-enable newly connected servers so the flyout checkbox is pre-checked
+            var servers = self.AvailableServers;
+            if (servers is { Count: > 0 })
+            {
+                var current = self.EnabledServerIds?.ToHashSet(StringComparer.OrdinalIgnoreCase)
+                    ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                bool changed = false;
+                foreach (var server in servers)
+                {
+                    if (server.IsConnected && current.Add(server.Id))
+                        changed = true;
+                }
+
+                if (changed)
+                {
+                    self.EnabledServerIds = [.. current];
+                    self.EnabledServersChanged?.Invoke(self, [.. current]);
+                }
+            }
+
             self.UpdateToolButtonVisibility();
+        }
     }
 
     /// <summary>
