@@ -53,11 +53,12 @@ Connect to external MCP servers to extend AI capabilities with custom tools:
 - **Search tools** — Meta-tool for efficiently searching across large tool sets
 - **Built-in servers** — Filesystem server auto-installed via `dotnet tool`, per-tab instances with MCP Roots protocol
 
-### Workspace Folders
+### Workspace Folders & Knowledge Archive
 
 - **Per-conversation folders** — Each conversation tab has its own set of workspace folders
-- **Title bar folder button** — Add/remove folders from the title bar flyout
-- **System prompt injection** — Workspace folder paths are automatically injected into the system prompt
+- **Title bar folder button** — Add/remove folders and manage Knowledge Archive from the folder flyout
+- **Knowledge Archive (RAG)** — Index local documents for retrieval-augmented generation. Per-tab RAG server with auto-indexing
+- **System prompt injection** — Workspace folder paths and archive search hints are automatically injected into the system prompt
 - **Tool CWD** — File and command tools operate within workspace folder context
 
 ### Built-in Tools

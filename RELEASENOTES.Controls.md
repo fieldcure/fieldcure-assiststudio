@@ -1,5 +1,30 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Controls.WinUI
 
+## [0.10.0] - 2026-03-24
+
+### Added
+- Folder flyout converted from code-behind to XAML `<Button.Flyout>` with `{ThemeResource}` bindings
+- `FolderStates` VisualStateGroup (`HasFolders`/`NoFolders`) for folder icon glyph swap (FolderOpen ↔ FolderFill)
+- Folder flyout localization via `ResourceLoader` (x:Uid not supported in ControlTemplate)
+- Remove button tooltips with Mouse placement in folder flyout
+- Static `ResourceLoader` field replacing per-call instantiation
+
+### Changed
+- Folder icon: FolderOpen (`E838`) when empty, FolderFill (`E8D5`) when folders exist — replaces accent color indicator
+- Folder button tooltip: "Folder Settings" (was "Workspace Folders")
+- Server-owned MCP tools (e.g., RAG tools) hidden from individual tool checkboxes — controlled by server checkbox only
+
+### Fixed
+- Folder icon invisible in default state (`Foreground = null` → VisualState with `{ThemeResource}`)
+- Flyout text not following theme (`Application.Current.Resources` → XAML `{ThemeResource}` bindings)
+- Flyout PART_ elements not resolved (`Flyout.Opening` → `Flyout.Opened` for visual tree availability)
+
+### Removed
+- `PART_FolderBadge` (unused numeric badge overlay)
+- `BuildFolderFlyout()` code-behind method (~270 lines)
+
+---
+
 ## [0.9.0] - 2026-03-24
 
 ### Added

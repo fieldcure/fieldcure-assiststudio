@@ -24,7 +24,7 @@ AssistStudio is two things:
 - **Extended Thinking** — Per-provider thinking/reasoning support (Claude extended thinking, OpenAI o-series reasoning, Ollama think tags). Configurable via `ThinkingOverride` and `ThinkingBudget`.
 - **Conversation Branching** — Tree-based message editing with branch navigator (◀ 1/2 ▶). Edit any message to explore alternatives without losing history.
 - **MCP Integration** — Connect to MCP servers (Stdio / HTTP) to aggregate tools from any Model Context Protocol source. `McpToolAdapter` bridges MCP tools to the `IAssistTool` pipeline.
-- **Built-in MCP Servers** — Filesystem server ships as a built-in, auto-installed via `dotnet tool`. Per-tab instances with MCP Roots protocol support for dynamic workspace folder updates.
+- **Built-in MCP Servers** — Filesystem and Knowledge Archive (RAG) servers ship as built-ins, auto-installed via `dotnet tool`. Per-tab instances with MCP Roots protocol support for dynamic workspace folder updates.
 - **Vision & Documents** — Attach images (PNG, JPG, WebP, GIF), PDFs, and DOCX files. Per-provider `PdfCapability` (Auto / TextExtraction / NativePdf / PageAsImage).
 - **Tool / Function Calling** — Define tools with `IAssistTool`. `ToolCallExecutor` orchestrates execution with confirmation flow. `ToolApprovalPanel` shows inline approval UI.
 - **Token Tracking** — Input/output token counts exposed after every request.
@@ -277,6 +277,7 @@ MCP servers are configured with Stdio or HTTP transport and connected at app sta
 The workspace app bundles MCP servers that are auto-installed and managed:
 
 - **Filesystem** (`FieldCure.Mcp.Filesystem`) — Secure file operations within workspace folders. Per-tab instances with MCP Roots protocol for dynamic folder updates.
+- **Knowledge Archive** (`FieldCure.Mcp.Rag`) — Index and search local documents for RAG. Per-tab instances with auto-indexing on folder selection.
 - **BuiltInServerHelper** — Auto-installs and updates built-in servers via `dotnet tool` on app startup. Read-only tools (read, list, search) skip user approval.
 
 ---

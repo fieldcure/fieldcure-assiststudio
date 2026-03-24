@@ -1,5 +1,15 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Core
 
+## [0.10.0] - 2026-03-24
+
+### Added
+- `IAssistTool.DisplayName` used for UI grouping — server-owned tools hidden from individual tool list when server checkbox exists
+
+### Changed
+- `McpToolAdapter.ServerName` used to filter tools from server-level toggles in tool flyout
+
+---
+
 ## [0.9.0] - 2026-03-24
 
 ### Added

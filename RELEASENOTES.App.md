@@ -1,5 +1,29 @@
 ﻿# Release Notes — AssistStudio App
 
+## [0.10.0] - 2026-03-24
+
+### Added
+- Knowledge Archive (RAG) built-in MCP server with per-tab folder management
+- Knowledge Archive folder flyout with set/re-index/remove controls
+- Per-tab RAG server lifecycle (connect, index, disconnect)
+- Knowledge Archive system prompt hint with `search_documents` instruction
+- Embedding model selection with RadioButtons and auto-select
+- `.astd` conversation persistence for Knowledge Archive folder and built-in server configs
+
+### Changed
+- Folder flyout redesigned as XAML-based with proper light/dark theme support
+- Folder icon swaps between FolderOpen (empty) and FolderFill (has folders)
+- RAG tools (`index_documents`, `search_documents`, `get_document_chunk`) hidden from individual tool list — controlled by Knowledge Folders server checkbox
+- Folder button tooltip changed to "Folder Settings"
+
+### Fixed
+- Folder icon invisible except on hover (VisualState replaces manual foreground assignment)
+- Flyout theme not matching app theme (XAML `{ThemeResource}` replaces `Application.Current.Resources`)
+- App exit hang from orphan MCP server tasks (`ExitProcess` via kernel32)
+- Deleted folder crash on conversation restore (guard check added)
+
+---
+
 ## [0.9.0] - 2026-03-24
 
 ### Added

@@ -14,7 +14,7 @@
 - **Tool / Function Calling** — Define tools with `IAssistTool`. `ToolCallExecutor` orchestrates execution with an optional confirmation callback. `ToolResolver` merges built-in and MCP tools with name-conflict resolution.
 - **MCP Tool Adapter** — `McpToolAdapter` bridges external MCP tools to the `IAssistTool` pipeline with zero MCP SDK dependency in Core.
 - **Workspace Context** — `IWorkspaceContext` for dynamic system prompt injection based on host app state.
-- **RAG Support** — `IContextProvider` retrieves relevant `ContextChunk`s for a query. Chunks are injected into the system prompt alongside workspace context.
+- **RAG Support** — `IContextProvider` retrieves relevant `ContextChunk`s for a query. Chunks are injected into the system prompt alongside workspace context. Built-in Knowledge Archive server provides document indexing and search via MCP.
 - **Token Tracking** — `TokenUsage` (input/output counts) exposed after every request.
 - **Structured Logging** — `DiagnosticLogger` with pluggable `OnException`, `OnWarning`, `OnInfo` callbacks.
 - **Hardware Probing** — `HardwareProbe` for GPU/CPU detection to evaluate Ollama model compatibility.

@@ -13,6 +13,7 @@
 - **Extended Thinking** — Collapsible thinking/reasoning blocks with visual left-bar styling. Auto-collapses when streaming completes.
 - **Conversation Branching** — Tree-based message editing. Edit any user message to create a new branch. Navigate between branches with the ◀ 1/2 ▶ navigator in message footers.
 - **Code Copy-to-Clipboard** — One-click copy button on every rendered code block.
+- **Folder Flyout** — XAML-based folder management flyout with workspace folders and Knowledge Archive controls. `{ThemeResource}` bindings for automatic light/dark theme support.
 - **Tool Approval** — Inline `ToolApprovalPanel` for user confirmation before tool execution, with expandable JSON arguments preview.
 - **TemplatedControls** — All controls are `TemplatedControl`s with `PART_` conventions. Override `Generic.xaml` to fully customize.
 - **Theming** — Light, Dark, and System themes. Set `Theme="System"` to follow the app theme.
