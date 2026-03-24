@@ -8,7 +8,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using Windows.ApplicationModel.Resources;
-using Windows.UI;
+
 
 namespace AssistStudio.Settings;
 
@@ -45,13 +45,7 @@ public sealed partial class ConnectPage : Page
         AddServerText.Text = _loader.GetString("Connect_AddServer");
         ImportText.Text = _loader.GetString("Connect_ImportFrom");
         EmptyStateText.Text = _loader.GetString("Connect_EmptyState");
-        RagBuiltInText.Text = _loader.GetString("Connect_BuiltIn");
-        RagAddFolderText.Text = _loader.GetString("Connect_AddArchiveFolder");
-
-        SetMouseToolTip(RagSettingsButton, _loader.GetString("Connect_EmbeddingSettings"));
-
         RefreshServerList();
-        RefreshKnowledgeArchiveCard();
     }
 
     #endregion
@@ -264,8 +258,40 @@ public sealed partial class ConnectPage : Page
         };
         FilesystemCard.Connection = new McpServerConnection(fsPlaceholder);
 
-        // User-configured servers only (exclude all built-in connections)
+        // RAG card — same pattern as Filesystem
         var ragPrefix = $"builtin_{BuiltInServerHelper.RagKey}";
+        var ragActiveCount = _registry.Connections
+            .Count(c => c.Config.Id.StartsWith(ragPrefix, StringComparison.Ordinal) && c.IsConnected);
+        var embeddingModel = AppSettings.EmbeddingModel;
+        string ragDescription;
+        if (ragActiveCount > 0)
+        {
+            ragDescription = $"{_loader.GetString("Connect_RagActiveInstances")}\n{string.Format(_loader.GetString("Connect_RagActiveCount"), ragActiveCount)}";
+            if (!string.IsNullOrEmpty(embeddingModel))
+                ragDescription += $"  ·  {embeddingModel}";
+        }
+        else if (!string.IsNullOrEmpty(embeddingModel))
+        {
+            ragDescription = $"{_loader.GetString("Connect_RagNeedsFolders")}\n{embeddingModel}";
+        }
+        else
+        {
+            ragDescription = _loader.GetString("Connect_RagNeedsFolders");
+        }
+
+        var ragPlaceholder = new McpServerConfig
+        {
+            Id = ragPrefix,
+            Name = BuiltInServerHelper.RagDisplayName,
+            TransportType = McpTransportType.Stdio,
+            Command = BuiltInServerHelper.GetServerExePath(BuiltInServerHelper.RagKey),
+            IsBuiltIn = true,
+            IsEnabled = false,
+            Description = ragDescription,
+        };
+        RagCard.Connection = new McpServerConnection(ragPlaceholder);
+
+        // User-configured servers only (exclude all built-in connections)
         var displayList = _registry.Connections
             .Where(c => !c.Config.Id.StartsWith(fsPrefix, StringComparison.Ordinal)
                 && !c.Config.Id.StartsWith(ragPrefix, StringComparison.Ordinal))
@@ -530,185 +556,6 @@ public sealed partial class ConnectPage : Page
         NotificationCenter.Instance.Post(
             _loader.GetString("Connect_ImportComplete"),
             string.Format(_loader.GetString("Connect_ImportedCount"), imported));
-    }
-
-    #endregion
-
-    #region Knowledge Archive
-
-    /// <summary>
-    /// Refreshes the Knowledge Archive card UI based on current state.
-    /// Activation is automatic: embedding configured + folder set → server connects.
-    /// No manual toggle — mirrors Workspace Folders pattern.
-    /// </summary>
-    private void RefreshKnowledgeArchiveCard()
-    {
-        var builtIn = AppSettings.BuiltInServers;
-        var ragConfig = builtIn.GetValueOrDefault(BuiltInServerHelper.RagKey)
-            ?? new BuiltInServerConfig();
-        var ragConnection = _registry?.GetBuiltInConnection(BuiltInServerHelper.RagKey);
-
-        var embeddingConfigured = !string.IsNullOrEmpty(AppSettings.EmbeddingBaseUrl)
-            && !string.IsNullOrEmpty(AppSettings.EmbeddingModel);
-
-        // Status icon color
-        var statusColor = ragConnection?.State switch
-        {
-            McpConnectionState.Connected => Color.FromArgb(255, 76, 175, 80),
-            McpConnectionState.Connecting => Color.FromArgb(255, 255, 193, 7),
-            McpConnectionState.Error => Color.FromArgb(255, 244, 67, 54),
-            _ => Color.FromArgb(255, 158, 158, 158),
-        };
-        RagStatusIcon.Foreground = new SolidColorBrush(statusColor);
-
-        if (!embeddingConfigured)
-        {
-            // Embedding not configured
-            RagWarningPanel.Visibility = Visibility.Visible;
-            RagWarningText.Text = _loader.GetString("Connect_EmbeddingNotConfigured");
-            RagAddFolderButton.Visibility = Visibility.Collapsed;
-            RagReindexButton.Visibility = Visibility.Collapsed;
-            RagDetailText.Text = _loader.GetString("Connect_KnowledgeArchiveDescription");
-        }
-        else if (ragConfig.Folders.Count == 0)
-        {
-            // Embedding OK, no folder yet — show add button
-            RagWarningPanel.Visibility = Visibility.Collapsed;
-            RagAddFolderButton.Visibility = Visibility.Visible;
-            RagReindexButton.Visibility = Visibility.Collapsed;
-            RagDetailText.Text = _loader.GetString("Connect_KnowledgeArchiveDescription");
-        }
-        else
-        {
-            // Active: embedding + folder → server should be connected
-            RagWarningPanel.Visibility = Visibility.Collapsed;
-            RagAddFolderButton.Visibility = Visibility.Collapsed;
-
-            var folderPath = ragConfig.Folders[0];
-            var model = AppSettings.EmbeddingModel;
-            var toolCount = ragConnection?.Tools.Count ?? 0;
-            RagDetailText.Text = ragConnection?.IsConnected == true
-                ? $"{folderPath}\n{model}  ·  {toolCount} {_loader.GetString("Connect_Tools")}"
-                : folderPath;
-
-            RagReindexButton.Visibility = ragConnection?.IsConnected == true
-                ? Visibility.Visible : Visibility.Collapsed;
-            SetMouseToolTip(RagReindexButton, _loader.GetString("Connect_Reindex"));
-        }
-    }
-
-    private static void SetMouseToolTip(FrameworkElement element, string text)
-    {
-        ToolTipService.SetToolTip(element, new ToolTip
-        {
-            Content = text,
-            Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
-        });
-    }
-
-    private async void OnAddArchiveFolder(object sender, RoutedEventArgs e)
-    {
-        var picker = new Windows.Storage.Pickers.FolderPicker();
-        picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
-        picker.FileTypeFilter.Add("*");
-
-        var app = (App)Application.Current;
-        WinRT.Interop.InitializeWithWindow.Initialize(picker,
-            WinRT.Interop.WindowNative.GetWindowHandle(app.MainWindow));
-
-        var folder = await picker.PickSingleFolderAsync();
-        if (folder is null) return;
-
-        // Save folder and auto-enable
-        var builtIn = AppSettings.BuiltInServers;
-        var ragConfig = builtIn.GetValueOrDefault(BuiltInServerHelper.RagKey)
-            ?? new BuiltInServerConfig();
-        ragConfig.Folders = [folder.Path];
-        ragConfig.IsEnabled = true;
-
-        // Set environment variable keys for embedding config
-        ragConfig.EnvironmentVariableKeys =
-        [
-            "EMBEDDING_BASE_URL", "EMBEDDING_API_KEY",
-            "EMBEDDING_MODEL", "EMBEDDING_DIMENSION",
-        ];
-
-        // Sync embedding settings to vault
-        SyncEmbeddingEnvVars();
-
-        builtIn[BuiltInServerHelper.RagKey] = ragConfig;
-        AppSettings.BuiltInServers = builtIn;
-
-        // Connect
-        if (_registry is not null)
-        {
-            await _registry.ConnectBuiltInAsync(BuiltInServerHelper.RagKey, ragConfig);
-        }
-
-        RefreshKnowledgeArchiveCard();
-    }
-
-    private async void OnRagReindex(object sender, RoutedEventArgs e)
-    {
-        var ragConnection = _registry?.GetBuiltInConnection(BuiltInServerHelper.RagKey);
-        if (ragConnection is null || !ragConnection.IsConnected) return;
-
-        NotificationCenter.Instance.Post(
-            InfoBarSeverity.Informational,
-            _loader.GetString("Connect_KnowledgeArchiveReindexing"),
-            string.Empty);
-
-        try
-        {
-            var tool = ragConnection.Tools.FirstOrDefault(t => t.Name == "index_documents");
-            if (tool is not null)
-            {
-                var result = await tool.ExecuteAsync(
-                    System.Text.Json.JsonSerializer.SerializeToElement(new { force = true }));
-
-                NotificationCenter.Instance.Post(
-                    InfoBarSeverity.Success,
-                    _loader.GetString("Connect_KnowledgeArchiveReady"),
-                    result ?? "",
-                    5000);
-            }
-        }
-        catch (Exception ex)
-        {
-            NotificationCenter.Instance.Post(
-                InfoBarSeverity.Error,
-                _loader.GetString("Connect_KnowledgeArchiveFailed"),
-                $"{ex.Message}\n{_loader.GetString("Connect_EmbeddingModelHint")}",
-                8000);
-        }
-    }
-
-    private void OnNavigateToAppTasks(object sender, RoutedEventArgs e)
-    {
-        if (Frame.Parent is NavigationView navView)
-        {
-            var appTasksItem = navView.MenuItems
-                .OfType<NavigationViewItem>()
-                .FirstOrDefault(i => i.Tag as string == "AppTasks");
-            if (appTasksItem is not null)
-            {
-                navView.SelectedItem = appTasksItem;
-                Frame.Navigate(typeof(AppTasksPage));
-            }
-        }
-    }
-
-    /// <summary>
-    /// Syncs embedding settings from AppSettings to PasswordVault
-    /// so they're available as environment variables when the RAG server starts.
-    /// </summary>
-    private static void SyncEmbeddingEnvVars()
-    {
-        const string id = "builtin_rag";
-        PasswordVaultHelper.SaveMcpEnvVar(id, "EMBEDDING_BASE_URL", AppSettings.EmbeddingBaseUrl);
-        PasswordVaultHelper.SaveMcpEnvVar(id, "EMBEDDING_MODEL", AppSettings.EmbeddingModel);
-        PasswordVaultHelper.SaveMcpEnvVar(id, "EMBEDDING_DIMENSION", "0");
-        // EMBEDDING_API_KEY is already saved by AppTasksPage handlers
     }
 
     #endregion

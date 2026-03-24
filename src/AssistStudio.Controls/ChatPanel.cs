@@ -2690,6 +2690,14 @@ public sealed partial class ChatPanel : Control
             workspaceText = (workspaceText ?? "") + folderSection;
         }
 
+        // Knowledge Archive hint — if search_documents tool is available
+        var activeTools = GetActiveTools();
+        if (activeTools?.Any(t => t.Name == "search_documents") == true)
+        {
+            workspaceText = (workspaceText ?? "")
+                + "\n\n## Knowledge Archive\nUse `search_documents` to find relevant information before answering.";
+        }
+
         var lastUserMsg = messages.LastOrDefault(m => m.Role == ChatRole.User)?.Content;
         var chunks = ContextProvider is not null && lastUserMsg is not null
             ? await ContextProvider.RetrieveAsync(lastUserMsg)

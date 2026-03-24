@@ -560,6 +560,42 @@ public sealed partial class ProfilesPage : Page
             });
         }
 
+        // Knowledge Archive (RAG) — always shown, same pattern as Workspace
+        {
+            var ragId = $"builtin_{BuiltInServerHelper.RagKey}";
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+
+            var dot = new Microsoft.UI.Xaml.Shapes.Ellipse
+            {
+                Width = 6, Height = 6,
+                Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            row.Children.Add(dot);
+
+            var cb = new CheckBox
+            {
+                Content = BuiltInServerHelper.RagDisplayName,
+                Tag = ragId,
+                IsChecked = enabledSet.Contains(ragId),
+                MinWidth = 0,
+            };
+            cb.Checked += OnServerChecked;
+            cb.Unchecked += OnServerChecked;
+            row.Children.Add(cb);
+
+            ToolsPanel.Children.Add(row);
+
+            ToolsPanel.Children.Add(new TextBlock
+            {
+                Text = loader.GetString("Profiles_KnowledgeHint"),
+                Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                TextWrapping = TextWrapping.Wrap,
+                Opacity = 0.5,
+                Margin = new Thickness(28, 0, 0, 4),
+            });
+        }
+
         // User-configured MCP servers
         foreach (var conn in userServers)
         {

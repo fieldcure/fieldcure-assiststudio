@@ -756,6 +756,15 @@
   <data name="Connect_KnowledgeArchiveDescription" xml:space="preserve">
     <value>의미 검색을 위한 참조 문서입니다.</value>
   </data>
+  <data name="Connect_RagActiveInstances" xml:space="preserve">
+    <value>대화별로 관리됩니다.</value>
+  </data>
+  <data name="Connect_RagActiveCount" xml:space="preserve">
+    <value>{0}개 활성 인스턴스</value>
+  </data>
+  <data name="Connect_RagNeedsFolders" xml:space="preserve">
+    <value>대화에서 지식보관소 폴더를 추가하면 활성화됩니다.</value>
+  </data>
   <data name="Connect_EmbeddingNotConfigured" xml:space="preserve">
     <value>임베딩 제공자가 설정되지 않았습니다.</value>
   </data>
@@ -779,6 +788,9 @@
   </data>
   <data name="Connect_EmbeddingSettings" xml:space="preserve">
     <value>임베딩 설정</value>
+  </data>
+  <data name="Profiles_KnowledgeHint" xml:space="preserve">
+    <value>대화에서 지식보관소 폴더를 추가하세요.</value>
   </data>
   <data name="Embedding_OllamaNotRunning" xml:space="preserve">
     <value>Ollama가 실행되지 않습니다. ollama serve 명령으로 시작하세요.</value>
