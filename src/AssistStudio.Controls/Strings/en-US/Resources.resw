@@ -201,7 +201,7 @@ Add them in Profile settings.</value>
     <value>How can I help you today?</value>
   </data>
   <data name="Folder_Tooltip" xml:space="preserve">
-    <value>Workspace Folders</value>
+    <value>Folders</value>
   </data>
   <data name="Folder_Header" xml:space="preserve">
     <value>Workspace Folders</value>
@@ -226,6 +226,9 @@ Add them in Profile settings.</value>
   </data>
   <data name="Folder_ReindexArchive" xml:space="preserve">
     <value>Re-index documents</value>
+  </data>
+  <data name="FolderFlyout_RemoveTooltip" xml:space="preserve">
+    <value>Remove</value>
   </data>
   <data name="FolderFlyout_Header.Text" xml:space="preserve">
     <value>Workspace Folders</value>

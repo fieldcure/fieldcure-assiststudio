@@ -391,8 +391,7 @@
                                 <VisualState x:Name="NoFolders" />
                                 <VisualState x:Name="HasFolders">
                                     <VisualState.Setters>
-                                        <Setter Target="PART_TitleFolderButton.Foreground"
-                                                Value="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                        <Setter Target="PART_FolderIcon.Glyph" Value="&#xE8D5;" />
                                     </VisualState.Setters>
                                 </VisualState>
                             </VisualStateGroup>
@@ -553,16 +552,7 @@
                                             </StackPanel>
                                         </Flyout>
                                     </Button.Flyout>
-                                    <Grid>
-                                        <FontIcon Glyph="&#xE8B7;" FontSize="12" />
-                                        <TextBlock x:Name="PART_FolderBadge"
-                                                   FontSize="9"
-                                                   FontWeight="Bold"
-                                                   HorizontalAlignment="Right"
-                                                   VerticalAlignment="Top"
-                                                   Margin="8,-4,-4,0"
-                                                   Visibility="Collapsed" />
-                                    </Grid>
+                                    <FontIcon x:Name="PART_FolderIcon" Glyph="&#xE838;" FontSize="14" />
                                 </Button>
                             </Grid>
                             <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />

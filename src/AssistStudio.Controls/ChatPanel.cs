@@ -8,6 +8,7 @@ using FieldCure.AssistStudio.Controls.Rendering;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Windows.ApplicationModel.DataTransfer;
+using Windows.ApplicationModel.Resources;
 
 namespace FieldCure.AssistStudio.Controls;
 
@@ -30,6 +31,9 @@ public enum ChatTheme
 /// </summary>
 public sealed partial class ChatPanel : Control
 {
+    private static readonly Windows.ApplicationModel.Resources.ResourceLoader Res =
+        new("AssistStudio.Controls/Resources");
+
     #region Dependency Properties
 
     /// <summary>Identifies the <see cref="Provider"/> dependency property.</summary>
@@ -530,7 +534,7 @@ public sealed partial class ChatPanel : Control
     /// </summary>
     private Button? _titleRefreshButton;
     private Button? _titleFolderButton;
-    private TextBlock? _folderBadge;
+
 
     // Folder flyout parts (resolved lazily on first Flyout.Opening)
     private Button? _folderAddButton;
@@ -1029,7 +1033,7 @@ public sealed partial class ChatPanel : Control
         _titleEditButton = GetTemplateChild("PART_TitleEditButton") as Button;
         _titleRefreshButton = GetTemplateChild("PART_TitleRefreshButton") as Button;
         _titleFolderButton = GetTemplateChild("PART_TitleFolderButton") as Button;
-        _folderBadge = GetTemplateChild("PART_FolderBadge") as TextBlock;
+
         _chatWebView = GetTemplateChild("PART_ChatWebView") as WebView2;
         _approvalPanel = GetTemplateChild("PART_ToolApprovalPanel") as ToolApprovalPanel;
 
@@ -1126,16 +1130,8 @@ public sealed partial class ChatPanel : Control
         if (_titleEditButton is not null)
         {
             _titleEditButton.Click += OnTitleEditClick;
-            try
-            {
-                var loader = new Windows.ApplicationModel.Resources.ResourceLoader("AssistStudio.Controls/Resources");
-                var tooltip = loader.GetString("ChatPanel_EditTitleTooltip");
-                SetBottomRightToolTip(_titleEditButton, !string.IsNullOrEmpty(tooltip) ? tooltip : "Edit title");
-            }
-            catch
-            {
-                SetBottomRightToolTip(_titleEditButton, "Edit title");
-            }
+            var tooltip = Res.GetString("ChatPanel_EditTitleTooltip");
+            SetBottomRightToolTip(_titleEditButton, !string.IsNullOrEmpty(tooltip) ? tooltip : "Edit title");
         }
         if (_titleRefreshButton is not null)
             _titleRefreshButton.Click += OnTitleRefreshClick;
@@ -1148,15 +1144,7 @@ public sealed partial class ChatPanel : Control
                 folderFlyout.Opening += OnFolderFlyoutOpening;
             }
 
-            try
-            {
-                var folderLoader = new Windows.ApplicationModel.Resources.ResourceLoader("AssistStudio.Controls/Resources");
-                SetBottomRightToolTip(_titleFolderButton, folderLoader.GetString("Folder_Tooltip"));
-            }
-            catch
-            {
-                SetBottomRightToolTip(_titleFolderButton, "Workspace Folders");
-            }
+            SetBottomRightToolTip(_titleFolderButton, Res.GetString("Folder_Tooltip") ?? "Folders");
         }
 
         UpdateFolderButtonBadge();
@@ -1816,22 +1804,21 @@ public sealed partial class ChatPanel : Control
             if (_archiveReindexButton is not null)
             {
                 _archiveReindexButton.Click += (s, e2) => KnowledgeArchiveReindexRequested?.Invoke(this, EventArgs.Empty);
-                try
-                {
-                    var loader = new Windows.ApplicationModel.Resources.ResourceLoader("AssistStudio.Controls/Resources");
-                    SetBottomRightToolTip(_archiveReindexButton, loader.GetString("Folder_ReindexArchive"));
-                }
-                catch
-                {
-                    SetBottomRightToolTip(_archiveReindexButton, "Re-index documents");
-                }
+                SetBottomRightToolTip(_archiveReindexButton, Res.GetString("Folder_ReindexArchive") ?? "Re-index documents");
             }
             if (_archiveRemoveButton is not null)
+            {
                 _archiveRemoveButton.Click += (s, e2) =>
                 {
                     KnowledgeArchiveFolder = null;
                     KnowledgeArchiveFolderChanged?.Invoke(this, null);
                 };
+                ToolTipService.SetToolTip(_archiveRemoveButton, new ToolTip
+                {
+                    Content = Res.GetString("FolderFlyout_RemoveTooltip") ?? "Remove",
+                    Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
+                });
+            }
 
             // Populate now (Opening couldn't do it because parts weren't resolved yet)
             PopulateFolderFlyout();
@@ -1868,6 +1855,9 @@ public sealed partial class ChatPanel : Control
 
         // Rebuild folder list items
         _folderList.Children.Clear();
+
+        var removeTooltipText = Res.GetString("FolderFlyout_RemoveTooltip") ?? "Remove";
+
         foreach (var folder in folders)
         {
             var row = new Grid
@@ -1899,6 +1889,11 @@ public sealed partial class ChatPanel : Control
                 Padding = new Thickness(4),
                 VerticalAlignment = VerticalAlignment.Center,
             };
+            ToolTipService.SetToolTip(removeButton, new ToolTip
+            {
+                Content = removeTooltipText,
+                Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
+            });
             removeButton.Click += (s, e) =>
             {
                 var updated = folders.Where(f => f != capturedFolder).ToList();
@@ -1985,15 +1980,7 @@ public sealed partial class ChatPanel : Control
     /// </summary>
     private static string LoadGreeting()
     {
-        try
-        {
-            var loader = new Windows.ApplicationModel.Resources.ResourceLoader("AssistStudio.Controls/Resources");
-            return loader.GetString("ChatPanel_Greeting");
-        }
-        catch
-        {
-            return "How can I help you today?";
-        }
+        return Res.GetString("ChatPanel_Greeting") ?? "How can I help you today?";
     }
 
     /// <summary>
@@ -2002,9 +1989,6 @@ public sealed partial class ChatPanel : Control
     /// </summary>
     private void UpdateFolderButtonBadge()
     {
-        if (_folderBadge is not null)
-            _folderBadge.Visibility = Visibility.Collapsed;
-
         var hasFolders = (WorkspaceFolders?.Count ?? 0) > 0
             || !string.IsNullOrEmpty(KnowledgeArchiveFolder);
 
@@ -2566,27 +2550,17 @@ public sealed partial class ChatPanel : Control
     {
         if (string.IsNullOrEmpty(providerName))
         {
-            try
-            {
-                var loader = new Windows.ApplicationModel.Resources.ResourceLoader("AssistStudio.Controls/Resources");
-                var fallback = loader.GetString("InputContainer_Placeholder");
-                Placeholder = !string.IsNullOrEmpty(fallback) ? fallback : "Type a message...";
-            }
-            catch { Placeholder = "Type a message..."; }
+            var fallback = Res.GetString("InputContainer_Placeholder");
+            Placeholder = !string.IsNullOrEmpty(fallback) ? fallback : "Type a message...";
             return;
         }
 
-        try
+        var format = Res.GetString("InputContainer_AskProvider");
+        if (!string.IsNullOrEmpty(format))
         {
-            var loader = new Windows.ApplicationModel.Resources.ResourceLoader("AssistStudio.Controls/Resources");
-            var format = loader.GetString("InputContainer_AskProvider");
-            if (!string.IsNullOrEmpty(format))
-            {
-                Placeholder = string.Format(format, providerName);
-                return;
-            }
+            Placeholder = string.Format(format, providerName);
+            return;
         }
-        catch { /* fallback */ }
 
         Placeholder = $"Ask {providerName}...";
     }
@@ -2599,17 +2573,12 @@ public sealed partial class ChatPanel : Control
         var provider = UtilityProvider ?? Provider;
         var providerName = provider?.ProviderName ?? "";
 
-        try
+        var format2 = Res.GetString("Chat_RegenerateTitle");
+        if (!string.IsNullOrEmpty(format2) && !string.IsNullOrEmpty(providerName) && _titleRefreshButton is not null)
         {
-            var loader = new Windows.ApplicationModel.Resources.ResourceLoader("AssistStudio.Controls/Resources");
-            var format = loader.GetString("Chat_RegenerateTitle");
-            if (!string.IsNullOrEmpty(format) && !string.IsNullOrEmpty(providerName) && _titleRefreshButton is not null)
-            {
-                SetBottomRightToolTip(_titleRefreshButton, string.Format(format, providerName));
-                return;
-            }
+            SetBottomRightToolTip(_titleRefreshButton, string.Format(format2, providerName));
+            return;
         }
-        catch { /* fallback */ }
 
         if (_titleRefreshButton is not null)
         {
