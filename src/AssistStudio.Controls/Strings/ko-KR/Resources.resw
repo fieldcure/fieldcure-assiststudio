@@ -224,4 +224,7 @@
   <data name="Folder_ArchiveDisabledHint" xml:space="preserve">
     <value>프로필에서 지식보관소를 활성화해야 이 폴더가 사용됩니다.</value>
   </data>
+  <data name="Folder_ReindexArchive" xml:space="preserve">
+    <value>문서 재인덱싱</value>
+  </data>
 </root>

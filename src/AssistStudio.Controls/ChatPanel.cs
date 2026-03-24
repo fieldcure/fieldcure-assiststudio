@@ -917,6 +917,11 @@ public sealed partial class ChatPanel : Control
     public event EventHandler? KnowledgeArchiveFolderAddRequested;
 
     /// <summary>
+    /// Occurs when the user clicks the re-index button in the Knowledge Archive flyout.
+    /// </summary>
+    public event EventHandler? KnowledgeArchiveReindexRequested;
+
+    /// <summary>
     /// Occurs when a keyboard shortcut is pressed inside the WebView2 that should be handled by the host.
     /// </summary>
     public event EventHandler<string>? KeyboardShortcutPressed;
@@ -1952,6 +1957,7 @@ public sealed partial class ChatPanel : Control
                 {
                     new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
                     new ColumnDefinition { Width = GridLength.Auto },
+                    new ColumnDefinition { Width = GridLength.Auto },
                 },
             };
 
@@ -1967,6 +1973,25 @@ public sealed partial class ChatPanel : Control
             Grid.SetColumn(archiveFolderText, 0);
             archiveRow.Children.Add(archiveFolderText);
 
+            // Re-index button
+            var reindexButton = new Button
+            {
+                Content = new FontIcon { Glyph = "\xE72C", FontSize = 10 },
+                Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
+                Padding = new Thickness(4),
+                VerticalAlignment = VerticalAlignment.Center,
+                IsEnabled = archiveEnabled,
+            };
+            ToolTipService.SetToolTip(reindexButton, new ToolTip
+            {
+                Content = loader?.GetString("Folder_ReindexArchive") ?? "Re-index documents",
+                Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
+            });
+            reindexButton.Click += (s, e) => KnowledgeArchiveReindexRequested?.Invoke(this, EventArgs.Empty);
+            Grid.SetColumn(reindexButton, 1);
+            archiveRow.Children.Add(reindexButton);
+
+            // Remove button
             var removeArchiveButton = new Button
             {
                 Content = new FontIcon { Glyph = "\xE74D", FontSize = 10 },
@@ -1979,7 +2004,7 @@ public sealed partial class ChatPanel : Control
                 KnowledgeArchiveFolder = null;
                 KnowledgeArchiveFolderChanged?.Invoke(this, null);
             };
-            Grid.SetColumn(removeArchiveButton, 1);
+            Grid.SetColumn(removeArchiveButton, 2);
             archiveRow.Children.Add(removeArchiveButton);
 
             panel.Children.Add(archiveRow);

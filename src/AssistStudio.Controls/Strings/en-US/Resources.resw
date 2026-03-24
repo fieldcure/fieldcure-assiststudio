@@ -224,4 +224,7 @@ Add them in Profile settings.</value>
   <data name="Folder_ArchiveDisabledHint" xml:space="preserve">
     <value>Enable Knowledge Archive in your profile to use this folder.</value>
   </data>
+  <data name="Folder_ReindexArchive" xml:space="preserve">
+    <value>Re-index documents</value>
+  </data>
 </root>

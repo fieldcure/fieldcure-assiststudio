@@ -329,7 +329,8 @@ public sealed partial class AppTasksPage : Page
 
         if (provider == "ollama")
         {
-            await HandleOllamaSelectionAsync(model, tag, rb);
+            // Fire-and-forget: apply selection immediately, pull in background
+            _ = HandleOllamaSelectionAsync(model, tag, rb);
         }
         else
         {
@@ -410,7 +411,10 @@ public sealed partial class AppTasksPage : Page
         {
             using var manager = new OllamaModelManager("http://localhost:11434");
             var installed = await manager.ListLocalModelsAsync();
-            var installedNames = installed.Select(m => m.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            // Ollama returns IDs like "bge-m3:latest" — strip tag for comparison
+            var installedNames = installed
+                .Select(m => m.Id.Split(':')[0])
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             foreach (var model in new[] { "nomic-embed-text", "nomic-embed-text-v2-moe", "bge-m3" })
             {

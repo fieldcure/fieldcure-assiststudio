@@ -803,6 +803,57 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
+    /// Handles re-index request from the Knowledge Archive flyout.
+    /// Runs index_documents with force=true in background.
+    /// </summary>
+    public async void OnKnowledgeArchiveReindexRequested(object? _sender, EventArgs _e)
+    {
+        if (_ragConnection is null || !_ragConnection.IsConnected) return;
+
+        var tool = _ragConnection.Tools.FirstOrDefault(t => t.Name == "index_documents");
+        if (tool is null) return;
+
+        NotificationCenter.Instance.Post(
+            Microsoft.UI.Xaml.Controls.InfoBarSeverity.Informational,
+            "Knowledge Archive",
+            "Re-indexing documents…");
+
+        try
+        {
+            var args = System.Text.Json.JsonSerializer.SerializeToElement(new { force = true });
+            var resultJson = await tool.ExecuteAsync(args);
+
+            var message = "Re-indexing complete.";
+            if (!string.IsNullOrEmpty(resultJson))
+            {
+                try
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(resultJson);
+                    var root = doc.RootElement;
+                    var indexed = root.TryGetProperty("indexed", out var i) ? i.GetInt32() : 0;
+                    var chunks = root.TryGetProperty("total_chunks", out var c) ? c.GetInt32() : 0;
+                    message = $"{indexed} indexed, {chunks} chunks";
+                }
+                catch { message = resultJson ?? message; }
+            }
+
+            NotificationCenter.Instance.Post(
+                Microsoft.UI.Xaml.Controls.InfoBarSeverity.Success,
+                "Knowledge Archive — Ready",
+                message,
+                5000);
+        }
+        catch (Exception ex)
+        {
+            NotificationCenter.Instance.Post(
+                Microsoft.UI.Xaml.Controls.InfoBarSeverity.Error,
+                "Knowledge Archive — Failed",
+                ex.Message,
+                8000);
+        }
+    }
+
+    /// <summary>
     /// Marks the conversation as dirty when a new message is added.
     /// </summary>
     public void OnMessageAdded(object? _sender, ChatMessage _message)

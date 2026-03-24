@@ -90,6 +90,7 @@ public sealed partial class ChatTabView : UserControl
         Panel.WorkspaceFolderAddRequested += OnWorkspaceFolderAddRequested;
         Panel.KnowledgeArchiveFolderChanged += vm.OnKnowledgeArchiveFolderChanged;
         Panel.KnowledgeArchiveFolderAddRequested += OnKnowledgeArchiveFolderAddRequested;
+        Panel.KnowledgeArchiveReindexRequested += vm.OnKnowledgeArchiveReindexRequested;
         Panel.EnabledServersChanged += vm.OnEnabledServersChanged;
     }
 
@@ -108,6 +109,7 @@ public sealed partial class ChatTabView : UserControl
         Panel.WorkspaceFolderAddRequested -= OnWorkspaceFolderAddRequested;
         Panel.KnowledgeArchiveFolderChanged -= vm.OnKnowledgeArchiveFolderChanged;
         Panel.KnowledgeArchiveFolderAddRequested -= OnKnowledgeArchiveFolderAddRequested;
+        Panel.KnowledgeArchiveReindexRequested -= vm.OnKnowledgeArchiveReindexRequested;
         Panel.EnabledServersChanged -= vm.OnEnabledServersChanged;
     }
 
