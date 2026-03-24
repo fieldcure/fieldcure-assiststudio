@@ -2135,6 +2135,15 @@ public sealed partial class ChatPanel : Control
                     toolResult = $"{{\"error\":\"{ex.Message}\"}}";
                 }
 
+                // Truncate oversized tool results to prevent blowing up conversation history
+                const int maxToolResultChars = 80_000; // ~20k tokens
+                if (toolResult.Length > maxToolResultChars)
+                {
+                    DiagnosticLogger.LogWarning($"[Tool] Result truncated: {call.FunctionName}, {toolResult.Length} -> {maxToolResultChars} chars");
+                    toolResult = toolResult[..maxToolResultChars]
+                        + $"\n\n... (truncated — original {toolResult.Length:N0} chars)";
+                }
+
                 var toolResultMsg = new ChatMessage(ChatRole.Tool, toolResult)
                 {
                     ToolCallId = call.Id,
