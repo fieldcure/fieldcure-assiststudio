@@ -1144,6 +1144,7 @@ public sealed partial class ChatPanel : Control
             // Wire Flyout.Opening for lazy PART_ resolution and content population
             if (_titleFolderButton.Flyout is Flyout folderFlyout)
             {
+                folderFlyout.Opened += OnFolderFlyoutOpened;
                 folderFlyout.Opening += OnFolderFlyoutOpening;
             }
 
@@ -1785,14 +1786,14 @@ public sealed partial class ChatPanel : Control
     }
 
     /// <summary>
-    /// Handles the folder flyout opening event.
-    /// Resolves PART_ elements on first open and populates dynamic content on every open.
+    /// Handles the folder flyout Opened event (visual tree is ready).
+    /// Resolves PART_ elements and wires click handlers on first open.
     /// </summary>
-    private void OnFolderFlyoutOpening(object? sender, object e)
+    private void OnFolderFlyoutOpened(object? sender, object e)
     {
         if (sender is not Flyout flyout) return;
 
-        // Lazily resolve flyout PART_ elements on first open (VisualTree not available until flyout opens)
+        // Resolve PART_ elements on first open (VisualTree available only after Opened)
         if (_folderAddButton is null && flyout.Content is FrameworkElement root)
         {
             _folderAddButton = FindDescendantByName<Button>(root, "PART_FolderAddButton");
@@ -1831,9 +1832,21 @@ public sealed partial class ChatPanel : Control
                     KnowledgeArchiveFolder = null;
                     KnowledgeArchiveFolderChanged?.Invoke(this, null);
                 };
-        }
 
-        PopulateFolderFlyout();
+            // Populate now (Opening couldn't do it because parts weren't resolved yet)
+            PopulateFolderFlyout();
+        }
+    }
+
+    /// <summary>
+    /// Handles the folder flyout Opening event.
+    /// Populates dynamic content if PART_ elements are already resolved.
+    /// </summary>
+    private void OnFolderFlyoutOpening(object? sender, object e)
+    {
+        // Only populate if parts are already resolved (after first Opened)
+        if (_folderList is not null)
+            PopulateFolderFlyout();
     }
 
     /// <summary>
