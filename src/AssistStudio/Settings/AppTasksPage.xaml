@@ -88,7 +88,7 @@
                         <StackPanel x:Name="OllamaGroup" Spacing="0">
                             <RadioButton x:Name="RbNomicV1" Tag="ollama/nomic-embed-text"
                                          GroupName="EmbeddingModel"
-                                         Click="OnEmbeddingModelSelected" Padding="0,6">
+                                         Click="OnEmbeddingModelSelected" Padding="8,6,0,0">
                                 <StackPanel Spacing="2">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <TextBlock Text="nomic-embed-text" />
@@ -103,7 +103,7 @@
                             </RadioButton>
                             <RadioButton x:Name="RbNomicV2" Tag="ollama/nomic-embed-text-v2-moe"
                                          GroupName="EmbeddingModel"
-                                         Click="OnEmbeddingModelSelected" Padding="0,6">
+                                         Click="OnEmbeddingModelSelected" Padding="8,6,0,0">
                                 <StackPanel Spacing="2">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <TextBlock Text="nomic-embed-text-v2-moe" />
@@ -125,7 +125,7 @@
                             </RadioButton>
                             <RadioButton x:Name="RbBgeM3" Tag="ollama/bge-m3"
                                          GroupName="EmbeddingModel"
-                                         Click="OnEmbeddingModelSelected" Padding="0,6">
+                                         Click="OnEmbeddingModelSelected" Padding="8,6,0,0">
                                 <StackPanel Spacing="2">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <TextBlock Text="bge-m3" />
@@ -156,7 +156,7 @@
                         <StackPanel x:Name="OpenAiGroup" Spacing="0">
                             <RadioButton x:Name="RbEmbed3Small" Tag="openai/text-embedding-3-small"
                                          GroupName="EmbeddingModel"
-                                         Click="OnEmbeddingModelSelected" Padding="0,6">
+                                         Click="OnEmbeddingModelSelected" Padding="8,6,0,0">
                                 <StackPanel Spacing="2">
                                     <TextBlock Text="text-embedding-3-small" />
                                     <TextBlock Text="1536 dim" Opacity="0.5"
@@ -165,7 +165,7 @@
                             </RadioButton>
                             <RadioButton x:Name="RbEmbed3Large" Tag="openai/text-embedding-3-large"
                                          GroupName="EmbeddingModel"
-                                         Click="OnEmbeddingModelSelected" Padding="0,6">
+                                         Click="OnEmbeddingModelSelected" Padding="8,6,0,0">
                                 <StackPanel Spacing="2">
                                     <TextBlock Text="text-embedding-3-large" />
                                     <TextBlock Text="3072 dim" Opacity="0.5"
