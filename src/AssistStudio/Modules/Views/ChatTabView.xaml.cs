@@ -88,6 +88,8 @@ public sealed partial class ChatTabView : UserControl
         Panel.BranchChanged += vm.OnBranchChanged;
         Panel.WorkspaceFoldersChanged += vm.OnWorkspaceFoldersChanged;
         Panel.WorkspaceFolderAddRequested += OnWorkspaceFolderAddRequested;
+        Panel.KnowledgeArchiveFolderChanged += vm.OnKnowledgeArchiveFolderChanged;
+        Panel.KnowledgeArchiveFolderAddRequested += OnKnowledgeArchiveFolderAddRequested;
         Panel.EnabledServersChanged += vm.OnEnabledServersChanged;
     }
 
@@ -104,6 +106,8 @@ public sealed partial class ChatTabView : UserControl
         Panel.BranchChanged -= vm.OnBranchChanged;
         Panel.WorkspaceFoldersChanged -= vm.OnWorkspaceFoldersChanged;
         Panel.WorkspaceFolderAddRequested -= OnWorkspaceFolderAddRequested;
+        Panel.KnowledgeArchiveFolderChanged -= vm.OnKnowledgeArchiveFolderChanged;
+        Panel.KnowledgeArchiveFolderAddRequested -= OnKnowledgeArchiveFolderAddRequested;
         Panel.EnabledServersChanged -= vm.OnEnabledServersChanged;
     }
 
@@ -134,6 +138,29 @@ public sealed partial class ChatTabView : UserControl
             if (DataContext is ChatTabViewModel vm)
                 vm.OnWorkspaceFoldersChanged(this, current);
         }
+    }
+
+    /// <summary>
+    /// Handles the "Set Folder" request for Knowledge Archive by opening a FolderPicker.
+    /// </summary>
+    private async void OnKnowledgeArchiveFolderAddRequested(object? sender, EventArgs e)
+    {
+        var picker = new Windows.Storage.Pickers.FolderPicker();
+        picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
+        picker.FileTypeFilter.Add("*");
+
+        var window = (App.Current as App)?.MainWindow;
+        if (window is null) return;
+        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+
+        var folder = await picker.PickSingleFolderAsync();
+        if (folder is null) return;
+
+        Panel.KnowledgeArchiveFolder = folder.Path;
+
+        if (DataContext is ChatTabViewModel vm)
+            vm.OnKnowledgeArchiveFolderChanged(this, folder.Path);
     }
 
     #endregion

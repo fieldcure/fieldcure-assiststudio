@@ -174,6 +174,16 @@ public sealed partial class ChatPanel : Control
         DependencyProperty.Register(nameof(IsWorkspaceEnabled), typeof(bool), typeof(ChatPanel),
             new PropertyMetadata(true, OnIsWorkspaceEnabledChanged));
 
+    /// <summary>Identifies the <see cref="KnowledgeArchiveFolder"/> dependency property.</summary>
+    public static readonly DependencyProperty KnowledgeArchiveFolderProperty =
+        DependencyProperty.Register(nameof(KnowledgeArchiveFolder), typeof(string), typeof(ChatPanel),
+            new PropertyMetadata(null));
+
+    /// <summary>Identifies the <see cref="IsKnowledgeArchiveEnabled"/> dependency property.</summary>
+    public static readonly DependencyProperty IsKnowledgeArchiveEnabledProperty =
+        DependencyProperty.Register(nameof(IsKnowledgeArchiveEnabled), typeof(bool), typeof(ChatPanel),
+            new PropertyMetadata(false));
+
     /// <summary>Identifies the <see cref="AllowAttachments"/> dependency property.</summary>
     public static readonly DependencyProperty AllowAttachmentsProperty =
         DependencyProperty.Register(nameof(AllowAttachments), typeof(bool), typeof(ChatPanel),
@@ -715,6 +725,25 @@ public sealed partial class ChatPanel : Control
     }
 
     /// <summary>
+    /// Gets or sets the Knowledge Archive folder path for the current conversation.
+    /// Single folder — each conversation has at most one archive folder.
+    /// </summary>
+    public string? KnowledgeArchiveFolder
+    {
+        get => (string?)GetValue(KnowledgeArchiveFolderProperty);
+        set => SetValue(KnowledgeArchiveFolderProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets whether the Knowledge Archive capability is enabled in the current profile.
+    /// </summary>
+    public bool IsKnowledgeArchiveEnabled
+    {
+        get => (bool)GetValue(IsKnowledgeArchiveEnabledProperty);
+        set => SetValue(IsKnowledgeArchiveEnabledProperty, value);
+    }
+
+    /// <summary>
     /// Gets or sets whether file attachments are allowed.
     /// </summary>
     public bool AllowAttachments
@@ -874,6 +903,18 @@ public sealed partial class ChatPanel : Control
     /// The App layer should handle this to show a FolderPicker and update <see cref="WorkspaceFolders"/>.
     /// </summary>
     public event EventHandler? WorkspaceFolderAddRequested;
+
+    /// <summary>
+    /// Occurs when the user sets or removes the Knowledge Archive folder via the flyout.
+    /// The event argument is the folder path (null to remove).
+    /// </summary>
+    public event EventHandler<string?>? KnowledgeArchiveFolderChanged;
+
+    /// <summary>
+    /// Occurs when the user clicks "Set Folder" for Knowledge Archive.
+    /// The App layer should handle this to show a FolderPicker and update <see cref="KnowledgeArchiveFolder"/>.
+    /// </summary>
+    public event EventHandler? KnowledgeArchiveFolderAddRequested;
 
     /// <summary>
     /// Occurs when a keyboard shortcut is pressed inside the WebView2 that should be handled by the host.
@@ -1837,6 +1878,121 @@ public sealed partial class ChatPanel : Control
 
                 panel.Children.Add(row);
             }
+        }
+
+        // ── Divider ──
+        panel.Children.Add(new Microsoft.UI.Xaml.Shapes.Rectangle
+        {
+            Height = 1,
+            Fill = secondaryBrush,
+            Opacity = 0.3,
+            Margin = new Thickness(0, 8, 0, 4),
+        });
+
+        // ── Knowledge Archive section (single folder) ──
+        var archiveFolder = KnowledgeArchiveFolder;
+        var archiveEnabled = IsKnowledgeArchiveEnabled;
+
+        var archiveHeaderRow = new Grid
+        {
+            ColumnDefinitions =
+            {
+                new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
+                new ColumnDefinition { Width = GridLength.Auto },
+            },
+            Margin = new Thickness(0, 0, 0, 4),
+        };
+
+        var archiveHeaderText = new TextBlock
+        {
+            Text = loader?.GetString("Folder_ArchiveHeader") ?? "Knowledge Archive",
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        Grid.SetColumn(archiveHeaderText, 0);
+        archiveHeaderRow.Children.Add(archiveHeaderText);
+
+        if (string.IsNullOrEmpty(archiveFolder))
+        {
+            // No folder — show "Set Folder" button
+            var setButton = new Button
+            {
+                Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
+                Padding = new Thickness(6, 2, 6, 2),
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            var setContent = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
+            setContent.Children.Add(new FontIcon { Glyph = "\xE710", FontSize = 10 });
+            setContent.Children.Add(new TextBlock { Text = loader?.GetString("Folder_SetArchive") ?? "Set Folder", FontSize = 12 });
+            setButton.Content = setContent;
+            setButton.Click += (s, e) => KnowledgeArchiveFolderAddRequested?.Invoke(this, EventArgs.Empty);
+            Grid.SetColumn(setButton, 1);
+            archiveHeaderRow.Children.Add(setButton);
+        }
+
+        panel.Children.Add(archiveHeaderRow);
+
+        if (!archiveEnabled && !string.IsNullOrEmpty(archiveFolder))
+        {
+            panel.Children.Add(new TextBlock
+            {
+                Text = loader?.GetString("Folder_ArchiveDisabledHint") ?? "Enable Knowledge Archive in your profile to use this folder.",
+                Foreground = secondaryBrush,
+                FontSize = 12,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 0, 0, 4),
+            });
+        }
+
+        if (!string.IsNullOrEmpty(archiveFolder))
+        {
+            var archiveRow = new Grid
+            {
+                ColumnDefinitions =
+                {
+                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
+                    new ColumnDefinition { Width = GridLength.Auto },
+                },
+            };
+
+            var archiveFolderText = new TextBlock
+            {
+                Text = archiveFolder,
+                VerticalAlignment = VerticalAlignment.Center,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                FontSize = 12,
+                Margin = new Thickness(8, 0, 0, 0),
+                Opacity = archiveEnabled ? 1.0 : 0.5,
+            };
+            Grid.SetColumn(archiveFolderText, 0);
+            archiveRow.Children.Add(archiveFolderText);
+
+            var removeArchiveButton = new Button
+            {
+                Content = new FontIcon { Glyph = "\xE74D", FontSize = 10 },
+                Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
+                Padding = new Thickness(4),
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            removeArchiveButton.Click += (s, e) =>
+            {
+                KnowledgeArchiveFolder = null;
+                KnowledgeArchiveFolderChanged?.Invoke(this, null);
+            };
+            Grid.SetColumn(removeArchiveButton, 1);
+            archiveRow.Children.Add(removeArchiveButton);
+
+            panel.Children.Add(archiveRow);
+        }
+        else
+        {
+            panel.Children.Add(new TextBlock
+            {
+                Text = loader?.GetString("Folder_Empty") ?? "(empty)",
+                Foreground = secondaryBrush,
+                FontSize = 12,
+                Margin = new Thickness(8, 0, 0, 0),
+            });
         }
 
         return new Flyout { Content = panel };

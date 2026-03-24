@@ -215,4 +215,13 @@
   <data name="Folder_DisabledHint" xml:space="preserve">
     <value>프로필에서 Workspace를 활성화해야 이 폴더가 사용됩니다.</value>
   </data>
+  <data name="Folder_ArchiveHeader" xml:space="preserve">
+    <value>지식보관소</value>
+  </data>
+  <data name="Folder_SetArchive" xml:space="preserve">
+    <value>폴더 지정</value>
+  </data>
+  <data name="Folder_ArchiveDisabledHint" xml:space="preserve">
+    <value>프로필에서 지식보관소를 활성화해야 이 폴더가 사용됩니다.</value>
+  </data>
 </root>

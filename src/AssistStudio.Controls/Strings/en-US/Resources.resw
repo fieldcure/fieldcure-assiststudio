@@ -215,4 +215,13 @@ Add them in Profile settings.</value>
   <data name="Folder_DisabledHint" xml:space="preserve">
     <value>Enable Workspace in your profile to use these folders.</value>
   </data>
+  <data name="Folder_ArchiveHeader" xml:space="preserve">
+    <value>Knowledge Archive</value>
+  </data>
+  <data name="Folder_SetArchive" xml:space="preserve">
+    <value>Set Folder</value>
+  </data>
+  <data name="Folder_ArchiveDisabledHint" xml:space="preserve">
+    <value>Enable Knowledge Archive in your profile to use this folder.</value>
+  </data>
 </root>

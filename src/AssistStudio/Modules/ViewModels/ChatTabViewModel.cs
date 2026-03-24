@@ -58,6 +58,12 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// </summary>
     private McpServerConnection? _filesystemConnection;
 
+    /// <summary>
+    /// Per-tab Knowledge Archive MCP server connection.
+    /// Each tab owns its own RAG server instance with a single archive folder.
+    /// </summary>
+    private McpServerConnection? _ragConnection;
+
     #endregion
 
     #region Observable Fields — ChatPanel bindings
@@ -517,11 +523,16 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     {
         GC.SuppressFinalize(this);
 
-        // Disconnect per-tab filesystem server
+        // Disconnect per-tab MCP servers
         if (_filesystemConnection is not null)
         {
             _ = App.McpRegistry.RemoveAsync(_filesystemConnection);
             _filesystemConnection = null;
+        }
+        if (_ragConnection is not null)
+        {
+            _ = App.McpRegistry.RemoveAsync(_ragConnection);
+            _ragConnection = null;
         }
 
         if (AppTasksProvider is IDisposable utilDisposable)
@@ -590,6 +601,22 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                 var folders = Panel.WorkspaceFolders;
                 if (folders is { Count: > 0 })
                     await ConnectFilesystemAsync(folders);
+            }
+
+            // Knowledge Archive capability
+            var ragServerId = $"builtin_{BuiltInServerHelper.RagKey}";
+            var isRagEnabled = profile.EnabledServers.Contains(ragServerId);
+            Panel.IsKnowledgeArchiveEnabled = isRagEnabled;
+
+            if (!isRagEnabled)
+            {
+                await DisconnectRagAsync();
+            }
+            else
+            {
+                var archiveFolder = Panel.KnowledgeArchiveFolder;
+                if (!string.IsNullOrEmpty(archiveFolder))
+                    await ConnectRagAsync(archiveFolder);
             }
         }
 
@@ -731,6 +758,51 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
+    /// Handles Knowledge Archive folder changes from the title bar flyout.
+    /// Connects the per-tab RAG server and starts indexing.
+    /// </summary>
+    public async void OnKnowledgeArchiveFolderChanged(object? _sender, string? folder)
+    {
+        // Save to conversation data
+        if (_builtInServers is null)
+            _builtInServers = new Dictionary<string, BuiltInServerConfig>();
+
+        if (!string.IsNullOrEmpty(folder))
+        {
+            _builtInServers[BuiltInServerHelper.RagKey] = new BuiltInServerConfig
+            {
+                IsEnabled = true,
+                Folders = [folder],
+                EnvironmentVariableKeys =
+                [
+                    "EMBEDDING_BASE_URL", "EMBEDDING_API_KEY",
+                    "EMBEDDING_MODEL", "EMBEDDING_DIMENSION",
+                ],
+            };
+        }
+        else
+        {
+            _builtInServers.Remove(BuiltInServerHelper.RagKey);
+        }
+        IsDirty = true;
+
+        // Connect/disconnect RAG server if profile has it enabled
+        var ragServerId = $"builtin_{BuiltInServerHelper.RagKey}";
+        var isRagEnabled = Panel?.SelectedProfile?.EnabledServers.Contains(ragServerId) ?? false;
+
+        if (isRagEnabled && !string.IsNullOrEmpty(folder))
+        {
+            await ConnectRagAsync(folder);
+        }
+        else
+        {
+            await DisconnectRagAsync();
+        }
+
+        ResolveTools(Panel?.SelectedProfile);
+    }
+
+    /// <summary>
     /// Marks the conversation as dirty when a new message is added.
     /// </summary>
     public void OnMessageAdded(object? _sender, ChatMessage _message)
@@ -778,6 +850,93 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
+    /// Connects (or reconnects) the per-tab RAG MCP server for a single archive folder.
+    /// Syncs embedding env vars from AppSettings, then starts indexing with notification.
+    /// </summary>
+    private async Task ConnectRagAsync(string folder)
+    {
+        await DisconnectRagAsync();
+
+        // Sync embedding env vars to vault
+        const string ragId = "builtin_rag";
+        PasswordVaultHelper.SaveMcpEnvVar(ragId, "EMBEDDING_BASE_URL", AppSettings.EmbeddingBaseUrl);
+        PasswordVaultHelper.SaveMcpEnvVar(ragId, "EMBEDDING_MODEL", AppSettings.EmbeddingModel);
+        PasswordVaultHelper.SaveMcpEnvVar(ragId, "EMBEDDING_DIMENSION", "0");
+
+        var ragConfig = new BuiltInServerConfig
+        {
+            IsEnabled = true,
+            Folders = [folder],
+            EnvironmentVariableKeys =
+            [
+                "EMBEDDING_BASE_URL", "EMBEDDING_API_KEY",
+                "EMBEDDING_MODEL", "EMBEDDING_DIMENSION",
+            ],
+        };
+
+        var mcpConfig = BuiltInServerHelper.CreateMcpServerConfig(BuiltInServerHelper.RagKey, ragConfig);
+        if (mcpConfig is null) return;
+
+        mcpConfig.Id = $"builtin_{BuiltInServerHelper.RagKey}_{Id}";
+
+        _ragConnection = await App.McpRegistry.AddAndConnectAsync(mcpConfig);
+
+        // Start indexing in background with notification
+        if (_ragConnection.IsConnected)
+        {
+            _ = IndexKnowledgeArchiveAsync();
+        }
+    }
+
+    /// <summary>
+    /// Disconnects the per-tab RAG server if connected.
+    /// </summary>
+    private async Task DisconnectRagAsync()
+    {
+        if (_ragConnection is not null)
+        {
+            await App.McpRegistry.RemoveAsync(_ragConnection);
+            _ragConnection = null;
+        }
+    }
+
+    /// <summary>
+    /// Runs index_documents on the connected RAG server and posts progress notifications.
+    /// </summary>
+    private async Task IndexKnowledgeArchiveAsync()
+    {
+        if (_ragConnection is null || !_ragConnection.IsConnected) return;
+
+        var tool = _ragConnection.Tools.FirstOrDefault(t => t.Name == "index_documents");
+        if (tool is null) return;
+
+        NotificationCenter.Instance.Post(
+            Microsoft.UI.Xaml.Controls.InfoBarSeverity.Informational,
+            "Knowledge Archive",
+            "Indexing documents…");
+
+        try
+        {
+            var args = System.Text.Json.JsonSerializer.SerializeToElement(new { force = false });
+            var result = await tool.ExecuteAsync(args);
+
+            NotificationCenter.Instance.Post(
+                Microsoft.UI.Xaml.Controls.InfoBarSeverity.Success,
+                "Knowledge Archive — Ready",
+                result ?? "Indexing complete.",
+                5000);
+        }
+        catch (Exception ex)
+        {
+            NotificationCenter.Instance.Post(
+                Microsoft.UI.Xaml.Controls.InfoBarSeverity.Error,
+                "Knowledge Archive — Failed",
+                $"{ex.Message}\nMake sure an embedding model is loaded:\n  ollama pull nomic-embed-text",
+                8000);
+        }
+    }
+
+    /// <summary>
     /// Resolves registered tools using server-level selection.
     /// Built-in tools (run_command, fetch_url) are always included.
     /// File tools (read_file, write_file, search_files) are included only when Filesystem MCP is inactive.
@@ -807,12 +966,17 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         // 2. search_tools — only when profile has enabled servers
         var enabledServerIds = profile?.EnabledServers ?? [];
 
-        // Map "builtin_filesystem" to the per-tab connection ID so filtering works
+        // Map built-in server IDs to per-tab connection IDs so filtering works
         var effectiveServerIds = enabledServerIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
         if (_filesystemConnection is not null
             && effectiveServerIds.Contains($"builtin_{BuiltInServerHelper.FilesystemKey}"))
         {
             effectiveServerIds.Add(_filesystemConnection.Config.Id);
+        }
+        if (_ragConnection is not null
+            && effectiveServerIds.Contains($"builtin_{BuiltInServerHelper.RagKey}"))
+        {
+            effectiveServerIds.Add(_ragConnection.Config.Id);
         }
 
         if (effectiveServerIds.Count > 0)
