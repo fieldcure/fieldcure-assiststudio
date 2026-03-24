@@ -110,6 +110,34 @@ public static class AppSettings
     }
 
     /// <summary>
+    /// Gets or sets the preset name used for embedding (UI reference only).
+    /// </summary>
+    public static string EmbeddingPreset
+    {
+        get => Settings.Values["EmbeddingPreset"] as string ?? "";
+        set => Settings.Values["EmbeddingPreset"] = value;
+    }
+
+    /// <summary>
+    /// Gets or sets the embedding model identifier (e.g., "nomic-embed-text").
+    /// </summary>
+    public static string EmbeddingModel
+    {
+        get => Settings.Values["EmbeddingModel"] as string ?? "";
+        set => Settings.Values["EmbeddingModel"] = value;
+    }
+
+    /// <summary>
+    /// Gets or sets the embedding API base URL.
+    /// Stored independently of the preset so it survives preset deletion.
+    /// </summary>
+    public static string EmbeddingBaseUrl
+    {
+        get => Settings.Values["EmbeddingBaseUrl"] as string ?? "";
+        set => Settings.Values["EmbeddingBaseUrl"] = value;
+    }
+
+    /// <summary>
     /// Gets or sets the name of the active profile (empty string means custom/manual).
     /// </summary>
     public static string ActiveProfile

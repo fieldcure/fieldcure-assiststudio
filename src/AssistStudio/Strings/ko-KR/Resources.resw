@@ -740,4 +740,44 @@
   <data name="Models_RefreshStatus.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>상태 확인</value>
   </data>
+  <!-- 지식보관소 / 임베딩 -->
+  <data name="AppTasks_EmbeddingTitle.Text" xml:space="preserve">
+    <value>임베딩</value>
+  </data>
+  <data name="AppTasks_EmbeddingDescription.Text" xml:space="preserve">
+    <value>지식보관소 문서 인덱싱 및 검색에 사용됩니다. OpenAI 호환 임베딩 API가 필요합니다 (Ollama, OpenAI 등)</value>
+  </data>
+  <data name="AppTasks_EmbeddingProvider.Header" xml:space="preserve">
+    <value>임베딩 제공자</value>
+  </data>
+  <data name="Connect_AddArchiveFolder" xml:space="preserve">
+    <value>보관소 폴더 추가</value>
+  </data>
+  <data name="Connect_KnowledgeArchiveDescription" xml:space="preserve">
+    <value>의미 검색을 위한 참조 문서입니다.</value>
+  </data>
+  <data name="Connect_EmbeddingNotConfigured" xml:space="preserve">
+    <value>임베딩 제공자가 설정되지 않았습니다.</value>
+  </data>
+  <data name="Connect_Configure" xml:space="preserve">
+    <value>설정</value>
+  </data>
+  <data name="Connect_Reindex" xml:space="preserve">
+    <value>전체 문서 재인덱싱</value>
+  </data>
+  <data name="Connect_KnowledgeArchiveReindexing" xml:space="preserve">
+    <value>문서 재인덱싱 중…</value>
+  </data>
+  <data name="Connect_KnowledgeArchiveReady" xml:space="preserve">
+    <value>지식보관소 — 준비됨</value>
+  </data>
+  <data name="Connect_KnowledgeArchiveFailed" xml:space="preserve">
+    <value>지식보관소 — 실패</value>
+  </data>
+  <data name="Connect_EmbeddingModelHint" xml:space="preserve">
+    <value>임베딩 모델이 로드되어 있는지 확인하세요: ollama pull nomic-embed-text</value>
+  </data>
+  <data name="Connect_EmbeddingSettings" xml:space="preserve">
+    <value>임베딩 설정</value>
+  </data>
 </root>

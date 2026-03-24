@@ -69,6 +69,65 @@
                                   Toggled="OnAutoSummaryToggled" />
                 </StackPanel>
 
+                <!-- Embedding -->
+                <StackPanel Spacing="12">
+                    <TextBlock x:Uid="AppTasks_EmbeddingTitle" Text="Embedding"
+                               Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                    <TextBlock x:Uid="AppTasks_EmbeddingDescription"
+                               Text="Used for Knowledge Archive document indexing and search. Requires an OpenAI-compatible embedding API (Ollama, OpenAI, etc.)"
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               TextWrapping="Wrap"
+                               Opacity="0.7" />
+
+                    <ComboBox x:Name="EmbeddingPresetCombo"
+                              x:Uid="AppTasks_EmbeddingProvider"
+                              Header="Embedding provider"
+                              HorizontalAlignment="Stretch"
+                              SelectionChanged="OnEmbeddingPresetChanged" />
+
+                    <!-- Claude warning -->
+                    <TextBlock x:Name="EmbeddingWarningText"
+                               Foreground="{ThemeResource SystemControlErrorTextForegroundBrush}"
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               TextWrapping="Wrap"
+                               Visibility="Collapsed" />
+
+                    <!-- Quick select: Ollama -->
+                    <StackPanel Spacing="4">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="Ollama" VerticalAlignment="Center"
+                                       Style="{StaticResource CaptionTextBlockStyle}" Opacity="0.7" />
+                            <Button Content="nomic-embed-text" Click="OnQuickSelectOllama"
+                                    Tag="nomic-embed-text"
+                                    Style="{ThemeResource SubtleButtonStyle}" Padding="8,4" />
+                            <Button Content="mxbai-embed-large" Click="OnQuickSelectOllama"
+                                    Tag="mxbai-embed-large"
+                                    Style="{ThemeResource SubtleButtonStyle}" Padding="8,4" />
+                            <Button Content="bge-m3" Click="OnQuickSelectOllama"
+                                    Tag="bge-m3"
+                                    Style="{ThemeResource SubtleButtonStyle}" Padding="8,4" />
+                        </StackPanel>
+
+                        <!-- Quick select: OpenAI -->
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="OpenAI" VerticalAlignment="Center"
+                                       Style="{StaticResource CaptionTextBlockStyle}" Opacity="0.7" />
+                            <Button Content="text-embedding-3-small" Click="OnQuickSelectOpenAi"
+                                    Tag="text-embedding-3-small"
+                                    Style="{ThemeResource SubtleButtonStyle}" Padding="8,4" />
+                            <Button Content="text-embedding-ada-002" Click="OnQuickSelectOpenAi"
+                                    Tag="text-embedding-ada-002"
+                                    Style="{ThemeResource SubtleButtonStyle}" Padding="8,4" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Current selection display -->
+                    <TextBlock x:Name="EmbeddingStatusText"
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               Opacity="0.5" />
+                </StackPanel>
+
             </StackPanel>
         </ScrollViewer>
     </Grid>

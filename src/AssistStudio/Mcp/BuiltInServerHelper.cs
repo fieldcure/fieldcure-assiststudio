@@ -27,6 +27,7 @@ public static class BuiltInServerHelper
     private static readonly Dictionary<string, (string PackageId, string RequiredVersion)> NuGetPackages = new()
     {
         [FilesystemKey] = ("FieldCure.Mcp.Filesystem", "0.4.0"),
+        [RagKey] = ("FieldCure.Mcp.Rag", "0.1.0"),
     };
 
     /// <summary>NuGet package ID for the Filesystem server.</summary>
@@ -53,6 +54,8 @@ public static class BuiltInServerHelper
         "read_file", "read_multiple_files", "read_file_lines",
         "list_directory", "directory_tree",
         "search_files", "search_within_files", "get_file_info",
+        // RAG
+        "search_documents", "get_document_chunk",
     ];
 
     /// <summary>
@@ -118,7 +121,7 @@ public static class BuiltInServerHelper
         if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath))
             return null;
 
-        return new McpServerConfig
+        var mcpConfig = new McpServerConfig
         {
             Id = $"builtin_{serverKey}",
             Name = def.DisplayName,
@@ -134,6 +137,14 @@ public static class BuiltInServerHelper
                 _ => "",
             },
         };
+
+        // Load environment variables from PasswordVault for built-in servers (e.g., RAG embedding config)
+        if (config.EnvironmentVariableKeys is { Count: > 0 } keys)
+        {
+            mcpConfig.EnvironmentVariables = PasswordVaultHelper.LoadMcpEnvVars(mcpConfig.Id, keys);
+        }
+
+        return mcpConfig;
     }
 
     /// <summary>

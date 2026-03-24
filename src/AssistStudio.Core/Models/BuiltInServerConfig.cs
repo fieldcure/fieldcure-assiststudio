@@ -20,7 +20,15 @@ public class BuiltInServerConfig
     /// <summary>
     /// Gets or sets the folder paths for this server.
     /// Filesystem: allowed directories for file operations.
-    /// RAG: document folders to index and search.
+    /// RAG: document folder to index and search (single entry).
     /// </summary>
     public List<string> Folders { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets environment variable key names for this server.
+    /// Values are stored in PasswordVault under <c>McpEnv_builtin_{serverKey}_{key}</c>.
+    /// Used by the RAG server for embedding configuration
+    /// (EMBEDDING_BASE_URL, EMBEDDING_API_KEY, EMBEDDING_MODEL, EMBEDDING_DIMENSION).
+    /// </summary>
+    public List<string>? EnvironmentVariableKeys { get; set; }
 }

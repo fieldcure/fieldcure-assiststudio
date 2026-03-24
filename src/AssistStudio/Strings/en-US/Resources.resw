@@ -740,4 +740,44 @@
   <data name="Models_RefreshStatus.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Check status</value>
   </data>
+  <!-- Knowledge Archive / Embedding -->
+  <data name="AppTasks_EmbeddingTitle.Text" xml:space="preserve">
+    <value>Embedding</value>
+  </data>
+  <data name="AppTasks_EmbeddingDescription.Text" xml:space="preserve">
+    <value>Used for Knowledge Archive document indexing and search. Requires an OpenAI-compatible embedding API (Ollama, OpenAI, etc.)</value>
+  </data>
+  <data name="AppTasks_EmbeddingProvider.Header" xml:space="preserve">
+    <value>Embedding provider</value>
+  </data>
+  <data name="Connect_AddArchiveFolder" xml:space="preserve">
+    <value>Add Archive Folder</value>
+  </data>
+  <data name="Connect_KnowledgeArchiveDescription" xml:space="preserve">
+    <value>Reference documents for semantic search.</value>
+  </data>
+  <data name="Connect_EmbeddingNotConfigured" xml:space="preserve">
+    <value>Embedding provider not configured.</value>
+  </data>
+  <data name="Connect_Configure" xml:space="preserve">
+    <value>Configure</value>
+  </data>
+  <data name="Connect_Reindex" xml:space="preserve">
+    <value>Re-index all documents</value>
+  </data>
+  <data name="Connect_KnowledgeArchiveReindexing" xml:space="preserve">
+    <value>Re-indexing documents…</value>
+  </data>
+  <data name="Connect_KnowledgeArchiveReady" xml:space="preserve">
+    <value>Knowledge Archive — Ready</value>
+  </data>
+  <data name="Connect_KnowledgeArchiveFailed" xml:space="preserve">
+    <value>Knowledge Archive — Failed</value>
+  </data>
+  <data name="Connect_EmbeddingModelHint" xml:space="preserve">
+    <value>Make sure an embedding model is loaded: ollama pull nomic-embed-text</value>
+  </data>
+  <data name="Connect_EmbeddingSettings" xml:space="preserve">
+    <value>Embedding settings</value>
+  </data>
 </root>
