@@ -129,6 +129,11 @@ public sealed partial class ChatPanel : Control
         DependencyProperty.Register(nameof(RegisteredTools), typeof(IReadOnlyList<IAssistTool>), typeof(ChatPanel),
             new PropertyMetadata(null, OnRegisteredToolsChanged));
 
+    /// <summary>Identifies the <see cref="McpTools"/> dependency property.</summary>
+    public static readonly DependencyProperty McpToolsProperty =
+        DependencyProperty.Register(nameof(McpTools), typeof(IReadOnlyList<IAssistTool>), typeof(ChatPanel),
+            new PropertyMetadata(null));
+
     /// <summary>Identifies the <see cref="FontFamily"/> dependency property for chat rendering.</summary>
     public new static readonly DependencyProperty FontFamilyProperty =
         DependencyProperty.Register("ChatFontFamily", typeof(string), typeof(ChatPanel),
@@ -613,6 +618,16 @@ public sealed partial class ChatPanel : Control
     {
         get => (IReadOnlyList<IAssistTool>?)GetValue(RegisteredToolsProperty) ?? [];
         set => SetValue(RegisteredToolsProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets additional MCP tools that are executable but not sent in the API tools array.
+    /// These tools are discovered via <c>search_tools</c> and made available to the <see cref="ToolCallExecutor"/>.
+    /// </summary>
+    public IReadOnlyList<IAssistTool> McpTools
+    {
+        get => (IReadOnlyList<IAssistTool>?)GetValue(McpToolsProperty) ?? [];
+        set => SetValue(McpToolsProperty, value);
     }
 
     /// <summary>
@@ -2039,7 +2054,11 @@ public sealed partial class ChatPanel : Control
         var activeTools = GetActiveTools();
         if (activeTools.Count > 0)
         {
-            executor = new ToolCallExecutor(activeTools);
+            // Include MCP tools in the executor so search_tools-discovered tools can be executed.
+            IReadOnlyList<IAssistTool> executableTools = McpTools is { Count: > 0 } mcpTools
+                ? [.. activeTools, .. mcpTools]
+                : activeTools;
+            executor = new ToolCallExecutor(executableTools);
             if (_approvalPanel is not null && _inputArea is not null)
             {
                 executor.ConfirmationHandler = async (toolName, arguments) =>
@@ -2125,7 +2144,9 @@ public sealed partial class ChatPanel : Control
                 _messages.Add(toolResultMsg);
 
                 var toolDisplayName = RegisteredTools
-                    .FirstOrDefault(t => t.Name == call.FunctionName)?.DisplayName ?? call.FunctionName;
+                    .FirstOrDefault(t => t.Name == call.FunctionName)?.DisplayName
+                    ?? McpTools.FirstOrDefault(t => t.Name == call.FunctionName)?.DisplayName
+                    ?? call.FunctionName;
                 assistantMessage.Content += $"[Tool: {call.FunctionName}]\n";
                 await _renderer.AppendToolBlockAsync(assistantMessage.Id, toolDisplayName);
             }
@@ -2192,7 +2213,9 @@ public sealed partial class ChatPanel : Control
                 {
                     var toolName = m.Groups[1].Value.Trim();
                     var displayName = RegisteredTools
-                        .FirstOrDefault(t => t.Name == toolName)?.DisplayName ?? toolName;
+                        .FirstOrDefault(t => t.Name == toolName)?.DisplayName
+                        ?? McpTools.FirstOrDefault(t => t.Name == toolName)?.DisplayName
+                        ?? toolName;
                     await _renderer.AppendToolBlockAsync(msg.Id, displayName);
                 }
 
@@ -2544,7 +2567,8 @@ public sealed partial class ChatPanel : Control
     /// </summary>
     private string GetLocalizedToolName(string toolName)
     {
-        var tool = RegisteredTools.FirstOrDefault(t => t.Name == toolName);
+        var tool = RegisteredTools.FirstOrDefault(t => t.Name == toolName)
+            ?? McpTools.FirstOrDefault(t => t.Name == toolName);
         if (tool is null) return toolName;
 
         try

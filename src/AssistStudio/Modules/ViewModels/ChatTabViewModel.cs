@@ -118,14 +118,19 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool _isDebugMode;
 
     /// <summary>
-    /// Tools registered for the current profile.
+    /// Tools registered for the current profile (sent in the API tools array).
     /// </summary>
     [ObservableProperty] private IReadOnlyList<IAssistTool> _registeredTools = [];
 
     /// <summary>
+    /// MCP tools that are executable but discovered via <c>search_tools</c> rather than sent in the API tools array.
+    /// </summary>
+    [ObservableProperty] private IReadOnlyList<IAssistTool> _mcpTools = [];
+
+    /// <summary>
     /// Available servers for the tool flyout. Built from McpRegistry connections.
     /// </summary>
-    [ObservableProperty] private IReadOnlyList<FieldCure.AssistStudio.Controls.ServerInfo> _availableServers = [];
+    [ObservableProperty] private IReadOnlyList<ServerInfo> _availableServers = [];
 
     /// <summary>
     /// Currently enabled server IDs (from profile + runtime toggles).
@@ -317,10 +322,12 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         if (RegisteredTools.Count > 0)
         {
             var tools = RegisteredTools;
+            var mcp = McpTools;
             panel.DispatcherQueue?.TryEnqueue(() =>
             {
                 panel.RegisteredTools = [];
                 panel.RegisteredTools = tools;
+                panel.McpTools = mcp;
             });
         }
 
@@ -446,6 +453,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                         {
                             Panel.RegisteredTools = [];
                             Panel.RegisteredTools = RegisteredTools;
+                            Panel.McpTools = McpTools;
                         });
                 }
             }
@@ -463,7 +471,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         var currentBaseUrl = CurrentPreset?.BaseUrl;
 
         // Force DP change callback by passing a new list instance
-        AvailablePresets = new System.Collections.ArrayList(presets);
+        AvailablePresets = new ArrayList(presets);
 
         var found = false;
         if (currentName is not null)
@@ -624,6 +632,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             {
                 Panel.RegisteredTools = [];
                 Panel.RegisteredTools = RegisteredTools;
+                Panel.McpTools = McpTools;
                 LoggingService.LogInfo("[Settings] RefreshTools pushed to ChatPanel");
             });
     }
@@ -830,10 +839,23 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 
         RegisteredTools = tools;
 
+        // Collect MCP tools for execution (not sent in API tools array, discovered via search_tools)
+        if (effectiveServerIds.Count > 0)
+        {
+            McpTools = [.. App.McpRegistry.AllTools
+                .Where(t => effectiveServerIds.Contains(
+                    App.McpRegistry.Connections
+                        .FirstOrDefault(c => c.Tools.Contains(t))?.Config.Id ?? ""))];
+        }
+        else
+        {
+            McpTools = [];
+        }
+
         // Update server list for the tool flyout UI (filtered by profile's enabled servers)
         AvailableServers = [.. App.McpRegistry.Connections
             .Where(c => effectiveServerIds.Contains(c.Config.Id))
-            .Select(c => new FieldCure.AssistStudio.Controls.ServerInfo(
+            .Select(c => new ServerInfo(
                 c.Config.Id, c.Config.Name, c.IsConnected, c.Config.IsBuiltIn))];
 
         EnabledServerIds = enabledServerIds;
