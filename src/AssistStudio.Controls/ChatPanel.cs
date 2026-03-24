@@ -455,6 +455,16 @@ public sealed partial class ChatPanel : Control
     /// </summary>
     private static readonly Windows.UI.Color DarkBg = Windows.UI.Color.FromArgb(255, 0x20, 0x20, 0x20);
 
+    /// <summary>
+    /// Maximum character length for tool results before truncation (~12k–15k tokens).
+    /// </summary>
+    private const int MaxToolResultChars = 50_000;
+
+    /// <summary>
+    /// Minimum length for a base64-like string to be considered binary content.
+    /// </summary>
+    private const int Base64DetectionThreshold = 10_000;
+
     #endregion
 
     #region Template Parts
@@ -1992,6 +2002,81 @@ public sealed partial class ChatPanel : Control
     }
 
     /// <summary>
+    /// Inspects a tool result and returns a size-guarded version to prevent context overflow.
+    /// Binary/base64 content is replaced with metadata; oversized text is truncated.
+    /// Error results (short JSON with "error" key) pass through unchanged.
+    /// </summary>
+    private static string GuardToolResultSize(string toolResult, string toolName)
+    {
+        // Short results and error results pass through unchanged
+        if (toolResult.Length <= MaxToolResultChars)
+            return toolResult;
+
+        if (toolResult.Length < 500 && toolResult.Contains("\"error\"", StringComparison.Ordinal))
+            return toolResult;
+
+        // Detect binary/base64 content — replace entirely with metadata
+        if (IsBinaryContent(toolResult))
+        {
+            DiagnosticLogger.LogWarning(
+                $"[Tool] Binary content detected: {toolName}, {toolResult.Length:N0} chars — replaced with metadata");
+            return $"""
+                [Binary/encoded content detected]
+                Tool: {toolName}
+                Original size: {toolResult.Length:N0} chars
+
+                This result contains binary or base64-encoded content that cannot be used inline.
+                Use DocumentParsers-integrated tools to extract text content, or read a specific section.
+                """;
+        }
+
+        // Text content exceeding threshold — truncate with guidance
+        DiagnosticLogger.LogWarning(
+            $"[Tool] Result truncated: {toolName}, {toolResult.Length:N0} -> {MaxToolResultChars:N0} chars");
+        return string.Concat(
+            toolResult.AsSpan(0, MaxToolResultChars),
+            $"\n\n--- truncated ---\nOriginal size: {toolResult.Length:N0} chars. Showing first {MaxToolResultChars:N0} chars.\nUse a more specific query or read a specific section.");
+    }
+
+    /// <summary>
+    /// Detects whether the content is likely binary or base64-encoded.
+    /// </summary>
+    private static bool IsBinaryContent(ReadOnlySpan<char> content)
+    {
+        // Check for null characters (strong binary indicator)
+        if (content.Contains('\0'))
+            return true;
+
+        // Check for base64 pattern: long string of [A-Za-z0-9+/=] with no newlines
+        if (content.Length >= Base64DetectionThreshold)
+        {
+            // Sample the first portion for base64 characteristics
+            var sample = content[..Math.Min(1000, content.Length)];
+            int base64Chars = 0;
+            foreach (var c in sample)
+            {
+                if (char.IsLetterOrDigit(c) || c is '+' or '/' or '=')
+                    base64Chars++;
+            }
+
+            // If >90% of sampled chars are base64-alphabet, likely encoded
+            if (base64Chars > sample.Length * 0.9)
+                return true;
+        }
+
+        // Check control character ratio in a sample
+        var ctrlSample = content[..Math.Min(2000, content.Length)];
+        int controlChars = 0;
+        foreach (var c in ctrlSample)
+        {
+            if (char.IsControl(c) && c is not '\r' and not '\n' and not '\t')
+                controlChars++;
+        }
+
+        return controlChars > ctrlSample.Length * 0.05; // >5% control chars
+    }
+
+    /// <summary>
     /// Consumes a stream of <see cref="StreamEvent"/> instances, appending text deltas to the message
     /// and rendering them in the chat UI. Returns aggregated usage, truncation info, and any tool calls.
     /// </summary>
@@ -2135,14 +2220,7 @@ public sealed partial class ChatPanel : Control
                     toolResult = $"{{\"error\":\"{ex.Message}\"}}";
                 }
 
-                // Truncate oversized tool results to prevent blowing up conversation history
-                const int maxToolResultChars = 80_000; // ~20k tokens
-                if (toolResult.Length > maxToolResultChars)
-                {
-                    DiagnosticLogger.LogWarning($"[Tool] Result truncated: {call.FunctionName}, {toolResult.Length} -> {maxToolResultChars} chars");
-                    toolResult = toolResult[..maxToolResultChars]
-                        + $"\n\n... (truncated — original {toolResult.Length:N0} chars)";
-                }
+                toolResult = GuardToolResultSize(toolResult, call.FunctionName);
 
                 var toolResultMsg = new ChatMessage(ChatRole.Tool, toolResult)
                 {
