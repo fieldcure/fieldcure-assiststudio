@@ -201,7 +201,7 @@
     <value>무엇을 도와드릴까요?</value>
   </data>
   <data name="Folder_Tooltip" xml:space="preserve">
-    <value>폴더</value>
+    <value>폴더 설정</value>
   </data>
   <data name="Folder_Header" xml:space="preserve">
     <value>작업 폴더</value>

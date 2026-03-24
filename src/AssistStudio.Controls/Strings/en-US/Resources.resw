@@ -201,7 +201,7 @@ Add them in Profile settings.</value>
     <value>How can I help you today?</value>
   </data>
   <data name="Folder_Tooltip" xml:space="preserve">
-    <value>Folders</value>
+    <value>Folder Settings</value>
   </data>
   <data name="Folder_Header" xml:space="preserve">
     <value>Workspace Folders</value>

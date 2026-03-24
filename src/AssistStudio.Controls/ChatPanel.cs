@@ -1796,6 +1796,9 @@ public sealed partial class ChatPanel : Control
             _archiveRemoveButton = FindDescendantByName<Button>(root, "PART_ArchiveRemoveButton");
             _archiveEmpty = FindDescendantByName<TextBlock>(root, "PART_ArchiveEmpty");
 
+            // Localize flyout text (x:Uid doesn't work in ControlTemplate)
+            LocalizeFlyoutText(root);
+
             // Wire click handlers (once)
             if (_folderAddButton is not null)
                 _folderAddButton.Click += (s, e2) => WorkspaceFolderAddRequested?.Invoke(this, EventArgs.Empty);
@@ -1929,6 +1932,42 @@ public sealed partial class ChatPanel : Control
             }
             if (_archiveReindexButton is not null)
                 _archiveReindexButton.IsEnabled = archiveEnabled;
+        }
+    }
+
+    /// <summary>
+    /// Applies localized strings to flyout elements that cannot use x:Uid in a ControlTemplate.
+    /// </summary>
+    private void LocalizeFlyoutText(FrameworkElement root)
+    {
+        SetText(root, "PART_FolderHeaderText", "Folder_Header", "Workspace Folders");
+        SetText(root, "PART_FolderAddButtonText", "Folder_AddButton", "Add Folder");
+        SetText(root, "PART_ArchiveHeaderText", "Folder_ArchiveHeader", "Knowledge Archive");
+
+        // Elements inside Collapsed parents aren't in the visual tree yet,
+        // so search within the referenced PART_ elements directly.
+        if (_folderEmpty is not null)
+            _folderEmpty.Text = Res.GetString("Folder_Empty") ?? "(empty)";
+        if (_folderDisabledHint is not null)
+            _folderDisabledHint.Text = Res.GetString("Folder_DisabledHint") ?? "Enable Workspace in your profile to use these folders.";
+        if (_archiveDisabledHint is not null)
+            _archiveDisabledHint.Text = Res.GetString("Folder_ArchiveDisabledHint") ?? "Enable Knowledge Archive in your profile to use this folder.";
+        if (_archiveEmpty is not null)
+            _archiveEmpty.Text = Res.GetString("Folder_Empty") ?? "(empty)";
+
+        // Set Folder button text — button starts Collapsed, so find text inside its content
+        if (_archiveSetButton?.Content is FrameworkElement setContent)
+        {
+            var tb = FindDescendantByName<TextBlock>(setContent, "PART_ArchiveSetButtonText");
+            if (tb is not null)
+                tb.Text = Res.GetString("Folder_SetArchive") ?? "Set Folder";
+        }
+
+        static void SetText(FrameworkElement parent, string elementName, string resKey, string fallback)
+        {
+            var el = FindDescendantByName<TextBlock>(parent, elementName);
+            if (el is not null)
+                el.Text = Res.GetString(resKey) ?? fallback;
         }
     }
 
