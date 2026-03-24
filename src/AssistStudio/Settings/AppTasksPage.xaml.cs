@@ -159,6 +159,11 @@ public sealed partial class AppTasksPage : Page
                 ToolTipService.SetToolTip(rb, ollamaTooltip);
             }
         }
+        else
+        {
+            // Check which models are already downloaded — hide download icon for installed ones
+            await UpdateOllamaModelIconsAsync();
+        }
 
         // 4. Auto-select only if no valid preset saved yet
         if (string.IsNullOrEmpty(savedPreset) || !savedPreset.Contains('/'))
@@ -344,81 +349,92 @@ public sealed partial class AppTasksPage : Page
     }
 
     /// <summary>
-    /// Handles Ollama model selection — checks if model is downloaded, offers pull if not.
+    /// Handles Ollama model selection. If not downloaded, starts background pull with spinner.
+    /// No blocking dialog — selection is applied immediately and pull runs in background.
     /// </summary>
     private async Task HandleOllamaSelectionAsync(string model, string tag, RadioButton rb)
+    {
+        // Apply selection immediately
+        ApplyEmbeddingSelection(tag);
+
+        // Check if already downloaded
+        var (icon, spinner) = GetOllamaModelControls(model);
+        if (icon?.Visibility == Visibility.Collapsed)
+            return; // Already installed, nothing to download
+
+        // Start background pull with spinner
+        if (icon is not null) icon.Visibility = Visibility.Collapsed;
+        if (spinner is not null) { spinner.Visibility = Visibility.Visible; spinner.IsActive = true; }
+
+        NotificationCenter.Instance.Post(
+            InfoBarSeverity.Informational,
+            string.Format(_loader.GetString("Embedding_Downloading"), model),
+            string.Empty);
+
+        try
+        {
+            using var manager = new OllamaModelManager("http://localhost:11434");
+            await manager.DownloadModelAsync(model);
+
+            // Done — hide spinner
+            if (spinner is not null) { spinner.IsActive = false; spinner.Visibility = Visibility.Collapsed; }
+
+            NotificationCenter.Instance.Post(
+                InfoBarSeverity.Success,
+                string.Format(_loader.GetString("Embedding_DownloadComplete"), model),
+                string.Empty,
+                5000);
+        }
+        catch (Exception ex)
+        {
+            // Failed — restore download icon
+            if (icon is not null) icon.Visibility = Visibility.Visible;
+            if (spinner is not null) { spinner.IsActive = false; spinner.Visibility = Visibility.Collapsed; }
+
+            NotificationCenter.Instance.Post(
+                InfoBarSeverity.Error,
+                _loader.GetString("Embedding_DownloadFailed"),
+                ex.Message,
+                8000);
+
+            LoggingService.LogError($"[Embedding] Pull failed for {model}: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Updates download icons for Ollama models — hides icon if already installed.
+    /// </summary>
+    private async Task UpdateOllamaModelIconsAsync()
     {
         try
         {
             using var manager = new OllamaModelManager("http://localhost:11434");
             var installed = await manager.ListLocalModelsAsync();
-            var isDownloaded = installed.Any(m =>
-                m.Id.Equals(model, StringComparison.OrdinalIgnoreCase));
+            var installedNames = installed.Select(m => m.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            if (!isDownloaded)
+            foreach (var model in new[] { "nomic-embed-text", "nomic-embed-text-v2-moe", "bge-m3" })
             {
-                // Show download confirmation dialog
-                var dialog = new ContentDialog
-                {
-                    Title = _loader.GetString("Embedding_PullTitle"),
-                    Content = string.Format(_loader.GetString("Embedding_PullMessage"), model),
-                    PrimaryButtonText = _loader.GetString("Dialog_OK"),
-                    CloseButtonText = _loader.GetString("Dialog_Cancel"),
-                    DefaultButton = ContentDialogButton.Primary,
-                    XamlRoot = XamlRoot,
-                };
-
-                if (await dialog.ShowAsync() != ContentDialogResult.Primary)
-                {
-                    // Cancelled — restore previous selection
-                    _suppressEvents = true;
-                    RestoreEmbeddingSelection(AppSettings.EmbeddingPreset);
-                    _suppressEvents = false;
-                    return;
-                }
-
-                // Pull model with notification
-                NotificationCenter.Instance.Post(
-                    InfoBarSeverity.Informational,
-                    string.Format(_loader.GetString("Embedding_Downloading"), model),
-                    string.Empty);
-
-                try
-                {
-                    await manager.DownloadModelAsync(model);
-
-                    NotificationCenter.Instance.Post(
-                        InfoBarSeverity.Success,
-                        string.Format(_loader.GetString("Embedding_DownloadComplete"), model),
-                        string.Empty,
-                        5000);
-                }
-                catch (Exception ex)
-                {
-                    NotificationCenter.Instance.Post(
-                        InfoBarSeverity.Error,
-                        _loader.GetString("Embedding_DownloadFailed"),
-                        ex.Message,
-                        8000);
-
-                    // Restore previous selection
-                    _suppressEvents = true;
-                    RestoreEmbeddingSelection(AppSettings.EmbeddingPreset);
-                    _suppressEvents = false;
-                    return;
-                }
+                var (icon, _) = GetOllamaModelControls(model);
+                if (icon is not null)
+                    icon.Visibility = installedNames.Contains(model) ? Visibility.Collapsed : Visibility.Visible;
             }
-
-            ApplyEmbeddingSelection(tag);
         }
         catch (Exception ex)
         {
-            LoggingService.LogError($"[Embedding] Ollama selection failed: {ex.Message}");
-            _suppressEvents = true;
-            RestoreEmbeddingSelection(AppSettings.EmbeddingPreset);
-            _suppressEvents = false;
+            LoggingService.LogWarning($"[Embedding] Failed to check Ollama models: {ex.Message}");
         }
     }
+
+    /// <summary>
+    /// Gets the download icon and spinner controls for an Ollama model name.
+    /// </summary>
+    private (FontIcon? icon, ProgressRing? spinner) GetOllamaModelControls(string model) => model switch
+    {
+        "nomic-embed-text" => (IcoNomicV1, SpinNomicV1),
+        "nomic-embed-text-v2-moe" => (IcoNomicV2, SpinNomicV2),
+        "bge-m3" => (IcoBgeM3, SpinBgeM3),
+        _ => (null, null),
+    };
 
     /// <summary>
     /// Handles OpenAI model selection — applies immediately using existing API key.

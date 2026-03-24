@@ -918,12 +918,38 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         try
         {
             var args = System.Text.Json.JsonSerializer.SerializeToElement(new { force = false });
-            var result = await tool.ExecuteAsync(args);
+            var resultJson = await tool.ExecuteAsync(args);
+
+            // Parse result JSON to build user-friendly message
+            var message = "Indexing complete.";
+            if (!string.IsNullOrEmpty(resultJson))
+            {
+                try
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(resultJson);
+                    var root = doc.RootElement;
+                    var indexed = root.TryGetProperty("indexed", out var i) ? i.GetInt32() : 0;
+                    var skipped = root.TryGetProperty("skipped", out var s) ? s.GetInt32() : 0;
+                    var chunks = root.TryGetProperty("total_chunks", out var c) ? c.GetInt32() : 0;
+                    var failed = root.TryGetProperty("failed", out var f) ? f.GetInt32() : 0;
+                    var removed = root.TryGetProperty("removed", out var r) ? r.GetInt32() : 0;
+
+                    var parts = new List<string>();
+                    if (indexed > 0) parts.Add($"{indexed} indexed");
+                    if (skipped > 0) parts.Add($"{skipped} unchanged");
+                    if (removed > 0) parts.Add($"{removed} removed");
+                    if (failed > 0) parts.Add($"{failed} failed");
+                    parts.Add($"{chunks} chunks");
+
+                    message = string.Join(", ", parts);
+                }
+                catch { message = resultJson; }
+            }
 
             NotificationCenter.Instance.Post(
                 Microsoft.UI.Xaml.Controls.InfoBarSeverity.Success,
                 "Knowledge Archive — Ready",
-                result ?? "Indexing complete.",
+                message,
                 5000);
         }
         catch (Exception ex)

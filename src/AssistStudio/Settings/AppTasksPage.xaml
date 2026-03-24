@@ -97,6 +97,11 @@
                                     <TextBlock Text="274MB" Opacity="0.5"
                                                Style="{StaticResource CaptionTextBlockStyle}"
                                                VerticalAlignment="Center" />
+                                    <!-- Download / spinner icon -->
+                                    <FontIcon x:Name="IcoNomicV1" Glyph="&#xE896;" FontSize="12"
+                                              VerticalAlignment="Center" Opacity="0.5" />
+                                    <ProgressRing x:Name="SpinNomicV1" IsActive="False"
+                                                  Width="14" Height="14" Visibility="Collapsed" />
                                 </StackPanel>
                             </RadioButton>
                             <RadioButton x:Name="RbNomicV2" Tag="ollama/nomic-embed-text-v2-moe"
@@ -115,6 +120,10 @@
                                         <TextBlock x:Uid="Embedding_Multilingual" Text="Multilingual"
                                                    FontSize="11" Opacity="0.7" />
                                     </Border>
+                                    <FontIcon x:Name="IcoNomicV2" Glyph="&#xE896;" FontSize="12"
+                                              VerticalAlignment="Center" Opacity="0.5" />
+                                    <ProgressRing x:Name="SpinNomicV2" IsActive="False"
+                                                  Width="14" Height="14" Visibility="Collapsed" />
                                 </StackPanel>
                             </RadioButton>
                             <RadioButton x:Name="RbBgeM3" Tag="ollama/bge-m3"
@@ -133,6 +142,10 @@
                                         <TextBlock x:Uid="Embedding_Multilingual" Text="Multilingual"
                                                    FontSize="11" Opacity="0.7" />
                                     </Border>
+                                    <FontIcon x:Name="IcoBgeM3" Glyph="&#xE896;" FontSize="12"
+                                              VerticalAlignment="Center" Opacity="0.5" />
+                                    <ProgressRing x:Name="SpinBgeM3" IsActive="False"
+                                                  Width="14" Height="14" Visibility="Collapsed" />
                                 </StackPanel>
                             </RadioButton>
                         </StackPanel>

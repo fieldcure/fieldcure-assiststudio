@@ -2060,7 +2060,7 @@ public sealed partial class ChatPanel : Control
 
         _titleFolderButton.Foreground = IsWorkspaceEnabled
             ? (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"]
-            : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorDisabledBrush"];
+            : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
     }
 
     /// <summary>
