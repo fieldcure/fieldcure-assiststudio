@@ -2091,9 +2091,9 @@ public sealed partial class ChatPanel : Control
     {
         if (_titleFolderButton is null) return;
 
-        _titleFolderButton.Foreground = IsWorkspaceEnabled || IsKnowledgeArchiveEnabled
-            ? (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"]
-            : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorPrimaryBrush"];
+        // Always use primary text color — the button is always functional
+        // (users can add folders regardless of profile workspace/archive setting)
+        _titleFolderButton.Foreground = null; // inherit from parent
     }
 
     /// <summary>
