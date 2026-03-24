@@ -2020,7 +2020,15 @@ public sealed partial class ChatPanel : Control
             });
         }
 
-        return new Flyout { Content = panel };
+        var flyout = new Flyout { Content = panel };
+
+        // Match the app theme so the flyout isn't always light
+        if (ActualTheme == ElementTheme.Dark)
+            panel.RequestedTheme = ElementTheme.Dark;
+        else if (ActualTheme == ElementTheme.Light)
+            panel.RequestedTheme = ElementTheme.Light;
+
+        return flyout;
     }
 
     /// <summary>
@@ -2083,9 +2091,9 @@ public sealed partial class ChatPanel : Control
     {
         if (_titleFolderButton is null) return;
 
-        _titleFolderButton.Foreground = IsWorkspaceEnabled
+        _titleFolderButton.Foreground = IsWorkspaceEnabled || IsKnowledgeArchiveEnabled
             ? (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"]
-            : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
+            : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorPrimaryBrush"];
     }
 
     /// <summary>
