@@ -28,6 +28,7 @@ Two separate scripts for independent release cycles. Both share common logic fro
 | PackageId | Project |
 |---|---|
 | `FieldCure.DocumentParsers` | src/DocumentParsers |
+| `FieldCure.DocumentParsers.Pdf` | src/DocumentParsers.Pdf |
 
 ### Prerequisites
 

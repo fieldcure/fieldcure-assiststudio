@@ -16,7 +16,8 @@ param(
 
 Invoke-NuGetPublish `
     -Projects @(
-        'src\DocumentParsers\DocumentParsers.csproj'
+        'src\DocumentParsers\DocumentParsers.csproj',
+        'src\DocumentParsers.Pdf\DocumentParsers.Pdf.csproj'
     ) `
     -SkipSign:$SkipSign `
     -SkipPush:$SkipPush `

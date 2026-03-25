@@ -1,26 +1,41 @@
+using System.Collections.Concurrent;
+
 namespace FieldCure.DocumentParsers;
 
 /// <summary>
 /// Resolves the appropriate <see cref="IDocumentParser"/> for a given file extension.
-/// Thread-safe singleton registry of all available parsers.
+/// Thread-safe registry of all available parsers.
+/// Built-in parsers (DOCX, HWPX, XLSX, PPTX) are registered automatically.
+/// External parsers (e.g., PDF) can be added via <see cref="Register"/>.
 /// </summary>
 public static class DocumentParserFactory
 {
-    private static readonly IReadOnlyDictionary<string, IDocumentParser> Parsers;
+    private static readonly ConcurrentDictionary<string, IDocumentParser> Parsers = new(StringComparer.OrdinalIgnoreCase);
 
     static DocumentParserFactory()
     {
-        var list = new IDocumentParser[]
+        var builtIn = new IDocumentParser[]
         {
             new DocxParser(),
             new HwpxParser(),
+            new XlsxParser(),
+            new PptxParser(),
         };
 
-        var dict = new Dictionary<string, IDocumentParser>(StringComparer.OrdinalIgnoreCase);
-        foreach (var p in list)
+        foreach (var p in builtIn)
             foreach (var ext in p.SupportedExtensions)
-                dict[ext] = p;
-        Parsers = dict;
+                Parsers[ext] = p;
+    }
+
+    /// <summary>
+    /// Registers an external parser. Each supported extension is mapped to the parser,
+    /// overwriting any previous mapping for that extension.
+    /// </summary>
+    /// <param name="parser">The parser to register.</param>
+    public static void Register(IDocumentParser parser)
+    {
+        foreach (var ext in parser.SupportedExtensions)
+            Parsers[ext] = parser;
     }
 
     /// <summary>

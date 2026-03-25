@@ -5,33 +5,36 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>12</LangVersion>
-    <Version>0.2.0</Version>
-    <AssemblyName>FieldCure.DocumentParsers</AssemblyName>
-    <RootNamespace>FieldCure.DocumentParsers</RootNamespace>
+    <Version>0.1.0</Version>
+    <AssemblyName>FieldCure.DocumentParsers.Pdf</AssemblyName>
+    <RootNamespace>FieldCure.DocumentParsers.Pdf</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
 
     <!-- NuGet Package Metadata -->
-    <PackageId>FieldCure.DocumentParsers</PackageId>
-    <Description>Document text extraction for DOCX, HWPX, and more. RAG-ready output with markdown tables.</Description>
+    <PackageId>FieldCure.DocumentParsers.Pdf</PackageId>
+    <Description>PDF text extraction and page image rendering for FieldCure.DocumentParsers</Description>
     <Authors>Jong Hyun Kim</Authors>
     <Company>Fieldcure Co., Ltd.</Company>
     <Copyright>Copyright (c) 2026 Fieldcure Co., Ltd.</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageTags>document;parser;docx;hwpx;xlsx;pptx;text-extraction;rag</PackageTags>
+    <PackageTags>document;parser;pdf;text-extraction;rag;pdfpig;pdfium</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>icon.png</PackageIcon>
-    <PackageReleaseNotes>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)\..\..\RELEASENOTES.DocumentParsers.md'))</PackageReleaseNotes>
+    <PackageReleaseNotes>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)\..\..\RELEASENOTES.DocumentParsers.Pdf.md'))</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />
-    <None Include="icon.png" Pack="true" PackagePath="" />
+    <None Include="..\DocumentParsers\icon.png" Pack="true" PackagePath="" Link="icon.png" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="DocumentFormat.OpenXml" Version="3.*" />
+    <ProjectReference Include="..\DocumentParsers\DocumentParsers.csproj" />
+    <PackageReference Include="PdfPig" Version="0.1.*" />
+    <PackageReference Include="PDFtoImage" Version="5.2.0" />
   </ItemGroup>
 
 </Project>

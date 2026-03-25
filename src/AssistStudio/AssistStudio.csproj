@@ -50,6 +50,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AssistStudio.Controls\AssistStudio.Controls.csproj" />
+    <ProjectReference Include="..\DocumentParsers.Pdf\DocumentParsers.Pdf.csproj" />
   </ItemGroup>
 
   <!--

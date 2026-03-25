@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.Windows.AppLifecycle;
 using Windows.ApplicationModel.Activation;
 using Windows.Storage;
+using FieldCure.DocumentParsers.Pdf;
 using WindowHelper = FieldCure.AssistStudio.Controls.Helpers.WindowHelper;
 
 namespace AssistStudio;
@@ -49,6 +50,7 @@ public partial class App : Application
     /// <inheritdoc/>
     protected override async void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
     {
+        DocumentParserFactoryExtensions.AddPdfSupport();
         ConversationManager.Initialize(ApplicationData.Current.LocalFolder.Path);
         await LoggingService.InitializeAsync(ApplicationData.Current.LocalFolder.Path);
 
