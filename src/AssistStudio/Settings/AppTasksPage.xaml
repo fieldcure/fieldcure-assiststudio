@@ -188,6 +188,124 @@
                              IsClosable="True" />
                 </StackPanel>
 
+                <!-- Chunk Contextualizer -->
+                <StackPanel Spacing="12">
+                    <TextBlock x:Uid="Contextualizer_Title" Text="Chunk Contextualizer"
+                               Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                    <TextBlock x:Uid="Contextualizer_Description"
+                               Text="Adds context descriptions and normalized keywords to each chunk during indexing to improve search accuracy. A small model (3-4B) is sufficient."
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               TextWrapping="Wrap"
+                               Opacity="0.7" />
+
+                    <!-- Disabled option -->
+                    <RadioButton x:Name="RbCtxNone" Tag="none"
+                                 GroupName="Contextualizer"
+                                 Click="OnContextualizerModelSelected"
+                                 Padding="8,6,0,0" MinHeight="0"
+                                 IsChecked="True">
+                        <TextBlock x:Uid="Contextualizer_Disabled" Text="Disabled" />
+                    </RadioButton>
+
+                    <!-- Ollama group -->
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="Ollama" Opacity="0.6"
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Margin="0,4,0,2" />
+                        <StackPanel x:Name="CtxOllamaGroup" Spacing="0">
+                            <RadioButton x:Name="RbCtxGemma3" Tag="ollama/gemma3:4b"
+                                         GroupName="Contextualizer"
+                                         Click="OnContextualizerModelSelected"
+                                         Padding="8,6,0,0" MinHeight="0"
+                                         VerticalContentAlignment="Top">
+                                <StackPanel Spacing="2">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="gemma3:4b" />
+                                        <FontIcon x:Name="IcoCtxGemma3" Glyph="&#xE896;" FontSize="12"
+                                                  VerticalAlignment="Center" Opacity="0.5" />
+                                        <ProgressRing x:Name="SpinCtxGemma3" IsActive="False"
+                                                      Width="14" Height="14" Visibility="Collapsed" />
+                                    </StackPanel>
+                                    <TextBlock Text="2.8GB" Opacity="0.5"
+                                               Style="{StaticResource CaptionTextBlockStyle}" />
+                                </StackPanel>
+                            </RadioButton>
+                            <RadioButton x:Name="RbCtxQwen3" Tag="ollama/qwen3:4b"
+                                         GroupName="Contextualizer"
+                                         Click="OnContextualizerModelSelected"
+                                         Padding="8,6,0,0" MinHeight="0"
+                                         VerticalContentAlignment="Top">
+                                <StackPanel Spacing="2">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="qwen3:4b" />
+                                        <FontIcon x:Name="IcoCtxQwen3" Glyph="&#xE896;" FontSize="12"
+                                                  VerticalAlignment="Center" Opacity="0.5" />
+                                        <ProgressRing x:Name="SpinCtxQwen3" IsActive="False"
+                                                      Width="14" Height="14" Visibility="Collapsed" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="2.7GB" Opacity="0.5"
+                                                   Style="{StaticResource CaptionTextBlockStyle}" />
+                                        <Border Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                                CornerRadius="4" Padding="6,1,6,1">
+                                            <TextBlock x:Uid="Embedding_Multilingual" Text="Multilingual"
+                                                       FontSize="11" Opacity="0.7" />
+                                        </Border>
+                                    </StackPanel>
+                                </StackPanel>
+                            </RadioButton>
+                            <RadioButton x:Name="RbCtxPhi4Mini" Tag="ollama/phi4-mini"
+                                         GroupName="Contextualizer"
+                                         Click="OnContextualizerModelSelected"
+                                         Padding="8,6,0,0" MinHeight="0"
+                                         VerticalContentAlignment="Top">
+                                <StackPanel Spacing="2">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="phi4-mini" />
+                                        <FontIcon x:Name="IcoCtxPhi4Mini" Glyph="&#xE896;" FontSize="12"
+                                                  VerticalAlignment="Center" Opacity="0.5" />
+                                        <ProgressRing x:Name="SpinCtxPhi4Mini" IsActive="False"
+                                                      Width="14" Height="14" Visibility="Collapsed" />
+                                    </StackPanel>
+                                    <TextBlock Text="2.5GB" Opacity="0.5"
+                                               Style="{StaticResource CaptionTextBlockStyle}" />
+                                </StackPanel>
+                            </RadioButton>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- OpenAI group -->
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="OpenAI" Opacity="0.6"
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Margin="0,4,0,2" />
+                        <StackPanel x:Name="CtxOpenAiGroup" Spacing="0">
+                            <RadioButton x:Name="RbCtxGpt4oMini" Tag="openai/gpt-4o-mini"
+                                         GroupName="Contextualizer"
+                                         Click="OnContextualizerModelSelected"
+                                         Padding="8,6,0,0" MinHeight="0">
+                                <TextBlock Text="gpt-4o-mini" />
+                            </RadioButton>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Claude group -->
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="Claude" Opacity="0.6"
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Margin="0,4,0,2" />
+                        <StackPanel x:Name="CtxClaudeGroup" Spacing="0">
+                            <RadioButton x:Name="RbCtxHaiku" Tag="anthropic/claude-haiku-4-5-20251001"
+                                         GroupName="Contextualizer"
+                                         Click="OnContextualizerModelSelected"
+                                         Padding="8,6,0,0" MinHeight="0">
+                                <TextBlock Text="claude-haiku-4-5-20251001" />
+                            </RadioButton>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+
             </StackPanel>
         </ScrollViewer>
     </Grid>

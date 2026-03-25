@@ -91,8 +91,8 @@ public sealed class KnowledgeArchiveService
         if (ragConfig is null || !ragConfig.IsEnabled || ragConfig.Folders.Count == 0)
             return;
 
-        // Sync embedding env vars
-        SyncEmbeddingEnvVars(ragConfig);
+        // Sync embedding + contextualizer env vars
+        SyncRagEnvVars(ragConfig);
 
         builtIn[BuiltInServerHelper.RagKey] = ragConfig;
         AppSettings.BuiltInServers = builtIn;
@@ -107,21 +107,31 @@ public sealed class KnowledgeArchiveService
     }
 
     /// <summary>
-    /// Syncs embedding settings from <see cref="AppSettings"/> to PasswordVault
-    /// and sets the environment variable keys on the config.
+    /// Syncs embedding and contextualizer settings from <see cref="AppSettings"/>
+    /// to PasswordVault and sets the environment variable keys on the config.
     /// </summary>
-    private static void SyncEmbeddingEnvVars(FieldCure.AssistStudio.Models.BuiltInServerConfig ragConfig)
+    private static void SyncRagEnvVars(FieldCure.AssistStudio.Models.BuiltInServerConfig ragConfig)
     {
         const string id = "builtin_rag";
+
+        // Embedding
         PasswordVaultHelper.SaveMcpEnvVar(id, "EMBEDDING_BASE_URL", AppSettings.EmbeddingBaseUrl);
         PasswordVaultHelper.SaveMcpEnvVar(id, "EMBEDDING_MODEL", AppSettings.EmbeddingModel);
         PasswordVaultHelper.SaveMcpEnvVar(id, "EMBEDDING_DIMENSION", "0");
         // EMBEDDING_API_KEY is saved by AppTasksPage handlers
 
+        // Contextualizer
+        PasswordVaultHelper.SaveMcpEnvVar(id, "CONTEXTUALIZER_PROVIDER", AppSettings.ContextualizerProvider);
+        PasswordVaultHelper.SaveMcpEnvVar(id, "CONTEXTUALIZER_BASE_URL", AppSettings.ContextualizerBaseUrl);
+        PasswordVaultHelper.SaveMcpEnvVar(id, "CONTEXTUALIZER_MODEL", AppSettings.ContextualizerModel);
+        // CONTEXTUALIZER_API_KEY is saved by AppTasksPage handlers
+
         ragConfig.EnvironmentVariableKeys =
         [
             "EMBEDDING_BASE_URL", "EMBEDDING_API_KEY",
             "EMBEDDING_MODEL", "EMBEDDING_DIMENSION",
+            "CONTEXTUALIZER_PROVIDER", "CONTEXTUALIZER_BASE_URL",
+            "CONTEXTUALIZER_API_KEY", "CONTEXTUALIZER_MODEL",
         ];
     }
 

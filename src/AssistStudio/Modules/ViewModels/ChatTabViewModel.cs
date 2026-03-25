@@ -801,6 +801,8 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                 [
                     "EMBEDDING_BASE_URL", "EMBEDDING_API_KEY",
                     "EMBEDDING_MODEL", "EMBEDDING_DIMENSION",
+                    "CONTEXTUALIZER_PROVIDER", "CONTEXTUALIZER_BASE_URL",
+                    "CONTEXTUALIZER_API_KEY", "CONTEXTUALIZER_MODEL",
                 ],
             };
         }
@@ -939,11 +941,14 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 
         await DisconnectRagAsync();
 
-        // Sync embedding env vars to vault
+        // Sync embedding + contextualizer env vars to vault
         const string ragId = "builtin_rag";
         PasswordVaultHelper.SaveMcpEnvVar(ragId, "EMBEDDING_BASE_URL", AppSettings.EmbeddingBaseUrl);
         PasswordVaultHelper.SaveMcpEnvVar(ragId, "EMBEDDING_MODEL", AppSettings.EmbeddingModel);
         PasswordVaultHelper.SaveMcpEnvVar(ragId, "EMBEDDING_DIMENSION", "0");
+        PasswordVaultHelper.SaveMcpEnvVar(ragId, "CONTEXTUALIZER_PROVIDER", AppSettings.ContextualizerProvider);
+        PasswordVaultHelper.SaveMcpEnvVar(ragId, "CONTEXTUALIZER_BASE_URL", AppSettings.ContextualizerBaseUrl);
+        PasswordVaultHelper.SaveMcpEnvVar(ragId, "CONTEXTUALIZER_MODEL", AppSettings.ContextualizerModel);
 
         var ragConfig = new BuiltInServerConfig
         {
@@ -953,6 +958,8 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             [
                 "EMBEDDING_BASE_URL", "EMBEDDING_API_KEY",
                 "EMBEDDING_MODEL", "EMBEDDING_DIMENSION",
+                "CONTEXTUALIZER_PROVIDER", "CONTEXTUALIZER_BASE_URL",
+                "CONTEXTUALIZER_API_KEY", "CONTEXTUALIZER_MODEL",
             ],
         };
 

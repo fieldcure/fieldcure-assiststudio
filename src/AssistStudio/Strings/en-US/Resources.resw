@@ -822,4 +822,31 @@
   <data name="Embedding_DownloadFailed" xml:space="preserve">
     <value>Download failed</value>
   </data>
+  <data name="Contextualizer_Title.Text" xml:space="preserve">
+    <value>Chunk Contextualizer</value>
+  </data>
+  <data name="Contextualizer_Description.Text" xml:space="preserve">
+    <value>Adds context descriptions and normalized keywords to each chunk during indexing to improve search accuracy. A small model (3-4B) is sufficient.</value>
+  </data>
+  <data name="Contextualizer_Disabled.Text" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="Contextualizer_OllamaNotRunning" xml:space="preserve">
+    <value>Ollama is not running. Start with: ollama serve</value>
+  </data>
+  <data name="Contextualizer_OpenAiKeyMissing" xml:space="preserve">
+    <value>Add an OpenAI API Key in Models first.</value>
+  </data>
+  <data name="Contextualizer_ClaudeKeyMissing" xml:space="preserve">
+    <value>Add a Claude API Key in Models first.</value>
+  </data>
+  <data name="Contextualizer_Downloading" xml:space="preserve">
+    <value>{0} downloading…</value>
+  </data>
+  <data name="Contextualizer_DownloadComplete" xml:space="preserve">
+    <value>{0} ready</value>
+  </data>
+  <data name="Contextualizer_DownloadFailed" xml:space="preserve">
+    <value>Download failed</value>
+  </data>
 </root>

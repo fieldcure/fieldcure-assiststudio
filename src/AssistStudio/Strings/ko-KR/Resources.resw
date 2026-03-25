@@ -822,4 +822,31 @@
   <data name="Embedding_DownloadFailed" xml:space="preserve">
     <value>다운로드 실패</value>
   </data>
+  <data name="Contextualizer_Title.Text" xml:space="preserve">
+    <value>청크 문맥화</value>
+  </data>
+  <data name="Contextualizer_Description.Text" xml:space="preserve">
+    <value>인덱싱 시 각 청크에 문맥 설명과 정규화된 키워드를 부여하여 검색 정확도를 높입니다. 소형 모델(3-4B)이면 충분합니다.</value>
+  </data>
+  <data name="Contextualizer_Disabled.Text" xml:space="preserve">
+    <value>사용 안 함</value>
+  </data>
+  <data name="Contextualizer_OllamaNotRunning" xml:space="preserve">
+    <value>Ollama가 실행되지 않습니다. ollama serve 명령으로 시작하세요.</value>
+  </data>
+  <data name="Contextualizer_OpenAiKeyMissing" xml:space="preserve">
+    <value>Models 페이지에서 OpenAI API Key를 먼저 등록하세요.</value>
+  </data>
+  <data name="Contextualizer_ClaudeKeyMissing" xml:space="preserve">
+    <value>Models 페이지에서 Claude API Key를 먼저 등록하세요.</value>
+  </data>
+  <data name="Contextualizer_Downloading" xml:space="preserve">
+    <value>{0} 다운로드 중…</value>
+  </data>
+  <data name="Contextualizer_DownloadComplete" xml:space="preserve">
+    <value>{0} 준비 완료</value>
+  </data>
+  <data name="Contextualizer_DownloadFailed" xml:space="preserve">
+    <value>다운로드 실패</value>
+  </data>
 </root>

@@ -71,6 +71,9 @@ public sealed partial class AppTasksPage : Page
         // Embedding: check provider availability and restore selection
         await InitializeEmbeddingSectionAsync();
 
+        // Contextualizer: check provider availability and restore selection
+        await InitializeContextualizerSectionAsync();
+
         _suppressEvents = false;
     }
 
@@ -447,6 +450,285 @@ public sealed partial class AppTasksPage : Page
     {
         ApplyEmbeddingSelection(tag);
     }
+
+    #endregion
+
+    #region Contextualizer
+
+    /// <summary>
+    /// Initializes the contextualizer section: checks provider availability and restores saved selection.
+    /// </summary>
+    private async Task InitializeContextualizerSectionAsync()
+    {
+        // 1. Restore saved selection (default: "none")
+        var savedPreset = AppSettings.ContextualizerPreset;
+        if (!string.IsNullOrEmpty(savedPreset) && savedPreset != "none" && savedPreset.Contains('/'))
+        {
+            RestoreContextualizerSelection(savedPreset);
+        }
+        else
+        {
+            RbCtxNone.IsChecked = true;
+        }
+
+        // 2. Check OpenAI API key availability
+        var presets = AppSettings.LoadPresets();
+        var hasOpenAiKey = presets.Any(p => p.ProviderType is "OpenAI" && !string.IsNullOrEmpty(p.ApiKey));
+        if (!hasOpenAiKey)
+        {
+            var tooltip = new ToolTip
+            {
+                Content = _loader.GetString("Contextualizer_OpenAiKeyMissing"),
+                Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
+            };
+            RbCtxGpt4oMini.IsEnabled = false;
+            ToolTipService.SetToolTip(RbCtxGpt4oMini, tooltip);
+        }
+
+        // 3. Check Claude API key availability
+        var hasClaudeKey = presets.Any(p => p.ProviderType is "Claude" && !string.IsNullOrEmpty(p.ApiKey));
+        if (!hasClaudeKey)
+        {
+            var tooltip = new ToolTip
+            {
+                Content = _loader.GetString("Contextualizer_ClaudeKeyMissing"),
+                Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
+            };
+            RbCtxHaiku.IsEnabled = false;
+            ToolTipService.SetToolTip(RbCtxHaiku, tooltip);
+        }
+
+        // 4. Check Ollama server status
+        var ollamaRunning = await OllamaHelper.IsOllamaRunningAsync();
+        if (!ollamaRunning)
+        {
+            var tooltip = new ToolTip
+            {
+                Content = _loader.GetString("Contextualizer_OllamaNotRunning"),
+                Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
+            };
+            foreach (var rb in new[] { RbCtxGemma3, RbCtxQwen3, RbCtxPhi4Mini })
+            {
+                rb.IsEnabled = false;
+                ToolTipService.SetToolTip(rb, tooltip);
+            }
+        }
+        else
+        {
+            await UpdateContextualizerOllamaIconsAsync();
+        }
+    }
+
+    /// <summary>
+    /// Saves contextualizer settings from a preset tag (e.g., "ollama/gemma3:4b", "none").
+    /// </summary>
+    private void ApplyContextualizerSelection(string presetTag)
+    {
+        const string ragId = "builtin_rag";
+
+        if (presetTag == "none")
+        {
+            AppSettings.ContextualizerPreset = "none";
+            AppSettings.ContextualizerProvider = "";
+            AppSettings.ContextualizerBaseUrl = "";
+            AppSettings.ContextualizerModel = "";
+            PasswordVaultHelper.SaveMcpEnvVar(ragId, "CONTEXTUALIZER_PROVIDER", "");
+            PasswordVaultHelper.SaveMcpEnvVar(ragId, "CONTEXTUALIZER_BASE_URL", "");
+            PasswordVaultHelper.SaveMcpEnvVar(ragId, "CONTEXTUALIZER_API_KEY", "");
+            PasswordVaultHelper.SaveMcpEnvVar(ragId, "CONTEXTUALIZER_MODEL", "");
+            return;
+        }
+
+        var parts = presetTag.Split('/', 2);
+        if (parts.Length != 2) return;
+
+        var providerType = parts[0]; // "ollama", "openai", "anthropic"
+        var model = parts[1];
+
+        AppSettings.ContextualizerPreset = presetTag;
+        AppSettings.ContextualizerModel = model;
+
+        switch (providerType)
+        {
+            case "ollama":
+                AppSettings.ContextualizerProvider = "openai"; // Ollama is OpenAI-compatible
+                AppSettings.ContextualizerBaseUrl = "http://localhost:11434";
+                PasswordVaultHelper.SaveMcpEnvVar(ragId, "CONTEXTUALIZER_PROVIDER", "openai");
+                PasswordVaultHelper.SaveMcpEnvVar(ragId, "CONTEXTUALIZER_BASE_URL", "http://localhost:11434");
+                PasswordVaultHelper.SaveMcpEnvVar(ragId, "CONTEXTUALIZER_API_KEY", "");
+                PasswordVaultHelper.SaveMcpEnvVar(ragId, "CONTEXTUALIZER_MODEL", model);
+                break;
+
+            case "openai":
+            {
+                var openAiPreset = AppSettings.LoadPresets()
+                    .FirstOrDefault(p => p.ProviderType is "OpenAI" && !string.IsNullOrEmpty(p.ApiKey));
+                var baseUrl = openAiPreset?.BaseUrl ?? "https://api.openai.com";
+                AppSettings.ContextualizerProvider = "openai";
+                AppSettings.ContextualizerBaseUrl = baseUrl;
+                PasswordVaultHelper.SaveMcpEnvVar(ragId, "CONTEXTUALIZER_PROVIDER", "openai");
+                PasswordVaultHelper.SaveMcpEnvVar(ragId, "CONTEXTUALIZER_BASE_URL", baseUrl);
+                PasswordVaultHelper.SaveMcpEnvVar(ragId, "CONTEXTUALIZER_API_KEY", openAiPreset?.ApiKey ?? "");
+                PasswordVaultHelper.SaveMcpEnvVar(ragId, "CONTEXTUALIZER_MODEL", model);
+                break;
+            }
+
+            case "anthropic":
+            {
+                var claudePreset = AppSettings.LoadPresets()
+                    .FirstOrDefault(p => p.ProviderType is "Claude" && !string.IsNullOrEmpty(p.ApiKey));
+                AppSettings.ContextualizerProvider = "anthropic";
+                AppSettings.ContextualizerBaseUrl = "https://api.anthropic.com";
+                PasswordVaultHelper.SaveMcpEnvVar(ragId, "CONTEXTUALIZER_PROVIDER", "anthropic");
+                PasswordVaultHelper.SaveMcpEnvVar(ragId, "CONTEXTUALIZER_BASE_URL", "https://api.anthropic.com");
+                PasswordVaultHelper.SaveMcpEnvVar(ragId, "CONTEXTUALIZER_API_KEY", claudePreset?.ApiKey ?? "");
+                PasswordVaultHelper.SaveMcpEnvVar(ragId, "CONTEXTUALIZER_MODEL", model);
+                break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Restores the contextualizer radio button selection from a saved preset tag.
+    /// </summary>
+    private void RestoreContextualizerSelection(string? presetTag)
+    {
+        if (string.IsNullOrEmpty(presetTag) || presetTag == "none")
+        {
+            RbCtxNone.IsChecked = true;
+            return;
+        }
+
+        RadioButton?[] allButtons =
+            [RbCtxNone, RbCtxGemma3, RbCtxQwen3, RbCtxPhi4Mini, RbCtxGpt4oMini, RbCtxHaiku];
+        foreach (var rb in allButtons)
+        {
+            if (rb?.Tag as string == presetTag)
+            {
+                rb.IsChecked = true;
+                return;
+            }
+        }
+
+        // No match found — fall back to "none"
+        RbCtxNone.IsChecked = true;
+    }
+
+    /// <summary>
+    /// Handles contextualizer model radio button selection.
+    /// </summary>
+    private void OnContextualizerModelSelected(object sender, RoutedEventArgs e)
+    {
+        if (_suppressEvents) return;
+        if (sender is not RadioButton rb) return;
+
+        var tag = rb.Tag?.ToString() ?? "none";
+
+        if (tag == "none")
+        {
+            ApplyContextualizerSelection("none");
+            return;
+        }
+
+        var parts = tag.Split('/', 2);
+        if (parts.Length != 2) return;
+
+        var providerType = parts[0];
+        var model = parts[1];
+
+        if (providerType == "ollama")
+        {
+            _ = HandleContextualizerOllamaSelectionAsync(model, tag, rb);
+        }
+        else
+        {
+            ApplyContextualizerSelection(tag);
+        }
+    }
+
+    /// <summary>
+    /// Handles Ollama contextualizer model selection with background download.
+    /// </summary>
+    private async Task HandleContextualizerOllamaSelectionAsync(string model, string tag, RadioButton rb)
+    {
+        ApplyContextualizerSelection(tag);
+
+        var (icon, spinner) = GetContextualizerOllamaControls(model);
+        if (icon?.Visibility == Visibility.Collapsed)
+            return; // Already installed
+
+        if (icon is not null) icon.Visibility = Visibility.Collapsed;
+        if (spinner is not null) { spinner.Visibility = Visibility.Visible; spinner.IsActive = true; }
+
+        NotificationCenter.Instance.Post(
+            InfoBarSeverity.Informational,
+            string.Format(_loader.GetString("Contextualizer_Downloading"), model),
+            string.Empty);
+
+        try
+        {
+            using var manager = new OllamaModelManager("http://localhost:11434");
+            await manager.DownloadModelAsync(model);
+
+            if (spinner is not null) { spinner.IsActive = false; spinner.Visibility = Visibility.Collapsed; }
+
+            NotificationCenter.Instance.Post(
+                InfoBarSeverity.Success,
+                string.Format(_loader.GetString("Contextualizer_DownloadComplete"), model),
+                string.Empty,
+                5000);
+        }
+        catch (Exception ex)
+        {
+            if (icon is not null) icon.Visibility = Visibility.Visible;
+            if (spinner is not null) { spinner.IsActive = false; spinner.Visibility = Visibility.Collapsed; }
+
+            NotificationCenter.Instance.Post(
+                InfoBarSeverity.Error,
+                _loader.GetString("Contextualizer_DownloadFailed"),
+                ex.Message,
+                8000);
+
+            LoggingService.LogError($"[Contextualizer] Pull failed for {model}: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Updates download icons for Ollama contextualizer models.
+    /// </summary>
+    private async Task UpdateContextualizerOllamaIconsAsync()
+    {
+        try
+        {
+            using var manager = new OllamaModelManager("http://localhost:11434");
+            var installed = await manager.ListLocalModelsAsync();
+            var installedNames = installed
+                .Select(m => m.Id.Split(':')[0])
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var model in new[] { "gemma3", "qwen3", "phi4-mini" })
+            {
+                var (icon, _) = GetContextualizerOllamaControls(model);
+                if (icon is not null)
+                    icon.Visibility = installedNames.Contains(model) ? Visibility.Collapsed : Visibility.Visible;
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggingService.LogWarning($"[Contextualizer] Failed to check Ollama models: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Gets the download icon and spinner controls for a contextualizer Ollama model.
+    /// </summary>
+    private (FontIcon? icon, ProgressRing? spinner) GetContextualizerOllamaControls(string model) => model switch
+    {
+        "gemma3" or "gemma3:4b" => (IcoCtxGemma3, SpinCtxGemma3),
+        "qwen3" or "qwen3:4b" => (IcoCtxQwen3, SpinCtxQwen3),
+        "phi4-mini" => (IcoCtxPhi4Mini, SpinCtxPhi4Mini),
+        _ => (null, null),
+    };
 
     #endregion
 }

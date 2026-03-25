@@ -138,6 +138,42 @@ public static class AppSettings
     }
 
     /// <summary>
+    /// Gets or sets the contextualizer preset tag for UI restoration (e.g., "ollama/gemma3:4b", "none").
+    /// </summary>
+    public static string ContextualizerPreset
+    {
+        get => Settings.Values["ContextualizerPreset"] as string ?? "";
+        set => Settings.Values["ContextualizerPreset"] = value;
+    }
+
+    /// <summary>
+    /// Gets or sets the contextualizer model identifier (e.g., "gemma3:4b", "gpt-4o-mini").
+    /// </summary>
+    public static string ContextualizerModel
+    {
+        get => Settings.Values["ContextualizerModel"] as string ?? "";
+        set => Settings.Values["ContextualizerModel"] = value;
+    }
+
+    /// <summary>
+    /// Gets or sets the contextualizer API base URL.
+    /// </summary>
+    public static string ContextualizerBaseUrl
+    {
+        get => Settings.Values["ContextualizerBaseUrl"] as string ?? "";
+        set => Settings.Values["ContextualizerBaseUrl"] = value;
+    }
+
+    /// <summary>
+    /// Gets or sets the contextualizer provider type ("openai" for Ollama/OpenAI, "anthropic" for Claude, "" for disabled).
+    /// </summary>
+    public static string ContextualizerProvider
+    {
+        get => Settings.Values["ContextualizerProvider"] as string ?? "";
+        set => Settings.Values["ContextualizerProvider"] = value;
+    }
+
+    /// <summary>
     /// Gets or sets the name of the active profile (empty string means custom/manual).
     /// </summary>
     public static string ActiveProfile
