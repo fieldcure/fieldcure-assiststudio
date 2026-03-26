@@ -89,7 +89,8 @@ public sealed partial class MainWindow : Window
         {
             LoggingService.LogInfo($"[Settings] ProfilesChanged → refreshing on {ViewModel.Tabs.Count} tabs");
             ViewModel.RefreshProfilesOnAll();
-            // Tool re-resolution is automatic via Profile.ToolSettingsChanged subscription
+            foreach (var tab in ViewModel.Tabs)
+                tab.RefreshTools();
         };
         App.McpRegistry.ToolsChanged += (_, _) =>
         {
