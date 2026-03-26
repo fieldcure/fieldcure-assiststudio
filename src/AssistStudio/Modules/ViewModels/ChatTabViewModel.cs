@@ -670,6 +670,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         {
             profile.ToolNames = match.ToolNames;
             profile.UseSearchTools = match.UseSearchTools;
+            profile.EnabledServers = match.EnabledServers;
         }
 
         LoggingService.LogInfo($"[Settings] RefreshTools: profile={profile.Name}, UseSearchTools={profile.UseSearchTools}, ToolNames={profile.ToolNames.Count}");
@@ -734,7 +735,24 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         var profile = Panel?.SelectedProfile;
         if (profile is not null)
         {
-            profile.EnabledServers = [.. serverIds];
+            // Merge: keep profile servers that are not visible in this tab's AvailableServers,
+            // then apply the user's toggle changes for visible servers only.
+            var visibleServerIds = Panel?.AvailableServers?
+                .Select(s => s.Id).ToHashSet(StringComparer.OrdinalIgnoreCase)
+                ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            // Also include built-in aliases (builtin_xxx) that map to visible per-tab connections
+            if (_filesystemConnection is not null && visibleServerIds.Contains(_filesystemConnection.Config.Id))
+                visibleServerIds.Add($"builtin_{BuiltInServerHelper.FilesystemKey}");
+            if (_ragConnection is not null && visibleServerIds.Contains(_ragConnection.Config.Id))
+                visibleServerIds.Add($"builtin_{BuiltInServerHelper.RagKey}");
+
+            var merged = profile.EnabledServers
+                .Where(s => !visibleServerIds.Contains(s))  // preserve servers not visible in this tab
+                .ToList();
+            merged.AddRange(serverIds);  // apply user's changes for visible servers
+
+            profile.EnabledServers = merged;
             AppSettings.SaveCustomProfiles(AppSettings.LoadProfiles()
                 .Select(p => p.Name == profile.Name ? profile : p));
         }
