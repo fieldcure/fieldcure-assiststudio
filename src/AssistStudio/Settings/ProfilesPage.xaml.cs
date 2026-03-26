@@ -109,7 +109,8 @@ public sealed partial class ProfilesPage : Page
 
         if (!profile.IsBuiltIn)
         {
-            profile.Name = ProfileNameBox.Text.Trim();
+            var desired = ProfileNameBox.Text.Trim();
+            profile.Name = MakeUniqueName(desired, excludeName: profile.Name);
         }
         profile.SystemPrompt = SystemPromptBox.Text;
 
@@ -156,7 +157,7 @@ public sealed partial class ProfilesPage : Page
 
         var newProfile = new Profile
         {
-            Name = name,
+            Name = MakeUniqueName(name),
             SystemPrompt = "",
             IsBuiltIn = false
         };
@@ -700,6 +701,28 @@ public sealed partial class ProfilesPage : Page
         {
             AppSettings.ActiveProfile = selected.Name;
             AppSettings.SystemPrompt = selected.SystemPrompt;
+        }
+    }
+
+    /// <summary>
+    /// Returns a unique profile name by appending (2), (3), etc. if the name
+    /// collides with built-in profiles or other existing profiles.
+    /// </summary>
+    private string MakeUniqueName(string desiredName, string? excludeName = null)
+    {
+        var existing = _profiles
+            .Where(p => excludeName is null || !p.Name.Equals(excludeName, StringComparison.OrdinalIgnoreCase))
+            .Select(p => p.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (!existing.Contains(desiredName))
+            return desiredName;
+
+        for (var i = 2; ; i++)
+        {
+            var candidate = $"{desiredName} ({i})";
+            if (!existing.Contains(candidate))
+                return candidate;
         }
     }
 
