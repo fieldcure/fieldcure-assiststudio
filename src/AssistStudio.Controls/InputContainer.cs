@@ -112,15 +112,6 @@ public sealed partial class InputContainer : Control
         DependencyProperty.Register(nameof(EnabledToolNames), typeof(IReadOnlyList<string>), typeof(InputContainer),
             new PropertyMetadata(null));
 
-    /// <summary>Identifies the <see cref="AvailableServers"/> dependency property.</summary>
-    public static readonly DependencyProperty AvailableServersProperty =
-        DependencyProperty.Register(nameof(AvailableServers), typeof(IReadOnlyList<ServerInfo>), typeof(InputContainer),
-            new PropertyMetadata(null, OnAvailableServersChanged));
-
-    /// <summary>Identifies the <see cref="EnabledServerIds"/> dependency property.</summary>
-    public static readonly DependencyProperty EnabledServerIdsProperty =
-        DependencyProperty.Register(nameof(EnabledServerIds), typeof(IReadOnlyList<string>), typeof(InputContainer),
-            new PropertyMetadata(null, OnEnabledServerIdsChanged));
 
     #endregion
 
@@ -340,23 +331,6 @@ public sealed partial class InputContainer : Control
         set => SetValue(EnabledToolNamesProperty, value);
     }
 
-    /// <summary>
-    /// Gets or sets the list of available servers for the server toggle flyout.
-    /// </summary>
-    public IReadOnlyList<ServerInfo>? AvailableServers
-    {
-        get => (IReadOnlyList<ServerInfo>?)GetValue(AvailableServersProperty);
-        set => SetValue(AvailableServersProperty, value);
-    }
-
-    /// <summary>
-    /// Gets or sets the list of enabled server IDs.
-    /// </summary>
-    public IReadOnlyList<string>? EnabledServerIds
-    {
-        get => (IReadOnlyList<string>?)GetValue(EnabledServerIdsProperty);
-        set => SetValue(EnabledServerIdsProperty, value);
-    }
 
     #endregion
 
@@ -381,12 +355,6 @@ public sealed partial class InputContainer : Control
     /// Occurs when the user clicks the summarize button.
     /// </summary>
     public event EventHandler? SummarizeRequested;
-
-    /// <summary>
-    /// Occurs when the user toggles a server in the server flyout.
-    /// The event argument contains the updated list of enabled server IDs.
-    /// </summary>
-    public event EventHandler<IReadOnlyList<string>>? EnabledServersChanged;
 
     /// <summary>
     /// Occurs when the user clicks the stop button to cancel the current streaming response.
@@ -926,45 +894,6 @@ public sealed partial class InputContainer : Control
         }
     }
 
-    /// <summary>
-    /// Called when <see cref="AvailableServers"/> changes to update the tool button visibility.
-    /// </summary>
-    private static void OnAvailableServersChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        if (d is InputContainer self)
-        {
-            // Auto-enable newly connected servers so the flyout checkbox is pre-checked
-            var servers = self.AvailableServers;
-            if (servers is { Count: > 0 })
-            {
-                var current = self.EnabledServerIds?.ToHashSet(StringComparer.OrdinalIgnoreCase)
-                    ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                bool changed = false;
-                foreach (var server in servers)
-                {
-                    if (server.IsConnected && current.Add(server.Id))
-                        changed = true;
-                }
-
-                if (changed)
-                {
-                    self.EnabledServerIds = [.. current];
-                    self.EnabledServersChanged?.Invoke(self, [.. current]);
-                }
-            }
-
-            self.UpdateToolButtonVisibility();
-        }
-    }
-
-    /// <summary>
-    /// Called when <see cref="EnabledServerIds"/> changes.
-    /// </summary>
-    private static void OnEnabledServerIdsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        // No-op — state is pushed from outside, flyout rebuilds on open
-    }
-
     private static void OnSelectedProfileChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is InputContainer self)
@@ -1231,34 +1160,20 @@ public sealed partial class InputContainer : Control
     }
 
     /// <summary>
-    /// Builds the unified tools flyout showing built-in tool toggles and server toggles
-    /// at the same level, separated by a divider. Shows an empty state message when
-    /// neither tools nor servers are enabled in the profile.
+    /// Builds the tools flyout showing tool toggles from the profile.
+    /// Shows an empty state message when no tools are enabled in the profile.
     /// </summary>
     private void BuildToolsFlyout()
     {
         if (_toolButton is null) return;
 
         var tools = AvailableTools;
-        var servers = AvailableServers;
-        var hasServers = servers is { Count: > 0 };
 
-        // Server display names whose tools should be hidden from the individual list
-        // (controlled by the server checkbox instead)
-        var serverNames = hasServers
-            ? servers!.Select(s => s.DisplayName).ToHashSet(StringComparer.OrdinalIgnoreCase)
-            : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // Hide meta-tools (search_tools) from the flyout — they are automatically included
+        bool IsVisibleTool(IAssistTool t) => t.Name != "search_tools";
 
-        bool IsVisibleTool(IAssistTool t) =>
-            t.Name != "search_tools"
-            && !(t is FieldCure.AssistStudio.Models.McpToolAdapter mcp
-                 && serverNames.Contains(mcp.ServerName));
-
-        var hasVisibleTools = tools.Any(IsVisibleTool);
-        var hasAnyToolsOrServers = tools.Count > 0 || hasServers;
-
-        // Empty state: neither tools nor servers enabled
-        if (!hasAnyToolsOrServers)
+        // Empty state: no tools enabled
+        if (tools.Count == 0)
         {
             Windows.ApplicationModel.Resources.ResourceLoader? emptyRes = null;
             try { emptyRes = new Windows.ApplicationModel.Resources.ResourceLoader("AssistStudio.Controls/Resources"); }
@@ -1279,7 +1194,6 @@ public sealed partial class InputContainer : Control
                 FontSize = 12,
             });
 
-            _toolButton.Visibility = Visibility.Visible;
             _toolButton.Flyout = new Flyout
             {
                 Content = emptyPanel,
@@ -1288,8 +1202,6 @@ public sealed partial class InputContainer : Control
             return;
         }
 
-        _toolButton.Visibility = Visibility.Visible;
-
         Windows.ApplicationModel.Resources.ResourceLoader? res = null;
         try { res = new Windows.ApplicationModel.Resources.ResourceLoader("AssistStudio.Controls/Resources"); }
         catch { /* keep defaults */ }
@@ -1297,7 +1209,6 @@ public sealed partial class InputContainer : Control
         var panel = new StackPanel { Spacing = 4 };
         var allCheckBoxes = new List<CheckBox>();
 
-        // --- Built-in tools (hide meta-tools and server-owned tools already controlled by server checkbox) ---
         var enabledToolSet = EnabledToolNames?.ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var tool in tools.Where(IsVisibleTool))
         {
@@ -1312,55 +1223,6 @@ public sealed partial class InputContainer : Control
             cb.Unchecked += ToolCheckBox_Changed;
             panel.Children.Add(cb);
             allCheckBoxes.Add(cb);
-        }
-
-        // --- Separator (only if both sections present) ---
-        if (hasVisibleTools && hasServers)
-        {
-            panel.Children.Add(new Microsoft.UI.Xaml.Shapes.Rectangle
-            {
-                Height = 1,
-                Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
-                Opacity = 0.3,
-                Margin = new Thickness(0, 2, 0, 2),
-            });
-        }
-
-        // --- Servers ---
-        var enabledServerSet = EnabledServerIds?.ToHashSet(StringComparer.OrdinalIgnoreCase)
-            ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        if (hasServers)
-        {
-            foreach (var server in servers!)
-            {
-                var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-
-                var dot = new Microsoft.UI.Xaml.Shapes.Ellipse
-                {
-                    Width = 6, Height = 6,
-                    Fill = server.IsConnected
-                        ? new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.LimeGreen)
-                        : new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
-                    VerticalAlignment = VerticalAlignment.Center,
-                };
-                row.Children.Add(dot);
-
-                var cb = new CheckBox
-                {
-                    Content = server.DisplayName,
-                    IsChecked = enabledServerSet.Contains(server.Id),
-                    Tag = server.Id,
-                    MinWidth = 0,
-                    IsEnabled = server.IsConnected,
-                };
-                cb.Checked += ServerCheckBox_Changed;
-                cb.Unchecked += ServerCheckBox_Changed;
-                row.Children.Add(cb);
-                allCheckBoxes.Add(cb);
-
-                panel.Children.Add(row);
-            }
         }
 
         // --- Footer: Separator + Toggle all ---
@@ -1387,10 +1249,7 @@ public sealed partial class InputContainer : Control
         {
             var nowAllChecked = allCheckBoxes.All(c => c.IsChecked == true);
             foreach (var cb in allCheckBoxes)
-            {
-                if (cb.IsEnabled)
-                    cb.IsChecked = !nowAllChecked;
-            }
+                cb.IsChecked = !nowAllChecked;
         };
         footer.Children.Add(toggleLink);
 
@@ -1411,7 +1270,7 @@ public sealed partial class InputContainer : Control
     }
 
     /// <summary>
-    /// Handles built-in tool checkbox toggle to update <see cref="EnabledToolNames"/>.
+    /// Handles tool checkbox toggle to update <see cref="EnabledToolNames"/>.
     /// </summary>
     private void ToolCheckBox_Changed(object sender, RoutedEventArgs e)
     {
@@ -1427,23 +1286,6 @@ public sealed partial class InputContainer : Control
             current.Remove(toolName);
 
         EnabledToolNames = current.Count == tools.Count ? null : [.. current];
-    }
-
-    /// <summary>
-    /// Handles server checkbox toggle to update <see cref="EnabledServerIds"/>.
-    /// </summary>
-    private void ServerCheckBox_Changed(object sender, RoutedEventArgs e)
-    {
-        if (sender is not CheckBox cb || cb.Tag is not string serverId) return;
-
-        var current = EnabledServerIds?.ToList() ?? [];
-        if (cb.IsChecked == true && !current.Contains(serverId, StringComparer.OrdinalIgnoreCase))
-            current.Add(serverId);
-        else if (cb.IsChecked == false)
-            current.RemoveAll(s => s.Equals(serverId, StringComparison.OrdinalIgnoreCase));
-
-        EnabledServerIds = current;
-        EnabledServersChanged?.Invoke(this, current);
     }
 
     #endregion

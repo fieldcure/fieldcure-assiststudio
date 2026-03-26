@@ -158,15 +158,6 @@ public sealed partial class ChatPanel : Control
         DependencyProperty.Register(nameof(ShowTitleBar), typeof(bool), typeof(ChatPanel),
             new PropertyMetadata(true, OnShowTitleBarChanged));
 
-    /// <summary>Identifies the <see cref="AvailableServers"/> dependency property.</summary>
-    public static readonly DependencyProperty AvailableServersProperty =
-        DependencyProperty.Register(nameof(AvailableServers), typeof(IReadOnlyList<ServerInfo>), typeof(ChatPanel),
-            new PropertyMetadata(null, OnAvailableServersChanged));
-
-    /// <summary>Identifies the <see cref="EnabledServerIds"/> dependency property.</summary>
-    public static readonly DependencyProperty EnabledServerIdsProperty =
-        DependencyProperty.Register(nameof(EnabledServerIds), typeof(IReadOnlyList<string>), typeof(ChatPanel),
-            new PropertyMetadata(null, OnEnabledServerIdsChanged));
 
     /// <summary>Identifies the <see cref="WorkspaceFolders"/> dependency property.</summary>
     public static readonly DependencyProperty WorkspaceFoldersProperty =
@@ -364,24 +355,6 @@ public sealed partial class ChatPanel : Control
                 ? Visibility.Visible
                 : Visibility.Collapsed;
         }
-    }
-
-    /// <summary>
-    /// Called when <see cref="AvailableServers"/> changes to sync to the input area.
-    /// </summary>
-    private static void OnAvailableServersChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        if (d is ChatPanel panel && panel._inputArea is not null)
-            panel._inputArea.AvailableServers = panel.AvailableServers;
-    }
-
-    /// <summary>
-    /// Called when <see cref="EnabledServerIds"/> changes to sync to the input area.
-    /// </summary>
-    private static void OnEnabledServerIdsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        if (d is ChatPanel panel && panel._inputArea is not null)
-            panel._inputArea.EnabledServerIds = panel.EnabledServerIds;
     }
 
     /// <summary>
@@ -675,6 +648,13 @@ public sealed partial class ChatPanel : Control
     }
 
     /// <summary>
+    /// Optional delegate called before sending to auto-connect servers and filter tools by connection state.
+    /// Receives user-selected tools, returns only tools that are actually usable.
+    /// When set, <see cref="McpTools"/> should also be updated by the delegate to reflect connected servers.
+    /// </summary>
+    public Func<IReadOnlyList<IAssistTool>, Task<IReadOnlyList<IAssistTool>>>? PrepareToolsForSendAsync { get; set; }
+
+    /// <summary>
     /// Gets or sets the font family name for chat message rendering.
     /// </summary>
     public new string? FontFamily
@@ -708,24 +688,6 @@ public sealed partial class ChatPanel : Control
     {
         get => (bool)GetValue(ShowTitleBarProperty);
         set => SetValue(ShowTitleBarProperty, value);
-    }
-
-    /// <summary>
-    /// Gets or sets the list of available servers for the tool flyout.
-    /// </summary>
-    public IReadOnlyList<ServerInfo>? AvailableServers
-    {
-        get => (IReadOnlyList<ServerInfo>?)GetValue(AvailableServersProperty);
-        set => SetValue(AvailableServersProperty, value);
-    }
-
-    /// <summary>
-    /// Gets or sets the list of enabled server IDs for the tool flyout.
-    /// </summary>
-    public IReadOnlyList<string>? EnabledServerIds
-    {
-        get => (IReadOnlyList<string>?)GetValue(EnabledServerIdsProperty);
-        set => SetValue(EnabledServerIdsProperty, value);
     }
 
     /// <summary>
@@ -917,12 +879,6 @@ public sealed partial class ChatPanel : Control
     public event EventHandler<IReadOnlyList<string>>? WorkspaceFoldersChanged;
 
     /// <summary>
-    /// Occurs when the user toggles servers in the tool flyout.
-    /// The event argument contains the updated list of enabled server IDs.
-    /// </summary>
-    public event EventHandler<IReadOnlyList<string>>? EnabledServersChanged;
-
-    /// <summary>
     /// Occurs when the user clicks "Add Folder" in the workspace folders flyout.
     /// The App layer should handle this to show a FolderPicker and update <see cref="WorkspaceFolders"/>.
     /// </summary>
@@ -1099,8 +1055,6 @@ public sealed partial class ChatPanel : Control
             _inputArea.ProfileChanged += OnInputProfileChanged;
             _inputArea.StopRequested += OnStopRequested;
             _inputArea.SummarizeRequested += OnInputSummarizeRequested;
-            _inputArea.EnabledServersChanged += (s, ids) => EnabledServersChanged?.Invoke(this, ids);
-
             // Push current values (may have been set before template was applied)
             if (AvailablePresets is { } presets)
                 _inputArea.AvailablePresets = presets;
@@ -1116,8 +1070,6 @@ public sealed partial class ChatPanel : Control
 
             // Sync tools and visibility settings
             _inputArea.AvailableTools = RegisteredTools;
-            _inputArea.AvailableServers = AvailableServers;
-            _inputArea.EnabledServerIds = EnabledServerIds;
             _inputArea.ShowAttachButton = AllowAttachments;
             if (IsReadOnly)
                 _inputArea.Visibility = Visibility.Collapsed;
@@ -2323,9 +2275,14 @@ public sealed partial class ChatPanel : Control
     {
         ToolCallExecutor? executor = null;
         var activeTools = GetActiveTools();
+
+        // Auto-connect servers and filter to connected tools before sending
+        if (PrepareToolsForSendAsync is not null)
+            activeTools = await PrepareToolsForSendAsync(activeTools);
+
         if (activeTools.Count > 0)
         {
-            // Include MCP tools in the executor so search_tools-discovered tools can be executed.
+            // Read McpTools after delegate (it may have updated connection-filtered tools)
             IReadOnlyList<IAssistTool> executableTools = McpTools is { Count: > 0 } mcpTools
                 ? [.. activeTools, .. mcpTools]
                 : activeTools;
@@ -2359,7 +2316,7 @@ public sealed partial class ChatPanel : Control
 
         do
         {
-            var request = await CreateRequestAsync([.. _messages]);
+            var request = await CreateRequestAsync([.. _messages], activeTools);
             if (round == 0)
                 DiagnosticLogger.LogInfo($"[Chat] Request start — provider={Provider!.ProviderName}, model={Provider.ModelId}, tools={activeTools.Count}, thinking={request.ThinkingEnabled}");
             result = await ConsumeStreamAsync(Provider!.StreamAsync(request, ct), assistantMessage, ct);
@@ -2846,8 +2803,13 @@ public sealed partial class ChatPanel : Control
     /// Builds an <see cref="AiRequest"/> from the current messages, selected preset settings,
     /// and optional workspace/RAG context.
     /// </summary>
-    private async Task<AiRequest> CreateRequestAsync(IReadOnlyList<ChatMessage> messages, string? systemPrompt = null)
+    private async Task<AiRequest> CreateRequestAsync(
+        IReadOnlyList<ChatMessage> messages,
+        IReadOnlyList<IAssistTool>? activeTools = null,
+        string? systemPrompt = null)
     {
+        activeTools ??= GetActiveTools();
+
         var workspaceText = WorkspaceContext is not null
             ? await WorkspaceContext.GetContextAsync()
             : null;
@@ -2863,8 +2825,7 @@ public sealed partial class ChatPanel : Control
         }
 
         // Knowledge Archive hint — if search_documents tool is available
-        var activeTools = GetActiveTools();
-        if (activeTools?.Any(t => t.Name == "search_documents") == true)
+        if (activeTools.Any(t => t.Name == "search_documents"))
         {
             workspaceText = (workspaceText ?? "")
                 + "\n\n## Knowledge Archive\nUse `search_documents` to find relevant information before answering."
@@ -2885,7 +2846,7 @@ public sealed partial class ChatPanel : Control
             ContextChunks = chunks is { Count: > 0 } ? chunks : null,
             Temperature = preset?.Temperature ?? 0.7,
             MaxTokens = preset?.MaxTokens ?? 4096,
-            Tools = GetActiveTools() is { Count: > 0 } tools ? tools : null,
+            Tools = activeTools is { Count: > 0 } ? activeTools : null,
             ThinkingEnabled = preset?.ThinkingEnabled ?? false,
             ThinkingBudget = preset?.ThinkingBudget
         };
