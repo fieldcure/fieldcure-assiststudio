@@ -2141,6 +2141,57 @@ public sealed partial class ChatPanel : Control
     /// Binary/base64 content is replaced with metadata; oversized text is truncated.
     /// Error results (short JSON with "error" key) pass through unchanged.
     /// </summary>
+    /// <summary>
+    /// Logs structured summary for RAG tool results (search_documents, get_document_chunk).
+    /// </summary>
+    private static void LogStructuredToolResult(string toolName, string resultJson)
+    {
+        try
+        {
+            if (toolName == "search_documents")
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(resultJson);
+                var root = doc.RootElement;
+                var mode = root.TryGetProperty("search_mode", out var m) ? m.GetString() : "?";
+                var total = root.TryGetProperty("total_chunks_searched", out var t) ? t.GetInt32() : 0;
+                var results = root.TryGetProperty("results", out var r) ? r : default;
+                var count = results.ValueKind == System.Text.Json.JsonValueKind.Array ? results.GetArrayLength() : 0;
+
+                DiagnosticLogger.LogInfo(
+                    $"[Tool] Result: search_documents → mode={mode}, {count} results, {total} chunks");
+
+                if (results.ValueKind == System.Text.Json.JsonValueKind.Array)
+                {
+                    int i = 1;
+                    foreach (var item in results.EnumerateArray())
+                    {
+                        var src = item.TryGetProperty("source_path", out var s)
+                            ? System.IO.Path.GetFileName(s.GetString() ?? "") : "?";
+                        var ci = item.TryGetProperty("chunk_index", out var c) ? c.GetInt32() : -1;
+                        var score = item.TryGetProperty("score", out var sc) ? sc.GetDouble() : 0;
+                        DiagnosticLogger.LogInfo($"  #{i} {src} [chunk {ci}] score={score:F3}");
+                        i++;
+                    }
+                }
+            }
+            else if (toolName == "get_document_chunk")
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(resultJson);
+                var root = doc.RootElement;
+                var chunkId = root.TryGetProperty("chunk_id", out var id) ? id.ToString() : "?";
+                var src = root.TryGetProperty("source_path", out var s)
+                    ? System.IO.Path.GetFileName(s.GetString() ?? "") : "?";
+                var ci = root.TryGetProperty("chunk_index", out var c) ? c.GetInt32() : -1;
+                DiagnosticLogger.LogInfo(
+                    $"[Tool] Result: get_document_chunk → id={chunkId}, {src} [chunk {ci}]");
+            }
+        }
+        catch
+        {
+            // JSON parsing failure — the existing length log is sufficient
+        }
+    }
+
     private static string GuardToolResultSize(string toolResult, string toolName)
     {
         // Short results and error results pass through unchanged
@@ -2347,6 +2398,7 @@ public sealed partial class ChatPanel : Control
                 {
                     toolResult = await executor.ExecuteAsync(call, ct);
                     DiagnosticLogger.LogInfo($"[Tool] Result: {call.FunctionName}, length={toolResult.Length}");
+                    LogStructuredToolResult(call.FunctionName, toolResult);
                 }
                 catch (Exception ex)
                 {

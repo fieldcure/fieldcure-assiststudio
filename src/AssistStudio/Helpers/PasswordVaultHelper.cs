@@ -103,6 +103,12 @@ internal static class PasswordVaultHelper
     /// </summary>
     public static void SaveMcpEnvVar(string serverId, string key, string value)
     {
+        if (string.IsNullOrEmpty(value))
+        {
+            DeleteMcpEnvVar(serverId, key);
+            return;
+        }
+
         SaveApiKey($"McpEnv_{serverId}_{key}", value);
     }
 
