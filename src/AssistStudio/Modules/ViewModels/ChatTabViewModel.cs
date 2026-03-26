@@ -1094,21 +1094,20 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             }
         }
 
-        // 3. Knowledge Archive tools — directly exposed (not behind search_tools)
-        // Include regardless of connection state; filtered at send time
-        if (_ragConnection is not null
-            && effectiveServerIds.Contains(_ragConnection.Config.Id))
+        // 3. Server placeholders — for flyout display (connection-independent)
+        foreach (var serverId in enabledServerIds)
         {
-            foreach (var ragTool in _ragConnection.Tools)
-                tools.Add(ragTool);
+            tools.Add(new ServerPlaceholderTool
+            {
+                Name = serverId,
+                DisplayName = GetServerDisplayName(serverId),
+            });
         }
 
         RegisteredTools = tools;
 
-        // Collect all MCP tools from enabled servers (connection-independent, for Flyout display)
-        McpTools = effectiveServerIds.Count > 0
-            ? [.. GetToolsFromServers(effectiveServerIds)]
-            : [];
+        // McpTools are resolved at send time by PrepareToolsForSendAsync
+        McpTools = [];
 
         // Set run_command default CWD to first workspace folder
         var runCmd = ToolRegistry.Resolve(["run_command"]).OfType<RunCommandTool>().FirstOrDefault();
@@ -1126,11 +1125,20 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     public async Task<IReadOnlyList<IAssistTool>> PrepareToolsForSendAsync(
         IReadOnlyList<IAssistTool> selectedTools)
     {
-        var profile = Panel?.SelectedProfile;
-        if (profile is null) return selectedTools;
+        // Separate real tools from server placeholders
+        var realTools = new List<IAssistTool>();
+        var enabledServerIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        var enabledServerIds = profile.EnabledServers;
-        if (enabledServerIds.Count == 0) return selectedTools;
+        foreach (var tool in selectedTools)
+        {
+            if (tool is ServerPlaceholderTool placeholder)
+                enabledServerIds.Add(placeholder.Name);
+            else
+                realTools.Add(tool);
+        }
+
+        if (enabledServerIds.Count == 0)
+            return realTools;
 
         var effectiveServerIds = BuildEffectiveServerIds(enabledServerIds);
 
@@ -1161,9 +1169,9 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                 connectedIds.Add(serverId);
         }
 
-        // 3. Filter tools to connected servers only
+        // 3. Build final tool list from real tools + connected server tools
         var result = new List<IAssistTool>();
-        foreach (var tool in selectedTools)
+        foreach (var tool in realTools)
         {
             if (IsBuiltInTool(tool.Name))
             {
@@ -1178,16 +1186,17 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                     result.Add(tool);
                 }
             }
-            else
-            {
-                // MCP tool (e.g., RAG search_documents) — check if its server is connected
-                var ownerConn = FindConnectionForTool(tool);
-                if (ownerConn?.IsConnected == true)
-                    result.Add(tool);
-            }
         }
 
-        // 4. Update McpTools to only connected server tools (for ToolCallExecutor)
+        // 4. Add directly-exposed tools from connected servers (e.g., RAG search_documents)
+        if (_ragConnection?.IsConnected == true
+            && connectedIds.Contains(_ragConnection.Config.Id))
+        {
+            foreach (var ragTool in _ragConnection.Tools)
+                result.Add(ragTool);
+        }
+
+        // 5. Update McpTools for ToolCallExecutor (search_tools-discovered tools)
         McpTools = connectedIds.Count > 0
             ? [.. GetToolsFromServers(connectedIds)]
             : [];
@@ -1246,6 +1255,21 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                 App.McpRegistry.Connections
                     .FirstOrDefault(c => c.Tools.Contains(t))?.Config.Id ?? ""))
             .Select(t => t.Name)];
+    }
+
+    /// <summary>Gets a display name for a server ID.</summary>
+    private static string GetServerDisplayName(string serverId)
+    {
+        // Built-in servers: use known display names
+        if (serverId.StartsWith("builtin_"))
+        {
+            var key = serverId["builtin_".Length..];
+            return BuiltInServerHelper.GetDisplayName(key);
+        }
+
+        // External servers: look up from McpRegistry connections
+        var conn = App.McpRegistry.Connections.FirstOrDefault(c => c.Config.Id == serverId);
+        return conn?.Config.Name ?? serverId;
     }
 
     /// <summary>Gets tool instances from servers matching the given IDs.</summary>

@@ -1212,9 +1212,14 @@ public sealed partial class InputContainer : Control
         var enabledToolSet = EnabledToolNames?.ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var tool in tools.Where(IsVisibleTool))
         {
+            // Try localized name from resources (e.g., Tool_read_file → "파일 읽기")
+            var displayName = res?.GetString($"Tool_{tool.Name}") is { Length: > 0 } localized
+                ? localized
+                : tool.DisplayName;
+
             var cb = new CheckBox
             {
-                Content = tool.DisplayName,
+                Content = displayName,
                 IsChecked = enabledToolSet is null || enabledToolSet.Contains(tool.Name),
                 Tag = tool.Name,
                 MinWidth = 0,
