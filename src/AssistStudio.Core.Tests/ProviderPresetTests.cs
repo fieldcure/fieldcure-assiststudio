@@ -50,7 +50,7 @@ public class ProfileTests
     {
         var profile = new Profile();
         Assert.AreEqual("", profile.Name);
-        Assert.AreEqual("", profile.Text);
+        Assert.AreEqual("", profile.SystemPrompt);
         Assert.IsFalse(profile.IsBuiltIn);
         Assert.IsNull(profile.PreferredProviderType);
         Assert.IsNull(profile.PreferredModelId);
@@ -63,7 +63,7 @@ public class ProfileTests
         var profile = new Profile
         {
             Name = "File Organizer",
-            Text = "You are a file organization assistant.",
+            SystemPrompt = "You are a file organization assistant.",
             IsBuiltIn = false,
             PreferredProviderType = "Ollama",
             PreferredModelId = "llama3.2",
@@ -74,7 +74,7 @@ public class ProfileTests
         var deserialized = JsonSerializer.Deserialize<Profile>(json)!;
 
         Assert.AreEqual("File Organizer", deserialized.Name);
-        Assert.AreEqual("You are a file organization assistant.", deserialized.Text);
+        Assert.AreEqual("You are a file organization assistant.", deserialized.SystemPrompt);
         Assert.IsFalse(deserialized.IsBuiltIn);
         Assert.AreEqual("Ollama", deserialized.PreferredProviderType);
         Assert.AreEqual("llama3.2", deserialized.PreferredModelId);
@@ -85,11 +85,11 @@ public class ProfileTests
     [TestMethod]
     public void Deserialize_MissingOptionalFields_UsesDefaults()
     {
-        var json = """{"Name":"Test","Text":"Hello"}""";
+        var json = """{"Name":"Test","SystemPrompt":"Hello"}""";
         var profile = JsonSerializer.Deserialize<Profile>(json)!;
 
         Assert.AreEqual("Test", profile.Name);
-        Assert.AreEqual("Hello", profile.Text);
+        Assert.AreEqual("Hello", profile.SystemPrompt);
         Assert.IsNull(profile.PreferredProviderType);
         Assert.IsNull(profile.PreferredModelId);
         Assert.AreEqual(0, profile.ToolNames.Count);

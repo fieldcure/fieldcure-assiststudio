@@ -445,7 +445,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     public void ApplySystemPrompt(string prompt, List<Profile> profiles, Profile? _selectedProfile)
     {
         // Use the tab's own profile text, not the global prompt
-        var profilePrompt = Panel?.SelectedProfile?.Text;
+        var profilePrompt = Panel?.SelectedProfile?.SystemPrompt;
         SystemPrompt = profilePrompt ?? prompt;
         AvailableProfiles = profiles;
     }
@@ -591,7 +591,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             SelectedProfile.ToolSettingsChanged -= OnProfileToolSettingsChanged;
         profile.ToolSettingsChanged += OnProfileToolSettingsChanged;
 
-        SystemPrompt = profile.Text;
+        SystemPrompt = profile.SystemPrompt;
 
         // Update workspace capability: profile decides if filesystem is enabled
         var filesystemServerId = $"builtin_{BuiltInServerHelper.FilesystemKey}";

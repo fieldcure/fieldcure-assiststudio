@@ -294,7 +294,7 @@ public sealed partial class ChatPanel : Control
                 panel._inputArea.SelectProfileInCombo(preset);
             }
             // Update the actual system prompt used in requests
-            panel.SystemPrompt = preset.Text;
+            panel.SystemPrompt = preset.SystemPrompt;
         }
     }
 
@@ -1705,7 +1705,7 @@ public sealed partial class ChatPanel : Control
     private void OnInputProfileChanged(object? sender, Profile profile)
     {
         SelectedProfile = profile;
-        SystemPrompt = profile.Text;
+        SystemPrompt = profile.SystemPrompt;
         ProfileChanged?.Invoke(this, profile);
     }
 

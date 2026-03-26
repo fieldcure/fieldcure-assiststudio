@@ -2,6 +2,7 @@ namespace FieldCure.AssistStudio.Models;
 
 /// <summary>
 /// A named profile that bundles a system prompt with optional preferred provider, model, and tools.
+/// Serialized to JSON via <c>AppJsonContext</c>.
 /// </summary>
 public class Profile
 {
@@ -20,8 +21,8 @@ public class Profile
     /// <summary>Unique display name for this profile.</summary>
     public string Name { get; set; } = "";
 
-    /// <summary>The system prompt text.</summary>
-    public string Text { get; set; } = "";
+    /// <summary>The system prompt text for this profile.</summary>
+    public string SystemPrompt { get; set; } = "";
 
     /// <summary>Whether this is a built-in profile (cannot be deleted).</summary>
     public bool IsBuiltIn { get; set; }

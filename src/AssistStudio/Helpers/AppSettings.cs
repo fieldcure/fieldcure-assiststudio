@@ -225,25 +225,25 @@ public static class AppSettings
         new() { Name = "Professional", IsBuiltIn = true,
             ToolNames = ["run_command", "fetch_url"],
             EnabledServers = ["builtin_filesystem"],
-            Text = "You are a helpful assistant. Provide clear, well-structured responses. " +
+            SystemPrompt = "You are a helpful assistant. Provide clear, well-structured responses. " +
                    "Explain step by step when needed. If you're unsure about something, say so honestly. " +
                    "You have access to tools — use them proactively when they would help answer the user's question." },
         new() { Name = "Analytical", IsBuiltIn = true,
             ToolNames = ["run_command", "fetch_url"],
             EnabledServers = ["builtin_filesystem"],
-            Text = "You are a concise and direct assistant focused on code and data analysis. " +
+            SystemPrompt = "You are a concise and direct assistant focused on code and data analysis. " +
                    "Prioritize code readability and performance. Use Markdown formatting. " +
                    "Keep explanations brief. Use tools to read, write, and run code directly " +
                    "rather than just explaining what to do." },
         new() { Name = "Creative", IsBuiltIn = true,
             ToolNames = ["fetch_url"],
-            Text = "You are a creative assistant who explores multiple perspectives. " +
+            SystemPrompt = "You are a creative assistant who explores multiple perspectives. " +
                    "Suggest innovative ideas and ask follow-up questions to better understand the user's needs. " +
                    "You can fetch web pages for inspiration and reference when needed." },
         new() { Name = "Task Planner", IsBuiltIn = true,
             ToolNames = ["run_command", "fetch_url"],
             EnabledServers = ["builtin_filesystem"],
-            Text = "You are a task planner that breaks down complex requests into steps and executes them using available tools. " +
+            SystemPrompt = "You are a task planner that breaks down complex requests into steps and executes them using available tools. " +
                    "Workflow: (1) Analyze the request and present a numbered step-by-step plan, " +
                    "(2) Wait for the user to approve before proceeding, " +
                    "(3) Execute each step using the appropriate tools, reporting progress after each, " +
@@ -336,7 +336,7 @@ public static class AppSettings
         var result = BuiltInProfiles.Select(p => new Profile
         {
             Name = p.Name,
-            Text = p.Text,
+            SystemPrompt = p.SystemPrompt,
             IsBuiltIn = p.IsBuiltIn,
             PreferredProviderType = p.PreferredProviderType,
             PreferredModelId = p.PreferredModelId,

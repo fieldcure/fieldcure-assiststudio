@@ -464,7 +464,7 @@ public partial class MainViewModel : ObservableObject
     /// <returns>The system prompt text to use for new conversations.</returns>
     private string GetActivePromptText()
     {
-        return GetActiveProfile()?.Text ?? AppSettings.SystemPrompt;
+        return GetActiveProfile()?.SystemPrompt ?? AppSettings.SystemPrompt;
     }
 
     /// <summary>

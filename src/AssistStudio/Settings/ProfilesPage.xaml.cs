@@ -111,7 +111,7 @@ public sealed partial class ProfilesPage : Page
         {
             profile.Name = ProfileNameBox.Text.Trim();
         }
-        profile.Text = SystemPromptBox.Text;
+        profile.SystemPrompt = SystemPromptBox.Text;
 
         // Refresh combo display
         _suppressEvents = true;
@@ -157,7 +157,7 @@ public sealed partial class ProfilesPage : Page
         var newProfile = new Profile
         {
             Name = name,
-            Text = "",
+            SystemPrompt = "",
             IsBuiltIn = false
         };
         _profiles.Add(newProfile);
@@ -270,7 +270,7 @@ public sealed partial class ProfilesPage : Page
         var defaults = AppSettings.GetBuiltInDefaults(profile.Name);
         if (defaults is null) return;
 
-        profile.Text = defaults.Text;
+        profile.SystemPrompt = defaults.SystemPrompt;
         profile.ToolNames = [.. defaults.ToolNames];
         profile.UseSearchTools = defaults.UseSearchTools;
         profile.EnabledServers = [.. defaults.EnabledServers];
@@ -339,7 +339,7 @@ public sealed partial class ProfilesPage : Page
         ResetProfileButton.Visibility = profile.IsBuiltIn ? Visibility.Visible : Visibility.Collapsed;
         DeleteProfileButton.Visibility = profile.IsBuiltIn ? Visibility.Collapsed : Visibility.Visible;
 
-        SystemPromptBox.Text = profile.Text;
+        SystemPromptBox.Text = profile.SystemPrompt;
 
         // Provider
         PopulateProviderCombo();
@@ -366,7 +366,7 @@ public sealed partial class ProfilesPage : Page
         if (ProfileCombo.SelectedItem is Profile selected)
         {
             AppSettings.ActiveProfile = selected.Name;
-            AppSettings.SystemPrompt = selected.Text;
+            AppSettings.SystemPrompt = selected.SystemPrompt;
             AppSettings.NotifyProfilesChanged();
             System.Diagnostics.Debug.WriteLine($"[SaveAll] NotifyProfilesChanged fired for {selected.Name}");
         }
@@ -699,7 +699,7 @@ public sealed partial class ProfilesPage : Page
         if (ProfileCombo.SelectedItem is Profile selected)
         {
             AppSettings.ActiveProfile = selected.Name;
-            AppSettings.SystemPrompt = selected.Text;
+            AppSettings.SystemPrompt = selected.SystemPrompt;
         }
     }
 
