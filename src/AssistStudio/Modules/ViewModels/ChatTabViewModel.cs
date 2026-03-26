@@ -852,11 +852,20 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// </summary>
     public async void OnKnowledgeArchiveReindexRequested(object? _sender, EventArgs _e)
     {
-        if (_ragConnection is null || !_ragConnection.IsConnected) return;
+        if (_ragConnection is null || !_ragConnection.IsConnected)
+        {
+            LoggingService.LogWarning("[RAG] Re-index requested but RAG not connected");
+            return;
+        }
 
         var tool = _ragConnection.Tools.FirstOrDefault(t => t.Name == "index_documents");
-        if (tool is null) return;
+        if (tool is null)
+        {
+            LoggingService.LogWarning("[RAG] Re-index requested but index_documents tool not found");
+            return;
+        }
 
+        LoggingService.LogInfo("[RAG] Re-indexing started (force=true)");
         NotificationCenter.Instance.Post(
             Microsoft.UI.Xaml.Controls.InfoBarSeverity.Informational,
             "Knowledge Archive",
@@ -866,6 +875,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         {
             var args = System.Text.Json.JsonSerializer.SerializeToElement(new { force = true });
             var resultJson = await tool.ExecuteAsync(args);
+            LoggingService.LogInfo($"[RAG] Re-index result: {resultJson}");
 
             var message = "Re-indexing complete.";
             if (!string.IsNullOrEmpty(resultJson))
@@ -877,8 +887,13 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                     var indexed = root.TryGetProperty("indexed", out var i) ? i.GetInt32() : 0;
                     var chunks = root.TryGetProperty("total_chunks", out var c) ? c.GetInt32() : 0;
                     message = $"{indexed} indexed, {chunks} chunks";
+                    LoggingService.LogInfo($"[RAG] Re-indexing complete: {message}");
                 }
-                catch { message = resultJson ?? message; }
+                catch
+                {
+                    message = resultJson ?? message;
+                    LoggingService.LogWarning($"[RAG] Could not parse re-index result: {resultJson}");
+                }
             }
 
             NotificationCenter.Instance.Post(
@@ -889,6 +904,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
+            LoggingService.LogError($"[RAG] Re-indexing failed: {ex.Message}");
             NotificationCenter.Instance.Post(
                 Microsoft.UI.Xaml.Controls.InfoBarSeverity.Error,
                 "Knowledge Archive — Failed",
@@ -950,10 +966,12 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// </summary>
     private async Task ConnectRagAsync(string folder)
     {
+        LoggingService.LogInfo($"[RAG] Connecting to folder: {folder}");
+
         // Skip if folder no longer exists on disk
         if (!Directory.Exists(folder))
         {
-            LoggingService.LogWarning($"[Tab] Knowledge Archive folder not found: {folder}");
+            LoggingService.LogWarning($"[RAG] Knowledge Archive folder not found: {folder}");
             return;
         }
 
@@ -987,6 +1005,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         mcpConfig.Id = $"builtin_{BuiltInServerHelper.RagKey}_{Id}";
 
         _ragConnection = await App.McpRegistry.AddAndConnectAsync(mcpConfig);
+        LoggingService.LogInfo($"[RAG] Connection result: IsConnected={_ragConnection.IsConnected}, Tools={_ragConnection.Tools.Count}");
 
         // Start indexing in background with notification
         if (_ragConnection.IsConnected)
@@ -1017,6 +1036,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         var tool = _ragConnection.Tools.FirstOrDefault(t => t.Name == "index_documents");
         if (tool is null) return;
 
+        LoggingService.LogInfo("[RAG] Indexing started");
         NotificationCenter.Instance.Post(
             Microsoft.UI.Xaml.Controls.InfoBarSeverity.Informational,
             "Knowledge Archive",
@@ -1025,7 +1045,9 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         try
         {
             var args = System.Text.Json.JsonSerializer.SerializeToElement(new { force = false });
+            LoggingService.LogInfo("[RAG] Calling index_documents tool…");
             var resultJson = await tool.ExecuteAsync(args);
+            LoggingService.LogInfo($"[RAG] index_documents result: {resultJson}");
 
             // Parse result JSON to build user-friendly message
             var message = "Indexing complete.";
@@ -1049,8 +1071,13 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                     parts.Add($"{chunks} chunks");
 
                     message = string.Join(", ", parts);
+                    LoggingService.LogInfo($"[RAG] Indexing complete: {message}");
                 }
-                catch { message = resultJson; }
+                catch
+                {
+                    message = resultJson;
+                    LoggingService.LogWarning($"[RAG] Could not parse index result: {resultJson}");
+                }
             }
 
             NotificationCenter.Instance.Post(
@@ -1061,6 +1088,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
+            LoggingService.LogError($"[RAG] Indexing failed: {ex.Message}");
             NotificationCenter.Instance.Post(
                 Microsoft.UI.Xaml.Controls.InfoBarSeverity.Error,
                 "Knowledge Archive — Failed",
