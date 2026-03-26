@@ -172,7 +172,7 @@ public static class AppSettings
     /// </summary>
     public static string ActiveProfile
     {
-        get => Settings.Values["ActiveProfile"] as string ?? "Professional";
+        get => Settings.Values["ActiveProfile"] as string ?? "Chat";
         set => Settings.Values["ActiveProfile"] = value;
     }
 
@@ -213,41 +213,82 @@ public static class AppSettings
     /// </summary>
     private static readonly List<Profile> BuiltInProfiles =
     [
-        new() { Name = "Professional", IsBuiltIn = true,
+        // --- No-tool conversational profile ---
+        new()
+        {
+            Name = "Chat",
+            IsBuiltIn = true,
+            ToolNames = [],
+            EnabledServers = [],
+            SystemPrompt =
+                "You are a friendly, thoughtful conversational assistant. " +
+                "Provide clear and helpful responses. " +
+                "If you're unsure about something, say so honestly."
+        },
+        // --- General-purpose with tool access ---
+        new()
+        {
+            Name = "General",
+            IsBuiltIn = true,
             ToolNames = ["run_command", "fetch_url"],
             EnabledServers = ["builtin_filesystem"],
-            SystemPrompt = "You are a helpful assistant. Provide clear, well-structured responses. " +
-                   "Explain step by step when needed. If you're unsure about something, say so honestly. " +
-                   "You have access to tools — use them proactively when they would help answer the user's question." },
-        new() { Name = "Analytical", IsBuiltIn = true,
-            ToolNames = ["run_command", "fetch_url"],
+            SystemPrompt =
+                "You are a helpful assistant. Provide clear, well-structured responses. " +
+                "Explain step by step when needed. If you're unsure about something, say so honestly. " +
+                "You have access to tools — use them proactively when they would help answer the user's question."
+        },
+        // --- Code & data focused, aggressive tool use ---
+        new()
+        {
+            Name = "Analytical",
+            IsBuiltIn = true,
+            ToolNames = ["run_command", "search_files", "fetch_url"],
             EnabledServers = ["builtin_filesystem"],
-            SystemPrompt = "You are a concise and direct assistant focused on code and data analysis. " +
-                   "Prioritize code readability and performance. Use Markdown formatting. " +
-                   "Keep explanations brief. Use tools to read, write, and run code directly " +
-                   "rather than just explaining what to do." },
-        new() { Name = "Creative", IsBuiltIn = true,
+            SystemPrompt =
+                "You are a concise, direct assistant focused on code and data analysis. " +
+                "Prioritize code readability and performance. Use Markdown formatting. " +
+                "Always prefer running code and showing actual results over explaining what to do. " +
+                "Use search_files to explore the workspace before making assumptions about project structure."
+        },
+        // --- Creative exploration ---
+        new()
+        {
+            Name = "Creative",
+            IsBuiltIn = true,
             ToolNames = ["fetch_url"],
-            SystemPrompt = "You are a creative assistant who explores multiple perspectives. " +
-                   "Suggest innovative ideas and ask follow-up questions to better understand the user's needs. " +
-                   "You can fetch web pages for inspiration and reference when needed." },
-        new() { Name = "Task Planner", IsBuiltIn = true,
-            ToolNames = ["run_command", "fetch_url"],
+            EnabledServers = [],
+            SystemPrompt =
+                "You are a creative assistant who explores multiple perspectives. " +
+                "Suggest innovative ideas and ask follow-up questions to better understand the user's needs. " +
+                "You can fetch web pages for inspiration and reference when needed."
+        },
+        // --- Multi-step task execution ---
+        new()
+        {
+            Name = "Task Planner",
+            IsBuiltIn = true,
+            ToolNames = ["run_command", "search_files", "fetch_url"],
             EnabledServers = ["builtin_filesystem"],
-            SystemPrompt = "You are a task planner that breaks down complex requests into steps and executes them using available tools. " +
-                   "Workflow: (1) Analyze the request and present a numbered step-by-step plan, " +
-                   "(2) Wait for the user to approve before proceeding, " +
-                   "(3) Execute each step using the appropriate tools, reporting progress after each, " +
-                   "(4) Summarize the final result. " +
-                   "If a step fails, explain what went wrong and suggest alternatives. " +
-                   "Always prefer the simplest approach. Do not over-engineer." },
-        new() { Name = "Knowledge Base", IsBuiltIn = true,
+            SystemPrompt =
+                "You are a task planner that breaks down complex requests into steps and executes them using available tools. " +
+                "For complex or multi-step tasks, present a numbered plan and wait for the user to approve before proceeding. " +
+                "For simple tasks, execute directly without unnecessary ceremony. " +
+                "Report progress after each major step. If a step fails, explain what went wrong and suggest alternatives. " +
+                "Always prefer the simplest approach. Do not over-engineer."
+        },
+        // --- RAG-powered Q&A ---
+        new()
+        {
+            Name = "Knowledge Base",
+            IsBuiltIn = true,
             ToolNames = ["fetch_url"],
-            EnabledServers = ["builtin_rag"],
-            SystemPrompt = "You are a helpful assistant with access to a knowledge archive. " +
-                   "When answering questions, always search the archive first using search_documents before responding. " +
-                   "Cite the source document when providing information. " +
-                   "If the archive has no relevant results, say so and answer from your general knowledge." }
+            EnabledServers = ["builtin_rag", "builtin_filesystem"],
+            SystemPrompt =
+                "You are a helpful assistant with access to a knowledge archive. " +
+                "When the question may relate to indexed content, search the archive first using search_documents. " +
+                "Cite the source document when providing information from the archive. " +
+                "If the archive has no relevant results, say so and answer from your general knowledge."
+        }
     ];
 
     /// <summary>
