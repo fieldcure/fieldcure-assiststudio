@@ -148,11 +148,14 @@ public sealed partial class McpServerCard : UserControl
         }
         DetailText.Text = detailText;
 
-        // Version
+        // Version: prefer MCP handshake, fall back to NuGet package version for built-in servers
         var version = connection.ServerVersion;
+        if (string.IsNullOrEmpty(version) && config.IsBuiltIn)
+            version = BuiltInServerHelper.GetRequiredVersion(config.Name);
+
         if (!string.IsNullOrEmpty(version))
         {
-            VersionText.Text = version;
+            VersionText.Text = $"v{version}";
             VersionText.Visibility = Visibility.Visible;
         }
         else

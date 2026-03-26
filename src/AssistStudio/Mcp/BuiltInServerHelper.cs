@@ -81,6 +81,12 @@ public static class BuiltInServerHelper
     #region Methods
 
     /// <summary>
+    /// Returns the required NuGet package version for a built-in server key, or null if not found.
+    /// </summary>
+    public static string? GetRequiredVersion(string serverKey)
+        => NuGetPackages.TryGetValue(serverKey, out var pkg) ? pkg.RequiredVersion : null;
+
+    /// <summary>
     /// Returns the default built-in server configurations.
     /// All servers start disabled with no folders.
     /// </summary>
