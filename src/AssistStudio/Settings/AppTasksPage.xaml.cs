@@ -68,13 +68,15 @@ public sealed partial class AppTasksPage : Page
         AutoTitleToggle.IsOn = AppSettings.AppAutoTitle;
         AutoSummaryToggle.IsOn = AppSettings.AppAutoSummary;
 
-        // Embedding: check provider availability and restore selection
-        await InitializeEmbeddingSectionAsync();
-
-        // Contextualizer: check provider availability and restore selection
-        await InitializeContextualizerSectionAsync();
+        // Restore saved selections immediately (synchronous — no flicker)
+        RestoreEmbeddingSelection(AppSettings.EmbeddingPreset);
+        RestoreContextualizerSelection(AppSettings.ContextualizerPreset);
 
         _suppressEvents = false;
+
+        // Then check provider availability asynchronously (disables unavailable options)
+        await InitializeEmbeddingSectionAsync();
+        await InitializeContextualizerSectionAsync();
     }
 
     #endregion
@@ -122,14 +124,10 @@ public sealed partial class AppTasksPage : Page
     /// </summary>
     private async Task InitializeEmbeddingSectionAsync()
     {
-        // 1. Restore saved selection immediately (no network wait)
+        // Saved selection is already restored in OnNavigatedTo (synchronous).
         var savedPreset = AppSettings.EmbeddingPreset;
-        if (!string.IsNullOrEmpty(savedPreset) && savedPreset.Contains('/'))
-        {
-            RestoreEmbeddingSelection(savedPreset);
-        }
 
-        // 2. Check OpenAI API key availability (sync, no network)
+        // Check OpenAI API key availability (sync, no network)
         var hasOpenAiKey = AppSettings.LoadPresets()
             .Any(p => p.ProviderType is "OpenAI"
                 && !string.IsNullOrEmpty(p.ApiKey));
@@ -377,8 +375,11 @@ public sealed partial class AppTasksPage : Page
 
         try
         {
-            using var manager = new OllamaModelManager("http://localhost:11434");
-            await manager.DownloadModelAsync(model);
+            await Task.Run(async () =>
+            {
+                using var manager = new OllamaModelManager("http://localhost:11434");
+                await manager.DownloadModelAsync(model);
+            });
 
             // Done — hide spinner
             if (spinner is not null) { spinner.IsActive = false; spinner.Visibility = Visibility.Collapsed; }
@@ -456,22 +457,12 @@ public sealed partial class AppTasksPage : Page
     #region Contextualizer
 
     /// <summary>
-    /// Initializes the contextualizer section: checks provider availability and restores saved selection.
+    /// Initializes the contextualizer section: checks provider availability and disables unavailable options.
+    /// Saved selection is already restored in OnNavigatedTo (synchronous).
     /// </summary>
     private async Task InitializeContextualizerSectionAsync()
     {
-        // 1. Restore saved selection (default: "none")
-        var savedPreset = AppSettings.ContextualizerPreset;
-        if (!string.IsNullOrEmpty(savedPreset) && savedPreset != "none" && savedPreset.Contains('/'))
-        {
-            RestoreContextualizerSelection(savedPreset);
-        }
-        else
-        {
-            RbCtxNone.IsChecked = true;
-        }
-
-        // 2. Check OpenAI API key availability
+        // Check OpenAI API key availability
         var presets = AppSettings.LoadPresets();
         var hasOpenAiKey = presets.Any(p => p.ProviderType is "OpenAI" && !string.IsNullOrEmpty(p.ApiKey));
         if (!hasOpenAiKey)
@@ -667,8 +658,11 @@ public sealed partial class AppTasksPage : Page
 
         try
         {
-            using var manager = new OllamaModelManager("http://localhost:11434");
-            await manager.DownloadModelAsync(model);
+            await Task.Run(async () =>
+            {
+                using var manager = new OllamaModelManager("http://localhost:11434");
+                await manager.DownloadModelAsync(model);
+            });
 
             if (spinner is not null) { spinner.IsActive = false; spinner.Visibility = Visibility.Collapsed; }
 
