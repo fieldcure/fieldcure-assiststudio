@@ -240,7 +240,14 @@ public static class AppSettings
                    "(3) Execute each step using the appropriate tools, reporting progress after each, " +
                    "(4) Summarize the final result. " +
                    "If a step fails, explain what went wrong and suggest alternatives. " +
-                   "Always prefer the simplest approach. Do not over-engineer." }
+                   "Always prefer the simplest approach. Do not over-engineer." },
+        new() { Name = "Knowledge Base", IsBuiltIn = true,
+            ToolNames = ["fetch_url"],
+            EnabledServers = ["builtin_rag"],
+            SystemPrompt = "You are a helpful assistant with access to a knowledge archive. " +
+                   "When answering questions, always search the archive first using search_documents before responding. " +
+                   "Cite the source document when providing information. " +
+                   "If the archive has no relevant results, say so and answer from your general knowledge." }
     ];
 
     /// <summary>
