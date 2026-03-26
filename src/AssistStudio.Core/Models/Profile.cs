@@ -5,6 +5,16 @@ namespace FieldCure.AssistStudio.Models;
 /// </summary>
 public class Profile
 {
+    #region Events
+
+    /// <summary>
+    /// Raised when any tool-related property (<see cref="ToolNames"/>, <see cref="EnabledServers"/>,
+    /// <see cref="UseSearchTools"/>) changes. Subscribers should refresh their tool resolution.
+    /// </summary>
+    public event EventHandler? ToolSettingsChanged;
+
+    #endregion
+
     #region Properties
 
     /// <summary>Unique display name for this profile.</summary>
@@ -23,19 +33,51 @@ public class Profile
     public string? PreferredModelId { get; set; }
 
     /// <summary>Tool names to enable when this profile is active.</summary>
-    public List<string> ToolNames { get; set; } = [];
+    public List<string> ToolNames
+    {
+        get => _toolNames;
+        set
+        {
+            _toolNames = value;
+            ToolSettingsChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
 
     /// <summary>
     /// When true, sends a single search_tools meta-tool instead of individual MCP tool definitions.
     /// </summary>
-    public bool UseSearchTools { get; set; }
+    public bool UseSearchTools
+    {
+        get => _useSearchTools;
+        set
+        {
+            _useSearchTools = value;
+            ToolSettingsChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
 
     /// <summary>
     /// Server IDs enabled for this profile (e.g., "builtin_filesystem", "github_abc123").
     /// When non-empty, only tools from these servers are discoverable via search_tools.
     /// Empty means no servers selected (built-in tools only).
     /// </summary>
-    public List<string> EnabledServers { get; set; } = [];
+    public List<string> EnabledServers
+    {
+        get => _enabledServers;
+        set
+        {
+            _enabledServers = value;
+            ToolSettingsChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    #endregion
+
+    #region Fields
+
+    private List<string> _toolNames = [];
+    private bool _useSearchTools;
+    private List<string> _enabledServers = [];
 
     #endregion
 }

@@ -29,7 +29,7 @@ public static class AppSettings
     public static event EventHandler? PresetsChanged;
 
     /// <summary>
-    /// Raised when profiles are added, removed, or modified.
+    /// Raised when profiles are added, removed, or modified (list-level changes).
     /// </summary>
     public static event EventHandler? ProfilesChanged;
 
@@ -37,6 +37,9 @@ public static class AppSettings
     /// Notifies subscribers that profiles have changed.
     /// </summary>
     public static void NotifyProfilesChanged() => ProfilesChanged?.Invoke(null, EventArgs.Empty);
+
+    /// <summary>Shared in-memory profile cache. All callers get the same instances.</summary>
+    private static List<Profile>? _profileCache;
 
     #endregion
 
@@ -319,8 +322,16 @@ public static class AppSettings
     /// Loads all profiles, combining built-in profiles with user-created custom profiles from storage.
     /// </summary>
     /// <returns>A list of all available profiles.</returns>
+    /// <summary>
+    /// Forces the next <see cref="LoadProfiles"/> call to reload from disk.
+    /// </summary>
+    public static void InvalidateProfileCache() => _profileCache = null;
+
     public static List<Profile> LoadProfiles()
     {
+        if (_profileCache is not null)
+            return _profileCache;
+
         // Clone built-in profiles so modifications don't affect the static defaults
         var result = BuiltInProfiles.Select(p => new Profile
         {
@@ -366,6 +377,7 @@ public static class AppSettings
             catch { /* ignore corrupt data */ }
         }
 
+        _profileCache = result;
         return result;
     }
 
