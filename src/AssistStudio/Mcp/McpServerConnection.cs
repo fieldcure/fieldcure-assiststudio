@@ -39,6 +39,7 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
     private McpConnectionState _state = McpConnectionState.Disconnected;
     private string? _errorMessage;
     private IReadOnlyList<McpToolAdapter> _tools = [];
+    private string? _serverVersion;
     private readonly Lock _rootsLock = new();
     private List<string> _currentFolders = [];
 
@@ -84,6 +85,15 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
     {
         get => _tools;
         private set => SetField(ref _tools, value);
+    }
+
+    /// <summary>
+    /// Gets the server version reported during MCP handshake, or null if unavailable.
+    /// </summary>
+    public string? ServerVersion
+    {
+        get => _serverVersion;
+        private set => SetField(ref _serverVersion, value);
     }
 
     /// <summary>Gets whether this connection is active.</summary>
@@ -150,10 +160,12 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
 
             _client = await McpClient.CreateAsync(transport, options, cancellationToken: ct);
 
-            // Auto-fill description from server's self-reported info
-            if (string.IsNullOrWhiteSpace(Config.Description) && _client.ServerInfo is { } serverInfo)
+            // Auto-fill description and version from server's self-reported info
+            if (_client.ServerInfo is { } serverInfo)
             {
-                Config.Description = serverInfo.Title ?? "";
+                if (string.IsNullOrWhiteSpace(Config.Description))
+                    Config.Description = serverInfo.Title ?? "";
+                ServerVersion = serverInfo.Version;
             }
 
             var mcpTools = await _client.ListToolsAsync(cancellationToken: ct);

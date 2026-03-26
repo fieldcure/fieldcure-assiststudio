@@ -43,6 +43,13 @@
                            Opacity="0.6"
                            TextWrapping="Wrap"
                            MaxWidth="500" />
+
+                <!-- Version -->
+                <TextBlock x:Name="VersionText"
+                           Style="{ThemeResource CaptionTextBlockStyle}"
+                           Opacity="0.45"
+                           FontSize="11"
+                           Visibility="Collapsed" />
             </StackPanel>
 
             <!-- Right: Actions (2 rows) -->

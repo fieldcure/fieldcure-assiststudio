@@ -148,6 +148,18 @@ public sealed partial class McpServerCard : UserControl
         }
         DetailText.Text = detailText;
 
+        // Version
+        var version = connection.ServerVersion;
+        if (!string.IsNullOrEmpty(version))
+        {
+            VersionText.Text = version;
+            VersionText.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            VersionText.Visibility = Visibility.Collapsed;
+        }
+
         // Toggle state (suppress event to avoid re-entry)
         _suppressToggleEvent = true;
         EnableToggle.IsOn = config.IsEnabled;
