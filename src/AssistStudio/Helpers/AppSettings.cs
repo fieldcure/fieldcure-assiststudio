@@ -370,7 +370,8 @@ public static class AppSettings
             try
             {
                 var custom = JsonSerializer.Deserialize(json, AppJsonContext.Default.ListProfile) ?? [];
-                result.AddRange(custom);
+                var builtInNames = result.Select(p => p.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                result.AddRange(custom.Where(c => !builtInNames.Contains(c.Name)));
             }
             catch { /* ignore corrupt data */ }
         }
