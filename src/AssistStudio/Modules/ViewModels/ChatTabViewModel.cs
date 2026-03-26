@@ -442,14 +442,12 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Updates the system prompt and profiles on the chat panel.
     /// </summary>
-    public void ApplySystemPrompt(string prompt, List<Profile> profiles, Profile? selectedProfile)
+    public void ApplySystemPrompt(string prompt, List<Profile> profiles, Profile? _selectedProfile)
     {
-        SystemPrompt = prompt;
+        // Use the tab's own profile text, not the global prompt
+        var profilePrompt = Panel?.SelectedProfile?.Text;
+        SystemPrompt = profilePrompt ?? prompt;
         AvailableProfiles = profiles;
-
-        // Don't override profile on tabs that already have conversation history
-        if (GetMessages().Count == 0)
-            SelectedProfile = selectedProfile;
     }
 
     /// <summary>
