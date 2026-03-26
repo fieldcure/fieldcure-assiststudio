@@ -22,6 +22,7 @@ public class Profile
     public string Name { get; set; } = "";
 
     /// <summary>The system prompt text for this profile.</summary>
+    [System.Text.Json.Serialization.JsonPropertyName("Text")]
     public string SystemPrompt { get; set; } = "";
 
     /// <summary>Whether this is a built-in profile (cannot be deleted).</summary>
