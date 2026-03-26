@@ -133,15 +133,6 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// </summary>
     [ObservableProperty] private IReadOnlyList<IAssistTool> _mcpTools = [];
 
-    /// <summary>
-    /// Available servers for the tool flyout. Built from McpRegistry connections.
-    /// </summary>
-    [ObservableProperty] private IReadOnlyList<ServerInfo> _availableServers = [];
-
-    /// <summary>
-    /// Currently enabled server IDs (from profile + runtime toggles).
-    /// </summary>
-    [ObservableProperty] private IReadOnlyList<string> _enabledServerIds = [];
 
     #endregion
 
@@ -271,6 +262,10 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 
         // Apply linked tools from active profile (built-in + MCP)
         ResolveTools(selectedProfile);
+
+        // Subscribe to profile tool settings changes (shared instance)
+        if (selectedProfile is not null)
+            selectedProfile.ToolSettingsChanged += OnProfileToolSettingsChanged;
     }
 
     #endregion
@@ -313,6 +308,9 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 
         // Relay keyboard shortcut from WebView2 (separate HWND)
         panel.KeyboardShortcutPressed += (s, e) => KeyboardShortcutPressed?.Invoke(s, e);
+
+        // Wire send-time tool resolution (auto-connect + connection filtering)
+        panel.PrepareToolsForSendAsync = PrepareToolsForSendAsync;
 
         // Flush branch messages first (tree-only, not active path)
         foreach (var (role, content, providerName, modelId, id, parentId, toolCalls, toolCallId) in _pendingBranchMessages)
@@ -467,27 +465,8 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             // Empty tab: switch to the active profile
             SelectedProfile = selectedProfile;
         }
-        else
-        {
-            // Tab with history: keep current profile but sync tool settings from saved data
-            var current = Panel?.SelectedProfile;
-            if (current is not null)
-            {
-                var updated = profiles.FirstOrDefault(p => p.Name == current.Name);
-                if (updated is not null)
-                {
-                    current.ToolNames = updated.ToolNames;
-                    current.UseSearchTools = updated.UseSearchTools;
-                    ResolveTools(current);
-                    Panel?.DispatcherQueue.TryEnqueue(() =>
-                        {
-                            Panel.RegisteredTools = [];
-                            Panel.RegisteredTools = RegisteredTools;
-                            Panel.McpTools = McpTools;
-                        });
-                }
-            }
-        }
+        // Tabs with history keep their current profile. Tool re-resolution
+        // is handled automatically via Profile.ToolSettingsChanged subscription.
     }
 
     /// <summary>
@@ -542,10 +521,24 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>
+    /// Handles tool settings changes from the shared Profile instance.
+    /// </summary>
+    private void OnProfileToolSettingsChanged(object? sender, EventArgs e)
+    {
+        if (sender is not Profile profile) return;
+        LoggingService.LogInfo($"[Tab] Profile.ToolSettingsChanged: {profile.Name}");
+        RefreshTools();
+    }
+
     /// <inheritdoc/>
     public void Dispose()
     {
         GC.SuppressFinalize(this);
+
+        // Unsubscribe from profile events
+        if (SelectedProfile is not null)
+            SelectedProfile.ToolSettingsChanged -= OnProfileToolSettingsChanged;
 
         // Disconnect per-tab MCP servers
         if (_filesystemConnection is not null)
@@ -600,6 +593,12 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     public async void OnProfileChanged(object? _sender, Profile profile)
     {
         LoggingService.LogInfo($"[Tab] Profile changed: {profile.Name}");
+
+        // Unsubscribe from old profile, subscribe to new
+        if (SelectedProfile is not null)
+            SelectedProfile.ToolSettingsChanged -= OnProfileToolSettingsChanged;
+        profile.ToolSettingsChanged += OnProfileToolSettingsChanged;
+
         SystemPrompt = profile.Text;
 
         // Update workspace capability: profile decides if filesystem is enabled
@@ -649,9 +648,8 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Re-resolves tools for the current profile. Call after profile tool settings
-    /// are modified externally (e.g., in ProfilesPage).
-    /// Reloads saved profiles to sync changes made in a different Profile instance.
+    /// Re-resolves tools for the current profile. Called when profile tool settings
+    /// change (shared instances via AppSettings cache, no disk reload needed).
     /// </summary>
     public void RefreshTools()
     {
@@ -660,17 +658,6 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         {
             LoggingService.LogInfo("[Settings] RefreshTools: profile is null, skipping");
             return;
-        }
-
-        // ProfilesPage uses its own Profile instances, so reload from settings
-        // and sync tool-related properties back to the active instance.
-        var saved = AppSettings.LoadProfiles();
-        var match = saved.FirstOrDefault(p => p.Name == profile.Name);
-        if (match is not null)
-        {
-            profile.ToolNames = match.ToolNames;
-            profile.UseSearchTools = match.UseSearchTools;
-            profile.EnabledServers = match.EnabledServers;
         }
 
         LoggingService.LogInfo($"[Settings] RefreshTools: profile={profile.Name}, UseSearchTools={profile.UseSearchTools}, ToolNames={profile.ToolNames.Count}");
@@ -724,40 +711,6 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             Title = input.Text.Trim();
             IsDirty = true;
         }
-    }
-
-    /// <summary>
-    /// Handles server toggle changes from the tool flyout.
-    /// Updates the profile's enabled servers and re-resolves tools.
-    /// </summary>
-    public void OnEnabledServersChanged(object? _sender, IReadOnlyList<string> serverIds)
-    {
-        var profile = Panel?.SelectedProfile;
-        if (profile is not null)
-        {
-            // Merge: keep profile servers that are not visible in this tab's AvailableServers,
-            // then apply the user's toggle changes for visible servers only.
-            var visibleServerIds = Panel?.AvailableServers?
-                .Select(s => s.Id).ToHashSet(StringComparer.OrdinalIgnoreCase)
-                ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            // Also include built-in aliases (builtin_xxx) that map to visible per-tab connections
-            if (_filesystemConnection is not null && visibleServerIds.Contains(_filesystemConnection.Config.Id))
-                visibleServerIds.Add($"builtin_{BuiltInServerHelper.FilesystemKey}");
-            if (_ragConnection is not null && visibleServerIds.Contains(_ragConnection.Config.Id))
-                visibleServerIds.Add($"builtin_{BuiltInServerHelper.RagKey}");
-
-            var merged = profile.EnabledServers
-                .Where(s => !visibleServerIds.Contains(s))  // preserve servers not visible in this tab
-                .ToList();
-            merged.AddRange(serverIds);  // apply user's changes for visible servers
-
-            profile.EnabledServers = merged;
-            AppSettings.SaveCustomProfiles(AppSettings.LoadProfiles()
-                .Select(p => p.Name == profile.Name ? profile : p));
-        }
-
-        ResolveTools(profile);
     }
 
     /// <summary>
@@ -1098,10 +1051,8 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Resolves registered tools using server-level selection.
-    /// Built-in tools (run_command, fetch_url) are always included.
-    /// File tools (read_file, write_file, search_files) are included only when Filesystem MCP is inactive.
-    /// All MCP tools are discovered via search_tools meta-tool, not registered individually.
+    /// Resolves registered tools for Flyout display (connection-independent).
+    /// Actual connection filtering happens at send time via <see cref="PrepareToolsForSendAsync"/>.
     /// </summary>
     private void ResolveTools(Profile? profile)
     {
@@ -1109,36 +1060,23 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         var profileToolNames = profile?.ToolNames ?? [];
 
         // 1. Built-in tools filtered by profile selection
-        var filesystemConn = _filesystemConnection;
-        var filesystemActiveInProfile = filesystemConn?.IsConnected == true
-            && (profile?.EnabledServers.Contains($"builtin_{BuiltInServerHelper.FilesystemKey}") ?? false);
+        // Suppress file tools when Filesystem MCP is enabled in the profile (regardless of connection state)
+        var filesystemEnabledInProfile =
+            profile?.EnabledServers.Contains($"builtin_{BuiltInServerHelper.FilesystemKey}") ?? false;
 
         foreach (var toolName in new[] { "run_command", "fetch_url", "read_file", "write_file", "search_files" })
         {
             if (!profileToolNames.Contains(toolName)) continue;
 
-            // File tools suppressed when Filesystem MCP is active
-            if (filesystemActiveInProfile && BuiltInServerHelper.SuppressedBuiltInToolNames.Contains(toolName))
+            if (filesystemEnabledInProfile && BuiltInServerHelper.SuppressedBuiltInToolNames.Contains(toolName))
                 continue;
 
             tools.AddRange(ToolRegistry.Resolve([toolName]));
         }
 
-        // 2. search_tools — only when profile has enabled servers
+        // 2. search_tools — when profile has enabled servers
         var enabledServerIds = profile?.EnabledServers ?? [];
-
-        // Map built-in server IDs to per-tab connection IDs so filtering works
-        var effectiveServerIds = enabledServerIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        if (_filesystemConnection is not null
-            && effectiveServerIds.Contains($"builtin_{BuiltInServerHelper.FilesystemKey}"))
-        {
-            effectiveServerIds.Add(_filesystemConnection.Config.Id);
-        }
-        if (_ragConnection is not null
-            && effectiveServerIds.Contains($"builtin_{BuiltInServerHelper.RagKey}"))
-        {
-            effectiveServerIds.Add(_ragConnection.Config.Id);
-        }
+        var effectiveServerIds = BuildEffectiveServerIds(enabledServerIds);
 
         if (effectiveServerIds.Count > 0)
         {
@@ -1147,14 +1085,8 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             {
                 if (searchTool is ISearchToolScope scoped)
                 {
-                    // Scope search to tools from enabled servers only
-                    var allowedToolNames = App.McpRegistry.AllTools
-                        .Where(t => effectiveServerIds.Contains(
-                            App.McpRegistry.Connections
-                                .FirstOrDefault(c => c.Tools.Contains(t))?.Config.Id ?? ""))
-                        .Select(t => t.Name)
-                        .ToHashSet();
-
+                    // Scope to all enabled servers' tools (connection-independent)
+                    var allowedToolNames = GetToolNamesFromServers(effectiveServerIds);
                     scoped.AllowedToolNames = allowedToolNames.Count > 0 ? allowedToolNames : null;
                 }
 
@@ -1162,47 +1094,170 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             }
         }
 
-        // 3. Knowledge Archive tools — always directly exposed (not behind search_tools)
-        if (_ragConnection is not null && _ragConnection.IsConnected
+        // 3. Knowledge Archive tools — directly exposed (not behind search_tools)
+        // Include regardless of connection state; filtered at send time
+        if (_ragConnection is not null
             && effectiveServerIds.Contains(_ragConnection.Config.Id))
         {
             foreach (var ragTool in _ragConnection.Tools)
-            {
                 tools.Add(ragTool);
-            }
         }
 
         RegisteredTools = tools;
 
-        // Collect MCP tools for execution (not sent in API tools array, discovered via search_tools)
-        if (effectiveServerIds.Count > 0)
-        {
-            McpTools = [.. App.McpRegistry.AllTools
-                .Where(t => effectiveServerIds.Contains(
-                    App.McpRegistry.Connections
-                        .FirstOrDefault(c => c.Tools.Contains(t))?.Config.Id ?? ""))];
-        }
-        else
-        {
-            McpTools = [];
-        }
+        // Collect all MCP tools from enabled servers (connection-independent, for Flyout display)
+        McpTools = effectiveServerIds.Count > 0
+            ? [.. GetToolsFromServers(effectiveServerIds)]
+            : [];
 
-        // Set run_command default CWD to first workspace folder (always update, even if suppressed by MCP)
+        // Set run_command default CWD to first workspace folder
         var runCmd = ToolRegistry.Resolve(["run_command"]).OfType<RunCommandTool>().FirstOrDefault();
         if (runCmd is not null)
         {
             var folders = Panel?.WorkspaceFolders;
             runCmd.DefaultWorkingDirectory = folders is { Count: > 0 } ? folders[0] : null;
         }
-
-        // Update server list for the tool flyout UI (filtered by profile's enabled servers)
-        AvailableServers = [.. App.McpRegistry.Connections
-            .Where(c => effectiveServerIds.Contains(c.Config.Id))
-            .Select(c => new ServerInfo(
-                c.Config.Id, c.Config.Name, c.IsConnected, c.Config.IsBuiltIn))];
-
-        EnabledServerIds = [.. effectiveServerIds];
     }
+
+    /// <summary>
+    /// Auto-connects disconnected servers and filters tools to only those from connected servers.
+    /// Called by ChatPanel before sending the API request.
+    /// </summary>
+    public async Task<IReadOnlyList<IAssistTool>> PrepareToolsForSendAsync(
+        IReadOnlyList<IAssistTool> selectedTools)
+    {
+        var profile = Panel?.SelectedProfile;
+        if (profile is null) return selectedTools;
+
+        var enabledServerIds = profile.EnabledServers;
+        if (enabledServerIds.Count == 0) return selectedTools;
+
+        var effectiveServerIds = BuildEffectiveServerIds(enabledServerIds);
+
+        // 1. Auto-connect disconnected servers
+        foreach (var serverId in effectiveServerIds)
+        {
+            var conn = ResolveConnection(serverId);
+            if (conn is not null && !conn.IsConnected)
+            {
+                try
+                {
+                    await conn.ConnectAsync();
+                    LoggingService.LogInfo($"[Send] Auto-connected server: {serverId}");
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogWarning($"[Send] Failed to auto-connect server {serverId}: {ex.Message}");
+                }
+            }
+        }
+
+        // 2. Determine which servers are now connected
+        var connectedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var serverId in effectiveServerIds)
+        {
+            var conn = ResolveConnection(serverId);
+            if (conn?.IsConnected == true)
+                connectedIds.Add(serverId);
+        }
+
+        // 3. Filter tools to connected servers only
+        var result = new List<IAssistTool>();
+        foreach (var tool in selectedTools)
+        {
+            if (IsBuiltInTool(tool.Name))
+            {
+                result.Add(tool);
+            }
+            else if (tool.Name == "search_tools")
+            {
+                if (connectedIds.Count > 0)
+                {
+                    if (tool is ISearchToolScope scoped)
+                        scoped.AllowedToolNames = GetToolNamesFromServers(connectedIds);
+                    result.Add(tool);
+                }
+            }
+            else
+            {
+                // MCP tool (e.g., RAG search_documents) — check if its server is connected
+                var ownerConn = FindConnectionForTool(tool);
+                if (ownerConn?.IsConnected == true)
+                    result.Add(tool);
+            }
+        }
+
+        // 4. Update McpTools to only connected server tools (for ToolCallExecutor)
+        McpTools = connectedIds.Count > 0
+            ? [.. GetToolsFromServers(connectedIds)]
+            : [];
+
+        return result;
+    }
+
+    #region Tool Resolution Helpers
+
+    /// <summary>Built-in tool names that don't require MCP server connections.</summary>
+    private static readonly HashSet<string> BuiltInToolNames =
+        ["run_command", "fetch_url", "read_file", "write_file", "search_files"];
+
+    private static bool IsBuiltInTool(string name) => BuiltInToolNames.Contains(name);
+
+    /// <summary>
+    /// Maps profile-level server IDs (builtin_xxx) to per-tab connection IDs.
+    /// </summary>
+    private HashSet<string> BuildEffectiveServerIds(IEnumerable<string> enabledServerIds)
+    {
+        var effective = enabledServerIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (_filesystemConnection is not null
+            && effective.Contains($"builtin_{BuiltInServerHelper.FilesystemKey}"))
+        {
+            effective.Add(_filesystemConnection.Config.Id);
+        }
+        if (_ragConnection is not null
+            && effective.Contains($"builtin_{BuiltInServerHelper.RagKey}"))
+        {
+            effective.Add(_ragConnection.Config.Id);
+        }
+        return effective;
+    }
+
+    /// <summary>Resolves a server ID to its <see cref="McpServerConnection"/>.</summary>
+    private McpServerConnection? ResolveConnection(string serverId)
+    {
+        if (_filesystemConnection?.Config.Id == serverId) return _filesystemConnection;
+        if (_ragConnection?.Config.Id == serverId) return _ragConnection;
+        return App.McpRegistry.Connections.FirstOrDefault(c => c.Config.Id == serverId);
+    }
+
+    /// <summary>Finds the connection that owns the given tool.</summary>
+    private McpServerConnection? FindConnectionForTool(IAssistTool tool)
+    {
+        if (_ragConnection?.Tools.Contains(tool) == true) return _ragConnection;
+        if (_filesystemConnection?.Tools.Contains(tool) == true) return _filesystemConnection;
+        return App.McpRegistry.Connections.FirstOrDefault(c => c.Tools.Contains(tool));
+    }
+
+    /// <summary>Gets tool names from servers matching the given IDs.</summary>
+    private static HashSet<string> GetToolNamesFromServers(HashSet<string> serverIds)
+    {
+        return [.. App.McpRegistry.AllTools
+            .Where(t => serverIds.Contains(
+                App.McpRegistry.Connections
+                    .FirstOrDefault(c => c.Tools.Contains(t))?.Config.Id ?? ""))
+            .Select(t => t.Name)];
+    }
+
+    /// <summary>Gets tool instances from servers matching the given IDs.</summary>
+    private static IEnumerable<IAssistTool> GetToolsFromServers(HashSet<string> serverIds)
+    {
+        return App.McpRegistry.AllTools
+            .Where(t => serverIds.Contains(
+                App.McpRegistry.Connections
+                    .FirstOrDefault(c => c.Tools.Contains(t))?.Config.Id ?? ""));
+    }
+
+    #endregion
 
     /// <summary>
     /// Resolves the app tasks provider based on the user's settings, returning <c>null</c>

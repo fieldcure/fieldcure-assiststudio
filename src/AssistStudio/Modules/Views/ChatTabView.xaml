@@ -28,8 +28,6 @@
         AutoTitle="{x:Bind ViewModel.AutoTitle, Mode=OneWay}"
         AutoSummarize="{x:Bind ViewModel.AutoSummarize, Mode=OneWay}"
         IsDebugMode="{x:Bind ViewModel.IsDebugMode, Mode=OneWay}"
-        RegisteredTools="{x:Bind ViewModel.RegisteredTools, Mode=OneWay}"
-        AvailableServers="{x:Bind ViewModel.AvailableServers, Mode=OneWay}"
-        EnabledServerIds="{x:Bind ViewModel.EnabledServerIds, Mode=OneWay}" />
+        RegisteredTools="{x:Bind ViewModel.RegisteredTools, Mode=OneWay}" />
 
 </UserControl>
