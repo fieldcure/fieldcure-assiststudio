@@ -456,17 +456,11 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// Updates the available profiles and selected profile on the chat panel.
     /// Tabs with existing conversation history keep their current profile selection.
     /// </summary>
-    public void ApplyProfiles(List<Profile> profiles, Profile? selectedProfile)
+    public void ApplyProfiles(List<Profile> profiles, Profile? _selectedProfile)
     {
+        // Update available list only — never change the tab's selected profile.
+        // Profile is set once at tab creation; user changes it via InputContainer ComboBox.
         AvailableProfiles = profiles;
-
-        if (GetMessages().Count == 0)
-        {
-            // Empty tab: switch to the active profile
-            SelectedProfile = selectedProfile;
-        }
-        // Tabs with history keep their current profile. Tool re-resolution
-        // is handled automatically via Profile.ToolSettingsChanged subscription.
     }
 
     /// <summary>
