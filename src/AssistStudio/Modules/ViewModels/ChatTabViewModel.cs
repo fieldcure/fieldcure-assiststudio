@@ -1094,14 +1094,40 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             }
         }
 
-        // 3. Server placeholders — for flyout display (connection-independent)
-        foreach (var serverId in enabledServerIds)
+        // 3. Server placeholders — for flyout display (same logic as ProfilesPage)
+        // Built-in servers: always available, check if enabled in profile
+        var enabledSet = enabledServerIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var filesystemId = $"builtin_{BuiltInServerHelper.FilesystemKey}";
+        var ragId = $"builtin_{BuiltInServerHelper.RagKey}";
+
+        if (enabledSet.Contains(filesystemId))
         {
             tools.Add(new ServerPlaceholderTool
             {
-                Name = serverId,
-                DisplayName = GetServerDisplayName(serverId),
+                Name = filesystemId,
+                DisplayName = BuiltInServerHelper.FilesystemDisplayName,
             });
+        }
+        if (enabledSet.Contains(ragId))
+        {
+            tools.Add(new ServerPlaceholderTool
+            {
+                Name = ragId,
+                DisplayName = BuiltInServerHelper.RagDisplayName,
+            });
+        }
+
+        // External servers: from McpRegistry (same source as ProfilesPage)
+        foreach (var conn in App.McpRegistry.Connections.Where(c => !c.Config.IsBuiltIn))
+        {
+            if (enabledSet.Contains(conn.Config.Id))
+            {
+                tools.Add(new ServerPlaceholderTool
+                {
+                    Name = conn.Config.Id,
+                    DisplayName = conn.Config.Name,
+                });
+            }
         }
 
         RegisteredTools = tools;
