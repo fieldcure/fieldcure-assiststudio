@@ -60,9 +60,25 @@ public class ToolCallExecutor
 
         var args = JsonSerializer.Deserialize<JsonElement>(call.Arguments);
 
+        DiagnosticLogger.LogInfo($"[Tool] Calling: {tool.Name} args={call.Arguments}");
+
         // Run tool execution on a thread pool thread to avoid blocking the UI thread.
         // ConfirmationHandler (above) has already run on the caller's context.
-        return await Task.Run(() => tool.ExecuteAsync(args, ct), ct);
+        var result = await Task.Run(() => tool.ExecuteAsync(args, ct), ct);
+
+        DiagnosticLogger.LogInfo($"[Tool] Result: {tool.Name} → {Truncate(result, 500)}");
+
+        return result;
+    }
+
+    #endregion
+
+    #region Private Methods
+
+    private static string Truncate(string? value, int maxLength)
+    {
+        if (string.IsNullOrEmpty(value)) return "(empty)";
+        return value.Length <= maxLength ? value : value[..maxLength] + "…";
     }
 
     #endregion

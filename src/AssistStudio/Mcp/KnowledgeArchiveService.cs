@@ -89,7 +89,12 @@ public sealed class KnowledgeArchiveService
         var builtIn = AppSettings.BuiltInServers;
         var ragConfig = builtIn.GetValueOrDefault(BuiltInServerHelper.RagKey);
         if (ragConfig is null || !ragConfig.IsEnabled || ragConfig.Folders.Count == 0)
+        {
+            LoggingService.LogInfo("[KnowledgeArchive] Skipped — server disabled or no folders configured");
             return;
+        }
+
+        LoggingService.LogInfo($"[KnowledgeArchive] Starting — folders: {string.Join(", ", ragConfig.Folders)}");
 
         // Sync embedding + contextualizer env vars
         SyncRagEnvVars(ragConfig);
@@ -97,12 +102,18 @@ public sealed class KnowledgeArchiveService
         builtIn[BuiltInServerHelper.RagKey] = ragConfig;
         AppSettings.BuiltInServers = builtIn;
 
+        LoggingService.LogInfo("[KnowledgeArchive] Connecting RAG server…");
         await _registry.ConnectBuiltInAsync(BuiltInServerHelper.RagKey, ragConfig);
 
         var connection = _registry.GetBuiltInConnection(BuiltInServerHelper.RagKey);
         if (connection?.IsConnected == true)
         {
+            LoggingService.LogInfo($"[KnowledgeArchive] Connected — tools: {string.Join(", ", connection.Tools.Select(t => t.Name))}");
             await IndexAsync();
+        }
+        else
+        {
+            LoggingService.LogWarning("[KnowledgeArchive] Connection failed — server did not connect");
         }
     }
 
@@ -120,11 +131,19 @@ public sealed class KnowledgeArchiveService
         PasswordVaultHelper.SaveMcpEnvVar(id, "EMBEDDING_DIMENSION", "0");
         // EMBEDDING_API_KEY is saved by AppTasksPage handlers
 
+        LoggingService.LogInfo($"[KnowledgeArchive] Embedding — model={AppSettings.EmbeddingModel}, baseUrl={AppSettings.EmbeddingBaseUrl}");
+
         // Contextualizer
         PasswordVaultHelper.SaveMcpEnvVar(id, "CONTEXTUALIZER_PROVIDER", AppSettings.ContextualizerProvider);
         PasswordVaultHelper.SaveMcpEnvVar(id, "CONTEXTUALIZER_BASE_URL", AppSettings.ContextualizerBaseUrl);
         PasswordVaultHelper.SaveMcpEnvVar(id, "CONTEXTUALIZER_MODEL", AppSettings.ContextualizerModel);
         // CONTEXTUALIZER_API_KEY is saved by AppTasksPage handlers
+
+        var ctxModel = AppSettings.ContextualizerModel;
+        if (string.IsNullOrEmpty(ctxModel))
+            LoggingService.LogInfo("[KnowledgeArchive] Contextualizer — disabled");
+        else
+            LoggingService.LogInfo($"[KnowledgeArchive] Contextualizer — provider={AppSettings.ContextualizerProvider}, model={ctxModel}, baseUrl={AppSettings.ContextualizerBaseUrl}");
 
         ragConfig.EnvironmentVariableKeys =
         [
