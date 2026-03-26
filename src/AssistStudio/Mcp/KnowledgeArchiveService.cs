@@ -5,7 +5,7 @@ using Microsoft.UI.Xaml.Controls;
 namespace AssistStudio.Mcp;
 
 /// <summary>
-/// Orchestrates Knowledge Archive (지식보관소) MCP server lifecycle and document indexing.
+/// Orchestrates Knowledge Archive MCP server lifecycle and document indexing.
 /// Reports progress via <see cref="NotificationCenter"/>.
 /// </summary>
 public sealed class KnowledgeArchiveService
