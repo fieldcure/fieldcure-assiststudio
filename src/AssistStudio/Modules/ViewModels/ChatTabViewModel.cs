@@ -440,17 +440,6 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     public void ApplyTheme(ChatTheme theme) => Theme = theme;
 
     /// <summary>
-    /// Updates the system prompt and profiles on the chat panel.
-    /// </summary>
-    public void ApplySystemPrompt(string prompt, List<Profile> profiles, Profile? _selectedProfile)
-    {
-        // Use the tab's own profile text, not the global prompt
-        var profilePrompt = Panel?.SelectedProfile?.SystemPrompt;
-        SystemPrompt = profilePrompt ?? prompt;
-        AvailableProfiles = profiles;
-    }
-
-    /// <summary>
     /// Updates the available profiles and selected profile on the chat panel.
     /// Tabs with existing conversation history keep their current profile selection.
     /// </summary>
@@ -653,6 +642,9 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         }
 
         LoggingService.LogInfo($"[Settings] RefreshTools: profile={profile.Name}, UseSearchTools={profile.UseSearchTools}, ToolNames={profile.ToolNames.Count}");
+
+        // Sync system prompt from profile
+        SystemPrompt = profile.SystemPrompt;
 
         ResolveTools(profile);
 

@@ -19,11 +19,6 @@ public static class AppSettings
     public static event EventHandler<string>? ThemeChanged;
 
     /// <summary>
-    /// Raised when the system prompt text changes.
-    /// </summary>
-    public static event EventHandler<string>? SystemPromptChanged;
-
-    /// <summary>
     /// Raised when provider presets are saved.
     /// </summary>
     public static event EventHandler? PresetsChanged;
@@ -69,11 +64,7 @@ public static class AppSettings
     public static string SystemPrompt
     {
         get => Settings.Values["SystemPrompt"] as string ?? "";
-        set
-        {
-            Settings.Values["SystemPrompt"] = value;
-            SystemPromptChanged?.Invoke(null, value);
-        }
+        set => Settings.Values["SystemPrompt"] = value;
     }
 
     /// <summary>

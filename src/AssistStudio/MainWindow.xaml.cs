@@ -75,11 +75,6 @@ public sealed partial class MainWindow : Window
             ApplyAppTheme(theme);
             ViewModel.ApplyThemeToAll(theme);
         };
-        AppSettings.SystemPromptChanged += (_, prompt) =>
-        {
-            LoggingService.LogInfo($"[Settings] SystemPromptChanged → pushing to {ViewModel.Tabs.Count} tabs");
-            ViewModel.ApplySystemPromptToAll(prompt);
-        };
         AppSettings.PresetsChanged += (_, _) =>
         {
             LoggingService.LogInfo($"[Settings] PresetsChanged → refreshing on {ViewModel.Tabs.Count} tabs");

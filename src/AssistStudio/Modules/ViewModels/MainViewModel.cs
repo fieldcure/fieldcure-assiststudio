@@ -257,21 +257,6 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Updates the system prompt on all open conversation tabs and reloads profiles.
-    /// </summary>
-    public void ApplySystemPromptToAll(string prompt)
-    {
-        _profiles = AppSettings.LoadProfiles();
-        var active = GetActiveProfile();
-        LoggingService.LogInfo($"[Settings] Applying system prompt to {Tabs.Count} tabs, activeProfile={active?.Name}");
-
-        foreach (var tab in Tabs)
-        {
-            tab.ApplySystemPrompt(prompt, _profiles, active);
-        }
-    }
-
-    /// <summary>
     /// Refreshes profiles on all open conversation tabs after a profile change.
     /// </summary>
     public void RefreshProfilesOnAll()
