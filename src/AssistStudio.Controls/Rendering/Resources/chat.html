@@ -1174,6 +1174,7 @@
                 var toolBlocks = Array.from(bubble.querySelectorAll('.tool-block'));
                 // Strip [Tool: ...] markers from content before markdown rendering
                 var cleanText = fullText.replace(/\[Tool:\s*[^\]]*\]\n?/g, '');
+                cleanText = cleanText.replace(/\[source\]\(([^)]+)\)/gi, '(Source: $1)');
                 bubble.innerHTML = renderMarkdown(cleanText);
                 toolBlocks.reverse().forEach(function(tb) {
                     bubble.insertBefore(tb, bubble.firstChild);
