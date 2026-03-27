@@ -431,9 +431,14 @@
                                         <FontIcon Glyph="&#xE777;" FontSize="12" />
                                     </Button>
                                 </StackPanel>
-                                <!-- Right: folder button with flyout -->
+                                <!-- Right: folder button + archive progress ring -->
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4"
+                                            VerticalAlignment="Center">
+                                <ProgressRing x:Name="PART_ArchiveProgressRing"
+                                              Width="16" Height="16"
+                                              IsActive="False"
+                                              Visibility="Collapsed" />
                                 <Button x:Name="PART_TitleFolderButton"
-                                        Grid.Column="1"
                                         Style="{StaticResource SubtleButtonStyle}"
                                         Padding="4"
                                         VerticalAlignment="Center">
@@ -565,10 +570,7 @@
                                     </Button.Flyout>
                                     <FontIcon x:Name="PART_FolderIcon" Glyph="&#xE838;" FontSize="14" />
                                 </Button>
-                                <ProgressRing x:Name="PART_ArchiveProgressRing"
-                                              Width="16" Height="16"
-                                              IsActive="False"
-                                              Visibility="Collapsed" />
+                                </StackPanel>
                             </Grid>
                             <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
                         </StackPanel>
