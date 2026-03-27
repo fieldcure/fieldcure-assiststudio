@@ -1966,6 +1966,8 @@ public sealed partial class ChatPanel : Control
         {
             _archiveProgressRing.Visibility = indexing ? Visibility.Visible : Visibility.Collapsed;
             _archiveProgressRing.IsActive = indexing;
+            if (indexing)
+                ToolTipService.SetToolTip(_archiveProgressRing, text ?? $"{progress:0}%");
         }
         // Disable reindex button during indexing
         if (_archiveReindexButton is not null && IsArchiveIndexing)
