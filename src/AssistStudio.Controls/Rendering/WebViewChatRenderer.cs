@@ -322,17 +322,24 @@ internal partial class WebViewChatRenderer
     {
         var uri = args.Uri;
 
-        // Allow internal navigations (about:blank, data:, NavigateToString content)
+        // Allow the initial blank page and data: URIs used during NavigateToString initialization
         if (string.IsNullOrEmpty(uri) ||
-            uri.StartsWith("about:", StringComparison.OrdinalIgnoreCase) ||
+            uri.Equals("about:blank", StringComparison.OrdinalIgnoreCase) ||
             uri.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
         {
             return;
         }
 
-        // Block navigation inside WebView2 and open in default browser
+        // Block all other navigation (prevents blank screen when clicking relative-path links
+        // such as [Source](filename.md) rendered by marked.js)
         args.Cancel = true;
-        OpenInDefaultBrowser(uri);
+
+        // Only open proper web URLs in the default browser; silently ignore local/relative paths
+        if (uri.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            uri.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            OpenInDefaultBrowser(uri);
+        }
     }
 
     /// <summary>
