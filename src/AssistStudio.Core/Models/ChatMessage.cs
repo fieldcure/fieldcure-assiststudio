@@ -153,9 +153,9 @@ public partial class ChatMessage : INotifyPropertyChanged
     /// <summary>
     /// The ID of the currently active child in a branch.
     /// Used to preserve the user's branch selection across save/load.
-    /// Computed at runtime, not serialized by Core.
+    /// Serialized when non-null so branch navigation is restored correctly.
     /// </summary>
-    [JsonIgnore]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ActiveChildId { get; set; }
 
     #endregion

@@ -1204,11 +1204,12 @@ public sealed partial class ChatPanel : Control
     public void AddRestoredMessage(ChatRole role, string content,
         string? providerName = null, string? providerModelId = null,
         string? id = null, string? parentId = null,
-        IReadOnlyList<ToolCall>? toolCalls = null, string? toolCallId = null)
+        IReadOnlyList<ToolCall>? toolCalls = null, string? toolCallId = null,
+        string? activeChildId = null)
     {
         var msg = id is not null
-            ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId }
-            : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId };
+            ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId }
+            : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId };
         RegisterInTree(msg);
         _messages.Add(msg);
     }
@@ -2142,8 +2143,19 @@ public sealed partial class ChatPanel : Control
             msg.SiblingIndex = siblings.Count;
             siblings.Add(msg);
         }
+
+        // Tool-internal messages (assistant tool-call requests and tool results) are
+        // not real branch points — they are part of the same response chain.
+        // Exclude them from the visible sibling count so the UI does not show
+        // spurious branch-navigation arrows when a tool chain lives alongside the
+        // next user message under the same parent.
+        static bool IsToolInternal(ChatMessage m) =>
+            m.Role == ChatRole.Tool ||
+            (m.Role == ChatRole.Assistant && m.ToolCalls is { Count: > 0 });
+
+        var visibleCount = siblings.Count(s => !IsToolInternal(s));
         foreach (var s in siblings)
-            s.SiblingCount = siblings.Count;
+            s.SiblingCount = IsToolInternal(s) ? 1 : Math.Max(visibleCount, 1);
 
         // Update the parent's active child pointer when on the active path
         if (updateActiveChild && msg.ParentId is not null)

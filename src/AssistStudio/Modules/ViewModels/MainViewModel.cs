@@ -310,14 +310,22 @@ public partial class MainViewModel : ObservableObject
             list.Add(msg);
         }
 
-        // Branching = any parent has multiple children (edit created a branch).
-        var hasBranching = childrenMap.Any(kv => kv.Value.Count > 1);
+        // Tool-internal messages (assistant tool-call requests and tool results) are
+        // part of a single response chain and must not be counted as real branches.
+        // A real branch only exists when a parent has multiple *visible* (non-tool-internal)
+        // children — i.e., the user edited a message and created an alternative path.
+        static bool IsToolInternal(SavedMessage m) =>
+            m.Role == ChatRole.Tool ||
+            (m.Role == ChatRole.Assistant && m.ToolCalls is { Count: > 0 });
+
+        var hasBranching = childrenMap.Any(kv =>
+            kv.Value.Count(m => !IsToolInternal(m)) > 1);
 
         if (!hasBranching)
         {
             // Linear conversation — add all as active path in file order
             foreach (var msg in messages)
-                vm.AddRestoredMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId, msg.Id, msg.ParentId, msg.ToolCalls, msg.ToolCallId);
+                vm.AddRestoredMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId, msg.Id, msg.ParentId, msg.ToolCalls, msg.ToolCallId, msg.ActiveChildId);
             return;
         }
 
@@ -367,7 +375,7 @@ public partial class MainViewModel : ObservableObject
         }
 
         foreach (var msg in ordered)
-            vm.AddRestoredMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId, msg.Id, msg.ParentId, msg.ToolCalls, msg.ToolCallId);
+            vm.AddRestoredMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId, msg.Id, msg.ParentId, msg.ToolCalls, msg.ToolCallId, msg.ActiveChildId);
     }
 
     /// <summary>
