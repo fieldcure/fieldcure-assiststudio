@@ -120,17 +120,67 @@ public sealed class HwpxParser : IDocumentParser
 
     /// <summary>
     /// Extracts and concatenates all text from hp:t elements within a single paragraph (hp:p).
+    /// Equation elements (hp:equation) are converted to [math: ...] notation.
     /// Multiple runs in the same paragraph are joined without separator.
     /// </summary>
     private static string ExtractParagraphText(XElement paragraph)
     {
-        var textNodes = paragraph.Descendants()
-            .Where(e => e.Name.LocalName == "t");
+        // Check if paragraph contains equations
+        var hasEquations = paragraph.Descendants()
+            .Any(e => e.Name.LocalName == "equation");
 
+        if (!hasEquations)
+        {
+            // Fast path: no equations, just concatenate text nodes
+            var textNodes = paragraph.Descendants()
+                .Where(e => e.Name.LocalName == "t");
+            var plainSb = new StringBuilder();
+            foreach (var t in textNodes)
+                plainSb.Append(t.Value);
+            return plainSb.ToString();
+        }
+
+        // Slow path: process children to interleave text and equations
         var sb = new StringBuilder();
-        foreach (var t in textNodes)
-            sb.Append(t.Value);
+        ExtractWithEquations(paragraph, sb);
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// Recursively extracts text and equation elements, converting equations to [math: ...].
+    /// </summary>
+    private static void ExtractWithEquations(XElement element, StringBuilder sb)
+    {
+        foreach (var child in element.Elements())
+        {
+            var localName = child.Name.LocalName;
+
+            if (localName == "equation")
+            {
+                // Extract script text from equation element
+                var script = child.Elements()
+                    .FirstOrDefault(e => e.Name.LocalName == "script");
+                if (script is not null)
+                {
+                    var latex = HancomMathNormalizer.ToLaTeX(script.Value);
+                    if (!string.IsNullOrWhiteSpace(latex))
+                        sb.Append($"[math: {latex}]");
+                }
+            }
+            else if (localName == "t")
+            {
+                sb.Append(child.Value);
+            }
+            else if (localName is "tbl")
+            {
+                // Skip tables — handled separately
+            }
+            else
+            {
+                // Recurse into runs, subList, etc.
+                ExtractWithEquations(child, sb);
+            }
+        }
     }
 
     /// <summary>
