@@ -282,7 +282,7 @@ public static partial class HancomMathNormalizer
                            .ToList();
 
         // Token mapping (ConvertMap takes priority over MiddleConvertMap)
-        for (int i = 0; i < tokens.Count; i++)
+        for (var i = 0; i < tokens.Count; i++)
         {
             if (ConvertMap.TryGetValue(tokens[i], out var conv))
                 tokens[i] = conv;
@@ -294,7 +294,7 @@ public static partial class HancomMathNormalizer
         tokens = tokens.Where(t => t.Length > 0).ToList();
 
         // Fix: \left { → \left \{   and   \right } → \right \}
-        for (int i = 1; i < tokens.Count; i++)
+        for (var i = 1; i < tokens.Count; i++)
         {
             if (tokens[i] == "{" && tokens[i - 1] == @"\left")  tokens[i] = @"\{";
             if (tokens[i] == "}" && tokens[i - 1] == @"\right") tokens[i] = @"\}";
@@ -326,10 +326,10 @@ public static partial class HancomMathNormalizer
     /// </summary>
     private static (int Start, int End) FindBracketsForward(string s, int fromIndex)
     {
-        int start = s.IndexOf('{', fromIndex);
+        var start = s.IndexOf('{', fromIndex);
         if (start < 0) throw new InvalidOperationException("No opening bracket");
-        int depth = 1;
-        for (int i = start + 1; i < s.Length; i++)
+        var depth = 1;
+        for (var i = start + 1; i < s.Length; i++)
         {
             if      (s[i] == '{') depth++;
             else if (s[i] == '}') { depth--; if (depth == 0) return (start, i + 1); }
@@ -344,13 +344,13 @@ public static partial class HancomMathNormalizer
     /// </summary>
     private static (int Start, int End) FindBracketsBackward(string s, int beforeIndex)
     {
-        int pos = beforeIndex - 1;
+        var pos = beforeIndex - 1;
         while (pos >= 0 && s[pos] == ' ') pos--;
         if (pos < 0 || s[pos] != '}')
             throw new InvalidOperationException("No closing bracket before index");
 
-        int end = pos + 1;
-        int depth = 1;
+        var end = pos + 1;
+        var depth = 1;
         pos--;
         while (pos >= 0)
         {
@@ -373,14 +373,14 @@ public static partial class HancomMathNormalizer
         const string keyword = " over ";
         while (true)
         {
-            int cursor = s.IndexOf(keyword, StringComparison.Ordinal);
+            var cursor = s.IndexOf(keyword, StringComparison.Ordinal);
             if (cursor < 0) break;
             try
             {
                 var (numStart, numEnd) = FindBracketsBackward(s, cursor);
-                string before    = s[..numStart];
-                string numerator = s[numStart..numEnd];
-                string after     = s[(cursor + keyword.Length)..];
+                var before    = s[..numStart];
+                var numerator = s[numStart..numEnd];
+                var after     = s[(cursor + keyword.Length)..];
                 s = before + @"\frac" + numerator + " " + after;
             }
             catch (InvalidOperationException) { break; }
@@ -397,16 +397,16 @@ public static partial class HancomMathNormalizer
         const string ofKw   = " of ";
         while (true)
         {
-            int rootPos = s.IndexOf(rootKw, StringComparison.Ordinal);
+            var rootPos = s.IndexOf(rootKw, StringComparison.Ordinal);
             if (rootPos < 0) break;
-            int ofPos = s.IndexOf(ofKw, rootPos + rootKw.Length, StringComparison.Ordinal);
+            var ofPos = s.IndexOf(ofKw, rootPos + rootKw.Length, StringComparison.Ordinal);
             if (ofPos < 0) break;
             try
             {
                 var (s1, e1) = FindBracketsForward(s, rootPos + 1);
                 var (s2, e2) = FindBracketsForward(s, ofPos + 1);
-                string n    = s[(s1 + 1)..(e1 - 1)];
-                string expr = s[(s2 + 1)..(e2 - 1)];
+                var n    = s[(s1 + 1)..(e1 - 1)];
+                var expr = s[(s2 + 1)..(e2 - 1)];
                 s = s[..rootPos] + @" \sqrt[" + n + "]{" + expr + "}" + s[e2..];
             }
             catch (InvalidOperationException) { break; }
@@ -424,12 +424,12 @@ public static partial class HancomMathNormalizer
         {
             while (true)
             {
-                int cursor = s.IndexOf(key, StringComparison.Ordinal);
+                var cursor = s.IndexOf(key, StringComparison.Ordinal);
                 if (cursor < 0) break;
                 try
                 {
                     var (eStart, eEnd) = FindBracketsForward(s, cursor);
-                    string inner = s[(eStart + 1)..(eEnd - 1)]
+                    var inner = s[(eStart + 1)..(eEnd - 1)]
                         .Replace("#",     @" \\ ")
                         .Replace("&amp;", "&");
 
@@ -438,7 +438,7 @@ public static partial class HancomMathNormalizer
                         // Try to consume the surrounding { } group (HML convention)
                         try
                         {
-                            int p = cursor - 1;
+                            var p = cursor - 1;
                             while (p >= 0 && s[p] != '{') p--;
                             if (p >= 0)
                             {
