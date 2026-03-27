@@ -528,7 +528,7 @@ public partial class GeminiProvider : IAiProvider, IDisposable
                 {
                     ["name"] = tool.Name,
                     ["description"] = tool.Description,
-                    ["parameters"] = JsonNode.Parse(tool.ParameterSchema)
+                    ["parameters"] = NormalizeSchemaForGemini(JsonNode.Parse(tool.ParameterSchema))
                 });
             }
             body["tools"] = new JsonArray
@@ -538,6 +538,52 @@ public partial class GeminiProvider : IAiProvider, IDisposable
         }
 
         return body.ToJsonString();
+    }
+
+    /// <summary>
+    /// Normalizes a JSON Schema node for the Gemini API.
+    /// Gemini does not support union-type arrays like <c>"type": ["string", "null"]</c>
+    /// that the MCP SDK produces for optional parameters. This method recursively
+    /// converts such arrays to the first non-null scalar type and removes unsupported
+    /// keywords (<c>default</c>, <c>$schema</c>).
+    /// </summary>
+    private static JsonNode? NormalizeSchemaForGemini(JsonNode? node)
+    {
+        if (node is not JsonObject obj) return node;
+
+        // "type": ["string", "null"] → "type": "STRING"
+        if (obj.TryGetPropertyValue("type", out var typeNode) && typeNode is JsonArray typeArray)
+        {
+            var nonNull = typeArray
+                .Select(t => t?.GetValue<string>())
+                .FirstOrDefault(t => t is not null && !t.Equals("null", StringComparison.OrdinalIgnoreCase));
+            obj["type"] = nonNull?.ToUpperInvariant() ?? "STRING";
+        }
+        else if (typeNode is JsonValue typeValue)
+        {
+            // Gemini expects uppercase type names (STRING, INTEGER, NUMBER, BOOLEAN, OBJECT, ARRAY)
+            obj["type"] = typeValue.GetValue<string>().ToUpperInvariant();
+        }
+
+        // Remove keywords unsupported by Gemini
+        obj.Remove("default");
+        obj.Remove("$schema");
+        obj.Remove("additionalProperties");
+
+        // Recurse into "properties"
+        if (obj.TryGetPropertyValue("properties", out var propsNode) && propsNode is JsonObject props)
+        {
+            foreach (var key in props.Select(p => p.Key).ToList())
+            {
+                props[key] = NormalizeSchemaForGemini(props[key]);
+            }
+        }
+
+        // Recurse into "items" (array element schema)
+        if (obj.TryGetPropertyValue("items", out var itemsNode))
+            obj["items"] = NormalizeSchemaForGemini(itemsNode);
+
+        return obj;
     }
 
     /// <summary>Sends an HTTP POST request to the Gemini API and validates the response.</summary>
