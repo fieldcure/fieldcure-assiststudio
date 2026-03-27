@@ -537,7 +537,6 @@ public sealed partial class ChatPanel : Control
     private TextBlock? _archiveEmpty;
     private ProgressBar? _archiveProgressBar;
     private TextBlock? _archiveProgressText;
-    private ProgressRing? _archiveProgressRing;
 
     private bool _isConversationActive;
     private string? _greetingText;
@@ -1024,7 +1023,6 @@ public sealed partial class ChatPanel : Control
         _archiveEmpty = null;
         _archiveProgressBar = null;
         _archiveProgressText = null;
-        _archiveProgressRing = null;
 
         // Get template parts
         _rootGrid = GetTemplateChild("PART_RootGrid") as Grid;
@@ -1037,7 +1035,6 @@ public sealed partial class ChatPanel : Control
         _titleEditButton = GetTemplateChild("PART_TitleEditButton") as Button;
         _titleRefreshButton = GetTemplateChild("PART_TitleRefreshButton") as Button;
         _titleFolderButton = GetTemplateChild("PART_TitleFolderButton") as Button;
-        _archiveProgressRing = GetTemplateChild("PART_ArchiveProgressRing") as ProgressRing;
 
         _chatWebView = GetTemplateChild("PART_ChatWebView") as WebView2;
         _approvalPanel = GetTemplateChild("PART_ToolApprovalPanel") as ToolApprovalPanel;
@@ -1962,13 +1959,7 @@ public sealed partial class ChatPanel : Control
             _archiveProgressText.Visibility = indexing ? Visibility.Visible : Visibility.Collapsed;
             _archiveProgressText.Text = indexing ? $"{progress:0}%" : "";
         }
-        if (_archiveProgressRing is not null)
-        {
-            _archiveProgressRing.Visibility = indexing ? Visibility.Visible : Visibility.Collapsed;
-            _archiveProgressRing.IsActive = indexing;
-            if (indexing)
-                ToolTipService.SetToolTip(_archiveProgressRing, text ?? $"{progress:0}%");
-        }
+        VisualStateManager.GoToState(this, indexing ? "Indexing" : "NotIndexing", true);
         // Disable reindex button during indexing
         if (_archiveReindexButton is not null && IsArchiveIndexing)
             _archiveReindexButton.IsEnabled = false;

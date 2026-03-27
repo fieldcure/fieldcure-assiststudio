@@ -395,6 +395,19 @@
                                     </VisualState.Setters>
                                 </VisualState>
                             </VisualStateGroup>
+                            <VisualStateGroup x:Name="IndexingStates">
+                                <VisualState x:Name="NotIndexing" />
+                                <VisualState x:Name="Indexing">
+                                    <Storyboard RepeatBehavior="Forever">
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="PART_FolderIcon"
+                                            Storyboard.TargetProperty="Opacity"
+                                            From="1.0" To="0.3"
+                                            Duration="0:0:0.8"
+                                            AutoReverse="True" />
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
@@ -431,14 +444,9 @@
                                         <FontIcon Glyph="&#xE777;" FontSize="12" />
                                     </Button>
                                 </StackPanel>
-                                <!-- Right: folder button + archive progress ring -->
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4"
-                                            VerticalAlignment="Center">
-                                <ProgressRing x:Name="PART_ArchiveProgressRing"
-                                              Width="16" Height="16"
-                                              IsActive="False"
-                                              Visibility="Collapsed" />
+                                <!-- Right: folder button with indexing animation -->
                                 <Button x:Name="PART_TitleFolderButton"
+                                        Grid.Column="1"
                                         Style="{StaticResource SubtleButtonStyle}"
                                         Padding="4"
                                         VerticalAlignment="Center">
@@ -570,7 +578,6 @@
                                     </Button.Flyout>
                                     <FontIcon x:Name="PART_FolderIcon" Glyph="&#xE838;" FontSize="14" />
                                 </Button>
-                                </StackPanel>
                             </Grid>
                             <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
                         </StackPanel>
