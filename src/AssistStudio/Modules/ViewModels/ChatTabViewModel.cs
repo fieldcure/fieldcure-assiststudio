@@ -306,6 +306,14 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         var ragServerId = $"builtin_{BuiltInServerHelper.RagKey}";
         panel.IsKnowledgeArchiveEnabled = SelectedProfile?.EnabledServers.Contains(ragServerId) ?? false;
 
+        // Reconnect RAG server if the conversation had a Knowledge Archive folder and
+        // the active profile enables RAG. Without this, save→load loses the search_documents tool.
+        if (!string.IsNullOrEmpty(panel.KnowledgeArchiveFolder)
+            && (SelectedProfile?.EnabledServers.Contains(ragServerId) ?? false))
+        {
+            _ = ConnectRagAsync(panel.KnowledgeArchiveFolder);
+        }
+
         // Relay keyboard shortcut from WebView2 (separate HWND)
         panel.KeyboardShortcutPressed += (s, e) => KeyboardShortcutPressed?.Invoke(s, e);
 
