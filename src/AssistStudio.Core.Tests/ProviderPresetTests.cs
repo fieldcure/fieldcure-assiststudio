@@ -85,7 +85,7 @@ public class ProfileTests
     [TestMethod]
     public void Deserialize_MissingOptionalFields_UsesDefaults()
     {
-        var json = """{"Name":"Test","SystemPrompt":"Hello"}""";
+        var json = """{"Name":"Test","Text":"Hello"}""";
         var profile = JsonSerializer.Deserialize<Profile>(json)!;
 
         Assert.AreEqual("Test", profile.Name);
