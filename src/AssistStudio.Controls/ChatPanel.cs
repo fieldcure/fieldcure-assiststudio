@@ -523,7 +523,6 @@ public sealed partial class ChatPanel : Control
     private Button? _titleRefreshButton;
     private Button? _titleFolderButton;
 
-
     // Folder flyout parts (resolved lazily on first Flyout.Opening)
     private Button? _folderAddButton;
     private TextBlock? _folderDisabledHint;
@@ -1038,6 +1037,7 @@ public sealed partial class ChatPanel : Control
         _titleEditButton = GetTemplateChild("PART_TitleEditButton") as Button;
         _titleRefreshButton = GetTemplateChild("PART_TitleRefreshButton") as Button;
         _titleFolderButton = GetTemplateChild("PART_TitleFolderButton") as Button;
+        _archiveProgressRing = GetTemplateChild("PART_ArchiveProgressRing") as ProgressRing;
 
         _chatWebView = GetTemplateChild("PART_ChatWebView") as WebView2;
         _approvalPanel = GetTemplateChild("PART_ToolApprovalPanel") as ToolApprovalPanel;
@@ -1798,7 +1798,6 @@ public sealed partial class ChatPanel : Control
             _archiveEmpty = FindDescendantByName<TextBlock>(root, "PART_ArchiveEmpty");
             _archiveProgressBar = FindDescendantByName<ProgressBar>(root, "PART_ArchiveProgressBar");
             _archiveProgressText = FindDescendantByName<TextBlock>(root, "PART_ArchiveProgressText");
-            _archiveProgressRing = FindDescendantByName<ProgressRing>(root, "PART_ArchiveProgressRing");
 
             // Localize flyout text (x:Uid doesn't work in ControlTemplate)
             LocalizeFlyoutText(root);
@@ -1967,13 +1966,6 @@ public sealed partial class ChatPanel : Control
         {
             _archiveProgressRing.Visibility = indexing ? Visibility.Visible : Visibility.Collapsed;
             _archiveProgressRing.IsActive = indexing;
-        }
-        // Hide folder icon when progress ring is shown
-        if (_archiveProgressRing is not null)
-        {
-            var folderIcon = FindDescendantByName<FontIcon>(this, "PART_FolderIcon");
-            if (folderIcon is not null)
-                folderIcon.Visibility = indexing ? Visibility.Collapsed : Visibility.Visible;
         }
         // Disable reindex button during indexing
         if (_archiveReindexButton is not null && IsArchiveIndexing)

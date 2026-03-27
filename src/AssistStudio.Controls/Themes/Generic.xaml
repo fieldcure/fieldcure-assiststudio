@@ -506,7 +506,7 @@
                                                                Grid.Column="2"
                                                                Margin="6,0,0,0"
                                                                FontSize="12"
-                                                               Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                                                VerticalAlignment="Center"
                                                                Visibility="Collapsed" />
                                                     <Button x:Name="PART_ArchiveSetButton"
@@ -563,14 +563,12 @@
                                             </StackPanel>
                                         </Flyout>
                                     </Button.Flyout>
-                                    <Grid>
-                                        <FontIcon x:Name="PART_FolderIcon" Glyph="&#xE838;" FontSize="14" />
-                                        <ProgressRing x:Name="PART_ArchiveProgressRing"
-                                                      Width="16" Height="16"
-                                                      IsActive="False"
-                                                      Visibility="Collapsed" />
-                                    </Grid>
+                                    <FontIcon x:Name="PART_FolderIcon" Glyph="&#xE838;" FontSize="14" />
                                 </Button>
+                                <ProgressRing x:Name="PART_ArchiveProgressRing"
+                                              Width="16" Height="16"
+                                              IsActive="False"
+                                              Visibility="Collapsed" />
                             </Grid>
                             <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
                         </StackPanel>

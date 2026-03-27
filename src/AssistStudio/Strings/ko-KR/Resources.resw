@@ -774,6 +774,12 @@
   <data name="Connect_Reindex" xml:space="preserve">
     <value>전체 문서 재인덱싱</value>
   </data>
+  <data name="Connect_KnowledgeArchiveTitle" xml:space="preserve">
+    <value>지식보관소</value>
+  </data>
+  <data name="Connect_KnowledgeArchiveIndexing" xml:space="preserve">
+    <value>문서 인덱싱 중…</value>
+  </data>
   <data name="Connect_KnowledgeArchiveReindexing" xml:space="preserve">
     <value>문서 재인덱싱 중…</value>
   </data>

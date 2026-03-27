@@ -774,6 +774,12 @@
   <data name="Connect_Reindex" xml:space="preserve">
     <value>Re-index all documents</value>
   </data>
+  <data name="Connect_KnowledgeArchiveTitle" xml:space="preserve">
+    <value>Knowledge Archive</value>
+  </data>
+  <data name="Connect_KnowledgeArchiveIndexing" xml:space="preserve">
+    <value>Indexing documents…</value>
+  </data>
   <data name="Connect_KnowledgeArchiveReindexing" xml:space="preserve">
     <value>Re-indexing documents…</value>
   </data>

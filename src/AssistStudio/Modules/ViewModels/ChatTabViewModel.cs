@@ -925,11 +925,21 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     {
         if (_ragConnection is null || !_ragConnection.IsConnected) return;
 
+        var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
+        var title = loader.GetString("Connect_KnowledgeArchiveTitle") ?? "Knowledge Archive";
+        var progressMsg = force
+            ? loader.GetString("Connect_KnowledgeArchiveReindexing") ?? "Re-indexing documents…"
+            : loader.GetString("Connect_KnowledgeArchiveIndexing") ?? "Indexing documents…";
+        var readyTitle = loader.GetString("Connect_KnowledgeArchiveReady") ?? "Knowledge Archive — Ready";
+        var failedTitle = loader.GetString("Connect_KnowledgeArchiveFailed") ?? "Knowledge Archive — Failed";
+        var embeddingHint = loader.GetString("Connect_EmbeddingModelHint")
+            ?? "Make sure an embedding model is loaded: ollama pull nomic-embed-text";
+
         LoggingService.LogInfo($"[RAG] {label} started (force={force})");
         NotificationCenter.Instance.Post(
             Microsoft.UI.Xaml.Controls.InfoBarSeverity.Informational,
-            "Knowledge Archive",
-            $"{label} documents…");
+            title,
+            progressMsg);
 
         // Set indexing state on ChatPanel
         if (Panel is not null)
@@ -972,7 +982,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 
             NotificationCenter.Instance.Post(
                 Microsoft.UI.Xaml.Controls.InfoBarSeverity.Success,
-                "Knowledge Archive — Ready",
+                readyTitle,
                 message,
                 5000);
         }
@@ -981,8 +991,8 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             LoggingService.LogError($"[RAG] {label} failed: {ex.Message}");
             NotificationCenter.Instance.Post(
                 Microsoft.UI.Xaml.Controls.InfoBarSeverity.Error,
-                "Knowledge Archive — Failed",
-                $"{ex.Message}\nMake sure an embedding model is loaded:\n  ollama pull nomic-embed-text",
+                failedTitle,
+                $"{ex.Message}\n{embeddingHint}",
                 8000);
         }
         finally
