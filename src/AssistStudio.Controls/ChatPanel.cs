@@ -185,6 +185,21 @@ public sealed partial class ChatPanel : Control
         DependencyProperty.Register(nameof(IsKnowledgeArchiveEnabled), typeof(bool), typeof(ChatPanel),
             new PropertyMetadata(false));
 
+    /// <summary>Identifies the <see cref="IsArchiveIndexing"/> dependency property.</summary>
+    public static readonly DependencyProperty IsArchiveIndexingProperty =
+        DependencyProperty.Register(nameof(IsArchiveIndexing), typeof(bool), typeof(ChatPanel),
+            new PropertyMetadata(false));
+
+    /// <summary>Identifies the <see cref="ArchiveIndexingProgress"/> dependency property.</summary>
+    public static readonly DependencyProperty ArchiveIndexingProgressProperty =
+        DependencyProperty.Register(nameof(ArchiveIndexingProgress), typeof(double), typeof(ChatPanel),
+            new PropertyMetadata(0.0));
+
+    /// <summary>Identifies the <see cref="ArchiveIndexingText"/> dependency property.</summary>
+    public static readonly DependencyProperty ArchiveIndexingTextProperty =
+        DependencyProperty.Register(nameof(ArchiveIndexingText), typeof(string), typeof(ChatPanel),
+            new PropertyMetadata(""));
+
     /// <summary>Identifies the <see cref="AllowAttachments"/> dependency property.</summary>
     public static readonly DependencyProperty AllowAttachmentsProperty =
         DependencyProperty.Register(nameof(AllowAttachments), typeof(bool), typeof(ChatPanel),
@@ -521,6 +536,9 @@ public sealed partial class ChatPanel : Control
     private Button? _archiveReindexButton;
     private Button? _archiveRemoveButton;
     private TextBlock? _archiveEmpty;
+    private ProgressBar? _archiveProgressBar;
+    private TextBlock? _archiveProgressText;
+    private ProgressRing? _archiveProgressRing;
 
     private bool _isConversationActive;
     private string? _greetingText;
@@ -727,6 +745,34 @@ public sealed partial class ChatPanel : Control
     {
         get => (bool)GetValue(IsKnowledgeArchiveEnabledProperty);
         set => SetValue(IsKnowledgeArchiveEnabledProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets whether the Knowledge Archive is currently indexing.
+    /// Controls visibility of the progress ring in the title bar and progress bar in the flyout.
+    /// </summary>
+    public bool IsArchiveIndexing
+    {
+        get => (bool)GetValue(IsArchiveIndexingProperty);
+        set => SetValue(IsArchiveIndexingProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the indexing progress as a percentage (0–100).
+    /// </summary>
+    public double ArchiveIndexingProgress
+    {
+        get => (double)GetValue(ArchiveIndexingProgressProperty);
+        set => SetValue(ArchiveIndexingProgressProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the indexing status text (e.g., "3/10 files...").
+    /// </summary>
+    public string ArchiveIndexingText
+    {
+        get => (string)GetValue(ArchiveIndexingTextProperty);
+        set => SetValue(ArchiveIndexingTextProperty, value);
     }
 
     /// <summary>
@@ -977,6 +1023,9 @@ public sealed partial class ChatPanel : Control
         _archiveReindexButton = null;
         _archiveRemoveButton = null;
         _archiveEmpty = null;
+        _archiveProgressBar = null;
+        _archiveProgressText = null;
+        _archiveProgressRing = null;
 
         // Get template parts
         _rootGrid = GetTemplateChild("PART_RootGrid") as Grid;
@@ -1747,6 +1796,9 @@ public sealed partial class ChatPanel : Control
             _archiveReindexButton = FindDescendantByName<Button>(root, "PART_ArchiveReindexButton");
             _archiveRemoveButton = FindDescendantByName<Button>(root, "PART_ArchiveRemoveButton");
             _archiveEmpty = FindDescendantByName<TextBlock>(root, "PART_ArchiveEmpty");
+            _archiveProgressBar = FindDescendantByName<ProgressBar>(root, "PART_ArchiveProgressBar");
+            _archiveProgressText = FindDescendantByName<TextBlock>(root, "PART_ArchiveProgressText");
+            _archiveProgressRing = FindDescendantByName<ProgressRing>(root, "PART_ArchiveProgressRing");
 
             // Localize flyout text (x:Uid doesn't work in ControlTemplate)
             LocalizeFlyoutText(root);
@@ -1883,8 +1935,49 @@ public sealed partial class ChatPanel : Control
                 _archiveFolderText.Opacity = archiveEnabled ? 1.0 : 0.5;
             }
             if (_archiveReindexButton is not null)
-                _archiveReindexButton.IsEnabled = archiveEnabled;
+                _archiveReindexButton.IsEnabled = archiveEnabled && !IsArchiveIndexing;
         }
+
+        // Indexing progress UI
+        UpdateArchiveProgressUI();
+    }
+
+    /// <summary>
+    /// Updates the indexing progress UI elements in the flyout and title bar.
+    /// Call this after changing <see cref="IsArchiveIndexing"/>, <see cref="ArchiveIndexingProgress"/>,
+    /// or <see cref="ArchiveIndexingText"/>.
+    /// </summary>
+    public void UpdateArchiveProgressUI()
+    {
+        var indexing = IsArchiveIndexing;
+        var progress = ArchiveIndexingProgress;
+        var text = ArchiveIndexingText;
+
+        if (_archiveProgressBar is not null)
+        {
+            _archiveProgressBar.Visibility = indexing ? Visibility.Visible : Visibility.Collapsed;
+            _archiveProgressBar.Value = progress;
+        }
+        if (_archiveProgressText is not null)
+        {
+            _archiveProgressText.Visibility = indexing ? Visibility.Visible : Visibility.Collapsed;
+            _archiveProgressText.Text = indexing ? $"{progress:0}%" : "";
+        }
+        if (_archiveProgressRing is not null)
+        {
+            _archiveProgressRing.Visibility = indexing ? Visibility.Visible : Visibility.Collapsed;
+            _archiveProgressRing.IsActive = indexing;
+        }
+        // Hide folder icon when progress ring is shown
+        if (_archiveProgressRing is not null)
+        {
+            var folderIcon = FindDescendantByName<FontIcon>(this, "PART_FolderIcon");
+            if (folderIcon is not null)
+                folderIcon.Visibility = indexing ? Visibility.Collapsed : Visibility.Visible;
+        }
+        // Disable reindex button during indexing
+        if (_archiveReindexButton is not null && IsArchiveIndexing)
+            _archiveReindexButton.IsEnabled = false;
     }
 
     /// <summary>

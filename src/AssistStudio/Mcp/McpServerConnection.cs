@@ -39,6 +39,7 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
     private McpConnectionState _state = McpConnectionState.Disconnected;
     private string? _errorMessage;
     private IReadOnlyList<McpToolAdapter> _tools = [];
+    private IReadOnlyList<McpClientTool> _mcpTools = [];
     private string? _serverVersion;
     private readonly Lock _rootsLock = new();
     private List<string> _currentFolders = [];
@@ -169,6 +170,7 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
             }
 
             var mcpTools = await _client.ListToolsAsync(cancellationToken: ct);
+            _mcpTools = [.. mcpTools];
             Tools = [.. mcpTools
                 .Select(t => new McpToolAdapter(
                     name: t.Name,
@@ -220,6 +222,7 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
         }
 
         Tools = [];
+        _mcpTools = [];
         State = McpConnectionState.Disconnected;
         ErrorMessage = null;
         LoggingService.LogInfo($"[MCP] Disconnected: {Config.Name}");
@@ -324,12 +327,52 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
         };
     }
 
+    /// <summary>
+    /// Calls an MCP tool by name with progress notification support.
+    /// Use this instead of <see cref="IAssistTool.ExecuteAsync"/> when you need
+    /// to receive progress updates (e.g., indexing operations).
+    /// </summary>
+    /// <param name="toolName">The name of the tool to call.</param>
+    /// <param name="arguments">JSON arguments to pass to the tool.</param>
+    /// <param name="progress">Optional progress callback receiving (current, total, message).</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The tool result as a string.</returns>
+    public async Task<string> CallToolWithProgressAsync(
+        string toolName,
+        JsonElement arguments,
+        IProgress<(double Current, double Total, string? Message)>? progress,
+        CancellationToken ct = default)
+    {
+        var mcpTool = _mcpTools.FirstOrDefault(t => t.Name == toolName)
+            ?? throw new InvalidOperationException($"Tool '{toolName}' not found.");
+
+        var argsDict = ConvertJsonArguments(arguments);
+
+        IProgress<ModelContextProtocol.ProgressNotificationValue>? mcpProgress = null;
+        if (progress is not null)
+        {
+            mcpProgress = new Progress<ModelContextProtocol.ProgressNotificationValue>(value =>
+            {
+                progress.Report((value.Progress, value.Total ?? 0, value.Message));
+            });
+        }
+
+        var result = await mcpTool.CallAsync(argsDict, progress: mcpProgress, cancellationToken: ct);
+        return ExtractTextResult(result);
+    }
+
     private static async Task<string> InvokeMcpToolAsync(
         McpClientTool mcpTool,
         JsonElement arguments,
         CancellationToken ct)
     {
-        // Convert JsonElement arguments to Dictionary<string, object?> for the MCP SDK
+        var argsDict = ConvertJsonArguments(arguments);
+        var result = await mcpTool.CallAsync(argsDict, cancellationToken: ct);
+        return ExtractTextResult(result);
+    }
+
+    private static Dictionary<string, object?> ConvertJsonArguments(JsonElement arguments)
+    {
         var argsDict = new Dictionary<string, object?>();
         if (arguments.ValueKind == JsonValueKind.Object)
         {
@@ -338,19 +381,18 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
                 argsDict[prop.Name] = ConvertJsonElement(prop.Value);
             }
         }
+        return argsDict;
+    }
 
-        var result = await mcpTool.CallAsync(argsDict, cancellationToken: ct);
-
-        // Extract text content from the result
+    private static string ExtractTextResult(ModelContextProtocol.Protocol.CallToolResult result)
+    {
         if (result.Content is { Count: > 0 } content)
         {
             var texts = content
-                .Where(c => c is ModelContextProtocol.Protocol.TextContentBlock)
-                .Select(c => ((ModelContextProtocol.Protocol.TextContentBlock)c).Text);
-
+                .Where(c => c is TextContentBlock)
+                .Select(c => ((TextContentBlock)c).Text);
             return string.Join("\n", texts);
         }
-
         return result.IsError == true ? """{"error": true}""" : "{}";
     }
 

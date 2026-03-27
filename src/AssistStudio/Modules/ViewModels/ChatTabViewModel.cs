@@ -795,59 +795,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var tool = _ragConnection.Tools.FirstOrDefault(t => t.Name == "index_documents");
-        if (tool is null)
-        {
-            LoggingService.LogWarning("[RAG] Re-index requested but index_documents tool not found");
-            return;
-        }
-
-        LoggingService.LogInfo("[RAG] Re-indexing started (force=true)");
-        NotificationCenter.Instance.Post(
-            Microsoft.UI.Xaml.Controls.InfoBarSeverity.Informational,
-            "Knowledge Archive",
-            "Re-indexing documents…");
-
-        try
-        {
-            var args = System.Text.Json.JsonSerializer.SerializeToElement(new { force = true });
-            var resultJson = await tool.ExecuteAsync(args);
-            LoggingService.LogInfo($"[RAG] Re-index result: {resultJson}");
-
-            var message = "Re-indexing complete.";
-            if (!string.IsNullOrEmpty(resultJson))
-            {
-                try
-                {
-                    using var doc = System.Text.Json.JsonDocument.Parse(resultJson);
-                    var root = doc.RootElement;
-                    var indexed = root.TryGetProperty("indexed", out var i) ? i.GetInt32() : 0;
-                    var chunks = root.TryGetProperty("total_chunks", out var c) ? c.GetInt32() : 0;
-                    message = $"{indexed} indexed, {chunks} chunks";
-                    LoggingService.LogInfo($"[RAG] Re-indexing complete: {message}");
-                }
-                catch
-                {
-                    message = resultJson ?? message;
-                    LoggingService.LogWarning($"[RAG] Could not parse re-index result: {resultJson}");
-                }
-            }
-
-            NotificationCenter.Instance.Post(
-                Microsoft.UI.Xaml.Controls.InfoBarSeverity.Success,
-                "Knowledge Archive — Ready",
-                message,
-                5000);
-        }
-        catch (Exception ex)
-        {
-            LoggingService.LogError($"[RAG] Re-indexing failed: {ex.Message}");
-            NotificationCenter.Instance.Post(
-                Microsoft.UI.Xaml.Controls.InfoBarSeverity.Error,
-                "Knowledge Archive — Failed",
-                ex.Message,
-                8000);
-        }
+        await RunIndexDocumentsAsync(force: true, label: "Re-indexing");
     }
 
     /// <summary>
@@ -964,58 +912,63 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Runs index_documents on the connected RAG server and posts progress notifications.
+    /// Runs index_documents on the connected RAG server with progress tracking.
     /// </summary>
-    private async Task IndexKnowledgeArchiveAsync()
+    private Task IndexKnowledgeArchiveAsync() =>
+        RunIndexDocumentsAsync(force: false, label: "Indexing");
+
+    /// <summary>
+    /// Shared indexing logic used by both initial connect and manual re-index.
+    /// Tracks progress via MCP notifications and updates ChatPanel UI.
+    /// </summary>
+    private async Task RunIndexDocumentsAsync(bool force, string label)
     {
         if (_ragConnection is null || !_ragConnection.IsConnected) return;
 
-        var tool = _ragConnection.Tools.FirstOrDefault(t => t.Name == "index_documents");
-        if (tool is null) return;
-
-        LoggingService.LogInfo("[RAG] Indexing started");
+        LoggingService.LogInfo($"[RAG] {label} started (force={force})");
         NotificationCenter.Instance.Post(
             Microsoft.UI.Xaml.Controls.InfoBarSeverity.Informational,
             "Knowledge Archive",
-            "Indexing documents…");
+            $"{label} documents…");
+
+        // Set indexing state on ChatPanel
+        if (Panel is not null)
+        {
+            Panel.DispatcherQueue.TryEnqueue(() =>
+            {
+                Panel.IsArchiveIndexing = true;
+                Panel.ArchiveIndexingProgress = 0;
+                Panel.ArchiveIndexingText = "";
+                Panel.UpdateArchiveProgressUI();
+            });
+        }
 
         try
         {
-            var args = System.Text.Json.JsonSerializer.SerializeToElement(new { force = false });
-            LoggingService.LogInfo("[RAG] Calling index_documents tool…");
-            var resultJson = await tool.ExecuteAsync(args);
+            var args = System.Text.Json.JsonSerializer.SerializeToElement(new { force });
+            LoggingService.LogInfo($"[RAG] Calling index_documents tool (force={force})…");
+
+            var progress = new Progress<(double Current, double Total, string? Message)>(value =>
+            {
+                var pct = value.Total > 0 ? value.Current / value.Total * 100 : 0;
+                LoggingService.LogInfo($"[RAG] Progress: {value.Current}/{value.Total} — {value.Message}");
+
+                if (Panel is not null)
+                {
+                    Panel.DispatcherQueue.TryEnqueue(() =>
+                    {
+                        Panel.ArchiveIndexingProgress = pct;
+                        Panel.ArchiveIndexingText = value.Message ?? $"{value.Current}/{value.Total}";
+                        Panel.UpdateArchiveProgressUI();
+                    });
+                }
+            });
+
+            var resultJson = await _ragConnection.CallToolWithProgressAsync(
+                "index_documents", args, progress);
             LoggingService.LogInfo($"[RAG] index_documents result: {resultJson}");
 
-            // Parse result JSON to build user-friendly message
-            var message = "Indexing complete.";
-            if (!string.IsNullOrEmpty(resultJson))
-            {
-                try
-                {
-                    using var doc = System.Text.Json.JsonDocument.Parse(resultJson);
-                    var root = doc.RootElement;
-                    var indexed = root.TryGetProperty("indexed", out var i) ? i.GetInt32() : 0;
-                    var skipped = root.TryGetProperty("skipped", out var s) ? s.GetInt32() : 0;
-                    var chunks = root.TryGetProperty("total_chunks", out var c) ? c.GetInt32() : 0;
-                    var failed = root.TryGetProperty("failed", out var f) ? f.GetInt32() : 0;
-                    var removed = root.TryGetProperty("removed", out var r) ? r.GetInt32() : 0;
-
-                    var parts = new List<string>();
-                    if (indexed > 0) parts.Add($"{indexed} indexed");
-                    if (skipped > 0) parts.Add($"{skipped} unchanged");
-                    if (removed > 0) parts.Add($"{removed} removed");
-                    if (failed > 0) parts.Add($"{failed} failed");
-                    parts.Add($"{chunks} chunks");
-
-                    message = string.Join(", ", parts);
-                    LoggingService.LogInfo($"[RAG] Indexing complete: {message}");
-                }
-                catch
-                {
-                    message = resultJson;
-                    LoggingService.LogWarning($"[RAG] Could not parse index result: {resultJson}");
-                }
-            }
+            var message = ParseIndexResult(resultJson, label);
 
             NotificationCenter.Instance.Post(
                 Microsoft.UI.Xaml.Controls.InfoBarSeverity.Success,
@@ -1025,12 +978,58 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            LoggingService.LogError($"[RAG] Indexing failed: {ex.Message}");
+            LoggingService.LogError($"[RAG] {label} failed: {ex.Message}");
             NotificationCenter.Instance.Post(
                 Microsoft.UI.Xaml.Controls.InfoBarSeverity.Error,
                 "Knowledge Archive — Failed",
                 $"{ex.Message}\nMake sure an embedding model is loaded:\n  ollama pull nomic-embed-text",
                 8000);
+        }
+        finally
+        {
+            if (Panel is not null)
+            {
+                Panel.DispatcherQueue.TryEnqueue(() =>
+                {
+                    Panel.IsArchiveIndexing = false;
+                    Panel.ArchiveIndexingProgress = 0;
+                    Panel.ArchiveIndexingText = "";
+                    Panel.UpdateArchiveProgressUI();
+                });
+            }
+        }
+    }
+
+    private static string ParseIndexResult(string? resultJson, string label)
+    {
+        if (string.IsNullOrEmpty(resultJson))
+            return $"{label} complete.";
+
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(resultJson);
+            var root = doc.RootElement;
+            var indexed = root.TryGetProperty("indexed", out var i) ? i.GetInt32() : 0;
+            var skipped = root.TryGetProperty("skipped", out var s) ? s.GetInt32() : 0;
+            var chunks = root.TryGetProperty("total_chunks", out var c) ? c.GetInt32() : 0;
+            var failed = root.TryGetProperty("failed", out var f) ? f.GetInt32() : 0;
+            var removed = root.TryGetProperty("removed", out var r) ? r.GetInt32() : 0;
+
+            var parts = new List<string>();
+            if (indexed > 0) parts.Add($"{indexed} indexed");
+            if (skipped > 0) parts.Add($"{skipped} unchanged");
+            if (removed > 0) parts.Add($"{removed} removed");
+            if (failed > 0) parts.Add($"{failed} failed");
+            parts.Add($"{chunks} chunks");
+
+            var message = string.Join(", ", parts);
+            LoggingService.LogInfo($"[RAG] {label} complete: {message}");
+            return message;
+        }
+        catch
+        {
+            LoggingService.LogWarning($"[RAG] Could not parse index result: {resultJson}");
+            return resultJson!;
         }
     }
 

@@ -484,18 +484,33 @@
                                                            Fill="{ThemeResource DividerStrokeColorDefaultBrush}"
                                                            Opacity="0.3" Margin="0,8,0,4" />
 
-                                                <!-- Knowledge Archive header + Set button -->
+                                                <!-- Knowledge Archive header + progress + Set button -->
                                                 <Grid Margin="0,0,0,4">
                                                     <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
                                                         <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
                                                         <ColumnDefinition Width="Auto" />
                                                     </Grid.ColumnDefinitions>
                                                     <TextBlock x:Name="PART_ArchiveHeaderText"
                                                                Text="Knowledge Archive"
                                                                FontWeight="SemiBold"
                                                                VerticalAlignment="Center" />
+                                                    <ProgressBar x:Name="PART_ArchiveProgressBar"
+                                                                 Grid.Column="1"
+                                                                 Margin="8,0,0,0"
+                                                                 VerticalAlignment="Center"
+                                                                 Minimum="0" Maximum="100"
+                                                                 Visibility="Collapsed" />
+                                                    <TextBlock x:Name="PART_ArchiveProgressText"
+                                                               Grid.Column="2"
+                                                               Margin="6,0,0,0"
+                                                               FontSize="12"
+                                                               Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                                               VerticalAlignment="Center"
+                                                               Visibility="Collapsed" />
                                                     <Button x:Name="PART_ArchiveSetButton"
-                                                            Grid.Column="1"
+                                                            Grid.Column="3"
                                                             Style="{StaticResource SubtleButtonStyle}"
                                                             Padding="6,2,6,2"
                                                             VerticalAlignment="Center"
@@ -548,7 +563,13 @@
                                             </StackPanel>
                                         </Flyout>
                                     </Button.Flyout>
-                                    <FontIcon x:Name="PART_FolderIcon" Glyph="&#xE838;" FontSize="14" />
+                                    <Grid>
+                                        <FontIcon x:Name="PART_FolderIcon" Glyph="&#xE838;" FontSize="14" />
+                                        <ProgressRing x:Name="PART_ArchiveProgressRing"
+                                                      Width="16" Height="16"
+                                                      IsActive="False"
+                                                      Visibility="Collapsed" />
+                                    </Grid>
                                 </Button>
                             </Grid>
                             <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
