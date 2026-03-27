@@ -396,7 +396,7 @@
                                 </VisualState>
                             </VisualStateGroup>
                             <VisualStateGroup x:Name="IndexingStates">
-                                <VisualState x:Name="NotIndexing" />
+                                <VisualState x:Name="Idle" />
                                 <VisualState x:Name="Indexing">
                                     <Storyboard RepeatBehavior="Forever">
                                         <DoubleAnimation
@@ -543,10 +543,11 @@
                                                            FontSize="12" TextWrapping="Wrap"
                                                            Margin="0,0,0,4" Visibility="Collapsed" />
 
-                                                <!-- Archive folder row (path + reindex + remove) -->
+                                                <!-- Archive folder row (path + reindex/lock + remove) -->
                                                 <Grid x:Name="PART_ArchiveFolderRow" Visibility="Collapsed">
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
                                                         <ColumnDefinition Width="Auto" />
                                                         <ColumnDefinition Width="Auto" />
                                                     </Grid.ColumnDefinitions>
@@ -560,8 +561,15 @@
                                                             Padding="4" VerticalAlignment="Center">
                                                         <FontIcon Glyph="&#xE72C;" FontSize="10" />
                                                     </Button>
+                                                    <FontIcon x:Name="PART_ArchiveLockIcon"
+                                                              Grid.Column="2"
+                                                              Glyph="&#xE72E;"
+                                                              FontSize="10"
+                                                              Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                              VerticalAlignment="Center"
+                                                              Visibility="Collapsed" />
                                                     <Button x:Name="PART_ArchiveRemoveButton"
-                                                            Grid.Column="2"
+                                                            Grid.Column="3"
                                                             Style="{StaticResource SubtleButtonStyle}"
                                                             Padding="4" VerticalAlignment="Center">
                                                         <FontIcon Glyph="&#xE74D;" FontSize="10" />

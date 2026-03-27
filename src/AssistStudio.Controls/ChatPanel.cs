@@ -200,6 +200,11 @@ public sealed partial class ChatPanel : Control
         DependencyProperty.Register(nameof(ArchiveIndexingText), typeof(string), typeof(ChatPanel),
             new PropertyMetadata(""));
 
+    /// <summary>Identifies the <see cref="IsArchiveLocked"/> dependency property.</summary>
+    public static readonly DependencyProperty IsArchiveLockedProperty =
+        DependencyProperty.Register(nameof(IsArchiveLocked), typeof(bool), typeof(ChatPanel),
+            new PropertyMetadata(false));
+
     /// <summary>Identifies the <see cref="AllowAttachments"/> dependency property.</summary>
     public static readonly DependencyProperty AllowAttachmentsProperty =
         DependencyProperty.Register(nameof(AllowAttachments), typeof(bool), typeof(ChatPanel),
@@ -533,6 +538,7 @@ public sealed partial class ChatPanel : Control
     private Grid? _archiveFolderRow;
     private TextBlock? _archiveFolderText;
     private Button? _archiveReindexButton;
+    private FontIcon? _archiveLockIcon;
     private Button? _archiveRemoveButton;
     private TextBlock? _archiveEmpty;
     private ProgressBar? _archiveProgressBar;
@@ -771,6 +777,16 @@ public sealed partial class ChatPanel : Control
     {
         get => (string)GetValue(ArchiveIndexingTextProperty);
         set => SetValue(ArchiveIndexingTextProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets whether the Knowledge Archive folder is locked by another process.
+    /// When true, shows a lock icon and hides the reindex button.
+    /// </summary>
+    public bool IsArchiveLocked
+    {
+        get => (bool)GetValue(IsArchiveLockedProperty);
+        set => SetValue(IsArchiveLockedProperty, value);
     }
 
     /// <summary>
@@ -1792,6 +1808,7 @@ public sealed partial class ChatPanel : Control
             _archiveFolderText = FindDescendantByName<TextBlock>(root, "PART_ArchiveFolderText");
             _archiveReindexButton = FindDescendantByName<Button>(root, "PART_ArchiveReindexButton");
             _archiveRemoveButton = FindDescendantByName<Button>(root, "PART_ArchiveRemoveButton");
+            _archiveLockIcon = FindDescendantByName<FontIcon>(root, "PART_ArchiveLockIcon");
             _archiveEmpty = FindDescendantByName<TextBlock>(root, "PART_ArchiveEmpty");
             _archiveProgressBar = FindDescendantByName<ProgressBar>(root, "PART_ArchiveProgressBar");
             _archiveProgressText = FindDescendantByName<TextBlock>(root, "PART_ArchiveProgressText");
@@ -1959,10 +1976,17 @@ public sealed partial class ChatPanel : Control
             _archiveProgressText.Visibility = indexing ? Visibility.Visible : Visibility.Collapsed;
             _archiveProgressText.Text = indexing ? $"{progress:0}%" : "";
         }
-        VisualStateManager.GoToState(this, indexing ? "Indexing" : "NotIndexing", true);
-        // Disable reindex button during indexing
-        if (_archiveReindexButton is not null && IsArchiveIndexing)
-            _archiveReindexButton.IsEnabled = false;
+        VisualStateManager.GoToState(this, indexing ? "Indexing" : "Idle", true);
+
+        // Lock / reindex button visibility
+        var locked = IsArchiveLocked;
+        if (_archiveReindexButton is not null)
+        {
+            _archiveReindexButton.Visibility = locked ? Visibility.Collapsed : Visibility.Visible;
+            _archiveReindexButton.IsEnabled = !indexing;
+        }
+        if (_archiveLockIcon is not null)
+            _archiveLockIcon.Visibility = locked ? Visibility.Visible : Visibility.Collapsed;
     }
 
     /// <summary>
