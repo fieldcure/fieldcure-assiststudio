@@ -2216,7 +2216,7 @@ public sealed partial class ChatPanel : Control
 
                 if (results.ValueKind == System.Text.Json.JsonValueKind.Array)
                 {
-                    int i = 1;
+                    var i = 1;
                     foreach (var item in results.EnumerateArray())
                     {
                         var src = item.TryGetProperty("source_path", out var s)
@@ -2292,7 +2292,7 @@ public sealed partial class ChatPanel : Control
         {
             // Sample the first portion for base64 characteristics
             var sample = content[..Math.Min(1000, content.Length)];
-            int base64Chars = 0;
+            var base64Chars = 0;
             foreach (var c in sample)
             {
                 if (char.IsLetterOrDigit(c) || c is '+' or '/' or '=')
@@ -2306,7 +2306,7 @@ public sealed partial class ChatPanel : Control
 
         // Check control character ratio in a sample
         var ctrlSample = content[..Math.Min(2000, content.Length)];
-        int controlChars = 0;
+        var controlChars = 0;
         foreach (var c in ctrlSample)
         {
             if (char.IsControl(c) && c is not '\r' and not '\n' and not '\t')
@@ -2385,7 +2385,7 @@ public sealed partial class ChatPanel : Control
         if (activeTools.Count > 0)
         {
             // Read McpTools after delegate (it may have updated connection-filtered tools)
-            IReadOnlyList<IAssistTool> executableTools = McpTools is { Count: > 0 } mcpTools
+            var executableTools = McpTools is { Count: > 0 } mcpTools
                 ? [.. activeTools, .. mcpTools]
                 : activeTools;
             executor = new ToolCallExecutor(executableTools);

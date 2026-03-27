@@ -25,7 +25,7 @@ AssistStudio is two things:
 - **Conversation Branching** — Tree-based message editing with branch navigator (◀ 1/2 ▶). Edit any message to explore alternatives without losing history.
 - **MCP Integration** — Connect to MCP servers (Stdio / HTTP) to aggregate tools from any Model Context Protocol source. `McpToolAdapter` bridges MCP tools to the `IAssistTool` pipeline.
 - **Built-in MCP Servers** — Filesystem and Knowledge Archive (RAG) servers ship as built-ins, auto-installed via `dotnet tool`. Per-tab instances with MCP Roots protocol support for dynamic workspace folder updates.
-- **Vision & Documents** — Attach images (PNG, JPG, WebP, GIF), PDFs, and DOCX files. Per-provider `PdfCapability` (Auto / TextExtraction / NativePdf / PageAsImage).
+- **Vision & Documents** — Attach images (PNG, JPG, WebP, GIF), PDFs, DOCX, HWPX, XLSX, and PPTX files. Document text extraction via [FieldCure.DocumentParsers](https://github.com/fieldcure/fieldcure-document-parsers). Per-provider `PdfCapability` (Auto / TextExtraction / NativePdf / PageAsImage).
 - **Tool / Function Calling** — Define tools with `IAssistTool`. `ToolCallExecutor` orchestrates execution with confirmation flow. `ToolApprovalPanel` shows inline approval UI.
 - **Token Tracking** — Input/output token counts exposed after every request.
 - **Re-templatable WinUI 3 Controls** — `ChatPanel`, `InputContainer`, `AttachmentPreviewBar`, and `ToolApprovalPanel` are `TemplatedControl`s. Override `Generic.xaml` to fully customize the UI.
@@ -76,7 +76,7 @@ AssistStudio is two things:
 
 | Project | NuGet Package | TFM | Key Types |
 |---------|--------------|-----|-----------|
-| **AssistStudio.Core** | `FieldCure.AssistStudio.Core` | `net8.0` | `IAiProvider`, `StreamEvent`, `IAssistTool`, `AiRequest`, `AiResponse`, `ChatMessage`, `ToolCallExecutor`, `ToolResolver`, `McpToolAdapter`, `IWorkspaceContext`, `ProviderPreset`, `Profile`, `ConversationManager` |
+| **AssistStudio.Core** | `FieldCure.AssistStudio.Core` | `net8.0` | `IAiProvider`, `StreamEvent`, `IAssistTool`, `AiRequest`, `AiResponse`, `ChatMessage`, `ToolCallExecutor`, `ToolResolver`, `McpToolAdapter`, `IWorkspaceContext`, `ProviderPreset`, `Profile`, `ConversationManager` — depends on [`FieldCure.DocumentParsers`](https://www.nuget.org/packages/FieldCure.DocumentParsers) |
 | **AssistStudio.Controls** | `FieldCure.AssistStudio.Controls.WinUI` | `net8.0-windows10.0.19041.0`<br>`net9.0-windows10.0.19041.0` | `ChatPanel`, `InputContainer`, `AttachmentPreviewBar`, `ToolApprovalPanel`, `ChatTheme` |
 | **AssistStudio** | *(workspace app)* | `net9.0-windows10.0.19041.0` | Reference implementation with settings, MCP server management, built-in tools, and `PasswordVaultHelper` |
 
@@ -325,6 +325,14 @@ var profile = new Profile
 | Windows App SDK | 1.7 |
 | WebView2 Runtime | Evergreen |
 | Target Platform | Windows 10 1903+ (10.0.19041.0) |
+
+---
+
+## Related Repositories
+
+| Repository | Description |
+|---|---|
+| [fieldcure-document-parsers](https://github.com/fieldcure/fieldcure-document-parsers) | Document text extraction — DOCX, HWPX, XLSX, PPTX, PDF with math equation support |
 
 ---
 

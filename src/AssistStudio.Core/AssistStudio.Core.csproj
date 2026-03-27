@@ -40,7 +40,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\DocumentParsers\DocumentParsers.csproj" />
+    <PackageReference Include="FieldCure.DocumentParsers" Version="0.3.0" />
   </ItemGroup>
 
 </Project>

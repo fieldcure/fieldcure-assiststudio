@@ -49,8 +49,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="FieldCure.DocumentParsers.Pdf" Version="0.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\AssistStudio.Controls\AssistStudio.Controls.csproj" />
-    <ProjectReference Include="..\DocumentParsers.Pdf\DocumentParsers.Pdf.csproj" />
   </ItemGroup>
 
   <!--
