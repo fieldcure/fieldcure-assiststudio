@@ -1182,9 +1182,7 @@
             block.className = 'tool-block';
             var header = document.createElement('div');
             header.className = 'tool-header';
-            // If toolName already contains an icon prefix (e.g. fetch_url rich label), use as-is
-            var isRichLabel = toolName.indexOf('(') !== -1;
-            header.textContent = isRichLabel ? toolName : '\uD83D\uDD27 Used ' + toolName;
+            header.textContent = '\uD83D\uDD27 ' + toolName;
             block.appendChild(header);
             var contentSpan = bubble.querySelector('.content');
             if (contentSpan) {
@@ -1214,8 +1212,7 @@
 
             var details = document.createElement('details');
             var summary = document.createElement('summary');
-            // Collapsed: looks identical to regular tool-block (🔧 Used <displayName>)
-            summary.textContent = '\uD83D\uDD27 Used ' + (displayName || 'search_documents')
+            summary.textContent = '\uD83D\uDD27 ' + (displayName || 'search_documents')
                 + ' \u2014 ' + results.length + ' results \u00b7 ' + totalChunks + ' chunks';
             details.appendChild(summary);
 

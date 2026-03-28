@@ -2270,7 +2270,7 @@ public sealed partial class ChatPanel : Control
             if (doc.RootElement.TryGetProperty("url", out var urlProp))
             {
                 var url = urlProp.GetString() ?? "?";
-                return $"\U0001F517 fetch_url(\u201C{url}\u201D) \u2014 {resultLength:N0} chars";
+                return $"fetch_url(\u201C{url}\u201D) \u2014 {resultLength:N0} chars";
             }
         }
         catch { /* fall through */ }
@@ -2509,24 +2509,12 @@ public sealed partial class ChatPanel : Control
 
                 assistantMessage.Content += $"[Tool: {call.FunctionName}]\n";
 
-                var toolDisplayName = RegisteredTools
-                    .FirstOrDefault(t => t.Name == call.FunctionName)?.DisplayName
-                    ?? McpTools.FirstOrDefault(t => t.Name == call.FunctionName)?.DisplayName
-                    ?? call.FunctionName;
-
                 if (call.FunctionName == "search_documents")
-                {
-                    await _renderer.AppendSearchResultBlockAsync(assistantMessage.Id, toolResult, toolDisplayName);
-                }
+                    await _renderer.AppendSearchResultBlockAsync(assistantMessage.Id, toolResult, call.FunctionName);
                 else if (call.FunctionName == "fetch_url")
-                {
-                    await _renderer.AppendToolBlockAsync(assistantMessage.Id,
-                        FormatFetchUrlLabel(call.Arguments, toolResult.Length));
-                }
+                    await _renderer.AppendToolBlockAsync(assistantMessage.Id, FormatFetchUrlLabel(call.Arguments, toolResult.Length));
                 else
-                {
-                    await _renderer.AppendToolBlockAsync(assistantMessage.Id, toolDisplayName);
-                }
+                    await _renderer.AppendToolBlockAsync(assistantMessage.Id, call.FunctionName);
             }
         } while (true);
 
@@ -2611,14 +2599,9 @@ public sealed partial class ChatPanel : Control
                 {
                     var toolName = m.Groups[1].Value.Trim();
 
-                    var displayName = RegisteredTools
-                        .FirstOrDefault(t => t.Name == toolName)?.DisplayName
-                        ?? McpTools.FirstOrDefault(t => t.Name == toolName)?.DisplayName
-                        ?? toolName;
-
                     if (toolName == "search_documents" && searchResultQueue.Count > 0)
                     {
-                        await _renderer.AppendSearchResultBlockAsync(msg.Id, searchResultQueue.Dequeue(), displayName);
+                        await _renderer.AppendSearchResultBlockAsync(msg.Id, searchResultQueue.Dequeue(), toolName);
                         continue;
                     }
 
@@ -2628,7 +2611,7 @@ public sealed partial class ChatPanel : Control
                         continue;
                     }
 
-                    await _renderer.AppendToolBlockAsync(msg.Id, displayName);
+                    await _renderer.AppendToolBlockAsync(msg.Id, toolName);
                 }
 
                 await _renderer.FinalizeMessageAsync(msg.Id, msg.Content ?? "");
