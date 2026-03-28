@@ -321,6 +321,8 @@ internal partial class WebViewChatRenderer
     /// </summary>
     private void OnNavigationCompleted(CoreWebView2 sender, CoreWebView2NavigationCompletedEventArgs args)
     {
+        // Scale chat UI via CSS zoom (WebView2 CoreWebView2 lacks ZoomFactor in WinUI 3)
+        _ = _webView.ExecuteScriptAsync("document.body.style.zoom = '1.05'");
         _navigationTcs?.TrySetResult();
     }
 
