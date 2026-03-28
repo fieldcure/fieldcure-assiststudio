@@ -234,7 +234,7 @@
     <value>(비어 있음)</value>
   </data>
   <data name="Folder_DisabledHint" xml:space="preserve">
-    <value>프로필에서 Workspace를 활성화해야 이 폴더가 사용됩니다.</value>
+    <value>이 폴더의 파일을 읽고 쓸 수 있습니다.</value>
   </data>
   <data name="Folder_ArchiveHeader" xml:space="preserve">
     <value>지식보관소</value>
@@ -243,10 +243,13 @@
     <value>폴더 지정</value>
   </data>
   <data name="Folder_ArchiveDisabledHint" xml:space="preserve">
-    <value>프로필에서 지식보관소를 활성화해야 이 폴더가 사용됩니다.</value>
+    <value>이 폴더의 문서를 검색할 수 있습니다.</value>
   </data>
   <data name="Folder_ReindexArchive" xml:space="preserve">
     <value>문서 재인덱싱</value>
+  </data>
+  <data name="Folder_CancelIndexing" xml:space="preserve">
+    <value>인덱싱 취소</value>
   </data>
   <data name="FolderFlyout_RemoveTooltip" xml:space="preserve">
     <value>제거</value>
@@ -261,7 +264,7 @@
     <value>(비어 있음)</value>
   </data>
   <data name="FolderFlyout_DisabledHint.Text" xml:space="preserve">
-    <value>프로필에서 Workspace를 활성화해야 이 폴더가 사용됩니다.</value>
+    <value>이 폴더의 파일을 읽고 쓸 수 있습니다.</value>
   </data>
   <data name="FolderFlyout_ArchiveHeader.Text" xml:space="preserve">
     <value>지식보관소</value>

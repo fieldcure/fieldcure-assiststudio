@@ -795,6 +795,9 @@
   <data name="Connect_KnowledgeArchiveFailed" xml:space="preserve">
     <value>Knowledge Archive — Failed</value>
   </data>
+  <data name="Connect_KnowledgeArchiveCancelled" xml:space="preserve">
+    <value>Indexing cancelled.</value>
+  </data>
   <data name="Connect_EmbeddingModelHint" xml:space="preserve">
     <value>Make sure an embedding model is loaded: ollama pull nomic-embed-text</value>
   </data>

@@ -234,7 +234,7 @@ Add them in Profile settings.</value>
     <value>(empty)</value>
   </data>
   <data name="Folder_DisabledHint" xml:space="preserve">
-    <value>Enable Workspace in your profile to use these folders.</value>
+    <value>Read and write files in these folders.</value>
   </data>
   <data name="Folder_ArchiveHeader" xml:space="preserve">
     <value>Knowledge Archive</value>
@@ -243,10 +243,13 @@ Add them in Profile settings.</value>
     <value>Set Folder</value>
   </data>
   <data name="Folder_ArchiveDisabledHint" xml:space="preserve">
-    <value>Enable Knowledge Archive in your profile to use this folder.</value>
+    <value>Search documents in these folders.</value>
   </data>
   <data name="Folder_ReindexArchive" xml:space="preserve">
     <value>Re-index documents</value>
+  </data>
+  <data name="Folder_CancelIndexing" xml:space="preserve">
+    <value>Cancel indexing</value>
   </data>
   <data name="FolderFlyout_RemoveTooltip" xml:space="preserve">
     <value>Remove</value>
@@ -261,7 +264,7 @@ Add them in Profile settings.</value>
     <value>(empty)</value>
   </data>
   <data name="FolderFlyout_DisabledHint.Text" xml:space="preserve">
-    <value>Enable Workspace in your profile to use these folders.</value>
+    <value>Read and write files in these folders.</value>
   </data>
   <data name="FolderFlyout_ArchiveHeader.Text" xml:space="preserve">
     <value>Knowledge Archive</value>
@@ -270,7 +273,7 @@ Add them in Profile settings.</value>
     <value>Set Folder</value>
   </data>
   <data name="FolderFlyout_ArchiveDisabledHint.Text" xml:space="preserve">
-    <value>Enable Knowledge Archive in your profile to use this folder.</value>
+    <value>Search documents in these folders.</value>
   </data>
   <data name="FolderFlyout_ArchiveEmpty.Text" xml:space="preserve">
     <value>(empty)</value>

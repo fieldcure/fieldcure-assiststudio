@@ -504,6 +504,7 @@
                                                         <ColumnDefinition Width="*" />
                                                         <ColumnDefinition Width="Auto" />
                                                         <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="Auto" />
                                                     </Grid.ColumnDefinitions>
                                                     <TextBlock x:Name="PART_ArchiveHeaderText"
                                                                Text="Knowledge Archive"
@@ -522,8 +523,15 @@
                                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                                                VerticalAlignment="Center"
                                                                Visibility="Collapsed" />
-                                                    <Button x:Name="PART_ArchiveSetButton"
+                                                    <Button x:Name="PART_ArchiveCancelButton"
                                                             Grid.Column="3"
+                                                            Style="{StaticResource SubtleButtonStyle}"
+                                                            Padding="4" VerticalAlignment="Center"
+                                                            Visibility="Collapsed">
+                                                        <FontIcon Glyph="&#xE711;" FontSize="10" />
+                                                    </Button>
+                                                    <Button x:Name="PART_ArchiveSetButton"
+                                                            Grid.Column="4"
                                                             Style="{StaticResource SubtleButtonStyle}"
                                                             Padding="6,2,6,2"
                                                             VerticalAlignment="Center"

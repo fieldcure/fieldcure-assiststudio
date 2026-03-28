@@ -64,6 +64,11 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// </summary>
     private McpServerConnection? _ragConnection;
 
+    /// <summary>
+    /// Cancellation source for the current indexing operation. Null when not indexing.
+    /// </summary>
+    private CancellationTokenSource? _indexingCts;
+
     #endregion
 
     #region Observable Fields — ChatPanel bindings
@@ -808,6 +813,16 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
+    /// Cancels the current indexing operation if one is in progress.
+    /// </summary>
+    public void OnKnowledgeArchiveCancelRequested(object? _sender, EventArgs _e)
+    {
+        if (_indexingCts is null) return;
+        LoggingService.LogInfo("[RAG] Indexing cancel requested by user");
+        _indexingCts.Cancel();
+    }
+
+    /// <summary>
     /// Marks the conversation as dirty when a new message is added.
     /// </summary>
     public void OnMessageAdded(object? _sender, ChatMessage _message)
@@ -962,6 +977,9 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             });
         }
 
+        _indexingCts = new CancellationTokenSource();
+        var ct = _indexingCts.Token;
+
         try
         {
             var args = System.Text.Json.JsonSerializer.SerializeToElement(new { force });
@@ -984,7 +1002,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             });
 
             var resultJson = await _ragConnection.CallToolWithProgressAsync(
-                "index_documents", args, progress);
+                "index_documents", args, progress, ct);
             LoggingService.LogInfo($"[RAG] index_documents result: {resultJson}");
 
             var message = ParseIndexResult(resultJson, label);
@@ -994,6 +1012,15 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                 readyTitle,
                 message,
                 5000);
+        }
+        catch (OperationCanceledException)
+        {
+            LoggingService.LogInfo($"[RAG] {label} cancelled by user");
+            NotificationCenter.Instance.Post(
+                Microsoft.UI.Xaml.Controls.InfoBarSeverity.Warning,
+                title,
+                loader.GetString("Connect_KnowledgeArchiveCancelled") ?? "Indexing cancelled.",
+                3000);
         }
         catch (Exception ex)
         {
@@ -1006,6 +1033,9 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         }
         finally
         {
+            _indexingCts?.Dispose();
+            _indexingCts = null;
+
             if (Panel is not null)
             {
                 Panel.DispatcherQueue.TryEnqueue(() =>

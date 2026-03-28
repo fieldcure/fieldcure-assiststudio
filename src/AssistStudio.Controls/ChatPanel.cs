@@ -543,6 +543,7 @@ public sealed partial class ChatPanel : Control
     private TextBlock? _archiveEmpty;
     private ProgressBar? _archiveProgressBar;
     private TextBlock? _archiveProgressText;
+    private Button? _archiveCancelButton;
 
     private bool _isConversationActive;
     private string? _greetingText;
@@ -962,6 +963,11 @@ public sealed partial class ChatPanel : Control
     public event EventHandler? KnowledgeArchiveReindexRequested;
 
     /// <summary>
+    /// Occurs when the user clicks the cancel button during Knowledge Archive indexing.
+    /// </summary>
+    public event EventHandler? KnowledgeArchiveCancelRequested;
+
+    /// <summary>
     /// Occurs when a keyboard shortcut is pressed inside the WebView2 that should be handled by the host.
     /// </summary>
     public event EventHandler<string>? KeyboardShortcutPressed;
@@ -1039,6 +1045,7 @@ public sealed partial class ChatPanel : Control
         _archiveEmpty = null;
         _archiveProgressBar = null;
         _archiveProgressText = null;
+        _archiveCancelButton = null;
 
         // Get template parts
         _rootGrid = GetTemplateChild("PART_RootGrid") as Grid;
@@ -1813,6 +1820,7 @@ public sealed partial class ChatPanel : Control
             _archiveEmpty = FindDescendantByName<TextBlock>(root, "PART_ArchiveEmpty");
             _archiveProgressBar = FindDescendantByName<ProgressBar>(root, "PART_ArchiveProgressBar");
             _archiveProgressText = FindDescendantByName<TextBlock>(root, "PART_ArchiveProgressText");
+            _archiveCancelButton = FindDescendantByName<Button>(root, "PART_ArchiveCancelButton");
 
             // Localize flyout text (x:Uid doesn't work in ControlTemplate)
             LocalizeFlyoutText(root);
@@ -1826,6 +1834,11 @@ public sealed partial class ChatPanel : Control
             {
                 _archiveReindexButton.Click += (s, e2) => KnowledgeArchiveReindexRequested?.Invoke(this, EventArgs.Empty);
                 SetBottomRightToolTip(_archiveReindexButton, Res.GetString("Folder_ReindexArchive") ?? "Re-index documents");
+            }
+            if (_archiveCancelButton is not null)
+            {
+                _archiveCancelButton.Click += (s, e2) => KnowledgeArchiveCancelRequested?.Invoke(this, EventArgs.Empty);
+                SetBottomRightToolTip(_archiveCancelButton, Res.GetString("Folder_CancelIndexing") ?? "Cancel indexing");
             }
             if (_archiveRemoveButton is not null)
             {
@@ -1870,7 +1883,7 @@ public sealed partial class ChatPanel : Control
 
         // Workspace section visibility
         if (_folderDisabledHint is not null)
-            _folderDisabledHint.Visibility = isEnabled ? Visibility.Collapsed : Visibility.Visible;
+            _folderDisabledHint.Visibility = Visibility.Visible;
         if (_folderEmpty is not null)
             _folderEmpty.Visibility = folders.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
@@ -1934,7 +1947,7 @@ public sealed partial class ChatPanel : Control
         if (_archiveSetButton is not null)
             _archiveSetButton.Visibility = string.IsNullOrEmpty(archiveFolder) ? Visibility.Visible : Visibility.Collapsed;
         if (_archiveDisabledHint is not null)
-            _archiveDisabledHint.Visibility = (!archiveEnabled && !string.IsNullOrEmpty(archiveFolder))
+            _archiveDisabledHint.Visibility = !string.IsNullOrEmpty(archiveFolder)
                 ? Visibility.Visible : Visibility.Collapsed;
         if (_archiveFolderRow is not null)
             _archiveFolderRow.Visibility = !string.IsNullOrEmpty(archiveFolder) ? Visibility.Visible : Visibility.Collapsed;
@@ -1977,6 +1990,10 @@ public sealed partial class ChatPanel : Control
             _archiveProgressText.Visibility = indexing ? Visibility.Visible : Visibility.Collapsed;
             _archiveProgressText.Text = indexing ? $"{progress:0}%" : "";
         }
+        if (_archiveCancelButton is not null)
+            _archiveCancelButton.Visibility = indexing ? Visibility.Visible : Visibility.Collapsed;
+        if (_archiveRemoveButton is not null)
+            _archiveRemoveButton.IsEnabled = !indexing;
         VisualStateManager.GoToState(this, indexing ? "Indexing" : "Idle", true);
 
         // Lock / reindex button visibility

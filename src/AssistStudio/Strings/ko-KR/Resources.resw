@@ -795,6 +795,9 @@
   <data name="Connect_KnowledgeArchiveFailed" xml:space="preserve">
     <value>지식보관소 — 실패</value>
   </data>
+  <data name="Connect_KnowledgeArchiveCancelled" xml:space="preserve">
+    <value>인덱싱이 취소되었습니다.</value>
+  </data>
   <data name="Connect_EmbeddingModelHint" xml:space="preserve">
     <value>임베딩 모델이 로드되어 있는지 확인하세요: ollama pull nomic-embed-text</value>
   </data>
