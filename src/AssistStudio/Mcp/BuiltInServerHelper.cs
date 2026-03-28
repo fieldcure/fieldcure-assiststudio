@@ -27,7 +27,7 @@ public static class BuiltInServerHelper
     private static readonly Dictionary<string, (string PackageId, string RequiredVersion)> NuGetPackages = new()
     {
         [FilesystemKey] = ("FieldCure.Mcp.Filesystem", "0.5.0"),
-        [RagKey] = ("FieldCure.Mcp.Rag", "0.10.0"),
+        [RagKey] = ("FieldCure.Mcp.Rag", "0.10.1"),
     };
 
     /// <summary>NuGet package ID for the Filesystem server.</summary>
