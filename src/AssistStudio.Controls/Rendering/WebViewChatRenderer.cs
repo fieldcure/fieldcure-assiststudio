@@ -223,6 +223,17 @@ internal partial class WebViewChatRenderer
     }
 
     /// <summary>
+    /// Applies CSS zoom and compensates container max-width to keep visual width at 800px.
+    /// </summary>
+    public Task ApplyZoomAsync(double zoomFactor)
+    {
+        var maxWidth = (int)Math.Round(800.0 / zoomFactor);
+        var script = $"document.body.style.zoom='{zoomFactor}';"
+            + $"document.getElementById('chat-container').style.maxWidth='{maxWidth}px';";
+        return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
+    /// <summary>
     /// Scrolls the chat view to the bottom.
     /// </summary>
     public Task ScrollToBottomAsync()
@@ -321,8 +332,6 @@ internal partial class WebViewChatRenderer
     /// </summary>
     private void OnNavigationCompleted(CoreWebView2 sender, CoreWebView2NavigationCompletedEventArgs args)
     {
-        // Scale chat UI via CSS zoom (WebView2 CoreWebView2 lacks ZoomFactor in WinUI 3)
-        _ = _webView.ExecuteScriptAsync("document.body.style.zoom = '1.05'");
         _navigationTcs?.TrySetResult();
     }
 

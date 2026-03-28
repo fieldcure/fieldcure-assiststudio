@@ -205,6 +205,11 @@ public sealed partial class ChatPanel : Control
         DependencyProperty.Register(nameof(IsArchiveLocked), typeof(bool), typeof(ChatPanel),
             new PropertyMetadata(false));
 
+    /// <summary>Identifies the <see cref="ChatZoomFactor"/> dependency property.</summary>
+    public static readonly DependencyProperty ChatZoomFactorProperty =
+        DependencyProperty.Register(nameof(ChatZoomFactor), typeof(double), typeof(ChatPanel),
+            new PropertyMetadata(1.05, OnChatZoomFactorChanged));
+
     /// <summary>Identifies the <see cref="AllowAttachments"/> dependency property.</summary>
     public static readonly DependencyProperty AllowAttachmentsProperty =
         DependencyProperty.Register(nameof(AllowAttachments), typeof(bool), typeof(ChatPanel),
@@ -791,6 +796,16 @@ public sealed partial class ChatPanel : Control
     }
 
     /// <summary>
+    /// Gets or sets the CSS zoom factor for the chat WebView2 content.
+    /// Default is 1.05 (105%). Adjusts both zoom and max-width to keep visual width at 800px.
+    /// </summary>
+    public double ChatZoomFactor
+    {
+        get => (double)GetValue(ChatZoomFactorProperty);
+        set => SetValue(ChatZoomFactorProperty, value);
+    }
+
+    /// <summary>
     /// Gets or sets whether file attachments are allowed.
     /// </summary>
     public bool AllowAttachments
@@ -1292,6 +1307,7 @@ public sealed partial class ChatPanel : Control
             _isInitialized = true;
             await ApplyThemeAsync();
             await ApplyLocaleStringsAsync();
+            ApplyChatZoom();
             if (IsDebugMode)
                 await _renderer.SetDebugModeAsync(true);
 
@@ -1970,6 +1986,24 @@ public sealed partial class ChatPanel : Control
     }
 
     /// <summary>
+    /// <summary>
+    /// Handles <see cref="ChatZoomFactor"/> changes — applies CSS zoom and adjusts max-width.
+    /// </summary>
+    private static void OnChatZoomFactorChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && panel._isInitialized)
+            panel.ApplyChatZoom();
+    }
+
+    /// <summary>
+    /// Applies the current <see cref="ChatZoomFactor"/> to the WebView2 via CSS zoom
+    /// and compensates <c>#chat-container</c> max-width to keep visual width at 800px.
+    /// </summary>
+    private void ApplyChatZoom()
+    {
+        _ = _renderer.ApplyZoomAsync(ChatZoomFactor);
+    }
+
     /// Updates the indexing progress UI elements in the flyout and title bar.
     /// Call this after changing <see cref="IsArchiveIndexing"/>, <see cref="ArchiveIndexingProgress"/>,
     /// or <see cref="ArchiveIndexingText"/>.
