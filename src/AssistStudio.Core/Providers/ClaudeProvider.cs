@@ -336,7 +336,7 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
     private string BuildRequestBody(AiRequest request, bool stream)
     {
         var messages = new JsonArray();
-        var systemPrompt = PromptBuilder.Build(request.SystemPrompt, request.WorkspaceText, request.ContextChunks);
+        var systemPrompt = PromptBuilder.Build(request.SystemPrompt, request.WorkspaceText, request.ContextChunks, request.MemoryText);
 
         foreach (var msg in request.Messages)
         {

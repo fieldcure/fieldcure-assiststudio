@@ -69,6 +69,8 @@ public partial class MainViewModel : ObservableObject
         ToolRegistry.Register(new SearchFilesTool());
         ToolRegistry.Register(new RunCommandTool());
         ToolRegistry.Register(new UrlFetchTool());
+        ToolRegistry.Register(new RememberTool(App.MemoryStore));
+        ToolRegistry.Register(new ForgetTool(App.MemoryStore));
         ToolRegistry.Register(new SearchToolsTool(App.McpRegistry));
     }
 
@@ -338,7 +340,7 @@ public partial class MainViewModel : ObservableObject
         var activePath = new HashSet<string?>();
         var currentKey = rootKey;
         // For root level, use ActiveRootChildId from ConversationData
-        string? rootHint = activeRootChildId;
+        var rootHint = activeRootChildId;
 
         while (childrenMap.TryGetValue(currentKey, out var children) && children.Count > 0)
         {

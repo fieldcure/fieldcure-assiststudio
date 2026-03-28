@@ -51,6 +51,11 @@ public sealed partial class ChatPanel : Control
         DependencyProperty.Register(nameof(SystemPrompt), typeof(string), typeof(ChatPanel),
             new PropertyMetadata(null));
 
+    /// <summary>Identifies the <see cref="MemoryText"/> dependency property.</summary>
+    public static readonly DependencyProperty MemoryTextProperty =
+        DependencyProperty.Register(nameof(MemoryText), typeof(string), typeof(ChatPanel),
+            new PropertyMetadata(null));
+
     /// <summary>Identifies the <see cref="Theme"/> dependency property.</summary>
     public static readonly DependencyProperty ThemeProperty =
         DependencyProperty.Register(nameof(Theme), typeof(ChatTheme), typeof(ChatPanel),
@@ -848,6 +853,15 @@ public sealed partial class ChatPanel : Control
     {
         get => (string?)GetValue(SystemPromptProperty);
         set => SetValue(SystemPromptProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the persistent memory text injected into the system prompt.
+    /// </summary>
+    public string? MemoryText
+    {
+        get => (string?)GetValue(MemoryTextProperty);
+        set => SetValue(MemoryTextProperty, value);
     }
 
     /// <summary>
@@ -1986,7 +2000,6 @@ public sealed partial class ChatPanel : Control
     }
 
     /// <summary>
-    /// <summary>
     /// Handles <see cref="ChatZoomFactor"/> changes — applies CSS zoom and adjusts max-width.
     /// </summary>
     private static void OnChatZoomFactorChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -2004,6 +2017,7 @@ public sealed partial class ChatPanel : Control
         _ = _renderer.ApplyZoomAsync(ChatZoomFactor);
     }
 
+    /// <summary>
     /// Updates the indexing progress UI elements in the flyout and title bar.
     /// Call this after changing <see cref="IsArchiveIndexing"/>, <see cref="ArchiveIndexingProgress"/>,
     /// or <see cref="ArchiveIndexingText"/>.
@@ -3059,6 +3073,7 @@ public sealed partial class ChatPanel : Control
         {
             Messages = messages,
             SystemPrompt = systemPrompt ?? SystemPrompt,
+            MemoryText = MemoryText,
             WorkspaceText = workspaceText,
             ContextChunks = chunks is { Count: > 0 } ? chunks : null,
             Temperature = preset?.Temperature ?? 0.7,

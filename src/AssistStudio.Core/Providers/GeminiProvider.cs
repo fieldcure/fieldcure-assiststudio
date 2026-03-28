@@ -325,7 +325,7 @@ public partial class GeminiProvider : IAiProvider, IDisposable
     private string BuildRequestBody(AiRequest request)
     {
         var contents = new JsonArray();
-        var systemText = PromptBuilder.Build(request.SystemPrompt, request.WorkspaceText, request.ContextChunks);
+        var systemText = PromptBuilder.Build(request.SystemPrompt, request.WorkspaceText, request.ContextChunks, request.MemoryText);
 
         foreach (var msg in request.Messages)
         {

@@ -105,6 +105,9 @@
   <data name="Nav_Models.Content" xml:space="preserve">
     <value>Models</value>
   </data>
+  <data name="Nav_Memory.Content" xml:space="preserve">
+    <value>Memory</value>
+  </data>
   <data name="Nav_Personalization.Content" xml:space="preserve">
     <value>Personalization</value>
   </data>
@@ -147,6 +150,22 @@
   </data>
   <data name="Models_BrowsePullModels.Content" xml:space="preserve">
     <value>Browse models</value>
+  </data>
+  <!-- Memory Page -->
+  <data name="Memory_Title.Text" xml:space="preserve">
+    <value>Memory</value>
+  </data>
+  <data name="Memory_ClearAll.Content" xml:space="preserve">
+    <value>Clear All</value>
+  </data>
+  <data name="Memory_ClearConfirm" xml:space="preserve">
+    <value>Are you sure you want to clear all memories?</value>
+  </data>
+  <data name="Memory_Empty.Text" xml:space="preserve">
+    <value>No memories saved yet.</value>
+  </data>
+  <data name="Memory_Counter" xml:space="preserve">
+    <value>{0} / {1} entries</value>
   </data>
   <!-- Personalization Page -->
   <data name="Personalization_Title.Text" xml:space="preserve">
@@ -461,6 +480,12 @@
   <data name="Tool_fetch_url" xml:space="preserve">
     <value>Fetch URL</value>
   </data>
+  <data name="Tool_remember" xml:space="preserve">
+    <value>Remember</value>
+  </data>
+  <data name="Tool_forget" xml:space="preserve">
+    <value>Forget</value>
+  </data>
   <!-- CollapsibleSection -->
   <data name="CollapsibleSection_CollapseTooltip" xml:space="preserve">
     <value>Collapse section</value>
@@ -653,6 +678,12 @@
   </data>
   <data name="Profiles_EssentialsLabel" xml:space="preserve">
     <value>Essentials</value>
+  </data>
+  <data name="Profiles_MemoryLabel" xml:space="preserve">
+    <value>Memory</value>
+  </data>
+  <data name="Profiles_MemoryHint" xml:space="preserve">
+    <value>Remember and forget information across conversations</value>
   </data>
   <data name="Profiles_EssentialsHint" xml:space="preserve">
     <value>Provides web access, command execution, file management, and more.</value>

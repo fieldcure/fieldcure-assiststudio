@@ -105,6 +105,9 @@
   <data name="Nav_Models.Content" xml:space="preserve">
     <value>&#xBAA8;&#xB378;</value>
   </data>
+  <data name="Nav_Memory.Content" xml:space="preserve">
+    <value>메모리</value>
+  </data>
   <data name="Nav_Personalization.Content" xml:space="preserve">
     <value>&#xAC1C;&#xC778; &#xC124;&#xC815;</value>
   </data>
@@ -147,6 +150,22 @@
   </data>
   <data name="Models_BrowsePullModels.Content" xml:space="preserve">
     <value>모델 찾아보기</value>
+  </data>
+  <!-- Memory Page -->
+  <data name="Memory_Title.Text" xml:space="preserve">
+    <value>메모리</value>
+  </data>
+  <data name="Memory_ClearAll.Content" xml:space="preserve">
+    <value>전체 삭제</value>
+  </data>
+  <data name="Memory_ClearConfirm" xml:space="preserve">
+    <value>모든 메모리를 삭제하시겠습니까?</value>
+  </data>
+  <data name="Memory_Empty.Text" xml:space="preserve">
+    <value>저장된 메모리가 없습니다.</value>
+  </data>
+  <data name="Memory_Counter" xml:space="preserve">
+    <value>{0} / {1}개</value>
   </data>
   <!-- Personalization Page -->
   <data name="Personalization_Title.Text" xml:space="preserve">
@@ -461,6 +480,12 @@
   <data name="Tool_fetch_url" xml:space="preserve">
     <value>URL 가져오기</value>
   </data>
+  <data name="Tool_remember" xml:space="preserve">
+    <value>기억하기</value>
+  </data>
+  <data name="Tool_forget" xml:space="preserve">
+    <value>잊기</value>
+  </data>
   <!-- CollapsibleSection -->
   <data name="CollapsibleSection_CollapseTooltip" xml:space="preserve">
     <value>섹션 접기</value>
@@ -656,6 +681,12 @@
   </data>
   <data name="Profiles_EssentialsHint" xml:space="preserve">
     <value>웹 접근, 명령 실행, 파일 관리 등 기본 도구를 제공합니다.</value>
+  </data>
+  <data name="Profiles_MemoryLabel" xml:space="preserve">
+    <value>메모리</value>
+  </data>
+  <data name="Profiles_MemoryHint" xml:space="preserve">
+    <value>대화 간 정보를 기억하고 잊을 수 있습니다</value>
   </data>
   <data name="Profiles_WorkspaceHint" xml:space="preserve">
     <value>대화에서 작업 폴더를 추가하세요.</value>

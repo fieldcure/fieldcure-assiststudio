@@ -319,6 +319,10 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             _ = ConnectRagAsync(panel.KnowledgeArchiveFolder);
         }
 
+        // Initialize memory text for prompt injection
+        panel.MemoryText = App.MemoryStore.BuildMemoryText();
+        App.MemoryStore.Changed += OnMemoryStoreChanged;
+
         // Relay keyboard shortcut from WebView2 (separate HWND)
         panel.KeyboardShortcutPressed += (s, e) => KeyboardShortcutPressed?.Invoke(s, e);
 
@@ -526,6 +530,18 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         RefreshTools();
     }
 
+    /// <summary>
+    /// Handles memory store changes to refresh the memory text in the panel.
+    /// </summary>
+    private void OnMemoryStoreChanged()
+    {
+        if (Panel is null) return;
+        Panel.DispatcherQueue.TryEnqueue(() =>
+        {
+            Panel.MemoryText = App.MemoryStore.BuildMemoryText();
+        });
+    }
+
     /// <inheritdoc/>
     public void Dispose()
     {
@@ -534,6 +550,9 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         // Unsubscribe from profile events
         if (SelectedProfile is not null)
             SelectedProfile.ToolSettingsChanged -= OnProfileToolSettingsChanged;
+
+        // Unsubscribe from memory store events
+        App.MemoryStore.Changed -= OnMemoryStoreChanged;
 
         // Disconnect per-tab MCP servers
         if (_filesystemConnection is not null)
@@ -757,8 +776,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     public async void OnKnowledgeArchiveFolderChanged(object? _sender, string? folder)
     {
         // Save to conversation data
-        if (_builtInServers is null)
-            _builtInServers = new Dictionary<string, BuiltInServerConfig>();
+        _builtInServers ??= [];
 
         if (!string.IsNullOrEmpty(folder))
         {
@@ -966,16 +984,13 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             progressMsg);
 
         // Set indexing state on ChatPanel
-        if (Panel is not null)
-        {
-            Panel.DispatcherQueue.TryEnqueue(() =>
+        Panel?.DispatcherQueue.TryEnqueue(() =>
             {
                 Panel.IsArchiveIndexing = true;
                 Panel.ArchiveIndexingProgress = 0;
                 Panel.ArchiveIndexingText = "";
                 Panel.UpdateArchiveProgressUI();
             });
-        }
 
         _indexingCts = new CancellationTokenSource();
         var ct = _indexingCts.Token;
@@ -990,15 +1005,12 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                 var pct = value.Total > 0 ? value.Current / value.Total * 100 : 0;
                 LoggingService.LogInfo($"[RAG] Progress: {value.Current}/{value.Total} — {value.Message}");
 
-                if (Panel is not null)
-                {
-                    Panel.DispatcherQueue.TryEnqueue(() =>
+                Panel?.DispatcherQueue.TryEnqueue(() =>
                     {
                         Panel.ArchiveIndexingProgress = pct;
                         Panel.ArchiveIndexingText = value.Message ?? $"{value.Current}/{value.Total}";
                         Panel.UpdateArchiveProgressUI();
                     });
-                }
             });
 
             var resultJson = await _ragConnection.CallToolWithProgressAsync(
@@ -1036,16 +1048,13 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             _indexingCts?.Dispose();
             _indexingCts = null;
 
-            if (Panel is not null)
-            {
-                Panel.DispatcherQueue.TryEnqueue(() =>
+            Panel?.DispatcherQueue.TryEnqueue(() =>
                 {
                     Panel.IsArchiveIndexing = false;
                     Panel.ArchiveIndexingProgress = 0;
                     Panel.ArchiveIndexingText = "";
                     Panel.UpdateArchiveProgressUI();
                 });
-            }
         }
     }
 
@@ -1102,6 +1111,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             foreach (var tool in ToolRegistry.All)
             {
                 if (tool.Name == "search_tools") continue; // meta-tool handled separately
+                if (BuiltInServerHelper.MemoryToolNames.Contains(tool.Name)) continue; // Memory server tools
                 if (filesystemEnabledInProfile && BuiltInServerHelper.SuppressedBuiltInToolNames.Contains(tool.Name))
                     continue;
                 tools.Add(tool);
@@ -1111,6 +1121,20 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             {
                 Name = BuiltInServerHelper.EssentialsKey,
                 DisplayName = BuiltInServerHelper.EssentialsDisplayName,
+            });
+        }
+
+        // 1.5 Memory virtual server
+        var memoryEnabled = enabledSet.Contains(BuiltInServerHelper.MemoryKey);
+        if (memoryEnabled)
+        {
+            foreach (var tool in ToolRegistry.Resolve(["remember", "forget"]))
+                tools.Add(tool);
+
+            tools.Add(new ServerPlaceholderTool
+            {
+                Name = BuiltInServerHelper.MemoryKey,
+                DisplayName = BuiltInServerHelper.MemoryDisplayName,
             });
         }
 
@@ -1270,7 +1294,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 
     /// <summary>Built-in tool names that don't require MCP server connections.</summary>
     private static readonly HashSet<string> BuiltInToolNames =
-        ["run_command", "fetch_url", "read_file", "write_file", "search_files"];
+        ["run_command", "fetch_url", "read_file", "write_file", "search_files", "remember", "forget"];
 
     private static bool IsBuiltInTool(string name) => BuiltInToolNames.Contains(name);
 

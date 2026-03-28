@@ -490,6 +490,30 @@ public sealed partial class ProfilesPage : Page
             });
         }
 
+        // --- Memory virtual server ---
+        {
+            var cb = new CheckBox
+            {
+                Content = loader.GetString("Profiles_MemoryLabel") is { Length: > 0 } ml
+                    ? ml : BuiltInServerHelper.MemoryDisplayName,
+                Tag = BuiltInServerHelper.MemoryKey,
+                IsChecked = profile.EnabledServers.Contains(BuiltInServerHelper.MemoryKey),
+                MinWidth = 0,
+            };
+            cb.Checked += OnServerChecked;
+            cb.Unchecked += OnServerChecked;
+            ToolsPanel.Children.Add(cb);
+
+            ToolsPanel.Children.Add(new TextBlock
+            {
+                Text = loader.GetString("Profiles_MemoryHint"),
+                Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                TextWrapping = TextWrapping.Wrap,
+                Opacity = 0.5,
+                Margin = new Thickness(28, 0, 0, 4),
+            });
+        }
+
         // --- Servers ---
         // Build server list: always include Workspace (filesystem), plus user-configured servers
         var filesystemId = $"builtin_{BuiltInServerHelper.FilesystemKey}";

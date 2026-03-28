@@ -80,6 +80,7 @@ public sealed partial class SettingsPanel : Page
             "Models" => typeof(ModelsPage),
             "Connect" => typeof(ConnectPage),
             "AppTasks" => typeof(AppTasksPage),
+            "Memory" => typeof(MemoryPage),
             "Personalization" => typeof(PersonalizationPage),
             "Advanced" => typeof(AdvancedPage),
             "About" => typeof(AboutPage),

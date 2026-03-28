@@ -39,6 +39,12 @@ public static class BuiltInServerHelper
     /// <summary>Display name for the Essentials virtual server.</summary>
     public const string EssentialsDisplayName = "Essentials";
 
+    /// <summary>Config key for the Memory virtual server.</summary>
+    public const string MemoryKey = "memory";
+
+    /// <summary>Display name for the Memory virtual server.</summary>
+    public const string MemoryDisplayName = "Memory";
+
     /// <summary>Config dictionary key for the Filesystem server.</summary>
     public const string FilesystemKey = "filesystem";
 
@@ -72,6 +78,11 @@ public static class BuiltInServerHelper
     [
         "read_file", "write_file", "search_files",
     ];
+
+    /// <summary>
+    /// Memory server tool names — excluded from Essentials, shown under Memory toggle.
+    /// </summary>
+    public static readonly HashSet<string> MemoryToolNames = ["remember", "forget"];
 
     /// <summary>
     /// Maps server keys to their executable names.

@@ -317,7 +317,7 @@ public partial class OllamaProvider : IAiProvider, IDisposable
     {
         var messages = new JsonArray();
 
-        var systemPrompt = PromptBuilder.Build(request.SystemPrompt, request.WorkspaceText, request.ContextChunks);
+        var systemPrompt = PromptBuilder.Build(request.SystemPrompt, request.WorkspaceText, request.ContextChunks, request.MemoryText);
         if (systemPrompt is not null)
         {
             messages.Add(new JsonObject

@@ -28,6 +28,9 @@ public partial class AiRequest
     /// <summary>Current workspace state text from <see cref="IWorkspaceContext"/>.</summary>
     public string? WorkspaceText { get; init; }
 
+    /// <summary>Persistent memory text to inject into the system prompt.</summary>
+    public string? MemoryText { get; init; }
+
     /// <summary>Whether extended thinking/reasoning is enabled.</summary>
     public bool ThinkingEnabled { get; init; }
 

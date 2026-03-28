@@ -28,18 +28,18 @@ public class PromptBuilderTests
     }
 
     [TestMethod]
-    public void Build_WorkspaceOnly_PrependsWorkspace()
+    public void Build_WorkspaceOnly_AppendsWorkspace()
     {
         var result = PromptBuilder.Build("Base", "Active dataset: X", null);
 
         Assert.IsNotNull(result);
-        Assert.IsTrue(result.StartsWith("[Workspace Context]"));
+        Assert.IsTrue(result.Contains("[Workspace Context]"));
         Assert.IsTrue(result.Contains("Active dataset: X"));
-        Assert.IsTrue(result.EndsWith("Base"));
+        Assert.IsTrue(result.StartsWith("Base"));
     }
 
     [TestMethod]
-    public void Build_ChunksOnly_PrependsChunks()
+    public void Build_ChunksOnly_AppendsChunks()
     {
         var chunks = new List<ContextChunk>
         {
@@ -54,7 +54,7 @@ public class PromptBuilderTests
         Assert.IsTrue(result.Contains("<source: doc.pdf>"));
         Assert.IsTrue(result.Contains("Chunk text 1"));
         Assert.IsTrue(result.Contains("Chunk text 2"));
-        Assert.IsTrue(result.EndsWith("Base"));
+        Assert.IsTrue(result.StartsWith("Base"));
     }
 
     [TestMethod]
@@ -65,12 +65,12 @@ public class PromptBuilderTests
         var result = PromptBuilder.Build("Base", "workspace state", chunks);
 
         Assert.IsNotNull(result);
+        var baseIndex = result.IndexOf("Base");
         var wsIndex = result.IndexOf("[Workspace Context]");
         var rcIndex = result.IndexOf("[Retrieved Context]");
-        var baseIndex = result.IndexOf("Base");
 
+        Assert.IsTrue(baseIndex < wsIndex, "Base prompt should come before workspace");
         Assert.IsTrue(wsIndex < rcIndex, "Workspace should come before retrieved context");
-        Assert.IsTrue(rcIndex < baseIndex, "Retrieved context should come before base prompt");
     }
 
     [TestMethod]
@@ -95,5 +95,44 @@ public class PromptBuilderTests
         Assert.IsNotNull(result);
         Assert.IsFalse(result.Contains("<source:"));
         Assert.IsTrue(result.Contains("text only"));
+    }
+
+    [TestMethod]
+    public void Build_WithMemory_InsertsAfterBaseBeforeWorkspace()
+    {
+        var chunks = new List<ContextChunk> { new("rag chunk") };
+        var memory = "## User Memory\n- User prefers dark theme.";
+
+        var result = PromptBuilder.Build("Base", "workspace", chunks, memory);
+
+        Assert.IsNotNull(result);
+        var baseIndex = result.IndexOf("Base");
+        var memIndex = result.IndexOf("## User Memory");
+        var wsIndex = result.IndexOf("[Workspace Context]");
+        var rcIndex = result.IndexOf("[Retrieved Context]");
+
+        Assert.IsTrue(baseIndex < memIndex, "Base prompt should come before memory");
+        Assert.IsTrue(memIndex < wsIndex, "Memory should come before workspace");
+        Assert.IsTrue(wsIndex < rcIndex, "Workspace should come before retrieved context");
+    }
+
+    [TestMethod]
+    public void Build_MemoryOnly_InsertsAfterBase()
+    {
+        var memory = "## User Memory\n- User is a data scientist.";
+
+        var result = PromptBuilder.Build("Base", null, null, memory);
+
+        Assert.IsNotNull(result);
+        Assert.IsTrue(result.StartsWith("Base"));
+        Assert.IsTrue(result.Contains("## User Memory"));
+        Assert.IsTrue(result.Contains("data scientist"));
+    }
+
+    [TestMethod]
+    public void Build_NullMemory_NoMemorySection()
+    {
+        var result = PromptBuilder.Build("Base", null, null, null);
+        Assert.AreEqual("Base", result);
     }
 }

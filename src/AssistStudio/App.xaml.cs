@@ -31,6 +31,11 @@ public partial class App : Application
     /// </summary>
     public static McpServerRegistry McpRegistry { get; } = new();
 
+    /// <summary>
+    /// Gets the app-level persistent memory store singleton.
+    /// </summary>
+    public static MemoryStore MemoryStore { get; } = new();
+
     #endregion
 
     #region Constructors
@@ -52,6 +57,12 @@ public partial class App : Application
     {
         DocumentParserFactoryExtensions.AddPdfSupport();
         ConversationManager.Initialize(ApplicationData.Current.LocalFolder.Path);
+
+        var appDataPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "FieldCure", "AssistStudio");
+        MemoryStore.Initialize(Path.Combine(appDataPath, "memory.json"));
+
         await LoggingService.InitializeAsync(ApplicationData.Current.LocalFolder.Path);
 
         // Wire up Core/Controls diagnostic logging to the app's LoggingService
