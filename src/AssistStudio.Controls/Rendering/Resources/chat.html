@@ -1182,7 +1182,9 @@
             block.className = 'tool-block';
             var header = document.createElement('div');
             header.className = 'tool-header';
-            header.textContent = '\uD83D\uDD27 Used ' + toolName;
+            // If toolName already contains an icon prefix (e.g. fetch_url rich label), use as-is
+            var isRichLabel = toolName.indexOf('(') !== -1;
+            header.textContent = isRichLabel ? toolName : '\uD83D\uDD27 Used ' + toolName;
             block.appendChild(header);
             var contentSpan = bubble.querySelector('.content');
             if (contentSpan) {

@@ -2258,6 +2258,25 @@ public sealed partial class ChatPanel : Control
         }
     }
 
+    /// <summary>
+    /// Formats a rich label for fetch_url tool blocks: "fetch_url("url") — N chars".
+    /// Falls back to plain "fetch_url" on parse failure.
+    /// </summary>
+    private static string FormatFetchUrlLabel(string argumentsJson, int resultLength)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(argumentsJson);
+            if (doc.RootElement.TryGetProperty("url", out var urlProp))
+            {
+                var url = urlProp.GetString() ?? "?";
+                return $"\U0001F517 fetch_url(\u201C{url}\u201D) \u2014 {resultLength:N0} chars";
+            }
+        }
+        catch { /* fall through */ }
+        return "fetch_url";
+    }
+
     private static string GuardToolResultSize(string toolResult, string toolName)
     {
         // Short results and error results pass through unchanged
@@ -2496,9 +2515,18 @@ public sealed partial class ChatPanel : Control
                     ?? call.FunctionName;
 
                 if (call.FunctionName == "search_documents")
+                {
                     await _renderer.AppendSearchResultBlockAsync(assistantMessage.Id, toolResult, toolDisplayName);
+                }
+                else if (call.FunctionName == "fetch_url")
+                {
+                    await _renderer.AppendToolBlockAsync(assistantMessage.Id,
+                        FormatFetchUrlLabel(call.Arguments, toolResult.Length));
+                }
                 else
+                {
                     await _renderer.AppendToolBlockAsync(assistantMessage.Id, toolDisplayName);
+                }
             }
         } while (true);
 
@@ -2539,20 +2567,23 @@ public sealed partial class ChatPanel : Control
         DiagnosticLogger.LogInfo($"[Chat] RenderRestoredMessages: {_messages.Count} messages");
         SwitchToChatLayout();
 
-        // Pre-index search_documents results for collapsible UI restoration.
+        // Pre-index tool results for rich UI restoration.
         // Uses linear _messages scan + explicit ToolCallId matching — no tree traversal.
         var searchResultQueue = new Queue<string>();
+        var fetchUrlLabelQueue = new Queue<string>();
         foreach (var m in _messages)
         {
             if (m.Role != ChatRole.Assistant || m.ToolCalls is not { Count: > 0 })
                 continue;
             foreach (var tc in m.ToolCalls)
             {
-                if (tc.FunctionName != "search_documents") continue;
                 var resultMsg = _messages.FirstOrDefault(r =>
                     r.Role == ChatRole.Tool && r.ToolCallId == tc.Id);
-                if (resultMsg?.Content is not null)
+
+                if (tc.FunctionName == "search_documents" && resultMsg?.Content is not null)
                     searchResultQueue.Enqueue(resultMsg.Content);
+                else if (tc.FunctionName == "fetch_url")
+                    fetchUrlLabelQueue.Enqueue(FormatFetchUrlLabel(tc.Arguments, resultMsg?.Content?.Length ?? 0));
             }
         }
 
@@ -2588,6 +2619,12 @@ public sealed partial class ChatPanel : Control
                     if (toolName == "search_documents" && searchResultQueue.Count > 0)
                     {
                         await _renderer.AppendSearchResultBlockAsync(msg.Id, searchResultQueue.Dequeue(), displayName);
+                        continue;
+                    }
+
+                    if (toolName == "fetch_url" && fetchUrlLabelQueue.Count > 0)
+                    {
+                        await _renderer.AppendToolBlockAsync(msg.Id, fetchUrlLabelQueue.Dequeue());
                         continue;
                     }
 
