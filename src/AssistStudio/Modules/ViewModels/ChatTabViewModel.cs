@@ -89,7 +89,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     [ObservableProperty] private ChatTheme _theme;
 
     /// <summary>
-    /// Available provider presets shown in the InputContainer ComboBox.
+    /// Available provider presets shown in the ComposeBar ComboBox.
     /// </summary>
     [ObservableProperty] private IList? _availablePresets;
 
@@ -165,7 +165,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     #region Events
 
     /// <summary>
-    /// Raised when the user switches provider preset via InputContainer ComboBox.
+    /// Raised when the user switches provider preset via ComposeBar ComboBox.
     /// </summary>
     public event Action<ChatTabViewModel, ProviderPreset>? PresetSwitched;
 
@@ -455,7 +455,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     public void ApplyProfiles(List<Profile> profiles, Profile? _selectedProfile)
     {
         // Update available list only — never change the tab's selected profile.
-        // Profile is set once at tab creation; user changes it via InputContainer ComboBox.
+        // Profile is set once at tab creation; user changes it via ComposeBar ComboBox.
         AvailableProfiles = profiles;
     }
 

@@ -500,7 +500,7 @@ public sealed partial class ChatPanel : Control
     /// <summary>
     /// The input container control for message composition.
     /// </summary>
-    private InputContainer? _inputArea;
+    private ComposeBar? _inputArea;
 
     /// <summary>
     /// The grid layout containing the WebView and input area during active chat.
@@ -553,7 +553,7 @@ public sealed partial class ChatPanel : Control
     private WebView2? _chatWebView;
 
     /// <summary>
-    /// The panel shown in place of InputContainer when a tool requires user confirmation.
+    /// The panel shown in place of ComposeBar when a tool requires user confirmation.
     /// </summary>
     private ToolApprovalPanel? _approvalPanel;
 
@@ -1044,7 +1044,7 @@ public sealed partial class ChatPanel : Control
         _rootGrid = GetTemplateChild("PART_RootGrid") as Grid;
         _emptyStatePanel = GetTemplateChild("PART_EmptyStatePanel") as Grid;
         _emptyStateContent = GetTemplateChild("PART_EmptyStateContent") as StackPanel;
-        _inputArea = GetTemplateChild("PART_InputArea") as InputContainer;
+        _inputArea = GetTemplateChild("PART_InputArea") as ComposeBar;
         _chatLayout = GetTemplateChild("PART_ChatLayout") as Grid;
         _titleBar = GetTemplateChild("PART_TitleBar") as StackPanel;
         _titleText = GetTemplateChild("PART_TitleText") as TextBlock;
@@ -2762,12 +2762,12 @@ public sealed partial class ChatPanel : Control
     {
         if (string.IsNullOrEmpty(providerName))
         {
-            var fallback = Res.GetString("InputContainer_Placeholder");
+            var fallback = Res.GetString("ComposeBar_Placeholder");
             Placeholder = !string.IsNullOrEmpty(fallback) ? fallback : "Type a message...";
             return;
         }
 
-        var format = Res.GetString("InputContainer_AskProvider");
+        var format = Res.GetString("ComposeBar_AskProvider");
         if (!string.IsNullOrEmpty(format))
         {
             Placeholder = string.Format(format, providerName);

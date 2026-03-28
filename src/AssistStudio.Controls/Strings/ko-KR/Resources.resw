@@ -90,49 +90,49 @@
   <data name="Chat_ShowLess" xml:space="preserve">
     <value>간략히 보기</value>
   </data>
-  <data name="InputContainer_Placeholder" xml:space="preserve">
+  <data name="ComposeBar_Placeholder" xml:space="preserve">
     <value>메시지를 입력하세요...</value>
   </data>
-  <data name="InputContainer_AskProvider" xml:space="preserve">
+  <data name="ComposeBar_AskProvider" xml:space="preserve">
     <value>{0}에게 물어보기...</value>
   </data>
   <data name="Chat_RegenerateTitle" xml:space="preserve">
     <value>{0}(으)로 제목 재생성</value>
   </data>
-  <data name="InputContainer_Attach.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+  <data name="ComposeBar_Attach.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>파일 첨부</value>
   </data>
-  <data name="InputContainer_Summarize.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+  <data name="ComposeBar_Summarize.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>대화 요약</value>
   </data>
-  <data name="InputContainer_Stop.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+  <data name="ComposeBar_Stop.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>생성 중지</value>
   </data>
-  <data name="InputContainer_AttachTooltip" xml:space="preserve">
+  <data name="ComposeBar_AttachTooltip" xml:space="preserve">
     <value>파일 첨부</value>
   </data>
-  <data name="InputContainer_SummarizeTooltip" xml:space="preserve">
+  <data name="ComposeBar_SummarizeTooltip" xml:space="preserve">
     <value>대화 요약</value>
   </data>
-  <data name="InputContainer_SummarizeDisabledTooltip" xml:space="preserve">
+  <data name="ComposeBar_SummarizeDisabledTooltip" xml:space="preserve">
     <value>대화가 충분하지 않아 요약할 수 없습니다</value>
   </data>
-  <data name="InputContainer_StopTooltip" xml:space="preserve">
+  <data name="ComposeBar_StopTooltip" xml:space="preserve">
     <value>생성 중지</value>
   </data>
-  <data name="InputContainer_SendTooltip" xml:space="preserve">
+  <data name="ComposeBar_SendTooltip" xml:space="preserve">
     <value>메시지 전송</value>
   </data>
-  <data name="InputContainer_ToolsTooltip" xml:space="preserve">
+  <data name="ComposeBar_ToolsTooltip" xml:space="preserve">
     <value>도구</value>
   </data>
-  <data name="InputContainer_SelectAll" xml:space="preserve">
+  <data name="ComposeBar_SelectAll" xml:space="preserve">
     <value>모두 선택</value>
   </data>
-  <data name="InputContainer_DeselectAll" xml:space="preserve">
+  <data name="ComposeBar_DeselectAll" xml:space="preserve">
     <value>모두 해제</value>
   </data>
-  <data name="InputContainer_NoToolsEnabled" xml:space="preserve">
+  <data name="ComposeBar_NoToolsEnabled" xml:space="preserve">
     <value>사용할 도구나 서버가 없습니다.
 프로필 설정에서 추가하세요.</value>
   </data>
@@ -182,19 +182,19 @@
     <value>검색 바 닫기</value>
   </data>
   <!-- Accessibility -->
-  <data name="InputContainer_Attach.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+  <data name="ComposeBar_Attach.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>파일 첨부</value>
   </data>
-  <data name="InputContainer_Summarize.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+  <data name="ComposeBar_Summarize.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>대화 요약</value>
   </data>
-  <data name="InputContainer_Tools.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+  <data name="ComposeBar_Tools.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>도구</value>
   </data>
-  <data name="InputContainer_Send.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+  <data name="ComposeBar_Send.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>메시지 전송</value>
   </data>
-  <data name="InputContainer_Stop.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+  <data name="ComposeBar_Stop.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>생성 중지</value>
   </data>
   <data name="ChatPanel_EditTitle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">

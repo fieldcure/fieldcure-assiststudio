@@ -20,7 +20,7 @@ namespace FieldCure.AssistStudio.Controls;
 /// A templated control that provides a chat input area with text entry, file attachments,
 /// preset selection, and drag-and-drop support. Default style is defined in Generic.xaml.
 /// </summary>
-public sealed partial class InputContainer : Control
+public sealed partial class ComposeBar : Control
 {
     #region Constants
 
@@ -49,67 +49,67 @@ public sealed partial class InputContainer : Control
 
     /// <summary>Identifies the <see cref="Placeholder"/> dependency property.</summary>
     public static readonly DependencyProperty PlaceholderProperty =
-        DependencyProperty.Register(nameof(Placeholder), typeof(string), typeof(InputContainer),
+        DependencyProperty.Register(nameof(Placeholder), typeof(string), typeof(ComposeBar),
             new PropertyMetadata("Reply..."));
 
     /// <summary>Identifies the <see cref="IsInputEnabled"/> dependency property.</summary>
     public static readonly DependencyProperty IsInputEnabledProperty =
-        DependencyProperty.Register(nameof(IsInputEnabled), typeof(bool), typeof(InputContainer),
+        DependencyProperty.Register(nameof(IsInputEnabled), typeof(bool), typeof(ComposeBar),
             new PropertyMetadata(true, OnIsInputEnabledChanged));
 
     /// <summary>Identifies the <see cref="IsSummarizeEnabled"/> dependency property.</summary>
     public static readonly DependencyProperty IsSummarizeEnabledProperty =
-        DependencyProperty.Register(nameof(IsSummarizeEnabled), typeof(bool), typeof(InputContainer),
+        DependencyProperty.Register(nameof(IsSummarizeEnabled), typeof(bool), typeof(ComposeBar),
             new PropertyMetadata(false, OnIsSummarizeEnabledChanged));
 
     /// <summary>Identifies the <see cref="AvailablePresets"/> dependency property.</summary>
     public static readonly DependencyProperty AvailablePresetsProperty =
-        DependencyProperty.Register(nameof(AvailablePresets), typeof(IList), typeof(InputContainer),
+        DependencyProperty.Register(nameof(AvailablePresets), typeof(IList), typeof(ComposeBar),
             new PropertyMetadata(null, OnAvailablePresetsChanged));
 
     /// <summary>Identifies the <see cref="SelectedPreset"/> dependency property.</summary>
     public static readonly DependencyProperty SelectedPresetProperty =
-        DependencyProperty.Register(nameof(SelectedPreset), typeof(ProviderPreset), typeof(InputContainer),
+        DependencyProperty.Register(nameof(SelectedPreset), typeof(ProviderPreset), typeof(ComposeBar),
             new PropertyMetadata(null, OnSelectedPresetChanged));
 
     /// <summary>Identifies the <see cref="AvailableProfiles"/> dependency property.</summary>
     public static readonly DependencyProperty AvailableProfilesProperty =
-        DependencyProperty.Register(nameof(AvailableProfiles), typeof(IList<Profile>), typeof(InputContainer),
+        DependencyProperty.Register(nameof(AvailableProfiles), typeof(IList<Profile>), typeof(ComposeBar),
             new PropertyMetadata(null, OnAvailableProfilesChanged));
 
     /// <summary>Identifies the <see cref="SelectedProfile"/> dependency property.</summary>
     public static readonly DependencyProperty SelectedProfileProperty =
-        DependencyProperty.Register(nameof(SelectedProfile), typeof(Profile), typeof(InputContainer),
+        DependencyProperty.Register(nameof(SelectedProfile), typeof(Profile), typeof(ComposeBar),
             new PropertyMetadata(null, OnSelectedProfileChanged));
 
     /// <summary>Identifies the <see cref="MaxLength"/> dependency property.</summary>
     public static readonly DependencyProperty MaxLengthProperty =
-        DependencyProperty.Register(nameof(MaxLength), typeof(int), typeof(InputContainer),
+        DependencyProperty.Register(nameof(MaxLength), typeof(int), typeof(ComposeBar),
             new PropertyMetadata(0, OnMaxLengthChanged));
 
     /// <summary>Identifies the <see cref="ShowSummarizeButton"/> dependency property.</summary>
     public static readonly DependencyProperty ShowSummarizeButtonProperty =
-        DependencyProperty.Register(nameof(ShowSummarizeButton), typeof(bool), typeof(InputContainer),
+        DependencyProperty.Register(nameof(ShowSummarizeButton), typeof(bool), typeof(ComposeBar),
             new PropertyMetadata(true, OnShowSummarizeButtonChanged));
 
     /// <summary>Identifies the <see cref="ShowAttachButton"/> dependency property.</summary>
     public static readonly DependencyProperty ShowAttachButtonProperty =
-        DependencyProperty.Register(nameof(ShowAttachButton), typeof(bool), typeof(InputContainer),
+        DependencyProperty.Register(nameof(ShowAttachButton), typeof(bool), typeof(ComposeBar),
             new PropertyMetadata(true, OnShowAttachButtonChanged));
 
     /// <summary>Identifies the <see cref="InputAreaMinHeight"/> dependency property.</summary>
     public static readonly DependencyProperty InputAreaMinHeightProperty =
-        DependencyProperty.Register(nameof(InputAreaMinHeight), typeof(double), typeof(InputContainer),
+        DependencyProperty.Register(nameof(InputAreaMinHeight), typeof(double), typeof(ComposeBar),
             new PropertyMetadata(32.0, OnInputAreaMinHeightChanged));
 
     /// <summary>Identifies the <see cref="AvailableTools"/> dependency property.</summary>
     public static readonly DependencyProperty AvailableToolsProperty =
-        DependencyProperty.Register(nameof(AvailableTools), typeof(IReadOnlyList<IAssistTool>), typeof(InputContainer),
+        DependencyProperty.Register(nameof(AvailableTools), typeof(IReadOnlyList<IAssistTool>), typeof(ComposeBar),
             new PropertyMetadata(null, OnAvailableToolsChanged));
 
     /// <summary>Identifies the <see cref="EnabledToolNames"/> dependency property.</summary>
     public static readonly DependencyProperty EnabledToolNamesProperty =
-        DependencyProperty.Register(nameof(EnabledToolNames), typeof(IReadOnlyList<string>), typeof(InputContainer),
+        DependencyProperty.Register(nameof(EnabledToolNames), typeof(IReadOnlyList<string>), typeof(ComposeBar),
             new PropertyMetadata(null));
 
 
@@ -201,11 +201,11 @@ public sealed partial class InputContainer : Control
     #region Constructors
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="InputContainer"/> class.
+    /// Initializes a new instance of the <see cref="ComposeBar"/> class.
     /// </summary>
-    public InputContainer()
+    public ComposeBar()
     {
-        DefaultStyleKey = typeof(InputContainer);
+        DefaultStyleKey = typeof(ComposeBar);
         Loaded += OnLoaded;
     }
 
@@ -435,11 +435,11 @@ public sealed partial class InputContainer : Control
         {
             var loader = new Windows.ApplicationModel.Resources.ResourceLoader(
                 "AssistStudio.Controls/Resources");
-            SetTooltip(_attachButton, loader.GetString("InputContainer_AttachTooltip"));
-            SetTooltip(_stopButton, loader.GetString("InputContainer_StopTooltip"));
-            SetTooltip(_sendButton, loader.GetString("InputContainer_SendTooltip"));
-            SetTooltip(_toolButton, loader.GetString("InputContainer_ToolsTooltip"));
-            SetTooltip(_summarizeButton, loader.GetString("InputContainer_SummarizeTooltip"));
+            SetTooltip(_attachButton, loader.GetString("ComposeBar_AttachTooltip"));
+            SetTooltip(_stopButton, loader.GetString("ComposeBar_StopTooltip"));
+            SetTooltip(_sendButton, loader.GetString("ComposeBar_SendTooltip"));
+            SetTooltip(_toolButton, loader.GetString("ComposeBar_ToolsTooltip"));
+            SetTooltip(_summarizeButton, loader.GetString("ComposeBar_SummarizeTooltip"));
         }
         catch { /* Resource not found — tooltips will be empty */ }
 
@@ -736,7 +736,7 @@ public sealed partial class InputContainer : Control
     /// </summary>
     private static void OnIsInputEnabledChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is InputContainer self)
+        if (d is ComposeBar self)
         {
             var enabled = (bool)e.NewValue;
             // Keep TextBox enabled during streaming so the user can continue typing
@@ -761,7 +761,7 @@ public sealed partial class InputContainer : Control
     /// </summary>
     private static void OnIsSummarizeEnabledChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is InputContainer self && self._summarizeButton is not null)
+        if (d is ComposeBar self && self._summarizeButton is not null)
         {
             var canSummarize = (bool)e.NewValue;
             self.ApplySummarizeVisualState(canSummarize && self.IsInputEnabled);
@@ -774,7 +774,7 @@ public sealed partial class InputContainer : Control
     /// </summary>
     private static void OnAvailablePresetsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is InputContainer self && e.NewValue is IList presets)
+        if (d is ComposeBar self && e.NewValue is IList presets)
         {
             if (!self.IsLoaded)
             {
@@ -790,7 +790,7 @@ public sealed partial class InputContainer : Control
     /// </summary>
     private static void OnSelectedPresetChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is not InputContainer self || !self.IsLoaded) return;
+        if (d is not ComposeBar self || !self.IsLoaded) return;
 
         if (e.NewValue is ProviderPreset preset)
         {
@@ -813,7 +813,7 @@ public sealed partial class InputContainer : Control
     /// </summary>
     private static void OnAvailableProfilesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is InputContainer self)
+        if (d is ComposeBar self)
         {
             if (!self.IsLoaded)
             {
@@ -829,7 +829,7 @@ public sealed partial class InputContainer : Control
     /// </summary>
     private static void OnMaxLengthChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is InputContainer self)
+        if (d is ComposeBar self)
         {
             var value = (int)e.NewValue;
             if (self._messageTextBox is not null)
@@ -844,7 +844,7 @@ public sealed partial class InputContainer : Control
     /// </summary>
     private static void OnShowSummarizeButtonChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is InputContainer self && self._summarizeButton is not null)
+        if (d is ComposeBar self && self._summarizeButton is not null)
         {
             // Only show if both ShowSummarizeButton and IsSummarizeEnabled are true
             self._summarizeButton.Visibility = (bool)e.NewValue && self.IsSummarizeEnabled
@@ -858,7 +858,7 @@ public sealed partial class InputContainer : Control
     /// </summary>
     private static void OnShowAttachButtonChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is InputContainer self && self._attachButton is not null)
+        if (d is ComposeBar self && self._attachButton is not null)
         {
             self._attachButton.Visibility = (bool)e.NewValue
                 ? Visibility.Visible
@@ -871,7 +871,7 @@ public sealed partial class InputContainer : Control
     /// </summary>
     private static void OnInputAreaMinHeightChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is InputContainer self)
+        if (d is ComposeBar self)
         {
             var value = (double)e.NewValue;
             if (self._messageTextBox is not null)
@@ -886,7 +886,7 @@ public sealed partial class InputContainer : Control
     /// </summary>
     private static void OnAvailableToolsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is InputContainer self)
+        if (d is ComposeBar self)
         {
             // Reset — all tools enabled by default
             self.EnabledToolNames = null;
@@ -896,7 +896,7 @@ public sealed partial class InputContainer : Control
 
     private static void OnSelectedProfileChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is InputContainer self)
+        if (d is ComposeBar self)
             self.UpdateToolButtonVisibility();
     }
 
@@ -946,7 +946,7 @@ public sealed partial class InputContainer : Control
         {
             var loader = new Windows.ApplicationModel.Resources.ResourceLoader(
                 "AssistStudio.Controls/Resources");
-            var text = loader.GetString("InputContainer_SummarizeTooltip");
+            var text = loader.GetString("ComposeBar_SummarizeTooltip");
             SetTooltip(_summarizeButton, text);
         }
         catch { /* Resource not found */ }
@@ -1187,7 +1187,7 @@ public sealed partial class InputContainer : Control
             };
             emptyPanel.Children.Add(new TextBlock
             {
-                Text = emptyRes?.GetString("InputContainer_NoToolsEnabled")
+                Text = emptyRes?.GetString("ComposeBar_NoToolsEnabled")
                     ?? "No tools or servers enabled.\nAdd them in Profile settings.",
                 TextWrapping = TextWrapping.Wrap,
                 Opacity = 0.6,
@@ -1240,8 +1240,8 @@ public sealed partial class InputContainer : Control
             Margin = new Thickness(0, 2, 0, 2),
         });
 
-        var selectLabel = res?.GetString("InputContainer_SelectAll") ?? "Select all";
-        var deselectLabel = res?.GetString("InputContainer_DeselectAll") ?? "Deselect all";
+        var selectLabel = res?.GetString("ComposeBar_SelectAll") ?? "Select all";
+        var deselectLabel = res?.GetString("ComposeBar_DeselectAll") ?? "Deselect all";
         var allChecked = allCheckBoxes.All(c => c.IsChecked == true);
 
         var toggleLink = new HyperlinkButton

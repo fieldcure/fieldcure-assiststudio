@@ -97,7 +97,7 @@ The main control. Provides message list (WebView2), input area, streaming, attac
 
 **Events:** `PresetChanged`, `ProfileChanged`, `MessageAdded`, `TitleGenerated`, `TitleEditRequested`, `KeyboardShortcutPressed`
 
-### InputContainer
+### ComposeBar
 
 Chat input area — text box, attach button, preset/profile selectors. Used internally by `ChatPanel`, but can be placed standalone.
 
@@ -111,7 +111,7 @@ Horizontal scrollable bar showing thumbnails of attached files before sending. S
 
 ### ToolApprovalPanel
 
-Inline confirmation panel for tools with `RequiresConfirmation = true`. Displays tool name, expandable JSON arguments, and Allow/Reject buttons. Replaces `InputContainer` during confirmation.
+Inline confirmation panel for tools with `RequiresConfirmation = true`. Displays tool name, expandable JSON arguments, and Allow/Reject buttons. Replaces `ComposeBar` during confirmation.
 
 **Dependency Properties:** `ToolName`, `ToolDisplayName`, `Arguments`, `IsExpanded`
 

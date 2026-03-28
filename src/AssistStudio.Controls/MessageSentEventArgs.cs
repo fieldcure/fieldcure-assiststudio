@@ -1,9 +1,9 @@
-using FieldCure.AssistStudio.Models;
+﻿using FieldCure.AssistStudio.Models;
 
 namespace FieldCure.AssistStudio.Controls;
 
 /// <summary>
-/// Provides data for the <see cref="InputContainer.MessageSent"/> event.
+/// Provides data for the <see cref="ComposeBar.MessageSent"/> event.
 /// </summary>
 public partial class MessageSentEventArgs : EventArgs
 {

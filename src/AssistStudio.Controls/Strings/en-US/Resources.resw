@@ -90,49 +90,49 @@
   <data name="Chat_ShowLess" xml:space="preserve">
     <value>Show less</value>
   </data>
-  <data name="InputContainer_Placeholder" xml:space="preserve">
+  <data name="ComposeBar_Placeholder" xml:space="preserve">
     <value>Type a message...</value>
   </data>
-  <data name="InputContainer_AskProvider" xml:space="preserve">
+  <data name="ComposeBar_AskProvider" xml:space="preserve">
     <value>Ask {0}...</value>
   </data>
   <data name="Chat_RegenerateTitle" xml:space="preserve">
     <value>Regenerate title with {0}</value>
   </data>
-  <data name="InputContainer_Attach.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+  <data name="ComposeBar_Attach.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Attach file</value>
   </data>
-  <data name="InputContainer_Summarize.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+  <data name="ComposeBar_Summarize.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Summarize conversation</value>
   </data>
-  <data name="InputContainer_Stop.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+  <data name="ComposeBar_Stop.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Stop generating</value>
   </data>
-  <data name="InputContainer_AttachTooltip" xml:space="preserve">
+  <data name="ComposeBar_AttachTooltip" xml:space="preserve">
     <value>Attach file</value>
   </data>
-  <data name="InputContainer_SummarizeTooltip" xml:space="preserve">
+  <data name="ComposeBar_SummarizeTooltip" xml:space="preserve">
     <value>Summarize conversation</value>
   </data>
-  <data name="InputContainer_SummarizeDisabledTooltip" xml:space="preserve">
+  <data name="ComposeBar_SummarizeDisabledTooltip" xml:space="preserve">
     <value>Not enough conversation to summarize</value>
   </data>
-  <data name="InputContainer_StopTooltip" xml:space="preserve">
+  <data name="ComposeBar_StopTooltip" xml:space="preserve">
     <value>Stop generating</value>
   </data>
-  <data name="InputContainer_SendTooltip" xml:space="preserve">
+  <data name="ComposeBar_SendTooltip" xml:space="preserve">
     <value>Send message</value>
   </data>
-  <data name="InputContainer_ToolsTooltip" xml:space="preserve">
+  <data name="ComposeBar_ToolsTooltip" xml:space="preserve">
     <value>Tools</value>
   </data>
-  <data name="InputContainer_SelectAll" xml:space="preserve">
+  <data name="ComposeBar_SelectAll" xml:space="preserve">
     <value>Select all</value>
   </data>
-  <data name="InputContainer_DeselectAll" xml:space="preserve">
+  <data name="ComposeBar_DeselectAll" xml:space="preserve">
     <value>Deselect all</value>
   </data>
-  <data name="InputContainer_NoToolsEnabled" xml:space="preserve">
+  <data name="ComposeBar_NoToolsEnabled" xml:space="preserve">
     <value>No tools or servers enabled.
 Add them in Profile settings.</value>
   </data>
@@ -182,19 +182,19 @@ Add them in Profile settings.</value>
     <value>Close search bar</value>
   </data>
   <!-- Accessibility -->
-  <data name="InputContainer_Attach.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+  <data name="ComposeBar_Attach.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Attach file</value>
   </data>
-  <data name="InputContainer_Summarize.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+  <data name="ComposeBar_Summarize.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Summarize conversation</value>
   </data>
-  <data name="InputContainer_Tools.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+  <data name="ComposeBar_Tools.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Tools</value>
   </data>
-  <data name="InputContainer_Send.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+  <data name="ComposeBar_Send.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Send message</value>
   </data>
-  <data name="InputContainer_Stop.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+  <data name="ComposeBar_Stop.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Stop generating</value>
   </data>
   <data name="ChatPanel_EditTitle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">

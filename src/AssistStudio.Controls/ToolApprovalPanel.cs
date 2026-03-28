@@ -1,10 +1,10 @@
-using Microsoft.UI.Xaml;
+﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
 namespace FieldCure.AssistStudio.Controls;
 
 /// <summary>
-/// An inline panel that replaces the InputContainer when a tool requires user confirmation.
+/// An inline panel that replaces the ComposeBar when a tool requires user confirmation.
 /// Displays the tool name, arguments preview, and Allow/Reject buttons.
 /// </summary>
 public sealed partial class ToolApprovalPanel : Control
