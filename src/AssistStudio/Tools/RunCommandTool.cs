@@ -27,7 +27,7 @@ public class RunCommandTool : IAssistTool
     public string DisplayName => "Run Command";
 
     /// <inheritdoc/>
-    public string Description => "Executes a shell command and returns the exit code, stdout, and stderr. Requires user confirmation before execution.";
+    public string Description => "Executes a shell command on Windows (cmd.exe) and returns the exit code, stdout, and stderr. Use Windows commands (dir, type, powershell, etc.). Requires user confirmation before execution.";
 
     /// <inheritdoc/>
     public string ParameterSchema => """
