@@ -23,6 +23,12 @@ public interface IAssistTool
     bool RequiresConfirmation => false;
 
     /// <summary>
+    /// If <see langword="true"/>, this tool is a UI-only placeholder representing a server group
+    /// (e.g., "Essentials", "Workspace Folders") and should not be sent to the AI model.
+    /// </summary>
+    bool IsServerPlaceholder => false;
+
+    /// <summary>
     /// Executes the tool with the given parameters and returns a result string for the AI model.
     /// </summary>
     Task<string> ExecuteAsync(JsonElement parameters, CancellationToken ct = default);

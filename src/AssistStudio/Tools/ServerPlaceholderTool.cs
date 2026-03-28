@@ -19,6 +19,7 @@ internal sealed class ServerPlaceholderTool : IAssistTool
 
     public string Description => "";
     public string ParameterSchema => """{"type":"object"}""";
+    public bool IsServerPlaceholder => true;
 
     public Task<string> ExecuteAsync(JsonElement parameters, CancellationToken ct = default)
         => throw new NotSupportedException("ServerPlaceholderTool is for display only.");

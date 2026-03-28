@@ -1169,8 +1169,9 @@ public sealed partial class ComposeBar : Control
 
         var tools = AvailableTools;
 
-        // Hide meta-tools (search_tools) from the flyout — they are automatically included
-        bool IsVisibleTool(IAssistTool t) => t.Name != "search_tools";
+        // Flyout shows only server placeholders (Essentials, Workspace, etc.).
+        // Individual tools and meta-tools (search_tools) are hidden.
+        bool IsVisibleTool(IAssistTool t) => t.IsServerPlaceholder;
 
         // Empty state: no tools enabled
         if (tools.Count == 0)

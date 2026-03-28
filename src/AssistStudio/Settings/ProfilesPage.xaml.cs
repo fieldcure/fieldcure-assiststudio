@@ -31,7 +31,6 @@ public sealed partial class ProfilesPage : Page
     /// <summary>
     /// Built-in tool checkboxes for suppress logic (file tools grayed out when Workspace active).
     /// </summary>
-    private readonly List<CheckBox> _builtInToolCheckBoxes = [];
 
     #endregion
 
@@ -210,25 +209,6 @@ public sealed partial class ProfilesPage : Page
     /// <summary>
     /// Handles built-in tool checkbox checked/unchecked events.
     /// </summary>
-    private void OnToolChecked(object sender, RoutedEventArgs e)
-    {
-        if (_suppressEvents) return;
-        if (ProfileCombo.SelectedItem is not Profile profile) return;
-        if (sender is not CheckBox cb || cb.Tag is not string toolName) return;
-
-        if (cb.IsChecked == true)
-        {
-            if (!profile.ToolNames.Contains(toolName))
-                profile.ToolNames.Add(toolName);
-        }
-        else
-        {
-            profile.ToolNames.Remove(toolName);
-        }
-
-        SaveAll();
-    }
-
     /// <summary>
     /// Handles server checkbox checked/unchecked events with Workspace suppress logic.
     /// </summary>
@@ -316,8 +296,6 @@ public sealed partial class ProfilesPage : Page
                 ?? (child as StackPanel)?.Children.OfType<CheckBox>().FirstOrDefault();
             if (cb is null) continue;
 
-            cb.Checked -= OnToolChecked;
-            cb.Unchecked -= OnToolChecked;
             cb.Checked -= OnServerChecked;
             cb.Unchecked -= OnServerChecked;
         }
@@ -486,25 +464,30 @@ public sealed partial class ProfilesPage : Page
     {
         UnsubscribeToolsPanelEvents();
         ToolsPanel.Children.Clear();
-        _builtInToolCheckBoxes.Clear();
         var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
 
-        // --- Built-in tools (exclude search_tools) ---
-        var builtInTools = ToolRegistry.All.Where(t => t.Name != "search_tools").ToList();
-        foreach (var tool in builtInTools)
+        // --- Essentials virtual server ---
         {
-            var localizedName = loader.GetString($"Tool_{tool.Name}");
             var cb = new CheckBox
             {
-                Content = string.IsNullOrEmpty(localizedName) ? tool.DisplayName : localizedName,
-                Tag = tool.Name,
-                IsChecked = profile.ToolNames.Contains(tool.Name),
+                Content = loader.GetString("Profiles_EssentialsLabel") is { Length: > 0 } l
+                    ? l : BuiltInServerHelper.EssentialsDisplayName,
+                Tag = BuiltInServerHelper.EssentialsKey,
+                IsChecked = profile.EnabledServers.Contains(BuiltInServerHelper.EssentialsKey),
                 MinWidth = 0,
             };
-            cb.Checked += OnToolChecked;
-            cb.Unchecked += OnToolChecked;
+            cb.Checked += OnServerChecked;
+            cb.Unchecked += OnServerChecked;
             ToolsPanel.Children.Add(cb);
-            _builtInToolCheckBoxes.Add(cb);
+
+            ToolsPanel.Children.Add(new TextBlock
+            {
+                Text = loader.GetString("Profiles_EssentialsHint"),
+                Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                TextWrapping = TextWrapping.Wrap,
+                Opacity = 0.5,
+                Margin = new Thickness(28, 0, 0, 4),
+            });
         }
 
         // --- Servers ---
@@ -551,9 +534,12 @@ public sealed partial class ProfilesPage : Page
 
             ToolsPanel.Children.Add(row);
 
+            var wsHint = enabledSet.Contains(filesystemId)
+                ? loader.GetString("Profiles_WorkspaceSuppressHint")
+                : loader.GetString("Profiles_WorkspaceHint");
             ToolsPanel.Children.Add(new TextBlock
             {
-                Text = loader.GetString("Profiles_WorkspaceHint"),
+                Text = wsHint,
                 Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
                 TextWrapping = TextWrapping.Wrap,
                 Opacity = 0.5,
@@ -627,17 +613,6 @@ public sealed partial class ProfilesPage : Page
         }
 
         // Info hints
-        if (enabledSet.Contains(filesystemId))
-        {
-            ToolsPanel.Children.Add(new TextBlock
-            {
-                Text = loader.GetString("Profiles_WorkspaceSuppressHint"),
-                Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-                TextWrapping = TextWrapping.Wrap,
-                Opacity = 0.5,
-                Margin = new Thickness(0, 4, 0, 0),
-            });
-        }
         ToolsPanel.Children.Add(new TextBlock
         {
             Text = loader.GetString("Profiles_ToolsDefaultHint"),
@@ -658,38 +633,6 @@ public sealed partial class ProfilesPage : Page
             });
         }
 
-        // Apply suppress if Workspace (filesystem) is currently enabled
-        var fsId = $"builtin_{BuiltInServerHelper.FilesystemKey}";
-        if (profile.EnabledServers.Contains(fsId))
-        {
-            ApplyFilesystemSuppress(profile, suppress: true);
-        }
-    }
-
-    /// <summary>
-    /// Suppresses or restores file tool checkboxes when the Workspace (filesystem) server is toggled.
-    /// When suppressed, read_file/write_file/search_files are unchecked and grayed out.
-    /// </summary>
-    private void ApplyFilesystemSuppress(Profile profile, bool suppress)
-    {
-        _suppressEvents = true;
-        foreach (var cb in _builtInToolCheckBoxes)
-        {
-            if (cb.Tag is string toolName && BuiltInServerHelper.SuppressedBuiltInToolNames.Contains(toolName))
-            {
-                if (suppress)
-                {
-                    cb.IsChecked = false;
-                    cb.IsEnabled = false;
-                }
-                else
-                {
-                    cb.IsEnabled = true;
-                    cb.IsChecked = profile.ToolNames.Contains(toolName);
-                }
-            }
-        }
-        _suppressEvents = false;
     }
 
     /// <summary>

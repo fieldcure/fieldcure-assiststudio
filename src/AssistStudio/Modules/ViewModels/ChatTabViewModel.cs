@@ -1059,25 +1059,32 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     private void ResolveTools(Profile? profile)
     {
         var tools = new List<IAssistTool>();
-        var profileToolNames = profile?.ToolNames ?? [];
+        var enabledServerIds = profile?.EnabledServers ?? [];
+        var enabledSet = enabledServerIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        // 1. Built-in tools filtered by profile selection
-        // Suppress file tools when Filesystem MCP is enabled in the profile (regardless of connection state)
+        // 1. Essentials virtual server — all built-in tools directly exposed
+        var essentialsEnabled = enabledSet.Contains(BuiltInServerHelper.EssentialsKey);
         var filesystemEnabledInProfile =
-            profile?.EnabledServers.Contains($"builtin_{BuiltInServerHelper.FilesystemKey}") ?? false;
+            enabledSet.Contains($"builtin_{BuiltInServerHelper.FilesystemKey}");
 
-        foreach (var toolName in new[] { "run_command", "fetch_url", "read_file", "write_file", "search_files" })
+        if (essentialsEnabled)
         {
-            if (!profileToolNames.Contains(toolName)) continue;
+            foreach (var tool in ToolRegistry.All)
+            {
+                if (tool.Name == "search_tools") continue; // meta-tool handled separately
+                if (filesystemEnabledInProfile && BuiltInServerHelper.SuppressedBuiltInToolNames.Contains(tool.Name))
+                    continue;
+                tools.Add(tool);
+            }
 
-            if (filesystemEnabledInProfile && BuiltInServerHelper.SuppressedBuiltInToolNames.Contains(toolName))
-                continue;
-
-            tools.AddRange(ToolRegistry.Resolve([toolName]));
+            tools.Add(new ServerPlaceholderTool
+            {
+                Name = BuiltInServerHelper.EssentialsKey,
+                DisplayName = BuiltInServerHelper.EssentialsDisplayName,
+            });
         }
 
-        // 2. search_tools — when profile has enabled servers
-        var enabledServerIds = profile?.EnabledServers ?? [];
+        // 2. search_tools — when profile has enabled MCP servers
         var effectiveServerIds = BuildEffectiveServerIds(enabledServerIds);
 
         if (effectiveServerIds.Count > 0)
@@ -1087,7 +1094,6 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             {
                 if (searchTool is ISearchToolScope scoped)
                 {
-                    // Scope to all enabled servers' tools (connection-independent)
                     var allowedToolNames = GetToolNamesFromServers(effectiveServerIds);
                     scoped.AllowedToolNames = allowedToolNames.Count > 0 ? allowedToolNames : null;
                 }
@@ -1096,9 +1102,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             }
         }
 
-        // 3. Server placeholders — for flyout display (same logic as ProfilesPage)
-        // Built-in servers: always available, check if enabled in profile
-        var enabledSet = enabledServerIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        // 3. Server placeholders — for flyout display
         var filesystemId = $"builtin_{BuiltInServerHelper.FilesystemKey}";
         var ragId = $"builtin_{BuiltInServerHelper.RagKey}";
 

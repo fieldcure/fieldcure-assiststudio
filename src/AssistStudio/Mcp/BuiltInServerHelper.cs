@@ -33,6 +33,12 @@ public static class BuiltInServerHelper
     /// <summary>NuGet package ID for the Filesystem server.</summary>
     public const string FilesystemPackageId = "FieldCure.Mcp.Filesystem";
 
+    /// <summary>Config key for the Essentials virtual server (no process, in-process tools).</summary>
+    public const string EssentialsKey = "essentials";
+
+    /// <summary>Display name for the Essentials virtual server.</summary>
+    public const string EssentialsDisplayName = "Essentials";
+
     /// <summary>Config dictionary key for the Filesystem server.</summary>
     public const string FilesystemKey = "filesystem";
 

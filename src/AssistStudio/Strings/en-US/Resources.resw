@@ -208,7 +208,7 @@
     <value>Tools &amp; Servers</value>
   </data>
   <data name="Profiles_ToolsDefaultHint" xml:space="preserve">
-    <value>Selected tools and servers will be the default for new conversations.</value>
+    <value>Selected servers will be the default for new conversations.</value>
   </data>
   <data name="Profiles_ServerToolsHint" xml:space="preserve">
     <value>Server tools are automatically discovered and used by AI.</value>
@@ -651,11 +651,17 @@
   <data name="BuiltIn_InstallFailedMessage" xml:space="preserve">
     <value>Check your internet connection and try again.</value>
   </data>
+  <data name="Profiles_EssentialsLabel" xml:space="preserve">
+    <value>Essentials</value>
+  </data>
+  <data name="Profiles_EssentialsHint" xml:space="preserve">
+    <value>Provides web access, command execution, file management, and more.</value>
+  </data>
   <data name="Profiles_WorkspaceHint" xml:space="preserve">
     <value>Add workspace folders in conversations.</value>
   </data>
   <data name="Profiles_WorkspaceSuppressHint" xml:space="preserve">
-    <value>Built-in file tools are automatically replaced when Workspace is enabled.</value>
+    <value>Essentials file tools are replaced by Workspace when enabled.</value>
   </data>
   <data name="Mcp_ServersConnected" xml:space="preserve">
     <value>{0} MCP server(s) connected</value>

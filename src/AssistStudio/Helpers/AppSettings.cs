@@ -218,7 +218,6 @@ public static class AppSettings
         {
             Name = "Chat",
             IsBuiltIn = true,
-            ToolNames = [],
             EnabledServers = [],
             SystemPrompt =
                 "You are a friendly, thoughtful conversational assistant. " +
@@ -230,8 +229,7 @@ public static class AppSettings
         {
             Name = "General",
             IsBuiltIn = true,
-            ToolNames = ["run_command", "fetch_url"],
-            EnabledServers = ["builtin_filesystem"],
+            EnabledServers = ["essentials", "builtin_filesystem"],
             SystemPrompt =
                 "You are a helpful assistant. Provide clear, well-structured responses. " +
                 "Explain step by step when needed. If you're unsure about something, say so honestly. " +
@@ -242,8 +240,7 @@ public static class AppSettings
         {
             Name = "Analytical",
             IsBuiltIn = true,
-            ToolNames = ["run_command", "search_files", "fetch_url"],
-            EnabledServers = ["builtin_filesystem"],
+            EnabledServers = ["essentials", "builtin_filesystem"],
             SystemPrompt =
                 "You are a concise, direct assistant focused on code and data analysis. " +
                 "Prioritize code readability and performance. Use Markdown formatting. " +
@@ -255,8 +252,7 @@ public static class AppSettings
         {
             Name = "Creative",
             IsBuiltIn = true,
-            ToolNames = ["fetch_url"],
-            EnabledServers = [],
+            EnabledServers = ["essentials"],
             SystemPrompt =
                 "You are a creative assistant who explores multiple perspectives. " +
                 "Suggest innovative ideas and ask follow-up questions to better understand the user's needs. " +
@@ -267,8 +263,7 @@ public static class AppSettings
         {
             Name = "Task Planner",
             IsBuiltIn = true,
-            ToolNames = ["run_command", "search_files", "fetch_url"],
-            EnabledServers = ["builtin_filesystem"],
+            EnabledServers = ["essentials", "builtin_filesystem"],
             SystemPrompt =
                 "You are a task planner that breaks down complex requests into steps and executes them using available tools. " +
                 "For complex or multi-step tasks, present a numbered plan and wait for the user to approve before proceeding. " +
@@ -281,8 +276,7 @@ public static class AppSettings
         {
             Name = "Knowledge Base",
             IsBuiltIn = true,
-            ToolNames = ["fetch_url"],
-            EnabledServers = ["builtin_rag", "builtin_filesystem"],
+            EnabledServers = ["essentials", "builtin_rag", "builtin_filesystem"],
             SystemPrompt =
                 "You are a helpful assistant with access to a knowledge archive. " +
                 "When the question may relate to indexed content, search the archive first using search_documents. " +
@@ -415,6 +409,16 @@ public static class AppSettings
                 result.AddRange(custom.Where(c => !builtInNames.Contains(c.Name)));
             }
             catch { /* ignore corrupt data */ }
+        }
+
+        // Migration: convert legacy ToolNames to EnabledServers["essentials"]
+        foreach (var p in result)
+        {
+            if (p.ToolNames.Count > 0 && !p.EnabledServers.Contains(Mcp.BuiltInServerHelper.EssentialsKey))
+            {
+                p.EnabledServers.Insert(0, Mcp.BuiltInServerHelper.EssentialsKey);
+                p.ToolNames.Clear();
+            }
         }
 
         _profileCache = result;
