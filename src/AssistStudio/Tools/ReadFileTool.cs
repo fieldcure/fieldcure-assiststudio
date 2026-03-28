@@ -12,7 +12,8 @@ namespace AssistStudio.Tools;
 /// </summary>
 public class ReadFileTool : IAssistTool
 {
-    private const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10 MB (documents can be larger than plain text)
+    private const long MaxTextFileSizeBytes = 10 * 1024 * 1024;  // 10 MB for plain text
+    private const long MaxDocumentFileSizeBytes = 50 * 1024 * 1024; // 50 MB for parsed documents (PDF, DOCX, etc.)
 
     #region IAssistTool Implementation
 
@@ -54,14 +55,15 @@ public class ReadFileTool : IAssistTool
             return JsonSerializer.Serialize(new { error = $"File not found: {path}" });
 
         var fileInfo = new FileInfo(path);
-        if (fileInfo.Length > MaxFileSizeBytes)
-            return JsonSerializer.Serialize(new { error = $"File too large ({fileInfo.Length:N0} bytes). Maximum allowed: {MaxFileSizeBytes:N0} bytes." });
+        var ext = fileInfo.Extension;
+        var parser = DocumentParserFactory.GetParser(ext);
+        var maxSize = parser is not null ? MaxDocumentFileSizeBytes : MaxTextFileSizeBytes;
+
+        if (fileInfo.Length > maxSize)
+            return JsonSerializer.Serialize(new { error = $"File too large ({fileInfo.Length:N0} bytes). Maximum allowed: {maxSize:N0} bytes." });
 
         try
         {
-            // Try document parser first (PDF, DOCX, XLSX, PPTX, HWPX)
-            var ext = fileInfo.Extension;
-            var parser = DocumentParserFactory.GetParser(ext);
             if (parser is not null)
             {
                 var data = await File.ReadAllBytesAsync(path, ct);
