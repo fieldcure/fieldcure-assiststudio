@@ -617,14 +617,41 @@
         background: var(--hover, rgba(128,128,128,0.08));
     }
 
+    /* ===== User Message Collapse (Show more / Show less) ===== */
+    .message.user .message-bubble.collapsible {
+        transition: max-height 0.15s ease;
+    }
+    .message.user .message-bubble.collapsed {
+        max-height: 6em;
+        overflow: hidden;
+        position: relative;
+    }
+    .message.user .message-bubble.collapsed::after {
+        content: '';
+        position: absolute;
+        bottom: 0; left: 0; right: 0;
+        height: 3em;
+        background: linear-gradient(transparent, var(--bg-user));
+        pointer-events: none;
+    }
+    .collapse-toggle {
+        font-size: 11px;
+        color: var(--timestamp-color);
+        cursor: pointer;
+        user-select: none;
+        margin-right: auto;
+    }
+    .collapse-toggle:hover { text-decoration: underline; }
+
     /* ===== User Message Footer (branch nav + timestamp) ===== */
     .user-message-footer {
         display: flex;
         align-items: center;
         justify-content: flex-end;
         gap: 8px;
-        margin-top: 4px;
+        margin-top: 6px;
         padding: 0 4px;
+        min-height: 20px;
     }
     .user-message-footer .message-timestamp {
         margin-top: 0;
@@ -708,6 +735,8 @@
         summarize: 'Summarize response',
         copyRequest: 'Copy Request',
         copyResponse: 'Copy Response',
+        showMore: 'Show more',
+        showLess: 'Show less',
         tokens: 'tokens',
         editBranchHint: 'Editing this message will create a new conversation branch. Use the arrow navigation buttons to switch between branches.',
         editCancel: 'Cancel',
@@ -1063,11 +1092,34 @@
             msg.id = 'msg-' + id;
             var attachmentHtml = renderAttachments(attachments);
             var textHtml = text ? escapeHtml(text) : '';
-            msg.innerHTML =
-                '<div class="message-bubble">' + attachmentHtml + textHtml + '</div>';
+            var bubble = document.createElement('div');
+            bubble.className = 'message-bubble';
+            bubble.innerHTML = attachmentHtml + textHtml;
+            msg.appendChild(bubble);
+
+            // Collapse long user messages (>6 lines or >500 chars)
+            var shouldCollapse = text && (text.split('\n').length > 6 || text.length > 500);
+            if (shouldCollapse) {
+                bubble.classList.add('collapsible', 'collapsed');
+            }
 
             var footer = document.createElement('div');
             footer.className = 'user-message-footer';
+
+            if (shouldCollapse) {
+                var toggle = document.createElement('span');
+                toggle.className = 'collapse-toggle';
+                toggle.textContent = _L.showMore;
+                toggle.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    var wasCollapsed = bubble.classList.contains('collapsed');
+                    bubble.classList.toggle('collapsed');
+                    toggle.textContent = wasCollapsed ? _L.showLess : _L.showMore;
+                    requestAnimationFrame(function() { toggle.scrollIntoView({ block: 'nearest' }); });
+                });
+                footer.appendChild(toggle);
+            }
+
             if (siblingCount > 1) {
                 footer.appendChild(createBranchNav(id, siblingIndex, siblingCount));
             }

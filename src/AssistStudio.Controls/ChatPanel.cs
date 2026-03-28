@@ -2912,7 +2912,9 @@ public sealed partial class ChatPanel : Control
                 ["tokens"] = loader.GetString("Chat_Tokens"),
                 ["editBranchHint"] = loader.GetString("Chat_EditBranchHint"),
                 ["editCancel"] = loader.GetString("Chat_EditCancel"),
-                ["editSave"] = loader.GetString("Chat_EditSave")
+                ["editSave"] = loader.GetString("Chat_EditSave"),
+                ["showMore"] = loader.GetString("Chat_ShowMore"),
+                ["showLess"] = loader.GetString("Chat_ShowLess")
             };
 
             // Filter out empty strings (key not found returns empty)

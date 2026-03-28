@@ -84,6 +84,12 @@
   <data name="Chat_EditSave" xml:space="preserve">
     <value>Send</value>
   </data>
+  <data name="Chat_ShowMore" xml:space="preserve">
+    <value>Show more</value>
+  </data>
+  <data name="Chat_ShowLess" xml:space="preserve">
+    <value>Show less</value>
+  </data>
   <data name="InputContainer_Placeholder" xml:space="preserve">
     <value>Type a message...</value>
   </data>
