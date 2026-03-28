@@ -23,15 +23,11 @@ internal static class PasswordVaultHelper
     {
         var vault = new PasswordVault();
 
-        // Remove existing entry if any
-        try
+        // Remove existing entry if any (avoid Retrieve exception by checking first)
+        var existing = FindCredential(vault, presetName);
+        if (existing is not null)
         {
-            var existing = vault.Retrieve(ResourceName, presetName);
             vault.Remove(existing);
-        }
-        catch
-        {
-            // Not found — OK
         }
 
         if (!string.IsNullOrEmpty(apiKey))
@@ -42,38 +38,25 @@ internal static class PasswordVaultHelper
 
     /// <summary>
     /// Checks whether an API key exists for the specified preset name without retrieving the password.
-    /// Uses FindAllByResource which avoids the heavier Retrieve call.
     /// </summary>
     public static bool HasApiKey(string presetName)
     {
-        try
-        {
-            var vault = new PasswordVault();
-            var results = vault.FindAllByResource(ResourceName);
-            return results.Any(c => c.UserName == presetName);
-        }
-        catch
-        {
-            return false;
-        }
+        var vault = new PasswordVault();
+        return FindCredential(vault, presetName) is not null;
     }
 
     /// <summary>
     /// Loads the API key for the specified preset name from the credential store.
+    /// Returns empty string if not found.
     /// </summary>
     public static string LoadApiKey(string presetName)
     {
-        try
-        {
-            var vault = new PasswordVault();
-            var credential = vault.Retrieve(ResourceName, presetName);
-            credential.RetrievePassword();
-            return credential.Password;
-        }
-        catch
-        {
-            return "";
-        }
+        var vault = new PasswordVault();
+        var credential = FindCredential(vault, presetName);
+        if (credential is null) return "";
+
+        credential.RetrievePassword();
+        return credential.Password;
     }
 
     /// <summary>
@@ -81,15 +64,11 @@ internal static class PasswordVaultHelper
     /// </summary>
     public static void DeleteApiKey(string presetName)
     {
-        try
+        var vault = new PasswordVault();
+        var credential = FindCredential(vault, presetName);
+        if (credential is not null)
         {
-            var vault = new PasswordVault();
-            var credential = vault.Retrieve(ResourceName, presetName);
             vault.Remove(credential);
-        }
-        catch
-        {
-            // Not found — OK
         }
     }
 
@@ -160,6 +139,29 @@ internal static class PasswordVaultHelper
                 result[key] = value;
         }
         return result;
+    }
+
+    #endregion
+
+    #region Private Methods
+
+    /// <summary>
+    /// Finds a credential by preset name without throwing if not found.
+    /// Uses <see cref="PasswordVault.FindAllByResource"/> to avoid first-chance exceptions
+    /// that occur with <see cref="PasswordVault.Retrieve"/> when the entry does not exist.
+    /// </summary>
+    private static PasswordCredential? FindCredential(PasswordVault vault, string presetName)
+    {
+        try
+        {
+            var results = vault.FindAllByResource(ResourceName);
+            return results.FirstOrDefault(c => c.UserName == presetName);
+        }
+        catch
+        {
+            // FindAllByResource throws if no entries exist for the resource at all.
+            return null;
+        }
     }
 
     #endregion
