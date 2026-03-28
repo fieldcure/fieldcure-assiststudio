@@ -267,3 +267,6 @@ nul
 # Local publish settings (not for version control)
 PublishSettings.props
 SigningSettings.props
+
+# todo
+todo/

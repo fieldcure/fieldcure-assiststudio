@@ -203,6 +203,41 @@
         color: var(--timestamp-color);
     }
 
+    /* ===== Search Result Block ===== */
+    /* Collapsed: identical to .tool-block + .tool-header. Expanded: shows hit list below. */
+    .search-result-block details > summary {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 2px 0;
+        user-select: none;
+        font-size: 11px;
+        color: var(--timestamp-color);
+        cursor: pointer;
+        list-style: none;
+    }
+    .search-result-block details > summary::-webkit-details-marker { display: none; }
+    .search-hits {
+        margin-top: 6px;
+        padding-left: 16px;
+        font-size: 11px;
+        color: var(--timestamp-color);
+    }
+    .search-hits li { margin-bottom: 4px; }
+    .hit-source { font-size: 1em; }
+    .hit-score { font-size: 1em; margin-left: 4px; }
+    .hit-snippet {
+        font-style: italic;
+        font-size: 1em;
+        margin: 1px 0 0 0;
+    }
+    .search-empty {
+        color: var(--timestamp-color);
+        font-style: italic;
+        font-size: 11px;
+        margin: 4px 0;
+    }
+
     /* ===== Markdown Content Styles ===== */
     /* Apply to both .rendered (finalized) and .rendered-zone (progressive streaming) */
     .message-bubble.rendered h1, .rendered-zone h1,
@@ -1158,6 +1193,62 @@
             doScroll('instant');
         },
 
+        appendSearchResultBlock: function(id, resultJson, displayName) {
+            var msg = document.getElementById('msg-' + id);
+            if (!msg) return;
+            var bubble = msg.querySelector('.message-bubble');
+            if (!bubble) return;
+
+            var data;
+            try { data = JSON.parse(resultJson); } catch(e) { return; }
+
+            var results = data.results || [];
+            var query = data.query || '?';
+            var mode = data.search_mode || '?';
+            var totalChunks = data.total_chunks_searched || 0;
+
+            var block = document.createElement('div');
+            block.className = 'tool-block search-result-block';
+
+            var details = document.createElement('details');
+            var summary = document.createElement('summary');
+            // Collapsed: looks identical to regular tool-block (🔧 Used <displayName>)
+            summary.textContent = '\uD83D\uDD27 Used ' + (displayName || 'search_documents')
+                + ' \u2014 ' + results.length + ' results \u00b7 ' + totalChunks + ' chunks';
+            details.appendChild(summary);
+
+            if (results.length === 0) {
+                var empty = document.createElement('p');
+                empty.className = 'search-empty';
+                empty.textContent = 'No results found';
+                details.appendChild(empty);
+            } else {
+                var ol = document.createElement('ol');
+                ol.className = 'search-hits';
+                results.forEach(function(hit) {
+                    var li = document.createElement('li');
+                    var src = (hit.source_path || '?').split(/[\\/]/).pop();
+                    var snippet = (hit.content || '').substring(0, 150);
+                    if (hit.content && hit.content.length > 150) snippet += '\u2026';
+                    li.innerHTML = '<span class="hit-source">' + escapeHtml(src)
+                        + ' #' + hit.chunk_index + '</span>'
+                        + '<span class="hit-score">(' + (hit.score || 0).toFixed(2) + ')</span>'
+                        + '<p class="hit-snippet">\u201C' + escapeHtml(snippet) + '\u201D</p>';
+                    ol.appendChild(li);
+                });
+                details.appendChild(ol);
+            }
+
+            block.appendChild(details);
+            var contentSpan = bubble.querySelector('.content');
+            if (contentSpan) {
+                bubble.insertBefore(block, contentSpan);
+            } else {
+                bubble.appendChild(block);
+            }
+            doScroll('instant');
+        },
+
         finalizeMessage: function(id, fullText, truncated, tokenCount) {
             // Clean up progressive state
             var ps = _progressiveState[id];
@@ -1173,7 +1264,7 @@
                 var thinkingBlock = bubble.querySelector('.thinking-block');
                 var toolBlocks = Array.from(bubble.querySelectorAll('.tool-block'));
                 // Strip [Tool: ...] markers from content before markdown rendering
-                var cleanText = fullText.replace(/\[Tool:\s*[^\]]*\]\n?/g, '');
+                var cleanText = fullText.replace(/\[Tool:\s*[^\]]*\]\n?/g, '\n');
                 cleanText = cleanText.replace(/\[source\]\(([^)]+)\)/gi, '(Source: $1)');
                 bubble.innerHTML = renderMarkdown(cleanText);
                 toolBlocks.reverse().forEach(function(tb) {

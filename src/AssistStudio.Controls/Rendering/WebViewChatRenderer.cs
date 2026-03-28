@@ -204,6 +204,16 @@ internal partial class WebViewChatRenderer
     }
 
     /// <summary>
+    /// Appends a collapsible search result block (details/summary) to an assistant message.
+    /// Used for <c>search_documents</c> tool results from RAG.
+    /// </summary>
+    public Task AppendSearchResultBlockAsync(string id, string searchResultJson, string displayName)
+    {
+        var script = $"window.assistChat.appendSearchResultBlock({Js(id)}, {Js(searchResultJson)}, {Js(displayName)})";
+        return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
+    /// <summary>
     /// Finalizes an assistant message with the full markdown content, truncation status, and token count.
     /// </summary>
     public Task FinalizeMessageAsync(string id, string fullMarkdown, bool truncated = false, int tokenCount = 0)

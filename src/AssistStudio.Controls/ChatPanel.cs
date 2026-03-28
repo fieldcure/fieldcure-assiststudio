@@ -2488,12 +2488,17 @@ public sealed partial class ChatPanel : Control
                 RegisterInTree(toolResultMsg);
                 _messages.Add(toolResultMsg);
 
+                assistantMessage.Content += $"[Tool: {call.FunctionName}]\n";
+
                 var toolDisplayName = RegisteredTools
                     .FirstOrDefault(t => t.Name == call.FunctionName)?.DisplayName
                     ?? McpTools.FirstOrDefault(t => t.Name == call.FunctionName)?.DisplayName
                     ?? call.FunctionName;
-                assistantMessage.Content += $"[Tool: {call.FunctionName}]\n";
-                await _renderer.AppendToolBlockAsync(assistantMessage.Id, toolDisplayName);
+
+                if (call.FunctionName == "search_documents")
+                    await _renderer.AppendSearchResultBlockAsync(assistantMessage.Id, toolResult, toolDisplayName);
+                else
+                    await _renderer.AppendToolBlockAsync(assistantMessage.Id, toolDisplayName);
             }
         } while (true);
 
@@ -2534,6 +2539,23 @@ public sealed partial class ChatPanel : Control
         DiagnosticLogger.LogInfo($"[Chat] RenderRestoredMessages: {_messages.Count} messages");
         SwitchToChatLayout();
 
+        // Pre-index search_documents results for collapsible UI restoration.
+        // Uses linear _messages scan + explicit ToolCallId matching — no tree traversal.
+        var searchResultQueue = new Queue<string>();
+        foreach (var m in _messages)
+        {
+            if (m.Role != ChatRole.Assistant || m.ToolCalls is not { Count: > 0 })
+                continue;
+            foreach (var tc in m.ToolCalls)
+            {
+                if (tc.FunctionName != "search_documents") continue;
+                var resultMsg = _messages.FirstOrDefault(r =>
+                    r.Role == ChatRole.Tool && r.ToolCallId == tc.Id);
+                if (resultMsg?.Content is not null)
+                    searchResultQueue.Enqueue(resultMsg.Content);
+            }
+        }
+
         var renderedCount = 0;
         foreach (var msg in _messages)
         {
@@ -2557,10 +2579,18 @@ public sealed partial class ChatPanel : Control
                 foreach (Match m in toolMarkers)
                 {
                     var toolName = m.Groups[1].Value.Trim();
+
                     var displayName = RegisteredTools
                         .FirstOrDefault(t => t.Name == toolName)?.DisplayName
                         ?? McpTools.FirstOrDefault(t => t.Name == toolName)?.DisplayName
                         ?? toolName;
+
+                    if (toolName == "search_documents" && searchResultQueue.Count > 0)
+                    {
+                        await _renderer.AppendSearchResultBlockAsync(msg.Id, searchResultQueue.Dequeue(), displayName);
+                        continue;
+                    }
+
                     await _renderer.AppendToolBlockAsync(msg.Id, displayName);
                 }
 
