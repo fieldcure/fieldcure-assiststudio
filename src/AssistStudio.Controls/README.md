@@ -92,6 +92,7 @@ The main control. Provides message list (WebView2), input area, streaming, attac
 | `IsReadOnly` | `bool` | Read-only conversation view |
 | `FontFamily` | `string` | Chat font family |
 | `FontSize` | `double` | Chat font size |
+| `ChatZoomFactor` | `double` | CSS zoom factor for chat rendering (default 1.05) |
 | `EmptyStateContent` | `object` | Custom empty state UI |
 | `AvailableServers` | `IList<ServerInfo>` | MCP server status for tools flyout |
 

@@ -1,5 +1,36 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Controls.WinUI
 
+## [0.11.0] - 2026-03-29
+
+### Added
+- `ChatZoomFactor` dependency property for dynamic chat UI scaling (default 1.05)
+- Collapsible long user messages with Show more / Show less toggle
+- URL and content length display in `fetch_url` tool result blocks
+- Collapsible `search_documents` results in WebView2 chat UI
+- Indexing cancel button + RAG file count safety limits in folder flyout
+- Indexing progress display in folder flyout and title bar
+- Dynamic tooltip on folder icon showing indexing file name
+- Lock icon on archive folder rows
+- Server placeholder entries in tools flyout with localized tool names
+- Persistent memory tools (`remember`, `forget`) UI support
+
+### Changed
+- `InputContainer` renamed to `ComposeBar`
+- Tool display name localization removed — raw function names used instead
+- Server toggle removed from tools flyout, replaced with `PrepareToolsForSendAsync` send-time auto-connect
+- `Profile.Text` → `Profile.SystemPrompt` in bindings
+- ProgressRing replaced with folder icon opacity animation for indexing state
+- Folder icon VisualState renamed to `Idle`
+
+### Fixed
+- WebView2 blank screen when clicking relative-path links (navigation intercepted)
+- OpenAI RAG source links converted to plain text before rendering
+- ProgressRing and folder button layout wrapped in StackPanel
+- Progress ring placement, percent color, InfoBar messages localized
+- PasswordVault empty-value exception prevention
+
+---
+
 ## [0.10.0] - 2026-03-24
 
 ### Added

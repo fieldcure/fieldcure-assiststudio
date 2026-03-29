@@ -1,5 +1,23 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Core
 
+## [0.11.0] - 2026-03-29
+
+### Added
+- Essentials virtual server — bundle built-in tools (`read_file`, `remember`, `forget`) as an in-process server
+- Persistent memory tools (`remember`, `forget`) for cross-conversation context retention
+- `Profile.ToolSettingsChanged` event and shared profile cache for per-profile server toggles
+
+### Changed
+- `Profile.Text` renamed to `Profile.SystemPrompt` for clarity (`JsonPropertyName("Text")` preserved for backward compatibility)
+- `DocumentParsers` migrated to independent NuGet package (`FieldCure.DocumentParsers` 0.3.x)
+- `IAssistTool` logging enhanced for Knowledge Archive lifecycle and tool execution
+
+### Fixed
+- MCP tool schemas normalized for Gemini API compatibility (strip unsupported keywords)
+- `ActiveChildId` restore on load — prevent false branch detection from tool call chains
+
+---
+
 ## [0.10.0] - 2026-03-24
 
 ### Added

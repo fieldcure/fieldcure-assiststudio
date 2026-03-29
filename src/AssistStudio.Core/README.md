@@ -193,7 +193,7 @@ public class MyProvider : IAiProvider
 | `AiRequest` / `AiResponse` | Request (messages, system prompt, tools, thinking) and response models |
 | `ChatMessage` | Conversation message with role, content, attachments, and tree branching (`ParentId`) |
 | `ProviderPreset` | Saved provider configuration — model, temperature, thinking, PDF capability |
-| `Profile` | System prompt + tool selection preset |
+| `Profile` | System prompt (`SystemPrompt`) + tool selection preset |
 | `ToolCallExecutor` | Executes tool calls with confirmation handler |
 | `ToolResolver` | Merges built-in and MCP tools with conflict resolution |
 | `McpToolAdapter` | Bridges MCP tools to `IAssistTool` (zero MCP SDK dependency) |

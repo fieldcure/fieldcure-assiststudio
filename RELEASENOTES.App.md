@@ -1,5 +1,45 @@
 ﻿# Release Notes — AssistStudio App
 
+## [0.11.0] - 2026-03-29
+
+### Added
+- Persistent memory with `remember` / `forget` tools for cross-conversation context
+- Essentials virtual server — bundles built-in tools (`read_file`, `remember`, `forget`) as an in-process MCP server
+- `read_file` now supports PDF, DOCX, XLSX, PPTX, HWPX via `FieldCure.DocumentParsers`
+- Document file size limit raised to 50 MB for `read_file`
+- Indexing cancel button with RAG file count safety limits
+- Chat UI scaled to 105% via CSS zoom (`ChatZoomFactor` dependency property)
+- NuGet package version display on built-in MCP server cards
+- Built-in MCP server version display on server cards
+- Indexing progress in folder flyout and title bar
+- Knowledge Base added as built-in profile
+- Auto-deduplicate profile names with (2), (3) suffix
+
+### Changed
+- Built-in profiles redesigned: Chat, General, Analytical, Creative, Task Planner, Knowledge Base
+- Tab-independent profiles — each tab owns its profile and system prompt (global broadcast removed)
+- Send-time auto-connect for MCP servers (`PrepareToolsForSendAsync` replaces manual toggle)
+- `InputContainer` renamed to `ComposeBar`
+- Tool display name localization removed — raw function names used
+- `Profile.Text` renamed to `Profile.SystemPrompt`
+- `DocumentParsers` migrated to independent NuGet packages (`FieldCure.DocumentParsers` 0.3.x, `FieldCure.DocumentParsers.Pdf` 0.2.x)
+- Built-in RAG server bumped to v0.10.1 (parallel contextualization, timing logs, indexing lock, PDF support, file count limits)
+- Built-in Filesystem server at v0.5.0
+
+### Fixed
+- Save/load branch detection: `ActiveChildId` restore and `SiblingCount` guard prevent false branching from tool chains
+- RAG server reconnection when loading conversations from `.astd` files
+- Gemini API compatibility: MCP tool schema normalization strips unsupported keywords
+- WebView2 blank screen on relative-path link clicks
+- PasswordVault empty-value exception (`PasswordVaultHelper` guard)
+- OpenAI RAG source links rendered as plain text before markdown conversion
+- Custom profiles with built-in name collisions skipped on load
+- Tab profile and system prompt preserved on settings page changes
+- App tasks page flicker on navigation eliminated
+- First-chance exceptions in `PasswordVaultHelper` when key not found
+
+---
+
 ## [0.10.0] - 2026-03-24
 
 ### Added

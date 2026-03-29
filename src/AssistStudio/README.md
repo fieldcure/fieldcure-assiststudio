@@ -40,7 +40,7 @@ Chat with five AI providers from a single app. Switch providers mid-conversation
 Attach files to any message via drag-and-drop, paste, or file picker:
 
 - Images: PNG, JPG, WebP, GIF, BMP
-- Documents: PDF (native, text extraction, or page-as-image), DOCX
+- Documents: PDF, DOCX, XLSX, PPTX, HWPX (native, text extraction, or page-as-image for PDF)
 - Text files: TXT, CSV, LOG, MD, JSON, XML
 
 ### MCP Integration (Model Context Protocol)
@@ -51,7 +51,7 @@ Connect to external MCP servers to extend AI capabilities with custom tools:
 - **Tool aggregation** — Tools from all connected servers appear alongside built-in tools
 - **Tool approval** — Tools that require confirmation show an inline approval panel before execution
 - **Search tools** — Meta-tool for efficiently searching across large tool sets
-- **Built-in servers** — Filesystem server auto-installed via `dotnet tool`, per-tab instances with MCP Roots protocol
+- **Built-in servers** — Essentials (in-process), Memory, Filesystem, and Knowledge Archive servers. External servers auto-installed via `dotnet tool` with per-tab instances and MCP Roots protocol
 
 ### Workspace Folders & Knowledge Archive
 
@@ -63,8 +63,10 @@ Connect to external MCP servers to extend AI capabilities with custom tools:
 
 ### Built-in Tools
 
-- **URL Fetch** — Extract web page content with SSRF protection
-- **File operations** — Read, write, and search files (via MCP Filesystem)
+- **Essentials** — `read_file` with PDF/DOCX/XLSX/PPTX/HWPX support (up to 50 MB), `fetch_url` with SSRF protection
+- **Memory** — `remember` and `forget` for persistent cross-conversation context
+- **Filesystem** — Read, write, list, and search files within workspace folders (via MCP Filesystem)
+- **Knowledge Archive** — Index and search local documents for RAG (via MCP Rag)
 - **Command execution** — Run shell commands (with approval)
 - **Search Tools** — Find the right tool across large MCP tool sets
 

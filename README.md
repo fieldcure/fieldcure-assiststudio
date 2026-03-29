@@ -28,7 +28,7 @@ AssistStudio is two things:
 - **Vision & Documents** — Attach images (PNG, JPG, WebP, GIF), PDFs, DOCX, HWPX, XLSX, and PPTX files. Document text extraction via [FieldCure.DocumentParsers](https://github.com/fieldcure/fieldcure-document-parsers). Per-provider `PdfCapability` (Auto / TextExtraction / NativePdf / PageAsImage).
 - **Tool / Function Calling** — Define tools with `IAssistTool`. `ToolCallExecutor` orchestrates execution with confirmation flow. `ToolApprovalPanel` shows inline approval UI.
 - **Token Tracking** — Input/output token counts exposed after every request.
-- **Re-templatable WinUI 3 Controls** — `ChatPanel`, `InputContainer`, `AttachmentPreviewBar`, and `ToolApprovalPanel` are `TemplatedControl`s. Override `Generic.xaml` to fully customize the UI.
+- **Re-templatable WinUI 3 Controls** — `ChatPanel`, `ComposeBar`, `AttachmentPreviewBar`, and `ToolApprovalPanel` are `TemplatedControl`s. Override `Generic.xaml` to fully customize the UI.
 - **Profiles & Presets** — Save provider configurations as presets; switch system prompts and tool selections with profiles.
 - **Workspace Context** — `IWorkspaceContext` for dynamic system prompt injection based on app state.
 - **Conversation Persistence** — Save and load conversations in `.astd` (JSON) format with full branching tree.
@@ -77,7 +77,7 @@ AssistStudio is two things:
 | Project | NuGet Package | TFM | Key Types |
 |---------|--------------|-----|-----------|
 | **AssistStudio.Core** | `FieldCure.AssistStudio.Core` | `net8.0` | `IAiProvider`, `StreamEvent`, `IAssistTool`, `AiRequest`, `AiResponse`, `ChatMessage`, `ToolCallExecutor`, `ToolResolver`, `McpToolAdapter`, `IWorkspaceContext`, `ProviderPreset`, `Profile`, `ConversationManager` — depends on [`FieldCure.DocumentParsers`](https://www.nuget.org/packages/FieldCure.DocumentParsers) |
-| **AssistStudio.Controls** | `FieldCure.AssistStudio.Controls.WinUI` | `net8.0-windows10.0.19041.0`<br>`net9.0-windows10.0.19041.0` | `ChatPanel`, `InputContainer`, `AttachmentPreviewBar`, `ToolApprovalPanel`, `ChatTheme` |
+| **AssistStudio.Controls** | `FieldCure.AssistStudio.Controls.WinUI` | `net8.0-windows10.0.19041.0`<br>`net9.0-windows10.0.19041.0` | `ChatPanel`, `ComposeBar`, `AttachmentPreviewBar`, `ToolApprovalPanel`, `ChatTheme` |
 | **AssistStudio** | *(workspace app)* | `net9.0-windows10.0.19041.0` | Reference implementation with settings, MCP server management, built-in tools, and `PasswordVaultHelper` |
 
 > **Core is platform-agnostic** (`net8.0`). It has no Windows-specific dependencies — you can reference it from a console app, a server, or any .NET project.
@@ -232,11 +232,11 @@ The main control. Provides a complete chat experience: message list (WebView2), 
                   WorkspaceContext="{x:Bind ViewModel.Workspace}" />
 ```
 
-**Key dependency properties:** `Provider`, `SystemPrompt`, `Theme`, `Title`, `Placeholder`, `AvailablePresets`, `SelectedPreset`, `AvailableProfiles`, `SelectedProfile`, `RegisteredTools`, `WorkspaceContext`, `UtilityProvider`, `AutoTitle`, `AutoSummarize`, `MaxInputTokens`, `MaxToolCallRounds`, `RecentTurnsToKeep`, `IsDebugMode`, `ShowTitleBar`, `AllowAttachments`, `IsReadOnly`, `FontFamily`, `FontSize`, `EmptyStateContent`
+**Key dependency properties:** `Provider`, `SystemPrompt`, `Theme`, `Title`, `Placeholder`, `AvailablePresets`, `SelectedPreset`, `AvailableProfiles`, `SelectedProfile`, `RegisteredTools`, `WorkspaceContext`, `UtilityProvider`, `AutoTitle`, `AutoSummarize`, `MaxInputTokens`, `MaxToolCallRounds`, `RecentTurnsToKeep`, `IsDebugMode`, `ShowTitleBar`, `AllowAttachments`, `IsReadOnly`, `FontFamily`, `FontSize`, `ChatZoomFactor`, `EmptyStateContent`
 
 **Events:** `PresetChanged`, `ProfileChanged`, `MessageAdded`, `TitleGenerated`, `TitleEditRequested`, `KeyboardShortcutPressed`
 
-### InputContainer
+### ComposeBar
 
 The chat input area — text box, attach button, preset/profile selectors. Used internally by `ChatPanel`, but can be placed standalone.
 
@@ -246,7 +246,7 @@ Horizontal scrollable bar showing thumbnails of attached files before sending.
 
 ### ToolApprovalPanel
 
-Inline confirmation panel shown when a tool with `RequiresConfirmation = true` is invoked. Displays the tool name, an expandable JSON arguments preview, and Allow/Reject buttons. Replaces `InputContainer` during confirmation and restores it after.
+Inline confirmation panel shown when a tool with `RequiresConfirmation = true` is invoked. Displays the tool name, an expandable JSON arguments preview, and Allow/Reject buttons. Replaces `ComposeBar` during confirmation and restores it after.
 
 ### Re-templating
 
@@ -276,8 +276,10 @@ MCP servers are configured with Stdio or HTTP transport and connected at app sta
 
 The workspace app bundles MCP servers that are auto-installed and managed:
 
-- **Filesystem** (`FieldCure.Mcp.Filesystem`) — Secure file operations within workspace folders. Per-tab instances with MCP Roots protocol for dynamic folder updates.
-- **Knowledge Archive** (`FieldCure.Mcp.Rag`) — Index and search local documents for RAG. Per-tab instances with auto-indexing on folder selection.
+- **Essentials** — In-process virtual server bundling built-in tools (`read_file`, `remember`, `forget`). `read_file` supports PDF, DOCX, XLSX, PPTX, HWPX via DocumentParsers.
+- **Memory** — Persistent cross-conversation memory with `remember` / `forget` tools.
+- **Filesystem** (`FieldCure.Mcp.Filesystem` v0.5.0) — Secure file operations within workspace folders. Per-tab instances with MCP Roots protocol for dynamic folder updates.
+- **Knowledge Archive** (`FieldCure.Mcp.Rag` v0.10.1) — Index and search local documents for RAG. Per-tab instances with auto-indexing on folder selection. Supports PDF, DOCX, XLSX, PPTX, HWPX.
 - **BuiltInServerHelper** — Auto-installs and updates built-in servers via `dotnet tool` on app startup. Read-only tools (read, list, search) skip user approval.
 
 ---
@@ -309,7 +311,7 @@ Profiles pair a system prompt with optional provider/model preferences and tool 
 var profile = new Profile
 {
     Name = "Task Planner",
-    Text = "You are a task planner that breaks down complex requests into steps.",
+    SystemPrompt = "You are a task planner that breaks down complex requests into steps.",
     ToolNames = ["search_files", "read_file", "write_file", "run_command"],
     UseSearchTools = true  // Use meta-tool instead of sending all tool definitions
 };
