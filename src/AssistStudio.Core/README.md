@@ -2,7 +2,6 @@
 
 **Platform-agnostic AI provider client library for .NET** — Claude, OpenAI, Gemini, Ollama, Groq, and any OpenAI-compatible endpoint.
 
-[![NuGet](https://img.shields.io/nuget/v/FieldCure.AssistStudio.Core)](https://www.nuget.org/packages/FieldCure.AssistStudio.Core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/fieldcure/fieldcure-assiststudio/blob/main/LICENSE)
 
 ## Features

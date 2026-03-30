@@ -2,7 +2,6 @@
 
 **Drop-in AI Chat UI Controls for WinUI 3** — Markdown rendering, streaming, attachments, thinking blocks, conversation branching, tool approval, and theming out of the box.
 
-[![NuGet](https://img.shields.io/nuget/v/FieldCure.AssistStudio.Controls.WinUI)](https://www.nuget.org/packages/FieldCure.AssistStudio.Controls.WinUI)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/fieldcure/fieldcure-assiststudio/blob/main/LICENSE)
 
 ## Features
