@@ -28,7 +28,7 @@ public static class BuiltInServerHelper
     {
         [FilesystemKey] = ("FieldCure.Mcp.Filesystem", "0.5.0"),
         [RagKey] = ("FieldCure.Mcp.Rag", "0.10.1"),
-        [OutboxKey] = ("FieldCure.Mcp.Outbox", "0.1.0"),
+        [OutboxKey] = ("FieldCure.Mcp.Outbox", "0.2.0"),
     };
 
     /// <summary>NuGet package ID for the Filesystem server.</summary>
