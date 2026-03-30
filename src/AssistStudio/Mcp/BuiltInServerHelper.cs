@@ -115,13 +115,13 @@ public static class BuiltInServerHelper
 
     /// <summary>
     /// Returns the default built-in server configurations.
-    /// All servers start disabled with no folders.
+    /// Folder-based servers start disabled; shared servers (Outbox) start enabled.
     /// </summary>
     public static Dictionary<string, BuiltInServerConfig> GetDefaults() => new()
     {
         [FilesystemKey] = new BuiltInServerConfig { IsEnabled = false, Folders = [] },
         [RagKey] = new BuiltInServerConfig { IsEnabled = false, Folders = [] },
-        [OutboxKey] = new BuiltInServerConfig { IsEnabled = false, Folders = [] },
+        [OutboxKey] = new BuiltInServerConfig { IsEnabled = true, Folders = [] },
     };
 
     /// <summary>
