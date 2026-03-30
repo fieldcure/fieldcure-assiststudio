@@ -389,7 +389,7 @@ public partial class OllamaProvider : IAiProvider, IDisposable
                         ["function"] = new JsonObject
                         {
                             ["name"] = tc.FunctionName,
-                            ["arguments"] = JsonNode.Parse(tc.Arguments)
+                            ["arguments"] = JsonNode.Parse(string.IsNullOrWhiteSpace(tc.Arguments) ? "{}" : tc.Arguments)
                         }
                     });
                 }

@@ -431,7 +431,7 @@ public partial class GeminiProvider : IAiProvider, IDisposable
                         ["functionCall"] = new JsonObject
                         {
                             ["name"] = tc.FunctionName,
-                            ["args"] = JsonNode.Parse(tc.Arguments)
+                            ["args"] = JsonNode.Parse(string.IsNullOrWhiteSpace(tc.Arguments) ? "{}" : tc.Arguments)
                         }
                     });
                 }

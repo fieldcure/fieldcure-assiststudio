@@ -58,7 +58,8 @@ public class ToolCallExecutor
             }
         }
 
-        var args = JsonSerializer.Deserialize<JsonElement>(call.Arguments);
+        var argsJson = string.IsNullOrWhiteSpace(call.Arguments) ? "{}" : call.Arguments;
+        var args = JsonSerializer.Deserialize<JsonElement>(argsJson);
 
         DiagnosticLogger.LogInfo($"[Tool] Calling: {tool.Name} args={call.Arguments}");
 

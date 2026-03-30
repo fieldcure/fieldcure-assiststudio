@@ -478,7 +478,7 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
                             ["type"] = "tool_use",
                             ["id"] = tc.Id,
                             ["name"] = tc.FunctionName,
-                            ["input"] = JsonNode.Parse(tc.Arguments)
+                            ["input"] = JsonNode.Parse(string.IsNullOrWhiteSpace(tc.Arguments) ? "{}" : tc.Arguments)
                         });
                     }
                     messages.Add(new JsonObject
