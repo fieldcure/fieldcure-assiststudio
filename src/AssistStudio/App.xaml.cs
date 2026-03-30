@@ -230,9 +230,11 @@ public partial class App : Application
             var builtInConfigs = AppSettings.BuiltInServers;
             foreach (var (key, config) in builtInConfigs)
             {
-                if (key == BuiltInServerHelper.FilesystemKey) continue;
-                if (config.IsEnabled && config.Folders.Count > 0)
-                    await McpRegistry.ConnectBuiltInAsync(key, config);
+                if (key == BuiltInServerHelper.FilesystemKey) continue; // per-tab only
+                if (!config.IsEnabled) continue;
+                // Shared servers (e.g., Outbox) don't need folders
+                if (!BuiltInServerHelper.IsSharedServer(key) && config.Folders.Count == 0) continue;
+                await McpRegistry.ConnectBuiltInAsync(key, config);
             }
         }
         catch (Exception ex)

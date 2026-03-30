@@ -28,6 +28,7 @@ public static class BuiltInServerHelper
     {
         [FilesystemKey] = ("FieldCure.Mcp.Filesystem", "0.5.0"),
         [RagKey] = ("FieldCure.Mcp.Rag", "0.10.1"),
+        [OutboxKey] = ("FieldCure.Mcp.Outbox", "0.1.0"),
     };
 
     /// <summary>NuGet package ID for the Filesystem server.</summary>
@@ -57,6 +58,12 @@ public static class BuiltInServerHelper
     /// <summary>Display name for the RAG server.</summary>
     public const string RagDisplayName = "Knowledge Folders";
 
+    /// <summary>Config dictionary key for the Outbox server.</summary>
+    public const string OutboxKey = "outbox";
+
+    /// <summary>Display name for the Outbox server.</summary>
+    public const string OutboxDisplayName = "Outbox";
+
     /// <summary>
     /// Tool names from the built-in Filesystem MCP server that are read-only
     /// and do not require user confirmation.
@@ -68,6 +75,8 @@ public static class BuiltInServerHelper
         "search_files", "search_within_files", "get_file_info",
         // RAG
         "search_documents", "get_document_chunk",
+        // Outbox — add_channel opens a subprocess console for credential input
+        "list_channels", "add_channel",
     ];
 
     /// <summary>
@@ -91,6 +100,7 @@ public static class BuiltInServerHelper
     {
         [FilesystemKey] = ("fieldcure-mcp-filesystem", FilesystemDisplayName),
         [RagKey] = ("fieldcure-mcp-rag", RagDisplayName),
+        [OutboxKey] = ("fieldcure-mcp-outbox", OutboxDisplayName),
     };
 
     #endregion
@@ -111,6 +121,7 @@ public static class BuiltInServerHelper
     {
         [FilesystemKey] = new BuiltInServerConfig { IsEnabled = false, Folders = [] },
         [RagKey] = new BuiltInServerConfig { IsEnabled = false, Folders = [] },
+        [OutboxKey] = new BuiltInServerConfig { IsEnabled = false, Folders = [] },
     };
 
     /// <summary>
@@ -129,12 +140,16 @@ public static class BuiltInServerHelper
 
     /// <summary>
     /// Creates a <see cref="McpServerConfig"/> for a built-in server.
-    /// Returns <see langword="null"/> if the server is disabled, has no folders,
-    /// or the executable is not found.
+    /// Returns <see langword="null"/> if the server is disabled, has no folders
+    /// (for folder-based servers), or the executable is not found.
     /// </summary>
     public static McpServerConfig? CreateMcpServerConfig(string serverKey, BuiltInServerConfig config)
     {
-        if (!config.IsEnabled || config.Folders.Count == 0)
+        if (!config.IsEnabled)
+            return null;
+
+        // Folder-based servers (Filesystem, RAG) require at least one folder
+        if (!IsSharedServer(serverKey) && config.Folders.Count == 0)
             return null;
 
         if (!ServerDefinitions.TryGetValue(serverKey, out var def))
@@ -150,13 +165,14 @@ public static class BuiltInServerHelper
             Name = def.DisplayName,
             TransportType = McpTransportType.Stdio,
             Command = exePath,
-            Arguments = [.. config.Folders],
+            Arguments = config.Folders.Count > 0 ? [.. config.Folders] : [],
             IsEnabled = true,
             IsBuiltIn = true,
             Description = serverKey switch
             {
                 FilesystemKey => "Secure filesystem operations within allowed directories.",
                 RagKey => "Index and search local documents.",
+                OutboxKey => "Send messages via Slack, Telegram, SMTP, and KakaoTalk.",
                 _ => "",
             },
         };
@@ -406,6 +422,12 @@ public static class BuiltInServerHelper
             ? def.DisplayName
             : serverKey;
     }
+
+    /// <summary>
+    /// Returns <see langword="true"/> if the built-in server is shared across all tabs (not per-tab).
+    /// Shared servers do not require folder arguments.
+    /// </summary>
+    public static bool IsSharedServer(string serverKey) => serverKey == OutboxKey;
 
     /// <summary>
     /// Returns <see langword="true"/> if the given command matches a built-in server executable.

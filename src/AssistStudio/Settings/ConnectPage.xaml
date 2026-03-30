@@ -40,6 +40,9 @@
                 <!-- 2. Knowledge Archive (RAG) — info-only placeholder, same as Filesystem -->
                 <controls:McpServerCard x:Name="RagCard" />
 
+                <!-- 3. Outbox — shared instance, no folders -->
+                <controls:McpServerCard x:Name="OutboxCard" />
+
                 </StackPanel> <!-- end built-in servers -->
 
                 <!-- Action buttons (user-configured servers) -->

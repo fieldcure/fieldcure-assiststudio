@@ -838,6 +838,12 @@
   <data name="Profiles_KnowledgeHint" xml:space="preserve">
     <value>대화에서 지식보관소 폴더를 추가하세요.</value>
   </data>
+  <data name="Profiles_OutboxHint" xml:space="preserve">
+    <value>Slack, Telegram, 이메일, KakaoTalk으로 메시지를 보냅니다.</value>
+  </data>
+  <data name="Connect_OutboxDescription" xml:space="preserve">
+    <value>AI와의 대화에서 메시지 채널을 추가하고 메시지를 보냅니다.</value>
+  </data>
   <data name="Embedding_OllamaNotRunning" xml:space="preserve">
     <value>Ollama가 실행되지 않습니다. ollama serve 명령으로 시작하세요.</value>
   </data>

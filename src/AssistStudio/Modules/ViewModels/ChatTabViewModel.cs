@@ -1177,6 +1177,16 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             });
         }
 
+        var outboxId = $"builtin_{BuiltInServerHelper.OutboxKey}";
+        if (enabledSet.Contains(outboxId))
+        {
+            tools.Add(new ServerPlaceholderTool
+            {
+                Name = outboxId,
+                DisplayName = BuiltInServerHelper.OutboxDisplayName,
+            });
+        }
+
         // External servers: from McpRegistry (same source as ProfilesPage)
         foreach (var conn in App.McpRegistry.Connections.Where(c => !c.Config.IsBuiltIn))
         {
@@ -1280,6 +1290,15 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         {
             foreach (var ragTool in _ragConnection.Tools)
                 result.Add(ragTool);
+        }
+
+        // 4.5 Outbox tools — shared connection from McpRegistry
+        var outboxConn = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.OutboxKey);
+        if (outboxConn?.IsConnected == true
+            && connectedIds.Contains(outboxConn.Config.Id))
+        {
+            foreach (var tool in outboxConn.Tools)
+                result.Add(tool);
         }
 
         // 5. Update McpTools for ToolCallExecutor (search_tools-discovered tools)

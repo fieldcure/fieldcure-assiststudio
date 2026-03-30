@@ -515,10 +515,10 @@ public sealed partial class ProfilesPage : Page
         }
 
         // --- Servers ---
-        // Build server list: always include Workspace (filesystem), plus user-configured servers
+        // Build server list: always include built-in servers, plus user-configured servers
         var filesystemId = $"builtin_{BuiltInServerHelper.FilesystemKey}";
         var userServers = App.McpRegistry.Connections
-            .Where(c => !c.Config.Id.StartsWith($"builtin_{BuiltInServerHelper.FilesystemKey}", StringComparison.Ordinal))
+            .Where(c => !c.Config.IsBuiltIn)
             .ToList();
         var hasServers = userServers.Count > 0;
 
@@ -600,6 +600,42 @@ public sealed partial class ProfilesPage : Page
             ToolsPanel.Children.Add(new TextBlock
             {
                 Text = loader.GetString("Profiles_KnowledgeHint"),
+                Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                TextWrapping = TextWrapping.Wrap,
+                Opacity = 0.5,
+                Margin = new Thickness(28, 0, 0, 4),
+            });
+        }
+
+        // Outbox — shared instance, always shown
+        {
+            var outboxId = $"builtin_{BuiltInServerHelper.OutboxKey}";
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+
+            var dot = new Microsoft.UI.Xaml.Shapes.Ellipse
+            {
+                Width = 6, Height = 6,
+                Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            row.Children.Add(dot);
+
+            var cb = new CheckBox
+            {
+                Content = BuiltInServerHelper.OutboxDisplayName,
+                Tag = outboxId,
+                IsChecked = enabledSet.Contains(outboxId),
+                MinWidth = 0,
+            };
+            cb.Checked += OnServerChecked;
+            cb.Unchecked += OnServerChecked;
+            row.Children.Add(cb);
+
+            ToolsPanel.Children.Add(row);
+
+            ToolsPanel.Children.Add(new TextBlock
+            {
+                Text = loader.GetString("Profiles_OutboxHint"),
                 Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
                 TextWrapping = TextWrapping.Wrap,
                 Opacity = 0.5,

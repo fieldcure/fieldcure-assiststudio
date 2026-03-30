@@ -291,10 +291,26 @@ public sealed partial class ConnectPage : Page
         };
         RagCard.Connection = new McpServerConnection(ragPlaceholder);
 
+        // Outbox card — shared instance, no folders
+        var outboxPrefix = $"builtin_{BuiltInServerHelper.OutboxKey}";
+        var outboxConn = _registry.GetBuiltInConnection(BuiltInServerHelper.OutboxKey);
+        var outboxPlaceholder = new McpServerConfig
+        {
+            Id = outboxPrefix,
+            Name = BuiltInServerHelper.OutboxDisplayName,
+            TransportType = McpTransportType.Stdio,
+            Command = BuiltInServerHelper.GetServerExePath(BuiltInServerHelper.OutboxKey),
+            IsBuiltIn = true,
+            IsEnabled = false,
+            Description = outboxConn?.IsConnected == true
+                ? $"{outboxConn.Tools.Count} {_loader.GetString("Connect_Tools")}"
+                : _loader.GetString("Connect_OutboxDescription"),
+        };
+        OutboxCard.Connection = new McpServerConnection(outboxPlaceholder);
+
         // User-configured servers only (exclude all built-in connections)
         var displayList = _registry.Connections
-            .Where(c => !c.Config.Id.StartsWith(fsPrefix, StringComparison.Ordinal)
-                && !c.Config.Id.StartsWith(ragPrefix, StringComparison.Ordinal))
+            .Where(c => !c.Config.IsBuiltIn)
             .ToList();
 
         ServerListControl.ItemsSource = displayList;
