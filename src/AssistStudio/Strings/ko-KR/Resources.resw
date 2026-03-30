@@ -164,8 +164,17 @@
   <data name="Memory_Empty.Text" xml:space="preserve">
     <value>저장된 메모리가 없습니다.</value>
   </data>
+  <data name="Memory_EmptyHint.Text" xml:space="preserve">
+    <value>대화 중 "이것을 기억해줘"라고 말하면 AI가 기억합니다.</value>
+  </data>
   <data name="Memory_Counter" xml:space="preserve">
     <value>{0} / {1}개</value>
+  </data>
+  <data name="Memory_DeleteTooltip" xml:space="preserve">
+    <value>삭제</value>
+  </data>
+  <data name="Memory_Hint.Text" xml:space="preserve">
+    <value>AI가 대화에서 기억한 정보입니다. 대화 중 기억하거나 잊도록 요청할 수 있습니다.</value>
   </data>
   <!-- Personalization Page -->
   <data name="Personalization_Title.Text" xml:space="preserve">

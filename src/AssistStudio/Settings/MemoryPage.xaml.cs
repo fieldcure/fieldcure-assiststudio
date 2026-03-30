@@ -38,44 +38,60 @@ public sealed partial class MemoryPage : Page
     /// <summary>
     /// Rebuilds the memory list UI from the current MemoryStore state.
     /// </summary>
+    private string _deleteTooltip = "Delete";
+
     private void RefreshList()
     {
         var entries = App.MemoryStore.GetAll();
         MemoryList.ItemsSource = null;
 
+        try
+        {
+            var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
+            _deleteTooltip = loader.GetString("Memory_DeleteTooltip") is { Length: > 0 } s ? s : "Delete";
+        }
+        catch { /* fallback */ }
+
         if (entries.Count == 0)
         {
-            EmptyText.Visibility = Visibility.Visible;
-            ClearAllButton.IsEnabled = false;
+            EmptyPanel.Visibility = Visibility.Visible;
+            HintText.Visibility = Visibility.Collapsed;
+            HintDivider.Visibility = Visibility.Collapsed;
+            ClearAllButton.Visibility = Visibility.Collapsed;
             CounterText.Text = "";
             return;
         }
 
-        EmptyText.Visibility = Visibility.Collapsed;
-        ClearAllButton.IsEnabled = true;
+        EmptyPanel.Visibility = Visibility.Collapsed;
+        HintText.Visibility = Visibility.Visible;
+        HintDivider.Visibility = Visibility.Visible;
+        ClearAllButton.Visibility = Visibility.Visible;
+        CounterText.Text = $"{entries.Count}/{MemoryStore.MaxEntries}";
 
-        // Load localized counter format
-        string counterFormat;
-        try
-        {
-            var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
-            counterFormat = loader.GetString("Memory_Counter");
-            if (string.IsNullOrEmpty(counterFormat)) counterFormat = "{0} / {1} entries";
-        }
-        catch
-        {
-            counterFormat = "{0} / {1} entries";
-        }
-        CounterText.Text = string.Format(counterFormat, entries.Count, MemoryStore.MaxEntries);
-
-        // Build item panels
-        var items = new List<StackPanel>();
+        // Build item list with dividers between entries
+        var items = new List<FrameworkElement>();
+        var isFirst = true;
         foreach (var entry in entries)
         {
-            var panel = new StackPanel
+            if (!isFirst)
             {
-                Orientation = Orientation.Horizontal,
-                Spacing = 8,
+                items.Add(new Microsoft.UI.Xaml.Shapes.Rectangle
+                {
+                    Height = 1,
+                    Fill = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["DividerStrokeColorDefaultBrush"],
+                });
+            }
+            isFirst = false;
+
+            // Entry row
+            var grid = new Grid
+            {
+                Padding = new Thickness(0, 10, 0, 10),
+                ColumnDefinitions =
+                {
+                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
+                    new ColumnDefinition { Width = GridLength.Auto },
+                },
             };
 
             var text = new TextBlock
@@ -84,24 +100,32 @@ public sealed partial class MemoryPage : Page
                 TextWrapping = TextWrapping.Wrap,
                 VerticalAlignment = VerticalAlignment.Center,
                 Style = (Style)Application.Current.Resources["BodyTextBlockStyle"],
-                MaxWidth = 500,
             };
-            panel.Children.Add(text);
+            Grid.SetColumn(text, 0);
+            grid.Children.Add(text);
 
             var deleteButton = new Button
             {
-                Content = "\uE711", // X icon
-                FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Segoe MDL2 Assets"),
-                Padding = new Thickness(4),
+                Content = new FontIcon { Glyph = "\uE711", FontSize = 12 },
+                Padding = new Thickness(6),
                 MinWidth = 0,
                 MinHeight = 0,
                 Tag = entry.Id,
-                VerticalAlignment = VerticalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Top,
+                Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
+                Opacity = 0,
             };
+            ToolTipService.SetToolTip(deleteButton, _deleteTooltip);
+            ToolTipService.SetPlacement(deleteButton, Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse);
             deleteButton.Click += OnDeleteClicked;
-            panel.Children.Add(deleteButton);
+            Grid.SetColumn(deleteButton, 1);
+            grid.Children.Add(deleteButton);
 
-            items.Add(panel);
+            // Show/hide delete button on hover
+            grid.PointerEntered += (_, _) => deleteButton.Opacity = 1;
+            grid.PointerExited += (_, _) => deleteButton.Opacity = 0;
+
+            items.Add(grid);
         }
 
         MemoryList.ItemsSource = items;

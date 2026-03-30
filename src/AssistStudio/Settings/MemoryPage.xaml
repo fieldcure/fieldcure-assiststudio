@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Page
     x:Class="AssistStudio.Settings.MemoryPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -13,43 +13,62 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Header -->
+        <!-- Header: title + counter badge + Clear All -->
         <Grid Grid.Row="0" Padding="20,14,20,14"
               BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
               BorderThickness="0,0,0,1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
             <TextBlock x:Uid="Memory_Title" Text="Memory"
+                       Grid.Column="0"
                        Style="{StaticResource TitleTextBlockStyle}" />
+
+            <TextBlock x:Name="CounterText" Grid.Column="2"
+                       Style="{StaticResource CaptionTextBlockStyle}"
+                       Opacity="0.6"
+                       VerticalAlignment="Center"
+                       Margin="0,0,12,0" />
+
+            <Button x:Name="ClearAllButton" Grid.Column="3"
+                    x:Uid="Memory_ClearAll" Content="Clear All"
+                    Click="OnClearAllClicked" />
         </Grid>
 
         <!-- Content -->
         <ScrollViewer Grid.Row="1" Padding="20,16">
-            <StackPanel Spacing="12" Padding="0,0,0,24">
-
-                <!-- Empty state -->
-                <TextBlock x:Name="EmptyText" x:Uid="Memory_Empty" Text="No memories saved yet."
-                           Visibility="Collapsed"
-                           Style="{StaticResource BodyTextBlockStyle}"
-                           Opacity="0.6" />
+            <StackPanel Spacing="0" Padding="0,0,0,24">
 
                 <!-- Memory list -->
                 <ItemsRepeater x:Name="MemoryList" />
 
-                <!-- Footer: counter + Clear All -->
-                <Grid Margin="0,8,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
+                <!-- Divider before hint -->
+                <Rectangle x:Name="HintDivider" Visibility="Collapsed"
+                           Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
 
-                    <TextBlock x:Name="CounterText" Grid.Column="0"
+                <!-- Hint text (shown when entries exist) -->
+                <TextBlock x:Name="HintText" x:Uid="Memory_Hint"
+                           Visibility="Collapsed"
+                           Style="{StaticResource CaptionTextBlockStyle}"
+                           TextWrapping="Wrap"
+                           Opacity="0.5"
+                           Margin="0,12,0,0" />
+
+                <!-- Empty state (shown when no entries) -->
+                <StackPanel x:Name="EmptyPanel" Visibility="Collapsed" Spacing="4"
+                            Margin="0,8,0,0">
+                    <TextBlock x:Uid="Memory_Empty"
+                               Style="{StaticResource BodyTextBlockStyle}"
+                               Opacity="0.6" />
+                    <TextBlock x:Uid="Memory_EmptyHint"
                                Style="{StaticResource CaptionTextBlockStyle}"
-                               Opacity="0.6"
-                               VerticalAlignment="Center" />
-
-                    <Button x:Name="ClearAllButton" Grid.Column="1"
-                            x:Uid="Memory_ClearAll" Content="Clear All"
-                            Click="OnClearAllClicked" />
-                </Grid>
+                               TextWrapping="Wrap"
+                               Opacity="0.5" />
+                </StackPanel>
 
             </StackPanel>
         </ScrollViewer>

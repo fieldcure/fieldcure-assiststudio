@@ -164,8 +164,17 @@
   <data name="Memory_Empty.Text" xml:space="preserve">
     <value>No memories saved yet.</value>
   </data>
+  <data name="Memory_EmptyHint.Text" xml:space="preserve">
+    <value>Say "remember this" during a conversation and the AI will save it.</value>
+  </data>
   <data name="Memory_Counter" xml:space="preserve">
     <value>{0} / {1} entries</value>
+  </data>
+  <data name="Memory_DeleteTooltip" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Memory_Hint.Text" xml:space="preserve">
+    <value>Memories are saved during conversations. Ask the AI to remember or forget information.</value>
   </data>
   <!-- Personalization Page -->
   <data name="Personalization_Title.Text" xml:space="preserve">
