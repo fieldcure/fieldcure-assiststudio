@@ -102,7 +102,7 @@
                               SelectionChanged="OnModelChanged" />
 
                     <!-- Tools & Servers -->
-                    <StackPanel Spacing="4">
+                    <StackPanel Spacing="8">
                         <TextBlock x:Uid="Profiles_DesiredTools" Text="Tools &amp; Servers"
                                    Style="{StaticResource BodyStrongTextBlockStyle}" />
                         <StackPanel x:Name="ToolsPanel" Spacing="4" />
