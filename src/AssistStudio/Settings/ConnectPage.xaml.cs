@@ -302,11 +302,24 @@ public sealed partial class ConnectPage : Page
             Command = BuiltInServerHelper.GetServerExePath(BuiltInServerHelper.OutboxKey),
             IsBuiltIn = true,
             IsEnabled = false,
-            Description = outboxConn?.IsConnected == true
-                ? $"{outboxConn.Tools.Count} {_loader.GetString("Connect_Tools")}"
-                : _loader.GetString("Connect_OutboxDescription"),
+            Description = _loader.GetString("Connect_OutboxDescription"),
         };
         OutboxCard.Connection = new McpServerConnection(outboxPlaceholder);
+
+        // Runner card — shared instance, no folders
+        var runnerPrefix = $"builtin_{BuiltInServerHelper.RunnerKey}";
+        var runnerConn = _registry.GetBuiltInConnection(BuiltInServerHelper.RunnerKey);
+        var runnerPlaceholder = new McpServerConfig
+        {
+            Id = runnerPrefix,
+            Name = BuiltInServerHelper.RunnerDisplayName,
+            TransportType = McpTransportType.Stdio,
+            Command = BuiltInServerHelper.GetServerExePath(BuiltInServerHelper.RunnerKey),
+            IsBuiltIn = true,
+            IsEnabled = false,
+            Description = _loader.GetString("Connect_RunnerDescription"),
+        };
+        RunnerCard.Connection = new McpServerConnection(runnerPlaceholder);
 
         // User-configured servers only (exclude all built-in connections)
         var displayList = _registry.Connections

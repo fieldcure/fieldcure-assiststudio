@@ -1187,6 +1187,16 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             });
         }
 
+        var runnerId = $"builtin_{BuiltInServerHelper.RunnerKey}";
+        if (enabledSet.Contains(runnerId))
+        {
+            tools.Add(new ServerPlaceholderTool
+            {
+                Name = runnerId,
+                DisplayName = BuiltInServerHelper.RunnerDisplayName,
+            });
+        }
+
         // External servers: from McpRegistry (same source as ProfilesPage)
         foreach (var conn in App.McpRegistry.Connections.Where(c => !c.Config.IsBuiltIn))
         {
@@ -1319,6 +1329,15 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             && connectedIds.Contains(outboxConn.Config.Id))
         {
             foreach (var tool in outboxConn.Tools)
+                result.Add(tool);
+        }
+
+        // 4.6 Runner tools — shared connection from McpRegistry
+        var runnerConn = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.RunnerKey);
+        if (runnerConn?.IsConnected == true
+            && connectedIds.Contains(runnerConn.Config.Id))
+        {
+            foreach (var tool in runnerConn.Tools)
                 result.Add(tool);
         }
 

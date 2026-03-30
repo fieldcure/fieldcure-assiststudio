@@ -44,7 +44,7 @@
                 </NavigationViewItem>
                 <NavigationViewItem x:Uid="Nav_Memory" Content="Memory" Tag="Memory">
                     <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE7E8;" />
+                        <FontIcon Glyph="&#xE77C;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
                 <NavigationViewItem x:Uid="Nav_Personalization" Content="Personalization" Tag="Personalization">

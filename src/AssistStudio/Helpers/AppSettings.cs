@@ -229,7 +229,7 @@ public static class AppSettings
         {
             Name = "General",
             IsBuiltIn = true,
-            EnabledServers = ["essentials", "memory", "builtin_filesystem", "builtin_outbox"],
+            EnabledServers = ["essentials", "builtin_filesystem", "memory", "builtin_outbox", "builtin_runner"],
             SystemPrompt =
                 "You are a helpful assistant. Provide clear, well-structured responses. " +
                 "Explain step by step when needed. If you're unsure about something, say so honestly. " +
@@ -242,7 +242,7 @@ public static class AppSettings
         {
             Name = "Analytical",
             IsBuiltIn = true,
-            EnabledServers = ["essentials", "memory", "builtin_filesystem"],
+            EnabledServers = ["essentials", "builtin_filesystem", "memory", "builtin_runner"],
             SystemPrompt =
                 "You are a concise, direct assistant focused on code and data analysis. " +
                 "Prioritize code readability and performance. Use Markdown formatting. " +
@@ -265,7 +265,7 @@ public static class AppSettings
         {
             Name = "Task Planner",
             IsBuiltIn = true,
-            EnabledServers = ["essentials", "memory", "builtin_filesystem", "builtin_outbox"],
+            EnabledServers = ["essentials", "builtin_filesystem", "memory", "builtin_outbox", "builtin_runner"],
             SystemPrompt =
                 "You are a task planner that breaks down complex requests into steps and executes them using available tools. " +
                 "For complex or multi-step tasks, present a numbered plan and wait for the user to approve before proceeding. " +
@@ -280,7 +280,7 @@ public static class AppSettings
         {
             Name = "Knowledge Base",
             IsBuiltIn = true,
-            EnabledServers = ["essentials", "memory", "builtin_rag", "builtin_filesystem"],
+            EnabledServers = ["essentials", "builtin_filesystem", "builtin_rag", "memory", "builtin_runner"],
             SystemPrompt =
                 "You are a helpful assistant with access to a knowledge archive. " +
                 "When the question may relate to indexed content, search the archive first using search_documents. " +

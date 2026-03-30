@@ -29,6 +29,7 @@ public static class BuiltInServerHelper
         [FilesystemKey] = ("FieldCure.Mcp.Filesystem", "0.5.0"),
         [RagKey] = ("FieldCure.Mcp.Rag", "0.10.1"),
         [OutboxKey] = ("FieldCure.Mcp.Outbox", "0.2.0"),
+        [RunnerKey] = ("FieldCure.AssistStudio.Runner", "0.1.0"),
     };
 
     /// <summary>NuGet package ID for the Filesystem server.</summary>
@@ -64,6 +65,12 @@ public static class BuiltInServerHelper
     /// <summary>Display name for the Outbox server.</summary>
     public const string OutboxDisplayName = "Outbox";
 
+    /// <summary>Config dictionary key for the Runner server.</summary>
+    public const string RunnerKey = "runner";
+
+    /// <summary>Display name for the Runner server.</summary>
+    public const string RunnerDisplayName = "Runner";
+
     /// <summary>
     /// Tool names from the built-in Filesystem MCP server that are read-only
     /// and do not require user confirmation.
@@ -77,6 +84,8 @@ public static class BuiltInServerHelper
         "search_documents", "get_document_chunk",
         // Outbox — add_channel opens a subprocess console for credential input
         "list_channels", "add_channel",
+        // Runner
+        "list_tasks", "get_execution_status", "get_task_history",
     ];
 
     /// <summary>
@@ -101,6 +110,7 @@ public static class BuiltInServerHelper
         [FilesystemKey] = ("fieldcure-mcp-filesystem", FilesystemDisplayName),
         [RagKey] = ("fieldcure-mcp-rag", RagDisplayName),
         [OutboxKey] = ("fieldcure-mcp-outbox", OutboxDisplayName),
+        [RunnerKey] = ("assiststudio-runner", RunnerDisplayName),
     };
 
     #endregion
@@ -122,6 +132,7 @@ public static class BuiltInServerHelper
         [FilesystemKey] = new BuiltInServerConfig { IsEnabled = false, Folders = [] },
         [RagKey] = new BuiltInServerConfig { IsEnabled = false, Folders = [] },
         [OutboxKey] = new BuiltInServerConfig { IsEnabled = true, Folders = [] },
+        [RunnerKey] = new BuiltInServerConfig { IsEnabled = true, Folders = [] },
     };
 
     /// <summary>
@@ -173,9 +184,14 @@ public static class BuiltInServerHelper
                 FilesystemKey => "Secure filesystem operations within allowed directories.",
                 RagKey => "Index and search local documents.",
                 OutboxKey => "Send messages via Slack, Telegram, SMTP, and KakaoTalk.",
+                RunnerKey => "Schedule and run headless LLM tasks.",
                 _ => "",
             },
         };
+
+        // Runner requires "serve" subcommand for MCP stdio mode
+        if (serverKey == RunnerKey)
+            mcpConfig.Arguments = ["serve"];
 
         // Load environment variables from PasswordVault for built-in servers (e.g., RAG embedding config)
         if (config.EnvironmentVariableKeys is { Count: > 0 } keys)
@@ -235,14 +251,14 @@ public static class BuiltInServerHelper
 
                 // Update needed
                 LoggingService.LogInfo($"[BuiltIn] Updating {packageId}: v{installed} → v{requiredVersion}");
-                NotifyAction(packageId, "BuiltIn_Updating", installed?.ToString() ?? "?", requiredVersion);
+                NotifyAction(packageId, "BuiltIn_Updating", packageId, installed?.ToString() ?? "?", requiredVersion);
                 try
                 {
                     var result = await RunDotnetToolAsync("update", packageId, ToolInstallPath);
                     if (result == 0)
                     {
                         LoggingService.LogInfo($"[BuiltIn] {packageId} updated successfully");
-                        NotifyAction(packageId, "BuiltIn_Updated", installed?.ToString() ?? "?", requiredVersion);
+                        NotifyAction(packageId, "BuiltIn_Updated", packageId, installed?.ToString() ?? "?", requiredVersion);
                     }
                     else
                     {
@@ -260,7 +276,7 @@ public static class BuiltInServerHelper
 
             // Fresh install
             LoggingService.LogInfo($"[BuiltIn] Installing {packageId} v{requiredVersion}");
-            NotifyAction(packageId, "BuiltIn_Installing", requiredVersion);
+            NotifyAction(packageId, "BuiltIn_Installing", packageId, requiredVersion);
             try
             {
                 var result = await RunDotnetToolAsync("install", packageId, ToolInstallPath);
@@ -427,7 +443,7 @@ public static class BuiltInServerHelper
     /// Returns <see langword="true"/> if the built-in server is shared across all tabs (not per-tab).
     /// Shared servers do not require folder arguments.
     /// </summary>
-    public static bool IsSharedServer(string serverKey) => serverKey == OutboxKey;
+    public static bool IsSharedServer(string serverKey) => serverKey is OutboxKey or RunnerKey;
 
     /// <summary>
     /// Returns <see langword="true"/> if the given command matches a built-in server executable.

@@ -43,6 +43,9 @@
                 <!-- 3. Outbox — shared instance, no folders -->
                 <controls:McpServerCard x:Name="OutboxCard" />
 
+                <!-- 4. Runner — shared instance, no folders -->
+                <controls:McpServerCard x:Name="RunnerCard" />
+
                 </StackPanel> <!-- end built-in servers -->
 
                 <!-- Action buttons (user-configured servers) -->

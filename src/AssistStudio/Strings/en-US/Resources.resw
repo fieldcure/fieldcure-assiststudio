@@ -662,13 +662,13 @@
     <value>Add workspace folders in a conversation to start using it.</value>
   </data>
   <data name="BuiltIn_Installing" xml:space="preserve">
-    <value>Installing FieldCure.Mcp.Filesystem v{0}…</value>
+    <value>Installing {0} v{1}…</value>
   </data>
   <data name="BuiltIn_Updating" xml:space="preserve">
-    <value>Updating FieldCure.Mcp.Filesystem v{0} → v{1}…</value>
+    <value>Updating {0} v{1} → v{2}…</value>
   </data>
   <data name="BuiltIn_Updated" xml:space="preserve">
-    <value>FieldCure.Mcp.Filesystem updated v{0} → v{1}</value>
+    <value>{0} updated v{1} → v{2}</value>
   </data>
   <data name="BuiltIn_InstallFailed" xml:space="preserve">
     <value>Failed to install {0}</value>
@@ -843,6 +843,12 @@
   </data>
   <data name="Connect_OutboxDescription" xml:space="preserve">
     <value>Add messaging channels and send messages through AI conversations.</value>
+  </data>
+  <data name="Profiles_RunnerHint" xml:space="preserve">
+    <value>Schedule AI tasks to run automatically.</value>
+  </data>
+  <data name="Connect_RunnerDescription" xml:space="preserve">
+    <value>Schedule and run AI tasks automatically on a timer.</value>
   </data>
   <data name="Embedding_OllamaNotRunning" xml:space="preserve">
     <value>Ollama is not running. Start with: ollama serve</value>

@@ -466,8 +466,28 @@ public sealed partial class ProfilesPage : Page
         ToolsPanel.Children.Clear();
         var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
 
-        // --- Essentials virtual server ---
+        // Build server list: always include built-in servers, plus user-configured servers
+        var filesystemId = $"builtin_{BuiltInServerHelper.FilesystemKey}";
+        var userServers = App.McpRegistry.Connections
+            .Where(c => !c.Config.IsBuiltIn)
+            .ToList();
+        var hasServers = userServers.Count > 0;
+        var enabledSet = profile.EnabledServers.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        // --- Built-in servers (order: Essentials → Filesystem → RAG → Memory → Outbox → Runner) ---
+
+        // Essentials
         {
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+
+            var dot = new Microsoft.UI.Xaml.Shapes.Ellipse
+            {
+                Width = 6, Height = 6,
+                Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            row.Children.Add(dot);
+
             var cb = new CheckBox
             {
                 Content = loader.GetString("Profiles_EssentialsLabel") is { Length: > 0 } l
@@ -478,7 +498,9 @@ public sealed partial class ProfilesPage : Page
             };
             cb.Checked += OnServerChecked;
             cb.Unchecked += OnServerChecked;
-            ToolsPanel.Children.Add(cb);
+            row.Children.Add(cb);
+
+            ToolsPanel.Children.Add(row);
 
             ToolsPanel.Children.Add(new TextBlock
             {
@@ -490,50 +512,7 @@ public sealed partial class ProfilesPage : Page
             });
         }
 
-        // --- Memory virtual server ---
-        {
-            var cb = new CheckBox
-            {
-                Content = loader.GetString("Profiles_MemoryLabel") is { Length: > 0 } ml
-                    ? ml : BuiltInServerHelper.MemoryDisplayName,
-                Tag = BuiltInServerHelper.MemoryKey,
-                IsChecked = profile.EnabledServers.Contains(BuiltInServerHelper.MemoryKey),
-                MinWidth = 0,
-            };
-            cb.Checked += OnServerChecked;
-            cb.Unchecked += OnServerChecked;
-            ToolsPanel.Children.Add(cb);
-
-            ToolsPanel.Children.Add(new TextBlock
-            {
-                Text = loader.GetString("Profiles_MemoryHint"),
-                Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-                TextWrapping = TextWrapping.Wrap,
-                Opacity = 0.5,
-                Margin = new Thickness(28, 0, 0, 4),
-            });
-        }
-
-        // --- Servers ---
-        // Build server list: always include built-in servers, plus user-configured servers
-        var filesystemId = $"builtin_{BuiltInServerHelper.FilesystemKey}";
-        var userServers = App.McpRegistry.Connections
-            .Where(c => !c.Config.IsBuiltIn)
-            .ToList();
-        var hasServers = userServers.Count > 0;
-
-        // Separator (always shown — filesystem is always present)
-        ToolsPanel.Children.Add(new Microsoft.UI.Xaml.Shapes.Rectangle
-        {
-            Height = 1,
-            Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
-            Opacity = 0.3,
-            Margin = new Thickness(0, 4, 0, 4),
-        });
-
-        var enabledSet = profile.EnabledServers.ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        // Workspace (filesystem) — always shown, not dependent on registry
+        // Workspace (Filesystem)
         {
             var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
 
@@ -571,7 +550,7 @@ public sealed partial class ProfilesPage : Page
             });
         }
 
-        // Knowledge Archive (RAG) — always shown, same pattern as Workspace
+        // Knowledge Archive (RAG)
         {
             var ragId = $"builtin_{BuiltInServerHelper.RagKey}";
             var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
@@ -607,7 +586,43 @@ public sealed partial class ProfilesPage : Page
             });
         }
 
-        // Outbox — shared instance, always shown
+        // Memory
+        {
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+
+            var dot = new Microsoft.UI.Xaml.Shapes.Ellipse
+            {
+                Width = 6, Height = 6,
+                Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            row.Children.Add(dot);
+
+            var cb = new CheckBox
+            {
+                Content = loader.GetString("Profiles_MemoryLabel") is { Length: > 0 } ml
+                    ? ml : BuiltInServerHelper.MemoryDisplayName,
+                Tag = BuiltInServerHelper.MemoryKey,
+                IsChecked = profile.EnabledServers.Contains(BuiltInServerHelper.MemoryKey),
+                MinWidth = 0,
+            };
+            cb.Checked += OnServerChecked;
+            cb.Unchecked += OnServerChecked;
+            row.Children.Add(cb);
+
+            ToolsPanel.Children.Add(row);
+
+            ToolsPanel.Children.Add(new TextBlock
+            {
+                Text = loader.GetString("Profiles_MemoryHint"),
+                Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                TextWrapping = TextWrapping.Wrap,
+                Opacity = 0.5,
+                Margin = new Thickness(28, 0, 0, 4),
+            });
+        }
+
+        // Outbox
         {
             var outboxId = $"builtin_{BuiltInServerHelper.OutboxKey}";
             var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
@@ -640,6 +655,54 @@ public sealed partial class ProfilesPage : Page
                 TextWrapping = TextWrapping.Wrap,
                 Opacity = 0.5,
                 Margin = new Thickness(28, 0, 0, 4),
+            });
+        }
+
+        // Runner
+        {
+            var runnerId = $"builtin_{BuiltInServerHelper.RunnerKey}";
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+
+            var dot = new Microsoft.UI.Xaml.Shapes.Ellipse
+            {
+                Width = 6, Height = 6,
+                Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            row.Children.Add(dot);
+
+            var cb = new CheckBox
+            {
+                Content = BuiltInServerHelper.RunnerDisplayName,
+                Tag = runnerId,
+                IsChecked = enabledSet.Contains(runnerId),
+                MinWidth = 0,
+            };
+            cb.Checked += OnServerChecked;
+            cb.Unchecked += OnServerChecked;
+            row.Children.Add(cb);
+
+            ToolsPanel.Children.Add(row);
+
+            ToolsPanel.Children.Add(new TextBlock
+            {
+                Text = loader.GetString("Profiles_RunnerHint"),
+                Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                TextWrapping = TextWrapping.Wrap,
+                Opacity = 0.5,
+                Margin = new Thickness(28, 0, 0, 4),
+            });
+        }
+
+        // Separator between built-in and user-configured servers
+        if (hasServers)
+        {
+            ToolsPanel.Children.Add(new Microsoft.UI.Xaml.Shapes.Rectangle
+            {
+                Height = 1,
+                Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
+                Opacity = 0.3,
+                Margin = new Thickness(0, 4, 0, 4),
             });
         }
 
