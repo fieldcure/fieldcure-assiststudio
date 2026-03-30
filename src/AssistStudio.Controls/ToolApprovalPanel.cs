@@ -14,12 +14,12 @@ public sealed partial class ToolApprovalPanel : Control
     /// <summary>Identifies the <see cref="ToolName"/> dependency property.</summary>
     public static readonly DependencyProperty ToolNameProperty =
         DependencyProperty.Register(nameof(ToolName), typeof(string), typeof(ToolApprovalPanel),
-            new PropertyMetadata(string.Empty));
+            new PropertyMetadata(string.Empty, OnToolNameChanged));
 
     /// <summary>Identifies the <see cref="ToolDisplayName"/> dependency property.</summary>
     public static readonly DependencyProperty ToolDisplayNameProperty =
         DependencyProperty.Register(nameof(ToolDisplayName), typeof(string), typeof(ToolApprovalPanel),
-            new PropertyMetadata(string.Empty));
+            new PropertyMetadata(string.Empty, OnToolNameChanged));
 
     /// <summary>Identifies the <see cref="Arguments"/> dependency property.</summary>
     public static readonly DependencyProperty ArgumentsProperty =
@@ -197,6 +197,13 @@ public sealed partial class ToolApprovalPanel : Control
         {
             return json;
         }
+    }
+
+    /// <summary>Callback when <see cref="ToolName"/> or <see cref="ToolDisplayName"/> changes.</summary>
+    private static void OnToolNameChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ToolApprovalPanel panel)
+            panel.UpdatePromptText();
     }
 
     /// <summary>Callback when <see cref="Arguments"/> property changes.</summary>
