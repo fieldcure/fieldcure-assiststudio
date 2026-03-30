@@ -229,11 +229,13 @@ public static class AppSettings
         {
             Name = "General",
             IsBuiltIn = true,
-            EnabledServers = ["essentials", "memory", "builtin_filesystem"],
+            EnabledServers = ["essentials", "memory", "builtin_filesystem", "builtin_outbox"],
             SystemPrompt =
                 "You are a helpful assistant. Provide clear, well-structured responses. " +
                 "Explain step by step when needed. If you're unsure about something, say so honestly. " +
-                "You have access to tools — use them proactively when they would help answer the user's question."
+                "You have access to tools — use them proactively when they would help answer the user's question. " +
+                "You can send messages through configured channels (Slack, Telegram, Email, KakaoTalk) " +
+                "using Outbox tools. Use list_channels to check available channels."
         },
         // --- Code & data focused, aggressive tool use ---
         new()
@@ -263,12 +265,14 @@ public static class AppSettings
         {
             Name = "Task Planner",
             IsBuiltIn = true,
-            EnabledServers = ["essentials", "memory", "builtin_filesystem"],
+            EnabledServers = ["essentials", "memory", "builtin_filesystem", "builtin_outbox"],
             SystemPrompt =
                 "You are a task planner that breaks down complex requests into steps and executes them using available tools. " +
                 "For complex or multi-step tasks, present a numbered plan and wait for the user to approve before proceeding. " +
                 "For simple tasks, execute directly without unnecessary ceremony. " +
                 "Report progress after each major step. If a step fails, explain what went wrong and suggest alternatives. " +
+                "You can send notifications through messaging channels (Slack, Telegram, Email, KakaoTalk) " +
+                "using Outbox tools. Use list_channels to check available channels. " +
                 "Always prefer the simplest approach. Do not over-engineer."
         },
         // --- RAG-powered Q&A ---
