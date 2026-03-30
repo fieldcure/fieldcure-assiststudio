@@ -150,8 +150,12 @@ public sealed partial class McpServerCard : UserControl
 
         // Version: prefer MCP handshake, fall back to NuGet package version for built-in servers
         var version = connection.ServerVersion;
-        if (string.IsNullOrEmpty(version) && config.IsBuiltIn)
-            version = BuiltInServerHelper.GetRequiredVersion(config.Name);
+        if (string.IsNullOrEmpty(version) && config.IsBuiltIn
+            && config.Id.StartsWith("builtin_", StringComparison.Ordinal))
+        {
+            var serverKey = config.Id["builtin_".Length..];
+            version = BuiltInServerHelper.GetRequiredVersion(serverKey);
+        }
 
         if (!string.IsNullOrEmpty(version))
         {
