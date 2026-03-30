@@ -217,6 +217,10 @@ public partial class App : Application
             // Ensure built-in server tools are installed via dotnet tool
             await BuiltInServerHelper.EnsureInstalledAsync();
 
+            // Sync API keys from UWP PasswordVault to Win32 Credential Manager
+            // so external processes (Runner serve/exec) can access them
+            PasswordVaultHelper.SyncToCredentialManager();
+
             var configs = await AppSettings.LoadMcpServersAsync();
             LoggingService.LogInfo($"[App] Initializing MCP servers ({configs.Count} configs)");
             if (configs.Count > 0)

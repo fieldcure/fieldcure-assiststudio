@@ -1,4 +1,6 @@
-﻿using Windows.Security.Credentials;
+﻿using System.Runtime.InteropServices;
+using System.Text;
+using Windows.Security.Credentials;
 
 namespace AssistStudio.Helpers;
 
@@ -139,6 +141,95 @@ internal static class PasswordVaultHelper
                 result[key] = value;
         }
         return result;
+    }
+
+    #endregion
+
+    #region Credential Manager Sync
+
+    /// <summary>
+    /// Copies all API keys from UWP PasswordVault to Win32 Credential Manager
+    /// so that external processes (e.g., Runner) can access them via CredEnumerate.
+    /// Packaged app PasswordVault is isolated; this bridges the gap.
+    /// </summary>
+    public static void SyncToCredentialManager()
+    {
+        IReadOnlyList<PasswordCredential> credentials;
+        try
+        {
+            var vault = new PasswordVault();
+            credentials = vault.FindAllByResource(ResourceName);
+        }
+        catch
+        {
+            return;
+        }
+
+        foreach (var cred in credentials)
+        {
+            try
+            {
+                cred.RetrievePassword();
+                if (!string.IsNullOrEmpty(cred.Password))
+                    CredManagerWrite(cred.UserName, cred.Password);
+            }
+            catch
+            {
+                // Skip individual failures
+            }
+        }
+    }
+
+    /// <summary>
+    /// Writes a single credential to Win32 Credential Manager with the same
+    /// Resource/UserName pattern that Runner's CredentialService reads via CredEnumerate.
+    /// </summary>
+    private static void CredManagerWrite(string userName, string secret)
+    {
+        var targetName = $"{ResourceName}/{userName}";
+        var secretBytes = Encoding.Unicode.GetBytes(secret);
+
+        var credential = new CREDENTIAL
+        {
+            Type = 1, // CRED_TYPE_GENERIC
+            TargetName = targetName,
+            UserName = userName,
+            CredentialBlobSize = (uint)secretBytes.Length,
+            CredentialBlob = Marshal.AllocHGlobal(secretBytes.Length),
+            Persist = 2, // CRED_PERSIST_LOCAL_MACHINE
+        };
+
+        try
+        {
+            Marshal.Copy(secretBytes, 0, credential.CredentialBlob, secretBytes.Length);
+            CredWrite(ref credential, 0);
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(credential.CredentialBlob);
+        }
+    }
+
+#pragma warning disable SYSLIB1054
+    [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern bool CredWrite(ref CREDENTIAL credential, uint flags);
+#pragma warning restore SYSLIB1054
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct CREDENTIAL
+    {
+        public uint Flags;
+        public int Type;
+        public string TargetName;
+        public string Comment;
+        public long LastWritten;
+        public uint CredentialBlobSize;
+        public IntPtr CredentialBlob;
+        public int Persist;
+        public uint AttributeCount;
+        public IntPtr Attributes;
+        public string TargetAlias;
+        public string UserName;
     }
 
     #endregion

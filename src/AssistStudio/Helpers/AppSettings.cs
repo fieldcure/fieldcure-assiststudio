@@ -527,6 +527,9 @@ public static class AppSettings
             }
         }
 
+        // Sync to Win32 Credential Manager for external processes (Runner)
+        PasswordVaultHelper.SyncToCredentialManager();
+
         var list = presets as List<ProviderPreset> ?? [.. presets];
         var json = JsonSerializer.Serialize(list, AppJsonContext.Default.ListProviderPreset);
         Settings.Values["ProviderPresets"] = json;
