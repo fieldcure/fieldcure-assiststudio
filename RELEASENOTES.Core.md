@@ -1,5 +1,17 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Core
 
+## [0.12.0] - 2026-03-30
+
+### Added
+- MCP Outbox built-in server support — shared (folderless) server pattern with `IsSharedServer()` helper
+- On-demand connect for shared built-in servers in `PrepareToolsForSendAsync`
+
+### Fixed
+- Empty tool arguments crash for parameterless MCP tools (`list_channels`) — guard `JsonSerializer.Deserialize` and `JsonNode.Parse` with `"{}"` fallback
+- `ClaudeProvider`, `GeminiProvider`, `OllamaProvider`: same empty arguments guard in `BuildRequestBody`
+
+---
+
 ## [0.11.0] - 2026-03-29
 
 ### Added

@@ -1,4 +1,4 @@
-# FieldCure AssistStudio
+﻿# FieldCure AssistStudio
 
 **AI Chat Controls for WinUI 3 + Windows AI Workspace App — Bring Your Own Key, pick any provider.**
 
@@ -14,6 +14,10 @@ AssistStudio is two things:
 
 ![Chat conversation with Markdown and syntax highlighting](docs/chat-conversation.png)
 
+### Ecosystem
+
+![AssistStudio Ecosystem](docs/ecosystem.png)
+
 ---
 
 ## Features
@@ -24,7 +28,7 @@ AssistStudio is two things:
 - **Extended Thinking** — Per-provider thinking/reasoning support (Claude extended thinking, OpenAI o-series reasoning, Ollama think tags). Configurable via `ThinkingOverride` and `ThinkingBudget`.
 - **Conversation Branching** — Tree-based message editing with branch navigator (◀ 1/2 ▶). Edit any message to explore alternatives without losing history.
 - **MCP Integration** — Connect to MCP servers (Stdio / HTTP) to aggregate tools from any Model Context Protocol source. `McpToolAdapter` bridges MCP tools to the `IAssistTool` pipeline.
-- **Built-in MCP Servers** — Filesystem and Knowledge Archive (RAG) servers ship as built-ins, auto-installed via `dotnet tool`. Per-tab instances with MCP Roots protocol support for dynamic workspace folder updates.
+- **Built-in MCP Servers** — Filesystem, Knowledge Archive (RAG), and Outbox servers ship as built-ins, auto-installed via `dotnet tool`. Per-tab or shared instances with MCP Roots protocol support.
 - **Vision & Documents** — Attach images (PNG, JPG, WebP, GIF), PDFs, DOCX, HWPX, XLSX, and PPTX files. Document text extraction via [FieldCure.DocumentParsers](https://github.com/fieldcure/fieldcure-document-parsers). Per-provider `PdfCapability` (Auto / TextExtraction / NativePdf / PageAsImage).
 - **Tool / Function Calling** — Define tools with `IAssistTool`. `ToolCallExecutor` orchestrates execution with confirmation flow. `ToolApprovalPanel` shows inline approval UI.
 - **Token Tracking** — Input/output token counts exposed after every request.
@@ -56,8 +60,8 @@ AssistStudio is two things:
 
 ```
                         ┌──────────────────────┐
-                        │   MCP Servers         │
-                        │  (Stdio / HTTP)       │
+                        │   MCP Servers        │
+                        │  (Stdio / HTTP)      │
                         └──────────┬───────────┘
                                    │ McpToolAdapter
 ┌──────────────────────────────────┼──────────────────┐
@@ -278,8 +282,9 @@ The workspace app bundles MCP servers that are auto-installed and managed:
 
 - **Essentials** — In-process virtual server bundling built-in tools (`read_file`, `remember`, `forget`). `read_file` supports PDF, DOCX, XLSX, PPTX, HWPX via DocumentParsers.
 - **Memory** — Persistent cross-conversation memory with `remember` / `forget` tools.
-- **Filesystem** (`FieldCure.Mcp.Filesystem` v0.5.0) — Secure file operations within workspace folders. Per-tab instances with MCP Roots protocol for dynamic folder updates.
-- **Knowledge Archive** (`FieldCure.Mcp.Rag` v0.10.1) — Index and search local documents for RAG. Per-tab instances with auto-indexing on folder selection. Supports PDF, DOCX, XLSX, PPTX, HWPX.
+- **Filesystem** ([`FieldCure.Mcp.Filesystem`](https://www.nuget.org/packages/FieldCure.Mcp.Filesystem)) — Secure file operations within workspace folders. Per-tab instances with MCP Roots protocol for dynamic folder updates.
+- **Knowledge Archive** ([`FieldCure.Mcp.Rag`](https://www.nuget.org/packages/FieldCure.Mcp.Rag)) — Index and search local documents for RAG. Per-tab instances with auto-indexing on folder selection. Supports PDF, DOCX, XLSX, PPTX, HWPX.
+- **Outbox** ([`FieldCure.Mcp.Outbox`](https://www.nuget.org/packages/FieldCure.Mcp.Outbox)) — Send messages via Slack, Telegram, Email (SMTP), and KakaoTalk. Shared instance across all tabs.
 - **BuiltInServerHelper** — Auto-installs and updates built-in servers via `dotnet tool` on app startup. Read-only tools (read, list, search) skip user approval.
 
 ---
@@ -312,7 +317,7 @@ var profile = new Profile
 {
     Name = "Task Planner",
     SystemPrompt = "You are a task planner that breaks down complex requests into steps.",
-    ToolNames = ["search_files", "read_file", "write_file", "run_command"],
+    EnabledServers = ["essentials", "memory", "builtin_filesystem"],
     UseSearchTools = true  // Use meta-tool instead of sending all tool definitions
 };
 ```
@@ -334,6 +339,9 @@ var profile = new Profile
 
 | Repository | Description |
 |---|---|
+| [fieldcure-mcp-filesystem](https://github.com/fieldcure/fieldcure-mcp-filesystem) | MCP server for secure file operations within allowed directories |
+| [fieldcure-mcp-rag](https://github.com/fieldcure/fieldcure-mcp-rag) | MCP server for document indexing and hybrid search (RAG) |
+| [fieldcure-mcp-outbox](https://github.com/fieldcure/fieldcure-mcp-outbox) | MCP server for multi-channel messaging — Slack, Telegram, SMTP, KakaoTalk |
 | [fieldcure-document-parsers](https://github.com/fieldcure/fieldcure-document-parsers) | Document text extraction — DOCX, HWPX, XLSX, PPTX, PDF with math equation support |
 
 ---

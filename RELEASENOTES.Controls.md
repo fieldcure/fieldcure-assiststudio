@@ -1,5 +1,13 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Controls.WinUI
 
+## [0.12.0] - 2026-03-30
+
+### Fixed
+- `ToolApprovalPanel` prompt text not updating when tool name changes — added `PropertyChanged` callbacks for `ToolName` and `ToolDisplayName` dependency properties
+- Built-in server version fallback using `config.Name` (display name) instead of extracting key from `config.Id` — now correctly resolves NuGet package version
+
+---
+
 ## [0.11.0] - 2026-03-29
 
 ### Added

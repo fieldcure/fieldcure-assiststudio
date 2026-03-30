@@ -1,5 +1,25 @@
 ﻿# Release Notes — AssistStudio App
 
+## [0.12.0] - 2026-03-30
+
+### Added
+- **MCP Outbox** built-in server — send messages via Slack, Telegram, Email (SMTP), and KakaoTalk through AI conversations
+- Outbox card on Connect page with version display
+- Outbox checkbox in Profile page (between Knowledge Folders and external servers)
+- Outbox enabled by default in General and Task Planner profiles with system prompt guidance
+- Built-in server version display on Connect page cards (fallback to NuGet package version)
+
+### Changed
+- Built-in MCP Outbox server v0.2.0
+- User-server filters in ConnectPage and ProfilesPage now use `IsBuiltIn` flag instead of prefix matching
+
+### Fixed
+- Empty tool arguments crash for parameterless MCP tools (e.g., `list_channels`)
+- `ToolApprovalPanel` showing wrong tool name on consecutive approvals
+- ProfilesPage "Tools & Servers" section spacing increased
+
+---
+
 ## [0.11.0] - 2026-03-29
 
 ### Added
