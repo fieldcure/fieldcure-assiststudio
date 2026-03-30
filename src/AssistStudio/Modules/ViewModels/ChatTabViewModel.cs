@@ -1242,6 +1242,27 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         foreach (var serverId in effectiveServerIds)
         {
             var conn = ResolveConnection(serverId);
+
+            // On-demand connect for shared built-in servers not yet in registry
+            if (conn is null && serverId.StartsWith("builtin_", StringComparison.Ordinal))
+            {
+                var serverKey = serverId["builtin_".Length..];
+                if (BuiltInServerHelper.IsSharedServer(serverKey))
+                {
+                    try
+                    {
+                        var config = new BuiltInServerConfig { IsEnabled = true, Folders = [] };
+                        await App.McpRegistry.ConnectBuiltInAsync(serverKey, config);
+                        conn = ResolveConnection(serverId);
+                        LoggingService.LogInfo($"[Send] On-demand connected shared server: {serverId}");
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggingService.LogWarning($"[Send] Failed to on-demand connect {serverId}: {ex.Message}");
+                    }
+                }
+            }
+
             if (conn is not null && !conn.IsConnected)
             {
                 try
