@@ -3,6 +3,7 @@ using AssistStudio.Helpers;
 using AssistStudio.Mcp;
 using AssistStudio.Tools;
 using FieldCure.AssistStudio.Models;
+using FieldCure.Ai.Providers.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Data;

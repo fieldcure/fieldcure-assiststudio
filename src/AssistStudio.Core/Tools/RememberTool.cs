@@ -1,6 +1,7 @@
 using System.Text.Json;
 using FieldCure.AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
+using FieldCure.Ai.Providers.Models;
 
 namespace FieldCure.AssistStudio.Tools;
 

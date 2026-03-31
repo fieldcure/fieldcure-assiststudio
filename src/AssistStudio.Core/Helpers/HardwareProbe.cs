@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using FieldCure.AssistStudio.Models;
+using FieldCure.Ai.Providers.Models;
 
 namespace FieldCure.AssistStudio.Helpers;
 

@@ -1,6 +1,7 @@
 using AssistStudio.Helpers;
 using FieldCure.AssistStudio.Helpers;
-using FieldCure.AssistStudio.Providers;
+using FieldCure.Ai.Providers;
+using FieldCure.Ai.Providers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;

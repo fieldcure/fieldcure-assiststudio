@@ -1,5 +1,6 @@
 using AssistStudio.Mcp;
 using FieldCure.AssistStudio.Models;
+using FieldCure.Ai.Providers.Models;
 using System.Text;
 using System.Text.Json;
 

@@ -40,7 +40,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\AssistStudio.Providers\AssistStudio.Providers.csproj" />
+    <ProjectReference Include="..\Ai.Providers\Ai.Providers.csproj" />
   </ItemGroup>
 
 </Project>

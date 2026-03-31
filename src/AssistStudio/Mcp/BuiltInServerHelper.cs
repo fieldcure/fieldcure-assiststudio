@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
+using FieldCure.Ai.Providers.Models;
 using Microsoft.UI.Xaml.Controls;
 
 namespace AssistStudio.Mcp;

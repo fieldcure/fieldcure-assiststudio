@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
+using FieldCure.Ai.Providers.Models;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 

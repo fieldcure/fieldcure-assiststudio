@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using FieldCure.AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
+using FieldCure.Ai.Providers.Models;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Web.WebView2.Core;
 using Windows.ApplicationModel.DataTransfer;
