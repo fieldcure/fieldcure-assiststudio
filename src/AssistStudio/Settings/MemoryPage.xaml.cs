@@ -12,6 +12,10 @@ namespace AssistStudio.Settings;
 /// </summary>
 public sealed partial class MemoryPage : Page
 {
+    private string _deleteTooltip = "Delete";
+    private string _connectingText = "Connecting to Essentials server...";
+    private string _searchPlaceholder = "Search memories...";
+
     public MemoryPage()
     {
         InitializeComponent();
@@ -20,30 +24,69 @@ public sealed partial class MemoryPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        _ = RefreshListAsync();
+        LoadLocalizedStrings();
+        _ = LoadMemoriesAsync();
     }
 
-    private string _deleteTooltip = "Delete";
-
-    private async Task RefreshListAsync()
+    private void LoadLocalizedStrings()
     {
         try
         {
             var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
             _deleteTooltip = loader.GetString("Memory_DeleteTooltip") is { Length: > 0 } s ? s : "Delete";
+            _connectingText = loader.GetString("Memory_Connecting") is { Length: > 0 } s2 ? s2 : _connectingText;
+            _searchPlaceholder = loader.GetString("Memory_SearchPlaceholder") is { Length: > 0 } s3 ? s3 : _searchPlaceholder;
         }
-        catch { /* fallback */ }
+        catch { /* fallback defaults */ }
 
+        ConnectingText.Text = _connectingText;
+        SearchBox.PlaceholderText = _searchPlaceholder;
+    }
+
+    private async Task LoadMemoriesAsync(string? query = null)
+    {
         var conn = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.EssentialsKey);
+
+        // Not connected — show connecting state and wait
         if (conn is null || !conn.IsConnected)
         {
-            ShowEmpty();
-            return;
+            ShowConnecting();
+            conn = await WaitForEssentialsAsync();
+            if (conn is null)
+            {
+                ShowEmpty();
+                return;
+            }
         }
 
+        await RefreshListAsync(conn, query);
+    }
+
+    private async Task<McpServerConnection?> WaitForEssentialsAsync()
+    {
+        // Poll for connection (max 10 seconds)
+        for (int i = 0; i < 20; i++)
+        {
+            await Task.Delay(500);
+            var conn = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.EssentialsKey);
+            if (conn?.IsConnected == true)
+            {
+                ConnectingPanel.Visibility = Visibility.Collapsed;
+                return conn;
+            }
+        }
+        ConnectingPanel.Visibility = Visibility.Collapsed;
+        return null;
+    }
+
+    private async Task RefreshListAsync(McpServerConnection conn, string? query = null)
+    {
         try
         {
-            var args = JsonDocument.Parse("{\"limit\": 100}").RootElement;
+            var argsObj = string.IsNullOrWhiteSpace(query)
+                ? new { limit = 100 }
+                : (object)new { query, limit = 100 };
+            var args = JsonDocument.Parse(JsonSerializer.Serialize(argsObj)).RootElement;
             var resultJson = await conn.CallToolWithProgressAsync("list_memories", args, null, CancellationToken.None);
 
             using var doc = JsonDocument.Parse(resultJson);
@@ -57,6 +100,7 @@ public sealed partial class MemoryPage : Page
 
             var total = root.TryGetProperty("total", out var totalEl) ? totalEl.GetInt32() : memories.GetArrayLength();
 
+            ConnectingPanel.Visibility = Visibility.Collapsed;
             EmptyPanel.Visibility = Visibility.Collapsed;
             HintText.Visibility = Visibility.Visible;
             HintDivider.Visibility = Visibility.Visible;
@@ -138,14 +182,39 @@ public sealed partial class MemoryPage : Page
         }
     }
 
+    private void ShowConnecting()
+    {
+        MemoryList.ItemsSource = null;
+        ConnectingPanel.Visibility = Visibility.Visible;
+        EmptyPanel.Visibility = Visibility.Collapsed;
+        HintText.Visibility = Visibility.Collapsed;
+        HintDivider.Visibility = Visibility.Collapsed;
+        ClearAllButton.Visibility = Visibility.Collapsed;
+        CounterText.Text = "";
+    }
+
     private void ShowEmpty()
     {
         MemoryList.ItemsSource = null;
+        ConnectingPanel.Visibility = Visibility.Collapsed;
         EmptyPanel.Visibility = Visibility.Visible;
         HintText.Visibility = Visibility.Collapsed;
         HintDivider.Visibility = Visibility.Collapsed;
         ClearAllButton.Visibility = Visibility.Collapsed;
         CounterText.Text = "";
+    }
+
+    private void OnSearchQuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
+    {
+        _ = LoadMemoriesAsync(args.QueryText);
+    }
+
+    private void OnSearchTextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
+    {
+        if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput && string.IsNullOrWhiteSpace(sender.Text))
+        {
+            _ = LoadMemoriesAsync();
+        }
     }
 
     private async void OnDeleteClicked(object sender, RoutedEventArgs e)
@@ -160,7 +229,7 @@ public sealed partial class MemoryPage : Page
         {
             var args = JsonDocument.Parse(JsonSerializer.Serialize(new { key })).RootElement;
             await conn.CallToolWithProgressAsync("forget", args, null, CancellationToken.None);
-            await RefreshListAsync();
+            await RefreshListAsync(conn, string.IsNullOrWhiteSpace(SearchBox.Text) ? null : SearchBox.Text);
         }
         catch { /* best effort */ }
     }
@@ -194,7 +263,6 @@ public sealed partial class MemoryPage : Page
         if (await dialog.ShowAsync() != ContentDialogResult.Primary)
             return;
 
-        // Delete all by fetching all keys and deleting each
         var conn = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.EssentialsKey);
         if (conn is null || !conn.IsConnected) return;
 
@@ -215,7 +283,7 @@ public sealed partial class MemoryPage : Page
                 }
             }
 
-            await RefreshListAsync();
+            await RefreshListAsync(conn);
         }
         catch { /* best effort */ }
     }
