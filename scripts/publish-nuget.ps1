@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Pack, sign, and push AssistStudio NuGet packages (Core + Controls).
+    Pack, sign, and push AssistStudio NuGet packages (Providers + Core + Controls).
 .EXAMPLE
     .\publish-nuget.ps1                      # full: pack → sign → push
     .\publish-nuget.ps1 -SkipPush            # pack → sign only
@@ -16,6 +16,7 @@ param(
 
 Invoke-NuGetPublish `
     -Projects @(
+        'src\Ai.Providers\Ai.Providers.csproj',
         'src\AssistStudio.Core\AssistStudio.Core.csproj',
         'src\AssistStudio.Controls\AssistStudio.Controls.csproj'
     ) `
