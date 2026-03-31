@@ -1,5 +1,5 @@
-using FieldCure.Ai.Providers.Models;
-using FieldCure.Ai.Providers.Models;
+﻿using FieldCure.Ai.Providers.Models;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace FieldCure.Ai.Providers.Tests;
 

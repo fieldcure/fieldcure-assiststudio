@@ -1,3 +1,5 @@
+﻿# Release Notes — FieldCure.Ai.Providers
+
 ## v0.1.0
 
 - Initial release — extracted from AssistStudio.Core
