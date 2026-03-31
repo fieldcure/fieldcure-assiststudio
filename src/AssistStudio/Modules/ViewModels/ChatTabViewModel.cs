@@ -319,9 +319,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             _ = ConnectRagAsync(panel.KnowledgeArchiveFolder);
         }
 
-        // Initialize memory text for prompt injection
-        panel.MemoryText = App.MemoryStore.BuildMemoryText();
-        App.MemoryStore.Changed += OnMemoryStoreChanged;
+        // Memory text is now fetched from Essentials MCP at send time (PrepareToolsForSendAsync)
 
         // Relay keyboard shortcut from WebView2 (separate HWND)
         panel.KeyboardShortcutPressed += (s, e) => KeyboardShortcutPressed?.Invoke(s, e);
@@ -533,14 +531,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Handles memory store changes to refresh the memory text in the panel.
     /// </summary>
-    private void OnMemoryStoreChanged()
-    {
-        if (Panel is null) return;
-        Panel.DispatcherQueue.TryEnqueue(() =>
-        {
-            Panel.MemoryText = App.MemoryStore.BuildMemoryText();
-        });
-    }
+    // Memory text is now fetched from Essentials MCP at send time — no event handler needed.
 
     /// <inheritdoc/>
     public void Dispose()
@@ -551,8 +542,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         if (SelectedProfile is not null)
             SelectedProfile.ToolSettingsChanged -= OnProfileToolSettingsChanged;
 
-        // Unsubscribe from memory store events
-        App.MemoryStore.Changed -= OnMemoryStoreChanged;
+        // Memory store events removed — memory fetched from MCP at send time
 
         // Disconnect per-tab MCP servers
         if (_filesystemConnection is not null)
@@ -1331,12 +1321,59 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             }
         }
 
-        // 5. Update McpTools for ToolCallExecutor (search_tools-discovered tools)
+        // 5. Refresh memory text from Essentials server
+        if (essentialsConn?.IsConnected == true)
+        {
+            try
+            {
+                var memoryText = await FetchMemoryTextAsync(essentialsConn);
+                if (Panel is not null)
+                    Panel.MemoryText = memoryText;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning($"[Send] Failed to fetch memory: {ex.Message}");
+            }
+        }
+
+        // 6. Update McpTools for ToolCallExecutor (search_tools-discovered tools)
         McpTools = connectedIds.Count > 0
             ? [.. GetToolsFromServers(connectedIds)]
             : [];
 
         return result;
+    }
+
+    /// <summary>
+    /// Fetches memory entries from Essentials MCP server and formats for system prompt injection.
+    /// Returns null if no memories exist.
+    /// </summary>
+    private static async Task<string?> FetchMemoryTextAsync(Mcp.McpServerConnection essentialsConn)
+    {
+        var listMemoriesTool = essentialsConn.Tools.FirstOrDefault(t => t.Name == "list_memories");
+        if (listMemoriesTool is null)
+            return null;
+
+        var args = System.Text.Json.JsonDocument.Parse("{\"limit\": 50}").RootElement;
+        var resultJson = await essentialsConn.CallToolWithProgressAsync("list_memories", args, null, CancellationToken.None);
+
+        using var doc = System.Text.Json.JsonDocument.Parse(resultJson);
+        var root = doc.RootElement;
+
+        if (!root.TryGetProperty("memories", out var memories) || memories.GetArrayLength() == 0)
+            return null;
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("## User Memory");
+        sb.AppendLine("The following information has been saved from previous conversations:");
+        foreach (var entry in memories.EnumerateArray())
+        {
+            var key = entry.GetProperty("key").GetString();
+            var value = entry.GetProperty("value").GetString();
+            sb.AppendLine($"- [{key}] {value}");
+        }
+
+        return sb.ToString().TrimEnd();
     }
 
     #region Tool Resolution Helpers
