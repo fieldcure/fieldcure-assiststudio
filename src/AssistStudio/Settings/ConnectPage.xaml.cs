@@ -321,6 +321,21 @@ public sealed partial class ConnectPage : Page
         };
         RunnerCard.Connection = new McpServerConnection(runnerPlaceholder);
 
+        // Essentials card — shared instance, no folders
+        var essentialsPrefix = $"builtin_{BuiltInServerHelper.EssentialsKey}";
+        var essentialsConn = _registry.GetBuiltInConnection(BuiltInServerHelper.EssentialsKey);
+        var essentialsPlaceholder = new McpServerConfig
+        {
+            Id = essentialsPrefix,
+            Name = BuiltInServerHelper.EssentialsDisplayName,
+            TransportType = McpTransportType.Stdio,
+            Command = BuiltInServerHelper.GetServerExePath(BuiltInServerHelper.EssentialsKey),
+            IsBuiltIn = true,
+            IsEnabled = false,
+            Description = _loader.GetString("Connect_EssentialsDescription"),
+        };
+        EssentialsCard.Connection = new McpServerConnection(essentialsPlaceholder);
+
         // User-configured servers only (exclude all built-in connections)
         var displayList = _registry.Connections
             .Where(c => !c.Config.IsBuiltIn)

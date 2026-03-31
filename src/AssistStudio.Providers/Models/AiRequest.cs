@@ -25,7 +25,7 @@ public partial class AiRequest
     /// <summary>Retrieved context chunks for RAG injection into the system prompt.</summary>
     public IReadOnlyList<ContextChunk>? ContextChunks { get; init; }
 
-    /// <summary>Current workspace state text from <see cref="IWorkspaceContext"/>.</summary>
+    /// <summary>Current workspace state text.</summary>
     public string? WorkspaceText { get; init; }
 
     /// <summary>Persistent memory text to inject into the system prompt.</summary>

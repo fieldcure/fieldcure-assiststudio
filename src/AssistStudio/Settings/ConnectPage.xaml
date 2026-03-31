@@ -46,6 +46,9 @@
                 <!-- 4. Runner — shared instance, no folders -->
                 <controls:McpServerCard x:Name="RunnerCard" />
 
+                <!-- 5. Essentials — shared instance, no folders -->
+                <controls:McpServerCard x:Name="EssentialsCard" />
+
                 </StackPanel> <!-- end built-in servers -->
 
                 <!-- Action buttons (user-configured servers) -->

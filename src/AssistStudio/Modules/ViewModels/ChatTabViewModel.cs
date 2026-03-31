@@ -1101,25 +1101,14 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         var enabledServerIds = profile?.EnabledServers ?? [];
         var enabledSet = enabledServerIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        // 1. Essentials virtual server — all built-in tools directly exposed
-        var essentialsEnabled = enabledSet.Contains(BuiltInServerHelper.EssentialsKey);
-        var filesystemEnabledInProfile =
-            enabledSet.Contains($"builtin_{BuiltInServerHelper.FilesystemKey}");
-
-        if (essentialsEnabled)
+        // 1. Essentials — real MCP server (placeholder for auto-connect at send time)
+        var essentialsId = $"builtin_{BuiltInServerHelper.EssentialsKey}";
+        if (enabledSet.Contains(BuiltInServerHelper.EssentialsKey)
+            || enabledSet.Contains(essentialsId))
         {
-            foreach (var tool in ToolRegistry.All)
-            {
-                if (tool.Name == "search_tools") continue; // meta-tool handled separately
-                if (BuiltInServerHelper.MemoryToolNames.Contains(tool.Name)) continue; // Memory server tools
-                if (filesystemEnabledInProfile && BuiltInServerHelper.SuppressedBuiltInToolNames.Contains(tool.Name))
-                    continue;
-                tools.Add(tool);
-            }
-
             tools.Add(new ServerPlaceholderTool
             {
-                Name = BuiltInServerHelper.EssentialsKey,
+                Name = essentialsId,
                 DisplayName = BuiltInServerHelper.EssentialsDisplayName,
             });
         }
@@ -1214,14 +1203,6 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 
         // McpTools are resolved at send time by PrepareToolsForSendAsync
         McpTools = [];
-
-        // Set run_command default CWD to first workspace folder
-        var runCmd = ToolRegistry.Resolve(["run_command"]).OfType<RunCommandTool>().FirstOrDefault();
-        if (runCmd is not null)
-        {
-            var folders = Panel?.WorkspaceFolders;
-            runCmd.DefaultWorkingDirectory = folders is { Count: > 0 } ? folders[0] : null;
-        }
     }
 
     /// <summary>
@@ -1341,6 +1322,23 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                 result.Add(tool);
         }
 
+        // 4.7 Essentials tools — shared connection from McpRegistry
+        var essentialsConn = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.EssentialsKey);
+        if (essentialsConn?.IsConnected == true
+            && connectedIds.Contains(essentialsConn.Config.Id))
+        {
+            // Collect tool names already added by higher-priority (non-shared) servers
+            var existingToolNames = new HashSet<string>(result.Select(t => t.Name), StringComparer.OrdinalIgnoreCase);
+
+            foreach (var tool in essentialsConn.Tools)
+            {
+                // Skip duplicate tool names — stateful servers (Filesystem) take precedence
+                if (existingToolNames.Contains(tool.Name))
+                    continue;
+                result.Add(tool);
+            }
+        }
+
         // 5. Update McpTools for ToolCallExecutor (search_tools-discovered tools)
         McpTools = connectedIds.Count > 0
             ? [.. GetToolsFromServers(connectedIds)]
@@ -1352,8 +1350,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     #region Tool Resolution Helpers
 
     /// <summary>Built-in tool names that don't require MCP server connections.</summary>
-    private static readonly HashSet<string> BuiltInToolNames =
-        ["run_command", "fetch_url", "read_file", "write_file", "search_files", "remember", "forget"];
+    private static readonly HashSet<string> BuiltInToolNames = ["remember", "forget"];
 
     private static bool IsBuiltInTool(string name) => BuiltInToolNames.Contains(name);
 

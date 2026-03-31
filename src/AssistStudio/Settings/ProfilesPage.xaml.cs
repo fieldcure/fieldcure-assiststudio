@@ -492,8 +492,8 @@ public sealed partial class ProfilesPage : Page
             {
                 Content = loader.GetString("Profiles_EssentialsLabel") is { Length: > 0 } l
                     ? l : BuiltInServerHelper.EssentialsDisplayName,
-                Tag = BuiltInServerHelper.EssentialsKey,
-                IsChecked = profile.EnabledServers.Contains(BuiltInServerHelper.EssentialsKey),
+                Tag = $"builtin_{BuiltInServerHelper.EssentialsKey}",
+                IsChecked = profile.EnabledServers.Contains($"builtin_{BuiltInServerHelper.EssentialsKey}"),
                 MinWidth = 0,
             };
             cb.Checked += OnServerChecked;

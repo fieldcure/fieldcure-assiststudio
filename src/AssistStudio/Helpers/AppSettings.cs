@@ -229,7 +229,7 @@ public static class AppSettings
         {
             Name = "General",
             IsBuiltIn = true,
-            EnabledServers = ["essentials", "builtin_filesystem", "memory", "builtin_outbox", "builtin_runner"],
+            EnabledServers = ["builtin_essentials", "builtin_filesystem", "memory", "builtin_outbox", "builtin_runner"],
             SystemPrompt =
                 "You are a helpful assistant. Provide clear, well-structured responses. " +
                 "Explain step by step when needed. If you're unsure about something, say so honestly. " +
@@ -242,7 +242,7 @@ public static class AppSettings
         {
             Name = "Analytical",
             IsBuiltIn = true,
-            EnabledServers = ["essentials", "builtin_filesystem", "memory", "builtin_runner"],
+            EnabledServers = ["builtin_essentials", "builtin_filesystem", "memory", "builtin_runner"],
             SystemPrompt =
                 "You are a concise, direct assistant focused on code and data analysis. " +
                 "Prioritize code readability and performance. Use Markdown formatting. " +
@@ -254,7 +254,7 @@ public static class AppSettings
         {
             Name = "Creative",
             IsBuiltIn = true,
-            EnabledServers = ["essentials", "memory"],
+            EnabledServers = ["builtin_essentials", "memory"],
             SystemPrompt =
                 "You are a creative assistant who explores multiple perspectives. " +
                 "Suggest innovative ideas and ask follow-up questions to better understand the user's needs. " +
@@ -265,7 +265,7 @@ public static class AppSettings
         {
             Name = "Task Planner",
             IsBuiltIn = true,
-            EnabledServers = ["essentials", "builtin_filesystem", "memory", "builtin_outbox", "builtin_runner"],
+            EnabledServers = ["builtin_essentials", "builtin_filesystem", "memory", "builtin_outbox", "builtin_runner"],
             SystemPrompt =
                 "You are a task planner that breaks down complex requests into steps and executes them using available tools. " +
                 "For complex or multi-step tasks, present a numbered plan and wait for the user to approve before proceeding. " +
@@ -280,7 +280,7 @@ public static class AppSettings
         {
             Name = "Knowledge Base",
             IsBuiltIn = true,
-            EnabledServers = ["essentials", "builtin_filesystem", "builtin_rag", "memory", "builtin_runner"],
+            EnabledServers = ["builtin_essentials", "builtin_filesystem", "builtin_rag", "memory", "builtin_runner"],
             SystemPrompt =
                 "You are a helpful assistant with access to a knowledge archive. " +
                 "When the question may relate to indexed content, search the archive first using search_documents. " +
@@ -415,13 +415,25 @@ public static class AppSettings
             catch { /* ignore corrupt data */ }
         }
 
-        // Migration: convert legacy ToolNames to EnabledServers["essentials"]
+        // Migration: convert legacy ToolNames to EnabledServers["builtin_essentials"]
+        var essentialsId = $"builtin_{Mcp.BuiltInServerHelper.EssentialsKey}";
         foreach (var p in result)
         {
-            if (p.ToolNames.Count > 0 && !p.EnabledServers.Contains(Mcp.BuiltInServerHelper.EssentialsKey))
+            if (p.ToolNames.Count > 0 && !p.EnabledServers.Contains(essentialsId))
             {
-                p.EnabledServers.Insert(0, Mcp.BuiltInServerHelper.EssentialsKey);
+                p.EnabledServers.Insert(0, essentialsId);
                 p.ToolNames.Clear();
+            }
+
+            // Migration: "essentials" → "builtin_essentials"
+            var legacyIdx = p.EnabledServers.IndexOf(Mcp.BuiltInServerHelper.EssentialsKey);
+            if (legacyIdx >= 0 && !p.EnabledServers.Contains(essentialsId))
+            {
+                p.EnabledServers[legacyIdx] = essentialsId;
+            }
+            else if (legacyIdx >= 0)
+            {
+                p.EnabledServers.RemoveAt(legacyIdx);
             }
         }
 

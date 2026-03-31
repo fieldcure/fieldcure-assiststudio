@@ -6,13 +6,13 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
-    <Version>0.12.0</Version>
+    <Version>0.1.0</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CA1416</NoWarn>
 
     <!-- NuGet Package Metadata -->
-    <PackageId>FieldCure.AssistStudio.Core</PackageId>
-    <Description>AI provider client library for Claude, OpenAI, Gemini, and Ollama. Core models, providers, and helpers.</Description>
+    <PackageId>FieldCure.AssistStudio.Providers</PackageId>
+    <Description>AI provider clients for Claude, OpenAI, Gemini, Ollama, and Groq. Shared models and streaming support.</Description>
     <Authors>Jong Hyun Kim</Authors>
     <Company>Fieldcure Co., Ltd.</Company>
     <Copyright>Copyright (c) 2026 Fieldcure Co., Ltd.</Copyright>
@@ -22,7 +22,7 @@
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;claude;openai;gemini;ollama;llm;provider;streaming</PackageTags>
-    <PackageReleaseNotes>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)\..\..\RELEASENOTES.Core.md'))</PackageReleaseNotes>
+    <PackageReleaseNotes>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)\..\..\RELEASENOTES.Providers.md'))</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -35,12 +35,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Win32.Registry" Version="5.*" />
-    <PackageReference Include="System.Management" Version="9.*" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\AssistStudio.Providers\AssistStudio.Providers.csproj" />
+    <PackageReference Include="FieldCure.DocumentParsers" Version="0.3.*" />
   </ItemGroup>
 
 </Project>

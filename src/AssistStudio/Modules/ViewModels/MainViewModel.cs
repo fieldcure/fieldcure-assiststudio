@@ -64,11 +64,6 @@ public partial class MainViewModel : ObservableObject
         _profiles = AppSettings.LoadProfiles();
 
         // Register available tools
-        ToolRegistry.Register(new ReadFileTool());
-        ToolRegistry.Register(new WriteFileTool());
-        ToolRegistry.Register(new SearchFilesTool());
-        ToolRegistry.Register(new RunCommandTool());
-        ToolRegistry.Register(new UrlFetchTool());
         ToolRegistry.Register(new RememberTool(App.MemoryStore));
         ToolRegistry.Register(new ForgetTool(App.MemoryStore));
         ToolRegistry.Register(new SearchToolsTool(App.McpRegistry));

@@ -30,6 +30,7 @@ public static class BuiltInServerHelper
         [RagKey] = ("FieldCure.Mcp.Rag", "0.10.1"),
         [OutboxKey] = ("FieldCure.Mcp.Outbox", "0.4.0"),
         [RunnerKey] = ("FieldCure.AssistStudio.Runner", "0.2.0"),
+        [EssentialsKey] = ("FieldCure.Mcp.Essentials", "0.1.0"),
     };
 
     /// <summary>NuGet package ID for the Filesystem server.</summary>
@@ -86,15 +87,8 @@ public static class BuiltInServerHelper
         "list_channels", "add_channel",
         // Runner
         "list_tasks", "get_execution_status", "get_task_history",
-    ];
-
-    /// <summary>
-    /// Built-in tool names that are suppressed when the Filesystem MCP server is active.
-    /// These built-in tools overlap with MCP Filesystem tools.
-    /// </summary>
-    public static readonly HashSet<string> SuppressedBuiltInToolNames =
-    [
-        "read_file", "write_file", "search_files",
+        // Essentials
+        "get_environment", "run_javascript",
     ];
 
     /// <summary>
@@ -111,6 +105,7 @@ public static class BuiltInServerHelper
         [RagKey] = ("fieldcure-mcp-rag", RagDisplayName),
         [OutboxKey] = ("fieldcure-mcp-outbox", OutboxDisplayName),
         [RunnerKey] = ("assiststudio-runner", RunnerDisplayName),
+        [EssentialsKey] = ("fieldcure-mcp-essentials", EssentialsDisplayName),
     };
 
     #endregion
@@ -133,6 +128,7 @@ public static class BuiltInServerHelper
         [RagKey] = new BuiltInServerConfig { IsEnabled = false, Folders = [] },
         [OutboxKey] = new BuiltInServerConfig { IsEnabled = true, Folders = [] },
         [RunnerKey] = new BuiltInServerConfig { IsEnabled = true, Folders = [] },
+        [EssentialsKey] = new BuiltInServerConfig { IsEnabled = true, Folders = [] },
     };
 
     /// <summary>
@@ -185,6 +181,7 @@ public static class BuiltInServerHelper
                 RagKey => "Index and search local documents.",
                 OutboxKey => "Send messages via Slack, Telegram, Email, and KakaoTalk.",
                 RunnerKey => "Schedule and run headless LLM tasks.",
+                EssentialsKey => "Essential tools — HTTP, shell, JavaScript, file I/O, and environment info.",
                 _ => "",
             },
         };
@@ -443,7 +440,7 @@ public static class BuiltInServerHelper
     /// Returns <see langword="true"/> if the built-in server is shared across all tabs (not per-tab).
     /// Shared servers do not require folder arguments.
     /// </summary>
-    public static bool IsSharedServer(string serverKey) => serverKey is OutboxKey or RunnerKey;
+    public static bool IsSharedServer(string serverKey) => serverKey is EssentialsKey or OutboxKey or RunnerKey;
 
     /// <summary>
     /// Returns <see langword="true"/> if the given command matches a built-in server executable.
