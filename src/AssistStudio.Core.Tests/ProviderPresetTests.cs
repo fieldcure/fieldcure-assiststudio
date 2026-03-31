@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Models;
 
@@ -55,7 +55,7 @@ public class ProfileTests
         Assert.IsFalse(profile.IsBuiltIn);
         Assert.IsNull(profile.PreferredProviderType);
         Assert.IsNull(profile.PreferredModelId);
-        Assert.AreEqual(0, profile.ToolNames.Count);
+        Assert.IsEmpty(profile.ToolNames);
     }
 
     [TestMethod]
@@ -79,7 +79,7 @@ public class ProfileTests
         Assert.IsFalse(deserialized.IsBuiltIn);
         Assert.AreEqual("Ollama", deserialized.PreferredProviderType);
         Assert.AreEqual("llama3.2", deserialized.PreferredModelId);
-        Assert.AreEqual(1, deserialized.ToolNames.Count);
+        Assert.HasCount(1, deserialized.ToolNames);
         Assert.AreEqual("scan_directory", deserialized.ToolNames[0]);
     }
 
@@ -93,6 +93,6 @@ public class ProfileTests
         Assert.AreEqual("Hello", profile.SystemPrompt);
         Assert.IsNull(profile.PreferredProviderType);
         Assert.IsNull(profile.PreferredModelId);
-        Assert.AreEqual(0, profile.ToolNames.Count);
+        Assert.IsEmpty(profile.ToolNames);
     }
 }
