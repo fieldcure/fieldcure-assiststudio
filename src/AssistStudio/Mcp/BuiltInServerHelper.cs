@@ -89,7 +89,7 @@ public static class BuiltInServerHelper
         // Runner
         "list_tasks", "get_execution_status", "get_task_history",
         // Essentials
-        "get_environment", "run_javascript",
+        "get_environment", "run_javascript", "http_request",
     ];
 
     /// <summary>
