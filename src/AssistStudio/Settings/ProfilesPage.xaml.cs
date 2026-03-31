@@ -587,41 +587,7 @@ public sealed partial class ProfilesPage : Page
             });
         }
 
-        // Memory
-        {
-            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-
-            var dot = new Microsoft.UI.Xaml.Shapes.Ellipse
-            {
-                Width = 6, Height = 6,
-                Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
-                VerticalAlignment = VerticalAlignment.Center,
-            };
-            row.Children.Add(dot);
-
-            var cb = new CheckBox
-            {
-                Content = loader.GetString("Profiles_MemoryLabel") is { Length: > 0 } ml
-                    ? ml : BuiltInServerHelper.MemoryDisplayName,
-                Tag = BuiltInServerHelper.MemoryKey,
-                IsChecked = profile.EnabledServers.Contains(BuiltInServerHelper.MemoryKey),
-                MinWidth = 0,
-            };
-            cb.Checked += OnServerChecked;
-            cb.Unchecked += OnServerChecked;
-            row.Children.Add(cb);
-
-            ToolsPanel.Children.Add(row);
-
-            ToolsPanel.Children.Add(new TextBlock
-            {
-                Text = loader.GetString("Profiles_MemoryHint"),
-                Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-                TextWrapping = TextWrapping.Wrap,
-                Opacity = 0.5,
-                Margin = new Thickness(28, 0, 0, 4),
-            });
-        }
+        // Memory — now part of Essentials MCP server (no separate toggle)
 
         // Outbox
         {
