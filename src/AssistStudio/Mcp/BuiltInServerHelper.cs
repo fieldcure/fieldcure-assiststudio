@@ -28,7 +28,7 @@ public static class BuiltInServerHelper
     {
         [FilesystemKey] = ("FieldCure.Mcp.Filesystem", "0.5.0"),
         [RagKey] = ("FieldCure.Mcp.Rag", "0.10.1"),
-        [OutboxKey] = ("FieldCure.Mcp.Outbox", "0.2.0"),
+        [OutboxKey] = ("FieldCure.Mcp.Outbox", "0.4.0"),
         [RunnerKey] = ("FieldCure.AssistStudio.Runner", "0.2.0"),
     };
 
@@ -183,7 +183,7 @@ public static class BuiltInServerHelper
             {
                 FilesystemKey => "Secure filesystem operations within allowed directories.",
                 RagKey => "Index and search local documents.",
-                OutboxKey => "Send messages via Slack, Telegram, SMTP, and KakaoTalk.",
+                OutboxKey => "Send messages via Slack, Telegram, Email, and KakaoTalk.",
                 RunnerKey => "Schedule and run headless LLM tasks.",
                 _ => "",
             },
