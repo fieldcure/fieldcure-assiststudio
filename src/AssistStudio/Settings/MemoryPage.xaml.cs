@@ -1,4 +1,5 @@
-using FieldCure.AssistStudio.Helpers;
+using System.Text.Json;
+using AssistStudio.Mcp;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
@@ -7,44 +8,25 @@ namespace AssistStudio.Settings;
 
 /// <summary>
 /// Settings page for viewing and managing persistent memory entries.
+/// Reads from Essentials MCP server via list_memories/forget tools.
 /// </summary>
 public sealed partial class MemoryPage : Page
 {
-    #region Constructors
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MemoryPage"/> class.
-    /// </summary>
     public MemoryPage()
     {
         InitializeComponent();
     }
 
-    #endregion
-
-    #region Overrides
-
-    /// <inheritdoc/>
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        RefreshList();
+        _ = RefreshListAsync();
     }
 
-    #endregion
-
-    #region Private Methods
-
-    /// <summary>
-    /// Rebuilds the memory list UI from the current MemoryStore state.
-    /// </summary>
     private string _deleteTooltip = "Delete";
 
-    private void RefreshList()
+    private async Task RefreshListAsync()
     {
-        var entries = App.MemoryStore.GetAll();
-        MemoryList.ItemsSource = null;
-
         try
         {
             var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
@@ -52,104 +34,137 @@ public sealed partial class MemoryPage : Page
         }
         catch { /* fallback */ }
 
-        if (entries.Count == 0)
+        var conn = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.EssentialsKey);
+        if (conn is null || !conn.IsConnected)
         {
-            EmptyPanel.Visibility = Visibility.Visible;
-            HintText.Visibility = Visibility.Collapsed;
-            HintDivider.Visibility = Visibility.Collapsed;
-            ClearAllButton.Visibility = Visibility.Collapsed;
-            CounterText.Text = "";
+            ShowEmpty();
             return;
         }
 
-        EmptyPanel.Visibility = Visibility.Collapsed;
-        HintText.Visibility = Visibility.Visible;
-        HintDivider.Visibility = Visibility.Visible;
-        ClearAllButton.Visibility = Visibility.Visible;
-        CounterText.Text = $"{entries.Count}/{MemoryStore.MaxEntries}";
-
-        // Build item list with dividers between entries
-        var items = new List<FrameworkElement>();
-        var isFirst = true;
-        foreach (var entry in entries)
+        try
         {
-            if (!isFirst)
+            var args = JsonDocument.Parse("{\"limit\": 100}").RootElement;
+            var resultJson = await conn.CallToolWithProgressAsync("list_memories", args, null, CancellationToken.None);
+
+            using var doc = JsonDocument.Parse(resultJson);
+            var root = doc.RootElement;
+
+            if (!root.TryGetProperty("memories", out var memories) || memories.GetArrayLength() == 0)
             {
-                items.Add(new Microsoft.UI.Xaml.Shapes.Rectangle
-                {
-                    Height = 1,
-                    Fill = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["DividerStrokeColorDefaultBrush"],
-                });
+                ShowEmpty();
+                return;
             }
-            isFirst = false;
 
-            // Entry row
-            var grid = new Grid
+            var total = root.TryGetProperty("total", out var totalEl) ? totalEl.GetInt32() : memories.GetArrayLength();
+
+            EmptyPanel.Visibility = Visibility.Collapsed;
+            HintText.Visibility = Visibility.Visible;
+            HintDivider.Visibility = Visibility.Visible;
+            ClearAllButton.Visibility = Visibility.Visible;
+            CounterText.Text = $"{total}";
+
+            var items = new List<FrameworkElement>();
+            var isFirst = true;
+            foreach (var entry in memories.EnumerateArray())
             {
-                Padding = new Thickness(0, 10, 0, 10),
-                ColumnDefinitions =
+                if (!isFirst)
                 {
-                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = GridLength.Auto },
-                },
-            };
+                    items.Add(new Microsoft.UI.Xaml.Shapes.Rectangle
+                    {
+                        Height = 1,
+                        Fill = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["DividerStrokeColorDefaultBrush"],
+                    });
+                }
+                isFirst = false;
 
-            var text = new TextBlock
-            {
-                Text = entry.Content,
-                TextWrapping = TextWrapping.Wrap,
-                VerticalAlignment = VerticalAlignment.Center,
-                Style = (Style)Application.Current.Resources["BodyTextBlockStyle"],
-            };
-            Grid.SetColumn(text, 0);
-            grid.Children.Add(text);
+                var key = entry.GetProperty("key").GetString() ?? "";
+                var value = entry.GetProperty("value").GetString() ?? "";
 
-            var deleteButton = new Button
-            {
-                Content = new FontIcon { Glyph = "\uE711", FontSize = 12 },
-                Padding = new Thickness(6),
-                MinWidth = 0,
-                MinHeight = 0,
-                Tag = entry.Id,
-                VerticalAlignment = VerticalAlignment.Top,
-                Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
-                Opacity = 0,
-            };
-            ToolTipService.SetToolTip(deleteButton, _deleteTooltip);
-            ToolTipService.SetPlacement(deleteButton, Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse);
-            deleteButton.Click += OnDeleteClicked;
-            Grid.SetColumn(deleteButton, 1);
-            grid.Children.Add(deleteButton);
+                var grid = new Grid
+                {
+                    Padding = new Thickness(0, 10, 0, 10),
+                    ColumnDefinitions =
+                    {
+                        new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
+                        new ColumnDefinition { Width = GridLength.Auto },
+                    },
+                };
 
-            // Show/hide delete button on hover
-            grid.PointerEntered += (_, _) => deleteButton.Opacity = 1;
-            grid.PointerExited += (_, _) => deleteButton.Opacity = 0;
+                var textPanel = new StackPanel { Spacing = 2 };
+                textPanel.Children.Add(new TextBlock
+                {
+                    Text = key,
+                    Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                    Opacity = 0.6,
+                });
+                textPanel.Children.Add(new TextBlock
+                {
+                    Text = value,
+                    TextWrapping = TextWrapping.Wrap,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Style = (Style)Application.Current.Resources["BodyTextBlockStyle"],
+                });
+                Grid.SetColumn(textPanel, 0);
+                grid.Children.Add(textPanel);
 
-            items.Add(grid);
+                var deleteButton = new Button
+                {
+                    Content = new FontIcon { Glyph = "\uE711", FontSize = 12 },
+                    Padding = new Thickness(6),
+                    MinWidth = 0,
+                    MinHeight = 0,
+                    Tag = key,
+                    VerticalAlignment = VerticalAlignment.Top,
+                    Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
+                    Opacity = 0,
+                };
+                ToolTipService.SetToolTip(deleteButton, _deleteTooltip);
+                ToolTipService.SetPlacement(deleteButton, Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse);
+                deleteButton.Click += OnDeleteClicked;
+                Grid.SetColumn(deleteButton, 1);
+                grid.Children.Add(deleteButton);
+
+                grid.PointerEntered += (_, _) => deleteButton.Opacity = 1;
+                grid.PointerExited += (_, _) => deleteButton.Opacity = 0;
+
+                items.Add(grid);
+            }
+
+            MemoryList.ItemsSource = items;
         }
-
-        MemoryList.ItemsSource = items;
-    }
-
-    #endregion
-
-    #region Event Handlers
-
-    /// <summary>
-    /// Handles individual memory entry deletion.
-    /// </summary>
-    private void OnDeleteClicked(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button btn && btn.Tag is string id)
+        catch
         {
-            App.MemoryStore.RemoveById(id);
-            RefreshList();
+            ShowEmpty();
         }
     }
 
-    /// <summary>
-    /// Handles the Clear All button click with confirmation.
-    /// </summary>
+    private void ShowEmpty()
+    {
+        MemoryList.ItemsSource = null;
+        EmptyPanel.Visibility = Visibility.Visible;
+        HintText.Visibility = Visibility.Collapsed;
+        HintDivider.Visibility = Visibility.Collapsed;
+        ClearAllButton.Visibility = Visibility.Collapsed;
+        CounterText.Text = "";
+    }
+
+    private async void OnDeleteClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn || btn.Tag is not string key)
+            return;
+
+        var conn = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.EssentialsKey);
+        if (conn is null || !conn.IsConnected) return;
+
+        try
+        {
+            var args = JsonDocument.Parse(JsonSerializer.Serialize(new { key })).RootElement;
+            await conn.CallToolWithProgressAsync("forget", args, null, CancellationToken.None);
+            await RefreshListAsync();
+        }
+        catch { /* best effort */ }
+    }
+
     private async void OnClearAllClicked(object sender, RoutedEventArgs e)
     {
         string title, content;
@@ -176,12 +191,32 @@ public sealed partial class MemoryPage : Page
             XamlRoot = XamlRoot,
         };
 
-        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
-        {
-            App.MemoryStore.Clear();
-            RefreshList();
-        }
-    }
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary)
+            return;
 
-    #endregion
+        // Delete all by fetching all keys and deleting each
+        var conn = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.EssentialsKey);
+        if (conn is null || !conn.IsConnected) return;
+
+        try
+        {
+            var listArgs = JsonDocument.Parse("{\"limit\": 100}").RootElement;
+            var resultJson = await conn.CallToolWithProgressAsync("list_memories", listArgs, null, CancellationToken.None);
+
+            using var doc = JsonDocument.Parse(resultJson);
+            if (doc.RootElement.TryGetProperty("memories", out var memories))
+            {
+                foreach (var entry in memories.EnumerateArray())
+                {
+                    var key = entry.GetProperty("key").GetString();
+                    if (key is null) continue;
+                    var args = JsonDocument.Parse(JsonSerializer.Serialize(new { key })).RootElement;
+                    await conn.CallToolWithProgressAsync("forget", args, null, CancellationToken.None);
+                }
+            }
+
+            await RefreshListAsync();
+        }
+        catch { /* best effort */ }
+    }
 }

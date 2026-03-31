@@ -31,10 +31,7 @@ public partial class App : Application
     /// </summary>
     public static McpServerRegistry McpRegistry { get; } = new();
 
-    /// <summary>
-    /// Gets the app-level persistent memory store singleton.
-    /// </summary>
-    public static MemoryStore MemoryStore { get; } = new();
+    // Memory is now managed by Essentials MCP server (memory.db)
 
     #endregion
 
@@ -61,8 +58,6 @@ public partial class App : Application
         var appDataPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "FieldCure", "AssistStudio");
-        MemoryStore.Initialize(Path.Combine(appDataPath, "memory.json"));
-
         await LoggingService.InitializeAsync(ApplicationData.Current.LocalFolder.Path);
 
         // Wire up Core/Controls diagnostic logging to the app's LoggingService
