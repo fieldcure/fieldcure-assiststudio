@@ -1,4 +1,4 @@
-# FieldCure.AssistStudio.Providers
+# FieldCure.Ai.Providers
 
 AI provider clients for Claude, OpenAI, Gemini, Ollama, and Groq with shared models and streaming support.
 
@@ -15,8 +15,8 @@ AI provider clients for Claude, OpenAI, Gemini, Ollama, and Groq with shared mod
 ## Quick Start
 
 ```csharp
-using FieldCure.AssistStudio.Models;
-using FieldCure.AssistStudio.Providers;
+using FieldCure.Ai.Providers.Models;
+using FieldCure.Ai.Providers;
 
 var preset = new ProviderPreset
 {
