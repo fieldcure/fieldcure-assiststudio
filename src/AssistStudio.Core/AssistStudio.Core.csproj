@@ -6,13 +6,13 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
-    <Version>0.12.0</Version>
+    <Version>0.13.0</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CA1416</NoWarn>
 
     <!-- NuGet Package Metadata -->
     <PackageId>FieldCure.AssistStudio.Core</PackageId>
-    <Description>AI provider client library for Claude, OpenAI, Gemini, and Ollama. Core models, providers, and helpers.</Description>
+    <Description>App-level helpers and models for AssistStudio — MCP server management, tool orchestration, workspace context, and conversation persistence. AI providers are in FieldCure.Ai.Providers.</Description>
     <Authors>Jong Hyun Kim</Authors>
     <Company>Fieldcure Co., Ltd.</Company>
     <Copyright>Copyright (c) 2026 Fieldcure Co., Ltd.</Copyright>

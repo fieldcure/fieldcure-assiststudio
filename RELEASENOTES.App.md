@@ -1,5 +1,24 @@
 ﻿# Release Notes — AssistStudio App
 
+## [0.13.0] - 2026-03-31
+
+### Added
+- **Essentials MCP server** — replaced in-process virtual server with external `FieldCure.Mcp.Essentials` v0.2.0 (7 tools: http_request, run_command, run_javascript, get_environment, read_file, write_file, search_files)
+- Essentials and Runner server cards on ConnectPage
+- Duplicate tool name resolution — Filesystem tools take precedence over Essentials when both active
+- `http_request` auto-approved (no confirmation popup)
+
+### Changed
+- **AI Providers extracted** to new `FieldCure.Ai.Providers` v0.1.0 NuGet package
+- Built-in Runner server bumped to v0.3.0 (default MCP servers, Core dependency removed)
+- Profile `EnabledServers` migrated from `"essentials"` to `"builtin_essentials"` convention
+- Streaming token batching (50ms intervals) for smoother UI during large responses
+
+### Removed
+- In-process tool classes (`ReadFileTool`, `WriteFileTool`, `SearchFilesTool`, `RunCommandTool`, `UrlFetchTool`) — replaced by Essentials MCP server
+
+---
+
 ## [0.12.0] - 2026-03-30
 
 ### Added

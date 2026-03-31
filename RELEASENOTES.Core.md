@@ -1,5 +1,23 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Core
 
+## [0.13.0] - 2026-03-31
+
+### Changed
+- **Providers extracted** — AI providers, shared models, and streaming types moved to new `FieldCure.Ai.Providers` package. Core now references Providers as a dependency.
+- **Essentials MCP server** — in-process virtual Essentials server replaced with external `FieldCure.Mcp.Essentials` MCP server process
+- Built-in tool classes removed (`ReadFileTool`, `WriteFileTool`, `SearchFilesTool`, `RunCommandTool`, `UrlFetchTool`) — now provided by Essentials MCP server
+
+### Added
+- `http_request` added to ReadOnlyToolNames (no confirmation required, matching previous `fetch_url` behavior)
+- Essentials and Runner server cards on ConnectPage
+- Profile `EnabledServers` migration from `"essentials"` to `"builtin_essentials"` convention
+- Duplicate tool name resolution — stateful servers (Filesystem) take precedence over shared servers (Essentials)
+
+### Fixed
+- Streaming token batching (50ms intervals) to reduce WebView2 calls and improve UI responsiveness
+
+---
+
 ## [0.12.0] - 2026-03-30
 
 ### Added

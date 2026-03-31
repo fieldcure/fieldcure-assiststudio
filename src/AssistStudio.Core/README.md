@@ -1,23 +1,21 @@
 # FieldCure.AssistStudio.Core
 
-**Platform-agnostic AI provider client library for .NET** — Claude, OpenAI, Gemini, Ollama, Groq, and any OpenAI-compatible endpoint.
+**App-level helpers and models for AssistStudio** — MCP server management, tool orchestration, workspace context, and conversation persistence. AI providers live in [`FieldCure.Ai.Providers`](https://www.nuget.org/packages/FieldCure.Ai.Providers).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/fieldcure/fieldcure-assiststudio/blob/main/LICENSE)
 
 ## Features
 
-- **Multi-Provider** — Claude, OpenAI, Gemini, Ollama, and Groq built-in. Implement `IAiProvider` to add your own.
-- **Streaming** — Real-time structured event streaming via `IAsyncEnumerable<StreamEvent>`. The `StreamEvent` discriminated union covers text, thinking, tool calls, usage, and completion.
-- **Extended Thinking** — Per-provider thinking/reasoning support. `ThinkingSupport` detection, `ThinkingOverride` (Auto / ForceOn / ForceOff), and `ThinkingBudget` on `AiRequest`.
-- **Vision & Documents** — Attach images (PNG, JPG, WebP, GIF), PDFs, and DOCX files. `PdfCapability` (Auto / TextExtraction / NativePdf / PageAsImage) per provider.
-- **Tool / Function Calling** — Define tools with `IAssistTool`. `ToolCallExecutor` orchestrates execution with an optional confirmation callback. `ToolResolver` merges built-in and MCP tools with name-conflict resolution.
-- **MCP Tool Adapter** — `McpToolAdapter` bridges external MCP tools to the `IAssistTool` pipeline with zero MCP SDK dependency in Core.
-- **Workspace Context** — `IWorkspaceContext` for dynamic system prompt injection based on host app state.
-- **RAG Support** — `IContextProvider` retrieves relevant `ContextChunk`s for a query. Chunks are injected into the system prompt alongside workspace context. Built-in Knowledge Archive server provides document indexing and search via MCP.
-- **Token Tracking** — `TokenUsage` (input/output counts) exposed after every request.
-- **Structured Logging** — `DiagnosticLogger` with pluggable `OnException`, `OnWarning`, `OnInfo` callbacks.
-- **Hardware Probing** — `HardwareProbe` for GPU/CPU detection to evaluate Ollama model compatibility.
-- **Platform-Agnostic** — Targets `net8.0` with no Windows dependency. Use from console apps, servers, or any .NET project.
+- **MCP Server Management** — Built-in server lifecycle (install, update, connect) via `BuiltInServerHelper`
+- **Tool Orchestration** — `ToolCallExecutor` with confirmation handler, `ToolResolver` for built-in/MCP tool merge
+- **Workspace Context** — `IWorkspaceContext` for dynamic system prompt injection
+- **RAG Support** — `IContextProvider` retrieves `ContextChunk`s for queries
+- **Structured Logging** — `DiagnosticLogger` with pluggable callbacks
+- **Hardware Probing** — `HardwareProbe` for GPU/CPU detection (Ollama compatibility)
+- **Conversation Models** — `McpServerConfig`, `BuiltInServerConfig`, `Profile`
+- **Platform-Agnostic** — Targets `net8.0`
+
+> **Note:** AI providers (Claude, OpenAI, Gemini, Ollama, Groq), streaming, and shared models (`ChatMessage`, `AiRequest`, `IAssistTool`, etc.) are in [`FieldCure.Ai.Providers`](https://www.nuget.org/packages/FieldCure.Ai.Providers).
 
 ## Install
 
@@ -28,10 +26,10 @@ dotnet add package FieldCure.AssistStudio.Core
 ## Quick Start
 
 ```csharp
-using FieldCure.AssistStudio.Models;
-using FieldCure.AssistStudio.Providers;
+using FieldCure.Ai.Providers;
+using FieldCure.Ai.Providers.Models;
 
-// Create a provider
+// Create a provider (from FieldCure.Ai.Providers)
 var provider = new ClaudeProvider(apiKey: "sk-ant-...", modelId: "claude-sonnet-4-20250514");
 
 // Simple completion
@@ -219,6 +217,7 @@ DiagnosticLogger.OnInfo = msg => logger.LogInformation(msg);
 
 ## Related Packages
 
+- [FieldCure.Ai.Providers](https://www.nuget.org/packages/FieldCure.Ai.Providers) — AI provider clients (Claude, OpenAI, Gemini, Ollama, Groq) and shared models. Core depends on this.
 - [FieldCure.AssistStudio.Controls.WinUI](https://www.nuget.org/packages/FieldCure.AssistStudio.Controls.WinUI) — WinUI 3 chat UI controls built on this library.
 
 ## License

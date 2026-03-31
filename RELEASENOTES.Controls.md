@@ -1,5 +1,13 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Controls.WinUI
 
+## [0.13.0] - 2026-03-31
+
+### Changed
+- Streaming token rendering batched at 50ms intervals to reduce WebView2 `ExecuteScriptAsync` calls — prevents UI thread saturation during large responses
+- `await Task.Delay(1)` yield during tool call argument streaming to keep UI responsive
+
+---
+
 ## [0.12.0] - 2026-03-30
 
 ### Fixed

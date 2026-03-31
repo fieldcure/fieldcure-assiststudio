@@ -2468,7 +2468,7 @@ public sealed partial class ChatPanel : Control
                     break;
             }
 
-            // Flush batched tokens at intervals
+            // Flush batched tokens at intervals and yield to UI thread
             var now = Environment.TickCount64;
             if (now - lastFlush >= TokenBatchInterval.TotalMilliseconds)
             {
@@ -2483,6 +2483,11 @@ public sealed partial class ChatPanel : Control
                     message.Content += textBatch.ToString();
                     await _renderer.AppendTokenAsync(message.Id, textBatch.ToString());
                     textBatch.Clear();
+                }
+                else
+                {
+                    // No text to render (e.g., tool call deltas only) — yield to keep UI responsive
+                    await Task.Delay(1);
                 }
                 lastFlush = now;
             }
