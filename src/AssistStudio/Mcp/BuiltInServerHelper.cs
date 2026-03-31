@@ -90,11 +90,14 @@ public static class BuiltInServerHelper
         "list_tasks", "get_execution_status", "get_task_history",
         // Essentials
         "get_environment", "run_javascript", "http_request",
+        "remember", "forget", "list_memories",
     ];
 
     /// <summary>
-    /// Memory server tool names — excluded from Essentials, shown under Memory toggle.
+    /// Legacy Memory tool names — now provided by Essentials MCP server.
+    /// Kept for profile migration compatibility.
     /// </summary>
+    [Obsolete("Memory tools are now part of Essentials MCP server.")]
     public static readonly HashSet<string> MemoryToolNames = ["remember", "forget"];
 
     /// <summary>

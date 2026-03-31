@@ -65,8 +65,6 @@ public partial class MainViewModel : ObservableObject
         _profiles = AppSettings.LoadProfiles();
 
         // Register available tools
-        ToolRegistry.Register(new RememberTool(App.MemoryStore));
-        ToolRegistry.Register(new ForgetTool(App.MemoryStore));
         ToolRegistry.Register(new SearchToolsTool(App.McpRegistry));
     }
 

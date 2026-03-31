@@ -1113,20 +1113,6 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             });
         }
 
-        // 1.5 Memory virtual server
-        var memoryEnabled = enabledSet.Contains(BuiltInServerHelper.MemoryKey);
-        if (memoryEnabled)
-        {
-            foreach (var tool in ToolRegistry.Resolve(["remember", "forget"]))
-                tools.Add(tool);
-
-            tools.Add(new ServerPlaceholderTool
-            {
-                Name = BuiltInServerHelper.MemoryKey,
-                DisplayName = BuiltInServerHelper.MemoryDisplayName,
-            });
-        }
-
         // 2. search_tools — when profile has enabled MCP servers
         var effectiveServerIds = BuildEffectiveServerIds(enabledServerIds);
 
@@ -1281,11 +1267,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         var result = new List<IAssistTool>();
         foreach (var tool in realTools)
         {
-            if (IsBuiltInTool(tool.Name))
-            {
-                result.Add(tool);
-            }
-            else if (tool.Name == "search_tools")
+            if (tool.Name == "search_tools")
             {
                 if (connectedIds.Count > 0)
                 {
@@ -1358,11 +1340,6 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     }
 
     #region Tool Resolution Helpers
-
-    /// <summary>Built-in tool names that don't require MCP server connections.</summary>
-    private static readonly HashSet<string> BuiltInToolNames = ["remember", "forget"];
-
-    private static bool IsBuiltInTool(string name) => BuiltInToolNames.Contains(name);
 
     /// <summary>
     /// Maps profile-level server IDs (builtin_xxx) to per-tab connection IDs.
