@@ -2416,6 +2416,9 @@ public sealed partial class ChatPanel : Control
     /// Consumes a stream of <see cref="StreamEvent"/> instances, appending text deltas to the message
     /// and rendering them in the chat UI. Returns aggregated usage, truncation info, and any tool calls.
     /// </summary>
+    /// <summary>Batching interval for streaming token rendering to avoid UI thread saturation.</summary>
+    private static readonly TimeSpan TokenBatchInterval = TimeSpan.FromMilliseconds(50);
+
     private async Task<StreamResult> ConsumeStreamAsync(
         IAsyncEnumerable<StreamEvent> events, ChatMessage message, CancellationToken ct)
     {
@@ -2424,6 +2427,11 @@ public sealed partial class ChatPanel : Control
         var toolAccumulator = new StreamToolCallAccumulator();
         var thinkingBlockStarted = false;
 
+        // Batch tokens to reduce WebView2 ExecuteScriptAsync calls
+        var textBatch = new System.Text.StringBuilder();
+        var thinkingBatch = new System.Text.StringBuilder();
+        var lastFlush = Environment.TickCount64;
+
         await foreach (var evt in events.WithCancellation(ct))
         {
             switch (evt)
@@ -2431,15 +2439,20 @@ public sealed partial class ChatPanel : Control
                 case StreamEvent.ThinkingDelta thinking:
                     if (!thinkingBlockStarted)
                     {
+                        // Flush any pending text before starting thinking block
+                        if (textBatch.Length > 0)
+                        {
+                            message.Content += textBatch.ToString();
+                            await _renderer.AppendTokenAsync(message.Id, textBatch.ToString());
+                            textBatch.Clear();
+                        }
                         await _renderer.BeginThinkingBlockAsync(message.Id);
                         thinkingBlockStarted = true;
                     }
-                    message.ThinkingContent = (message.ThinkingContent ?? "") + thinking.Text;
-                    await _renderer.AppendThinkingTokenAsync(message.Id, thinking.Text);
+                    thinkingBatch.Append(thinking.Text);
                     break;
                 case StreamEvent.TextDelta delta:
-                    message.Content += delta.Text;
-                    await _renderer.AppendTokenAsync(message.Id, delta.Text);
+                    textBatch.Append(delta.Text);
                     break;
                 case StreamEvent.ToolCallStart start:
                     toolAccumulator.HandleStart(start);
@@ -2454,6 +2467,37 @@ public sealed partial class ChatPanel : Control
                     isTruncated = completed.IsTruncated;
                     break;
             }
+
+            // Flush batched tokens at intervals
+            var now = Environment.TickCount64;
+            if (now - lastFlush >= TokenBatchInterval.TotalMilliseconds)
+            {
+                if (thinkingBatch.Length > 0)
+                {
+                    message.ThinkingContent = (message.ThinkingContent ?? "") + thinkingBatch.ToString();
+                    await _renderer.AppendThinkingTokenAsync(message.Id, thinkingBatch.ToString());
+                    thinkingBatch.Clear();
+                }
+                if (textBatch.Length > 0)
+                {
+                    message.Content += textBatch.ToString();
+                    await _renderer.AppendTokenAsync(message.Id, textBatch.ToString());
+                    textBatch.Clear();
+                }
+                lastFlush = now;
+            }
+        }
+
+        // Flush remaining tokens
+        if (thinkingBatch.Length > 0)
+        {
+            message.ThinkingContent = (message.ThinkingContent ?? "") + thinkingBatch.ToString();
+            await _renderer.AppendThinkingTokenAsync(message.Id, thinkingBatch.ToString());
+        }
+        if (textBatch.Length > 0)
+        {
+            message.Content += textBatch.ToString();
+            await _renderer.AppendTokenAsync(message.Id, textBatch.ToString());
         }
 
         if (thinkingBlockStarted)
