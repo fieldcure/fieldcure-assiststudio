@@ -3,12 +3,10 @@ using AssistStudio.Helpers;
 using AssistStudio.Mcp;
 using AssistStudio.Tools;
 using CommunityToolkit.Mvvm.ComponentModel;
-using FieldCure.AssistStudio.Controls;
-using FieldCure.AssistStudio.Helpers;
-using FieldCure.AssistStudio.Models;
+using FieldCure.Ai.Providers;
 using FieldCure.Ai.Providers.Models;
-using FieldCure.Ai.Providers;
-using FieldCure.Ai.Providers;
+using FieldCure.AssistStudio.Controls;
+using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml.Controls;
 using System.Collections;
 

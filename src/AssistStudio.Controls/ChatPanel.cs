@@ -1,16 +1,14 @@
-﻿using System.Collections;
-using System.Collections.ObjectModel;
-using System.Text.RegularExpressions;
+﻿using FieldCure.Ai.Providers;
+using FieldCure.Ai.Providers.Models;
+using FieldCure.AssistStudio.Controls.Rendering;
 using FieldCure.AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
-using FieldCure.Ai.Providers.Models;
-using FieldCure.Ai.Providers;
-using FieldCure.Ai.Providers;
-using FieldCure.AssistStudio.Controls.Rendering;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using System.Collections;
+using System.Collections.ObjectModel;
+using System.Text.RegularExpressions;
 using Windows.ApplicationModel.DataTransfer;
-using Windows.ApplicationModel.Resources;
 
 namespace FieldCure.AssistStudio.Controls;
 

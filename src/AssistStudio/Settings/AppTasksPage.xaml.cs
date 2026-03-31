@@ -1,10 +1,7 @@
-using AssistStudio.Helpers;
+﻿using AssistStudio.Helpers;
 using AssistStudio.Mcp;
+using FieldCure.Ai.Providers;
 using FieldCure.AssistStudio.Helpers;
-using FieldCure.AssistStudio.Models;
-using FieldCure.Ai.Providers.Models;
-using FieldCure.Ai.Providers;
-using FieldCure.Ai.Providers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;

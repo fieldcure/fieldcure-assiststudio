@@ -1,9 +1,7 @@
+﻿using FieldCure.Ai.Providers;
+using FieldCure.Ai.Providers.Models;
 using System.Net;
 using System.Text;
-using FieldCure.AssistStudio.Models;
-using FieldCure.Ai.Providers.Models;
-using FieldCure.Ai.Providers;
-using FieldCure.Ai.Providers;
 
 namespace FieldCure.AssistStudio.Tests;
 
