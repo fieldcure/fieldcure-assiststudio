@@ -1296,7 +1296,17 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             }
         }
 
-        // 4. Add directly-exposed tools from connected servers (e.g., RAG search_documents)
+        // 4. Add directly-exposed tools from connected servers
+
+        // 4.1 Filesystem tools — per-tab connection (higher priority than Essentials)
+        if (_filesystemConnection?.IsConnected == true
+            && connectedIds.Contains(_filesystemConnection.Config.Id))
+        {
+            foreach (var tool in _filesystemConnection.Tools)
+                result.Add(tool);
+        }
+
+        // 4.2 RAG tools
         if (_ragConnection?.IsConnected == true
             && connectedIds.Contains(_ragConnection.Config.Id))
         {
