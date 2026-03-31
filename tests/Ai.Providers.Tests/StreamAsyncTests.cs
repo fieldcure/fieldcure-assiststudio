@@ -3,7 +3,7 @@ using FieldCure.Ai.Providers.Models;
 using System.Net;
 using System.Text;
 
-namespace FieldCure.AssistStudio.Tests;
+namespace FieldCure.Ai.Providers.Tests;
 
 /// <summary>
 /// Integration tests that verify each provider's <see cref="IAiProvider.StreamAsync"/> method

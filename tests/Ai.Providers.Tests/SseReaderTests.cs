@@ -1,7 +1,7 @@
 ﻿using FieldCure.Ai.Providers;
 using System.Text;
 
-namespace FieldCure.AssistStudio.Tests;
+namespace FieldCure.Ai.Providers.Tests;
 
 [TestClass]
 public class SseReaderTests

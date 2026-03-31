@@ -1,7 +1,7 @@
 ﻿using FieldCure.Ai.Providers;
 using FieldCure.Ai.Providers.Models;
 
-namespace FieldCure.AssistStudio.Tests;
+namespace FieldCure.Ai.Providers.Tests;
 
 [TestClass]
 public class PromptBuilderTests

@@ -2,7 +2,7 @@
 using FieldCure.Ai.Providers.Models;
 using System.Text.Json;
 
-namespace FieldCure.AssistStudio.Tests;
+namespace FieldCure.Ai.Providers.Tests;
 
 [TestClass]
 public class ContextInjectionTests

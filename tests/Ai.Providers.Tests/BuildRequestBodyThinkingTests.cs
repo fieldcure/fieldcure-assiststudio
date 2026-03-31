@@ -3,7 +3,7 @@ using FieldCure.Ai.Providers.Models;
 using System.Net;
 using System.Text.Json;
 
-namespace FieldCure.AssistStudio.Tests;
+namespace FieldCure.Ai.Providers.Tests;
 
 /// <summary>
 /// Verifies that each provider's BuildRequestBody correctly includes thinking parameters
