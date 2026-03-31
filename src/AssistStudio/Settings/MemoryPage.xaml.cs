@@ -90,7 +90,7 @@ public sealed partial class MemoryPage : Page
                     },
                 };
 
-                var textPanel = new StackPanel { Spacing = 2 };
+                var textPanel = new StackPanel { Spacing = 6 };
                 textPanel.Children.Add(new TextBlock
                 {
                     Text = key,
