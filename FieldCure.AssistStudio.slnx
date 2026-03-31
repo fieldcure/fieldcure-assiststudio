@@ -9,12 +9,19 @@
     <File Path="RELEASENOTES.App.md" />
     <File Path="RELEASENOTES.Controls.md" />
     <File Path="RELEASENOTES.Core.md" />
+    <File Path="RELEASENOTES.Providers.md" />
   </Folder>
 
   <Folder Name="/src/">
     <Project Path="src/AssistStudio/AssistStudio.csproj" Id="ad2171d6-2c2f-4c6a-b467-425f09c13247">
       <Platform Project="x64" />
       <Deploy />
+    </Project>
+    <Project Path="src/Ai.Providers/Ai.Providers.csproj">
+      <Configuration Solution="Debug|x64" Project="Debug|AnyCPU" />
+      <Configuration Solution="Debug|arm64" Project="Debug|AnyCPU" />
+      <Configuration Solution="Release|x64" Project="Release|AnyCPU" />
+      <Configuration Solution="Release|arm64" Project="Release|AnyCPU" />
     </Project>
     <Project Path="src/AssistStudio.Core/AssistStudio.Core.csproj">
       <Configuration Solution="Debug|x64" Project="Debug|AnyCPU" />
