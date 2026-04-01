@@ -209,8 +209,14 @@ public partial class App : Application
     {
         try
         {
-            // Ensure built-in server tools are installed via dotnet tool
-            await BuiltInServerHelper.EnsureInstalledAsync();
+            // Check for built-in server updates in the background (non-blocking).
+            // Servers are already installed from a previous launch; update checks
+            // should not delay MCP server connections or the first user message.
+            _ = Task.Run(async () =>
+            {
+                try { await BuiltInServerHelper.EnsureInstalledAsync(); }
+                catch (Exception ex) { LoggingService.LogWarning($"[BuiltIn] Background update check failed: {ex.Message}"); }
+            });
 
             // Sync API keys from UWP PasswordVault to Win32 Credential Manager
             // so external processes (Runner serve/exec) can access them

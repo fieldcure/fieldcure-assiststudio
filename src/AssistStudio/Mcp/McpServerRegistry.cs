@@ -237,8 +237,15 @@ public class McpServerRegistry : IAsyncDisposable
         await _lock.WaitAsync(ct);
         try
         {
-            // Find and remove existing built-in connection
+            // Skip if already connected (avoid killing a healthy connection during concurrent init)
             var existing = _connections.FirstOrDefault(c => c.Config.Id == builtInId);
+            if (existing is not null && existing.IsConnected)
+            {
+                LoggingService.LogInfo($"[MCP] Built-in {serverKey} already connected, skipping");
+                return;
+            }
+
+            // Remove failed or disconnected existing connection
             if (existing is not null)
             {
                 await existing.DisposeAsync();
