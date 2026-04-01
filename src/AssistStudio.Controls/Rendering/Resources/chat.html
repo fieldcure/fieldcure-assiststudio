@@ -1364,15 +1364,26 @@
             if (bubble) {
                 bubble.classList.remove('streaming');
                 bubble.classList.add('rendered');
-                // Preserve thinking and tool blocks before markdown re-render
+                // Preserve thinking, tool blocks, and tool images before markdown re-render
                 var thinkingBlock = bubble.querySelector('.thinking-block');
                 var toolBlocks = Array.from(bubble.querySelectorAll('.tool-block'));
+                var toolImages = Array.from(bubble.querySelectorAll('.tool-result-image'));
                 // Strip [Tool: ...] markers from content before markdown rendering
                 var cleanText = fullText.replace(/\[Tool:\s*[^\]]*\]\n?/g, '\n');
                 cleanText = cleanText.replace(/\[source\]\(([^)]+)\)/gi, '(Source: $1)');
                 bubble.innerHTML = renderMarkdown(cleanText);
+                // Re-insert tool blocks and their images at the top (in original order)
                 toolBlocks.reverse().forEach(function(tb) {
                     bubble.insertBefore(tb, bubble.firstChild);
+                });
+                toolImages.forEach(function(img) {
+                    // Insert after the last tool-block
+                    var lastTb = bubble.querySelector('.tool-block:last-of-type');
+                    if (lastTb && lastTb.nextSibling) {
+                        bubble.insertBefore(img, lastTb.nextSibling);
+                    } else {
+                        bubble.insertBefore(img, bubble.firstChild);
+                    }
                 });
                 if (thinkingBlock) {
                     bubble.insertBefore(thinkingBlock, bubble.firstChild);
