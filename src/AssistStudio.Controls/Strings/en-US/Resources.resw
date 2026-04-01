@@ -90,6 +90,24 @@
   <data name="Chat_ShowLess" xml:space="preserve">
     <value>Show less</value>
   </data>
+  <data name="Chat_ImageSave" xml:space="preserve">
+    <value>Save image</value>
+  </data>
+  <data name="Chat_ImageCopy" xml:space="preserve">
+    <value>Copy to clipboard</value>
+  </data>
+  <data name="Chat_ImageExpand" xml:space="preserve">
+    <value>View full size</value>
+  </data>
+  <data name="Chat_ImageClose" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Chat_ImageSaved" xml:space="preserve">
+    <value>Image saved</value>
+  </data>
+  <data name="Chat_ImageCopied" xml:space="preserve">
+    <value>Copied to clipboard</value>
+  </data>
   <data name="ComposeBar_Placeholder" xml:space="preserve">
     <value>Type a message...</value>
   </data>

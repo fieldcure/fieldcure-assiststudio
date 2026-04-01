@@ -3102,7 +3102,13 @@ public sealed partial class ChatPanel : Control
                 ["editCancel"] = loader.GetString("Chat_EditCancel"),
                 ["editSave"] = loader.GetString("Chat_EditSave"),
                 ["showMore"] = loader.GetString("Chat_ShowMore"),
-                ["showLess"] = loader.GetString("Chat_ShowLess")
+                ["showLess"] = loader.GetString("Chat_ShowLess"),
+                ["imageSave"] = loader.GetString("Chat_ImageSave"),
+                ["imageCopy"] = loader.GetString("Chat_ImageCopy"),
+                ["imageExpand"] = loader.GetString("Chat_ImageExpand"),
+                ["imageClose"] = loader.GetString("Chat_ImageClose"),
+                ["imageSaved"] = loader.GetString("Chat_ImageSaved"),
+                ["imageCopied"] = loader.GetString("Chat_ImageCopied")
             };
 
             // Filter out empty strings (key not found returns empty)

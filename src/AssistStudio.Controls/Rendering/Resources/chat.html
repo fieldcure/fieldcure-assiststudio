@@ -219,6 +219,90 @@
         display: block;
     }
 
+    /* ===== Image Wrapper + Toolbar ===== */
+    .image-wrapper {
+        position: relative;
+        display: inline-block;
+    }
+    .image-toolbar {
+        position: absolute;
+        bottom: 12px;
+        right: 8px;
+        display: flex;
+        gap: 2px;
+        opacity: 0;
+        transition: opacity 0.2s;
+        background: var(--bg-primary);
+        border-radius: 6px;
+        padding: 2px;
+        box-shadow: var(--shadow);
+    }
+    .image-wrapper:hover .image-toolbar {
+        opacity: 1;
+    }
+
+    /* ===== Image Popover ===== */
+    .image-popover-backdrop {
+        position: fixed;
+        inset: 0;
+        backdrop-filter: blur(8px);
+        z-index: 9998;
+    }
+    [data-theme="light"] .image-popover-backdrop {
+        background: rgba(255, 255, 255, 0.6);
+    }
+    [data-theme="dark"] .image-popover-backdrop {
+        background: rgba(0, 0, 0, 0.7);
+    }
+    .image-popover-card {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 9999;
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        padding: 12px;
+        max-width: 85%;
+        max-height: 85%;
+        display: flex;
+        flex-direction: column;
+    }
+    .image-popover-header {
+        display: flex;
+        justify-content: flex-end;
+        gap: 4px;
+        padding-bottom: 8px;
+    }
+    .image-popover-card img {
+        max-width: 100%;
+        max-height: calc(85vh - 80px);
+        object-fit: contain;
+        border-radius: 8px;
+    }
+
+    /* ===== Image Toast ===== */
+    .image-toast {
+        position: fixed;
+        bottom: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        padding: 8px 16px;
+        border-radius: 8px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+        font-size: 13px;
+        z-index: 10000;
+        opacity: 1;
+        transition: opacity 0.3s;
+    }
+    .image-toast.fade-out {
+        opacity: 0;
+    }
+
     /* ===== Search Result Block ===== */
     /* Collapsed: identical to .tool-block + .tool-header. Expanded: shows hit list below. */
     .search-result-block details > summary {
@@ -844,6 +928,213 @@
         });
     }
 
+    // ===== Image Toolbar & Modal =====
+
+    function wrapImageWithToolbar(img) {
+        if (img.parentElement && img.parentElement.classList.contains('image-wrapper')) return;
+        var wrapper = document.createElement('div');
+        wrapper.className = 'image-wrapper';
+        if (img.parentNode) {
+            img.parentNode.insertBefore(wrapper, img);
+        }
+        wrapper.appendChild(img);
+
+        var toolbar = document.createElement('div');
+        toolbar.className = 'image-toolbar';
+
+        // Save button
+        var saveBtn = document.createElement('button');
+        saveBtn.className = 'msg-action-btn';
+        saveBtn.title = _L.imageSave || 'Save image';
+        saveBtn.textContent = '\uE74E';
+        saveBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            downloadImage(img);
+        });
+        toolbar.appendChild(saveBtn);
+
+        // Copy button
+        var copyBtn = document.createElement('button');
+        copyBtn.className = 'msg-action-btn';
+        copyBtn.title = _L.imageCopy || 'Copy to clipboard';
+        copyBtn.textContent = '\uE8C8';
+        copyBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            copyImage(img, copyBtn);
+        });
+        toolbar.appendChild(copyBtn);
+
+        // Expand button
+        var expandBtn = document.createElement('button');
+        expandBtn.className = 'msg-action-btn';
+        expandBtn.title = _L.imageExpand || 'View full size';
+        expandBtn.textContent = '\uE740';
+        expandBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            openImageModal(img);
+        });
+        toolbar.appendChild(expandBtn);
+
+        wrapper.appendChild(toolbar);
+
+        // Click image to expand
+        img.style.cursor = 'pointer';
+        img.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            openImageModal(img);
+        });
+    }
+
+    function imgToDataUri(imgEl) {
+        if (imgEl.src && imgEl.src.startsWith('data:')) return imgEl.src;
+        // Draw the already-loaded image to canvas (avoids re-fetching URL images)
+        try {
+            var canvas = document.createElement('canvas');
+            canvas.width = imgEl.naturalWidth || imgEl.width;
+            canvas.height = imgEl.naturalHeight || imgEl.height;
+            canvas.getContext('2d').drawImage(imgEl, 0, 0);
+            return canvas.toDataURL('image/png');
+        } catch (e) {
+            // CORS tainted canvas — fall back to URL for C# handling
+            return null;
+        }
+    }
+
+    function getImageData(imgEl, callback) {
+        var dataUri = imgToDataUri(imgEl);
+        if (dataUri) { callback(dataUri); return; }
+        // CORS fallback: ask C# to download the URL
+        window.chrome.webview.postMessage('saveImageUrl:' + imgEl.src);
+    }
+
+    function downloadImage(imgEl) {
+        var dataUri = imgToDataUri(imgEl);
+        if (!dataUri) {
+            window.chrome.webview.postMessage('saveImageUrl:' + imgEl.src);
+            return;
+        }
+        window.chrome.webview.postMessage('saveImage:' + dataUri);
+    }
+
+    function copyImage(imgEl, btn) {
+        var dataUri = imgToDataUri(imgEl);
+        if (dataUri) {
+            window.chrome.webview.postMessage('copyImage:' + dataUri);
+        } else {
+            window.chrome.webview.postMessage('copyImageUrl:' + imgEl.src);
+        }
+        if (btn) flashCopyBtn(btn);
+    }
+
+    function flashCopyBtn(btn) {
+        var orig = btn.textContent;
+        btn.textContent = '\uE73E';
+        btn.classList.add('copied');
+        setTimeout(function() {
+            btn.textContent = orig;
+            btn.classList.remove('copied');
+        }, 2000);
+    }
+
+    function openImageModal(imgEl) {
+        closeImageModal();
+        var cachedDataUri = imgToDataUri(imgEl);
+
+        // Backdrop
+        var backdrop = document.createElement('div');
+        backdrop.className = 'image-popover-backdrop';
+        backdrop.id = 'image-popover-backdrop';
+        backdrop.addEventListener('click', closeImageModal);
+
+        // Card
+        var card = document.createElement('div');
+        card.className = 'image-popover-card';
+        card.id = 'image-popover-card';
+
+        // Header with buttons
+        var header = document.createElement('div');
+        header.className = 'image-popover-header';
+
+        var saveBtn = document.createElement('button');
+        saveBtn.className = 'msg-action-btn';
+        saveBtn.title = _L.imageSave || 'Save image';
+        saveBtn.textContent = '\uE74E';
+        saveBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (cachedDataUri) window.chrome.webview.postMessage('saveImage:' + cachedDataUri);
+            else if (imgEl.src) window.chrome.webview.postMessage('saveImageUrl:' + imgEl.src);
+        });
+        header.appendChild(saveBtn);
+
+        var copyBtn = document.createElement('button');
+        copyBtn.className = 'msg-action-btn';
+        copyBtn.title = _L.imageCopy || 'Copy to clipboard';
+        copyBtn.textContent = '\uE8C8';
+        copyBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (cachedDataUri) window.chrome.webview.postMessage('copyImage:' + cachedDataUri);
+            else if (imgEl.src) window.chrome.webview.postMessage('copyImageUrl:' + imgEl.src);
+            flashCopyBtn(copyBtn);
+        });
+        header.appendChild(copyBtn);
+
+        var closeBtn = document.createElement('button');
+        closeBtn.className = 'msg-action-btn';
+        closeBtn.title = _L.imageClose || 'Close';
+        closeBtn.textContent = '\uE711';
+        closeBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            closeImageModal();
+        });
+        header.appendChild(closeBtn);
+
+        var img = document.createElement('img');
+        img.src = cachedDataUri || imgEl.src;
+
+        card.appendChild(header);
+        card.appendChild(img);
+
+        document.body.appendChild(backdrop);
+        document.body.appendChild(card);
+        document.addEventListener('keydown', _imageModalEscHandler);
+    }
+
+    function closeImageModal() {
+        var backdrop = document.getElementById('image-popover-backdrop');
+        var card = document.getElementById('image-popover-card');
+        if (backdrop) backdrop.remove();
+        if (card) card.remove();
+        document.removeEventListener('keydown', _imageModalEscHandler);
+    }
+
+    function _imageModalEscHandler(e) {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            closeImageModal();
+        }
+    }
+
+    function showImageToast(message) {
+        var existing = document.querySelector('.image-toast');
+        if (existing) existing.remove();
+        var toast = document.createElement('div');
+        toast.className = 'image-toast';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(function() {
+            toast.classList.add('fade-out');
+            setTimeout(function() { toast.remove(); }, 300);
+        }, 2000);
+    }
+
+    function wrapAllImages(container) {
+        var images = container.querySelectorAll('img:not(.attachment-image)');
+        for (var i = 0; i < images.length; i++) {
+            wrapImageWithToolbar(images[i]);
+        }
+    }
+
     function renderAttachments(attachments) {
         if (!attachments || attachments.length === 0) return '';
         var html = '<div class="attachment-container">';
@@ -1282,17 +1573,19 @@
             img.className = 'tool-result-image';
             img.src = dataUri;
             img.alt = 'Tool result image';
+            wrapImageWithToolbar(img);
+            var wrapper = img.parentElement;
             // Insert after the last tool-block, before .content
             var toolBlocks = bubble.querySelectorAll('.tool-block');
             var lastToolBlock = toolBlocks.length > 0 ? toolBlocks[toolBlocks.length - 1] : null;
             if (lastToolBlock && lastToolBlock.nextSibling) {
-                bubble.insertBefore(img, lastToolBlock.nextSibling);
+                bubble.insertBefore(wrapper, lastToolBlock.nextSibling);
             } else {
                 var contentSpan = bubble.querySelector('.content');
                 if (contentSpan) {
-                    bubble.insertBefore(img, contentSpan);
+                    bubble.insertBefore(wrapper, contentSpan);
                 } else {
-                    bubble.appendChild(img);
+                    bubble.appendChild(wrapper);
                 }
             }
             doScroll('instant');
@@ -1364,31 +1657,33 @@
             if (bubble) {
                 bubble.classList.remove('streaming');
                 bubble.classList.add('rendered');
-                // Preserve thinking, tool blocks, and tool images before markdown re-render
+                // Preserve thinking, tool blocks, and image wrappers before markdown re-render
                 var thinkingBlock = bubble.querySelector('.thinking-block');
                 var toolBlocks = Array.from(bubble.querySelectorAll('.tool-block'));
-                var toolImages = Array.from(bubble.querySelectorAll('.tool-result-image'));
+                var imageWrappers = Array.from(bubble.querySelectorAll('.image-wrapper'));
                 // Strip [Tool: ...] markers from content before markdown rendering
                 var cleanText = fullText.replace(/\[Tool:\s*[^\]]*\]\n?/g, '\n');
                 cleanText = cleanText.replace(/\[source\]\(([^)]+)\)/gi, '(Source: $1)');
                 bubble.innerHTML = renderMarkdown(cleanText);
-                // Re-insert tool blocks and their images at the top (in original order)
+                // Re-insert tool blocks and their image wrappers at the top (in original order)
                 toolBlocks.reverse().forEach(function(tb) {
                     bubble.insertBefore(tb, bubble.firstChild);
                 });
-                toolImages.forEach(function(img) {
+                imageWrappers.forEach(function(w) {
                     // Insert after the last tool-block
                     var lastTb = bubble.querySelector('.tool-block:last-of-type');
                     if (lastTb && lastTb.nextSibling) {
-                        bubble.insertBefore(img, lastTb.nextSibling);
+                        bubble.insertBefore(w, lastTb.nextSibling);
                     } else {
-                        bubble.insertBefore(img, bubble.firstChild);
+                        bubble.insertBefore(w, bubble.firstChild);
                     }
                 });
                 if (thinkingBlock) {
                     bubble.insertBefore(thinkingBlock, bubble.firstChild);
                 }
                 addCopyButtons(bubble);
+                // Wrap any markdown images with toolbar (skip already-wrapped)
+                wrapAllImages(bubble);
 
                 if (truncated) {
                     var btn = document.createElement('button');
@@ -1454,6 +1749,10 @@
                     footer.insertBefore(createBranchNav(id, siblingIndex, siblingCount), footer.firstChild);
                 }
             }
+        },
+
+        showImageToast: function(message) {
+            showImageToast(message);
         },
 
         setTheme: function(isDark) {
