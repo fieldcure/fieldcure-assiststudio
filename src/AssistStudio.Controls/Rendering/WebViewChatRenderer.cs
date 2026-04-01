@@ -205,6 +205,18 @@ internal partial class WebViewChatRenderer
     }
 
     /// <summary>
+    /// Appends an image to an assistant message, rendered below the most recent tool block.
+    /// Used for MCP <c>ImageContentBlock</c> results.
+    /// </summary>
+    /// <param name="id">The assistant message identifier.</param>
+    /// <param name="dataUri">A data URI string (e.g. <c>data:image/png;base64,...</c>).</param>
+    public Task AppendToolImageAsync(string id, string dataUri)
+    {
+        var script = $"window.assistChat.appendToolImage({Js(id)}, {Js(dataUri)})";
+        return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
+    /// <summary>
     /// Appends a collapsible search result block (details/summary) to an assistant message.
     /// Used for <c>search_documents</c> tool results from RAG.
     /// </summary>

@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 using AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
@@ -362,14 +363,16 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
         return ExtractTextResult(result);
     }
 
-    private static async Task<string> InvokeMcpToolAsync(
+    private static async Task<ToolExecutionResult> InvokeMcpToolAsync(
         McpClientTool mcpTool,
         JsonElement arguments,
         CancellationToken ct)
     {
         var argsDict = ConvertJsonArguments(arguments);
         var result = await mcpTool.CallAsync(argsDict, cancellationToken: ct);
-        return ExtractTextResult(result);
+        var text = ExtractTextResult(result);
+        var images = ExtractImageDataUris(result);
+        return new ToolExecutionResult(text, images);
     }
 
     private static Dictionary<string, object?> ConvertJsonArguments(JsonElement arguments)
@@ -395,6 +398,28 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
             return string.Join("\n", texts);
         }
         return result.IsError == true ? """{"error": true}""" : "{}";
+    }
+
+    /// <summary>
+    /// Extracts image content blocks from an MCP tool result and converts them to data URIs.
+    /// </summary>
+    private static IReadOnlyList<string>? ExtractImageDataUris(ModelContextProtocol.Protocol.CallToolResult result)
+    {
+        if (result.Content is not { Count: > 0 } content)
+            return null;
+
+        List<string>? uris = null;
+        foreach (var block in content)
+        {
+            if (block is ImageContentBlock image)
+            {
+                var base64 = Encoding.UTF8.GetString(image.Data.Span);
+                var dataUri = $"data:{image.MimeType};base64,{base64}";
+                uris ??= [];
+                uris.Add(dataUri);
+            }
+        }
+        return uris;
     }
 
     private static object? ConvertJsonElement(JsonElement element) => element.ValueKind switch

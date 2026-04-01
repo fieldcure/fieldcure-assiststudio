@@ -70,7 +70,7 @@ public static class ToolResolver
                             prefixedName,
                             mcp.Description,
                             mcp.ParameterSchema,
-                            mcp.ExecuteAsync)
+                            mcp.ExecuteWithContentAsync)
                         { ServerName = mcp.ServerName };
 
                         result.Add(prefixed);

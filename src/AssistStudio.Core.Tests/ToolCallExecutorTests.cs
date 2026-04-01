@@ -41,7 +41,7 @@ public class ToolCallExecutorTests
 
         var result = await executor.ExecuteAsync(call);
 
-        Assert.AreEqual("hello", result);
+        Assert.AreEqual("hello", result.Text);
     }
 
     [TestMethod]
@@ -65,8 +65,8 @@ public class ToolCallExecutorTests
 
         var result = await executor.ExecuteAsync(call);
 
-        Assert.IsTrue(result.Contains("rejected"));
-        Assert.IsTrue(result.Contains("Tool call rejected by user."));
+        Assert.IsTrue(result.Text.Contains("rejected"));
+        Assert.IsTrue(result.Text.Contains("Tool call rejected by user."));
     }
 
     [TestMethod]
@@ -80,7 +80,7 @@ public class ToolCallExecutorTests
 
         var result = await executor.ExecuteAsync(call);
 
-        Assert.AreEqual("executed", result);
+        Assert.AreEqual("executed", result.Text);
     }
 
     [TestMethod]
@@ -91,6 +91,6 @@ public class ToolCallExecutorTests
 
         var result = await executor.ExecuteAsync(call);
 
-        Assert.AreEqual("executed", result);
+        Assert.AreEqual("executed", result.Text);
     }
 }

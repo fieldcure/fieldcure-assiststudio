@@ -2660,25 +2660,25 @@ public sealed partial class ChatPanel : Control
             foreach (var call in result.ToolCalls!)
             {
                 DiagnosticLogger.LogInfo($"[Tool] Executing: {call.FunctionName} (id={call.Id})");
-                string toolResult;
+                ToolExecutionResult execResult;
                 try
                 {
-                    toolResult = await executor.ExecuteAsync(call, ct);
-                    DiagnosticLogger.LogInfo($"[Tool] Result: {call.FunctionName}, length={toolResult.Length}");
-                    LogStructuredToolResult(call.FunctionName, toolResult);
+                    execResult = await executor.ExecuteAsync(call, ct);
+                    DiagnosticLogger.LogInfo($"[Tool] Result: {call.FunctionName}, length={execResult.Text.Length}");
+                    LogStructuredToolResult(call.FunctionName, execResult.Text);
                 }
                 catch (Exception ex)
                 {
                     DiagnosticLogger.LogWarning($"[Tool] Execution error: {call.FunctionName} — {ex.Message}");
                     DiagnosticLogger.LogException(ex);
-                    toolResult = $"{{\"error\":\"{ex.Message}\"}}";
+                    execResult = new ToolExecutionResult($"{{\"error\":\"{ex.Message}\"}}");
                 }
 
                 // Capture user note from approval (if any) for injection in next API call
                 if (executor.LastUserNote is not null)
                     pendingUserNote = executor.LastUserNote;
 
-                toolResult = GuardToolResultSize(toolResult, call.FunctionName);
+                var toolResult = GuardToolResultSize(execResult.Text, call.FunctionName);
 
                 var toolResultMsg = new ChatMessage(ChatRole.Tool, toolResult)
                 {
@@ -2696,6 +2696,13 @@ public sealed partial class ChatPanel : Control
                     await _renderer.AppendToolBlockAsync(assistantMessage.Id, FormatFetchUrlLabel(call.Arguments, toolResult.Length));
                 else
                     await _renderer.AppendToolBlockAsync(assistantMessage.Id, call.FunctionName);
+
+                // Render images from MCP tool results
+                if (execResult.ImageDataUris is { Count: > 0 } imageUris)
+                {
+                    foreach (var dataUri in imageUris)
+                        await _renderer.AppendToolImageAsync(assistantMessage.Id, dataUri);
+                }
             }
         } while (true);
 

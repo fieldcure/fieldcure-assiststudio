@@ -209,6 +209,16 @@
         color: var(--timestamp-color);
     }
 
+    /* ===== Tool Result Image ===== */
+    .tool-result-image {
+        max-width: 100%;
+        max-height: 400px;
+        border-radius: 8px;
+        object-fit: contain;
+        margin: 4px 0 8px 0;
+        display: block;
+    }
+
     /* ===== Search Result Block ===== */
     /* Collapsed: identical to .tool-block + .tool-header. Expanded: shows hit list below. */
     .search-result-block details > summary {
@@ -387,6 +397,15 @@
     }
     .message-bubble.rendered tr:nth-child(even) td {
         background: var(--table-stripe);
+    }
+
+    /* ===== Markdown image ===== */
+    .message-bubble.rendered img, .rendered-zone img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 8px;
+        margin: 8px 0;
+        display: block;
     }
 
     /* ===== highlight.js token colors (GitHub-style) ===== */
@@ -1250,6 +1269,31 @@
                 bubble.insertBefore(block, contentSpan);
             } else {
                 bubble.appendChild(block);
+            }
+            doScroll('instant');
+        },
+
+        appendToolImage: function(id, dataUri) {
+            var msg = document.getElementById('msg-' + id);
+            if (!msg) return;
+            var bubble = msg.querySelector('.message-bubble');
+            if (!bubble) return;
+            var img = document.createElement('img');
+            img.className = 'tool-result-image';
+            img.src = dataUri;
+            img.alt = 'Tool result image';
+            // Insert after the last tool-block, before .content
+            var toolBlocks = bubble.querySelectorAll('.tool-block');
+            var lastToolBlock = toolBlocks.length > 0 ? toolBlocks[toolBlocks.length - 1] : null;
+            if (lastToolBlock && lastToolBlock.nextSibling) {
+                bubble.insertBefore(img, lastToolBlock.nextSibling);
+            } else {
+                var contentSpan = bubble.querySelector('.content');
+                if (contentSpan) {
+                    bubble.insertBefore(img, contentSpan);
+                } else {
+                    bubble.appendChild(img);
+                }
             }
             doScroll('instant');
         },

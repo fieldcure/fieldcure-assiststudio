@@ -3,7 +3,7 @@ using System.Text.Json;
 namespace FieldCure.Ai.Providers.Models;
 
 /// <summary>
-/// Adapts an MCP tool to the <see cref="IAssistTool"/> interface.
+/// Adapts an MCP tool to the <see cref="IAssistTool"/> and <see cref="IMultiContentTool"/> interfaces.
 /// Allows MCP tools to participate in the existing tool-calling pipeline
 /// without any changes to <see cref="Providers.IAiProvider"/> implementations.
 /// </summary>
@@ -12,11 +12,11 @@ namespace FieldCure.Ai.Providers.Models;
 /// any MCP SDK dependency. The delegate typically captures an
 /// <c>IMcpClient</c> instance to route calls to the MCP server.
 /// </remarks>
-public class McpToolAdapter : IAssistTool
+public class McpToolAdapter : IMultiContentTool
 {
     #region Fields
 
-    private readonly Func<JsonElement, CancellationToken, Task<string>> _executeFunc;
+    private readonly Func<JsonElement, CancellationToken, Task<ToolExecutionResult>> _executeFunc;
 
     #endregion
 
@@ -33,13 +33,14 @@ public class McpToolAdapter : IAssistTool
     /// </param>
     /// <param name="executeFunc">
     /// Delegate that invokes the MCP tool. Receives the parsed parameters
-    /// and returns the result string for the AI model.
+    /// and returns a <see cref="ToolExecutionResult"/> containing the text result
+    /// and optional image data URIs.
     /// </param>
     public McpToolAdapter(
         string name,
         string description,
         string parameterSchema,
-        Func<JsonElement, CancellationToken, Task<string>> executeFunc)
+        Func<JsonElement, CancellationToken, Task<ToolExecutionResult>> executeFunc)
     {
         Name = name;
         Description = description;
@@ -74,7 +75,18 @@ public class McpToolAdapter : IAssistTool
     public bool RequiresConfirmation => OverrideRequiresConfirmation ?? true;
 
     /// <inheritdoc />
-    public Task<string> ExecuteAsync(JsonElement parameters, CancellationToken ct = default)
+    public async Task<string> ExecuteAsync(JsonElement parameters, CancellationToken ct = default)
+    {
+        var result = await _executeFunc(parameters, ct);
+        return result.Text;
+    }
+
+    #endregion
+
+    #region IMultiContentTool
+
+    /// <inheritdoc />
+    public Task<ToolExecutionResult> ExecuteWithContentAsync(JsonElement parameters, CancellationToken ct = default)
         => _executeFunc(parameters, ct);
 
     #endregion

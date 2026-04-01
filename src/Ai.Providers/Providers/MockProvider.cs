@@ -81,6 +81,9 @@ public class MockProvider : IAiProvider
         - **Bold text** and *italic text*
         - Inline `code` formatting
         - [Hyperlinks](https://example.com)
+        - Inline image:
+
+        ![Sample Image](https://picsum.photos/400/200)
 
         ### Code Block (C#)
 

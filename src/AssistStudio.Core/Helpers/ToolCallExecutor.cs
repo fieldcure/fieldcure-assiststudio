@@ -49,10 +49,16 @@ public class ToolCallExecutor
     #region Public Methods
 
     /// <summary>
-    /// Executes a single tool call and returns the result string for the AI model.
+    /// Executes a single tool call and returns a <see cref="ToolExecutionResult"/>
+    /// containing the text result and optional multimedia content.
     /// </summary>
+    /// <remarks>
+    /// When the tool implements <see cref="IMultiContentTool"/>, the richer
+    /// <see cref="IMultiContentTool.ExecuteWithContentAsync"/> path is used
+    /// to preserve image data from MCP tool results.
+    /// </remarks>
     /// <exception cref="InvalidOperationException">Thrown when the requested tool is not found.</exception>
-    public async Task<string> ExecuteAsync(ToolCall call, CancellationToken ct = default)
+    public async Task<ToolExecutionResult> ExecuteAsync(ToolCall call, CancellationToken ct = default)
     {
         var tool = _tools.FirstOrDefault(t => t.Name == call.FunctionName)
             ?? throw new InvalidOperationException($"Tool not found: {call.FunctionName}");
@@ -67,7 +73,7 @@ public class ToolCallExecutor
                     ? "Tool call rejected by user."
                     : $"Tool call rejected by user. Reason: {note}";
                 DiagnosticLogger.LogInfo($"[Tool] Rejected: {tool.Name} — {reason}");
-                return reason;
+                return new ToolExecutionResult(reason);
             }
             LastUserNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
         }
@@ -79,9 +85,18 @@ public class ToolCallExecutor
 
         // Run tool execution on a thread pool thread to avoid blocking the UI thread.
         // ConfirmationHandler (above) has already run on the caller's context.
-        var result = await Task.Run(() => tool.ExecuteAsync(args, ct), ct);
+        ToolExecutionResult result;
+        if (tool is IMultiContentTool multiContentTool)
+        {
+            result = await Task.Run(() => multiContentTool.ExecuteWithContentAsync(args, ct), ct);
+        }
+        else
+        {
+            var text = await Task.Run(() => tool.ExecuteAsync(args, ct), ct);
+            result = new ToolExecutionResult(text);
+        }
 
-        DiagnosticLogger.LogInfo($"[Tool] Result: {tool.Name} → {Truncate(result, 500)}");
+        DiagnosticLogger.LogInfo($"[Tool] Result: {tool.Name} → {Truncate(result.Text, 500)}");
 
         return result;
     }
