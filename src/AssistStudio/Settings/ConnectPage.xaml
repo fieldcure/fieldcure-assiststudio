@@ -34,20 +34,20 @@
                 <!-- Built-in servers (grouped, tight spacing) -->
                 <StackPanel Spacing="8">
 
-                <!-- 1. Workspace Folders (Filesystem) — info-only placeholder -->
+                <!-- 1. Essentials — shared instance, no folders -->
+                <controls:McpServerCard x:Name="EssentialsCard" />
+
+                <!-- 2. Workspace Folders (Filesystem) — info-only placeholder -->
                 <controls:McpServerCard x:Name="FilesystemCard" />
 
-                <!-- 2. Knowledge Archive (RAG) — info-only placeholder, same as Filesystem -->
+                <!-- 3. Knowledge Archive (RAG) — info-only placeholder -->
                 <controls:McpServerCard x:Name="RagCard" />
 
-                <!-- 3. Outbox — shared instance, no folders -->
+                <!-- 4. Outbox — shared instance, no folders -->
                 <controls:McpServerCard x:Name="OutboxCard" />
 
-                <!-- 4. Runner — shared instance, no folders -->
+                <!-- 5. Runner — shared instance, no folders -->
                 <controls:McpServerCard x:Name="RunnerCard" />
-
-                <!-- 5. Essentials — shared instance, no folders -->
-                <controls:McpServerCard x:Name="EssentialsCard" />
 
                 </StackPanel> <!-- end built-in servers -->
 

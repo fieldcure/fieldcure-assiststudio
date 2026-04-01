@@ -859,6 +859,9 @@
   <data name="Connect_RunnerDescription" xml:space="preserve">
     <value>Schedule and run AI tasks automatically on a timer.</value>
   </data>
+  <data name="Connect_EssentialsDescription" xml:space="preserve">
+    <value>Fetch web pages, run commands, and manage memory in conversations.</value>
+  </data>
   <data name="Embedding_OllamaNotRunning" xml:space="preserve">
     <value>Ollama is not running. Start with: ollama serve</value>
   </data>

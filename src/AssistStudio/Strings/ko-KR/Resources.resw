@@ -859,6 +859,9 @@
   <data name="Connect_RunnerDescription" xml:space="preserve">
     <value>AI 작업을 예약하고 자동으로 실행할 수 있습니다.</value>
   </data>
+  <data name="Connect_EssentialsDescription" xml:space="preserve">
+    <value>웹 페이지 조회, 명령 실행, 메모리 관리 등 핵심 기능을 제공합니다.</value>
+  </data>
   <data name="Embedding_OllamaNotRunning" xml:space="preserve">
     <value>Ollama가 실행되지 않습니다. ollama serve 명령으로 시작하세요.</value>
   </data>
