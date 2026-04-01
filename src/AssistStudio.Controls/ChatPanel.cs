@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml.Controls;
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.Text.RegularExpressions;
+using System.Threading.Channels;
 using Windows.ApplicationModel.DataTransfer;
 
 namespace FieldCure.AssistStudio.Controls;
@@ -2268,6 +2269,21 @@ public sealed partial class ChatPanel : Control
     }
 
     /// <summary>
+    /// Batched rendering instruction sent from the background producer to the UI-thread consumer.
+    /// </summary>
+    private abstract record RenderCommand
+    {
+        /// <summary>Flush accumulated text tokens to the assistant message.</summary>
+        public sealed record FlushText(string Text) : RenderCommand;
+
+        /// <summary>Begin a collapsible thinking block (must precede FlushThinking).</summary>
+        public sealed record BeginThinking : RenderCommand;
+
+        /// <summary>Flush accumulated thinking tokens.</summary>
+        public sealed record FlushThinking(string Text) : RenderCommand;
+    }
+
+    /// <summary>
     /// Inspects a tool result and returns a size-guarded version to prevent context overflow.
     /// Binary/base64 content is replaced with metadata; oversized text is truncated.
     /// Error results (short JSON with "error" key) pass through unchanged.
@@ -2413,12 +2429,10 @@ public sealed partial class ChatPanel : Control
     }
 
     /// <summary>
-    /// Consumes a stream of <see cref="StreamEvent"/> instances, appending text deltas to the message
-    /// and rendering them in the chat UI. Returns aggregated usage, truncation info, and any tool calls.
+    /// Consumes a stream of <see cref="StreamEvent"/> instances on a background thread,
+    /// forwarding batched rendering commands to the UI thread via a <see cref="Channel{T}"/>.
+    /// Returns aggregated usage, truncation info, and any tool calls.
     /// </summary>
-    /// <summary>Batching interval for streaming token rendering to avoid UI thread saturation.</summary>
-    private static readonly TimeSpan TokenBatchInterval = TimeSpan.FromMilliseconds(50);
-
     private async Task<StreamResult> ConsumeStreamAsync(
         IAsyncEnumerable<StreamEvent> events, ChatMessage message, CancellationToken ct)
     {
@@ -2427,83 +2441,124 @@ public sealed partial class ChatPanel : Control
         var toolAccumulator = new StreamToolCallAccumulator();
         var thinkingBlockStarted = false;
 
-        // Batch tokens to reduce WebView2 ExecuteScriptAsync calls
-        var textBatch = new System.Text.StringBuilder();
-        var thinkingBatch = new System.Text.StringBuilder();
-        var lastFlush = Environment.TickCount64;
+        var channel = Channel.CreateUnbounded<RenderCommand>(
+            new UnboundedChannelOptions { SingleWriter = true, SingleReader = true });
 
-        await foreach (var evt in events.WithCancellation(ct))
+        // ── Producer (background thread) ──────────────────────────────
+        var producer = Task.Run(async () =>
         {
-            switch (evt)
+            try
             {
-                case StreamEvent.ThinkingDelta thinking:
-                    if (!thinkingBlockStarted)
+                var textBatch = new System.Text.StringBuilder();
+                var thinkingBatch = new System.Text.StringBuilder();
+                var lastFlush = Environment.TickCount64;
+
+                await foreach (var evt in events.WithCancellation(ct))
+                {
+                    switch (evt)
                     {
-                        // Flush any pending text before starting thinking block
+                        case StreamEvent.ThinkingDelta thinking:
+                            if (!thinkingBlockStarted)
+                            {
+                                if (textBatch.Length > 0)
+                                {
+                                    channel.Writer.TryWrite(new RenderCommand.FlushText(textBatch.ToString()));
+                                    textBatch.Clear();
+                                }
+                                channel.Writer.TryWrite(new RenderCommand.BeginThinking());
+                                thinkingBlockStarted = true;
+                            }
+                            thinkingBatch.Append(thinking.Text);
+                            break;
+
+                        case StreamEvent.TextDelta delta:
+                            textBatch.Append(delta.Text);
+                            break;
+
+                        case StreamEvent.ToolCallStart start:
+                            toolAccumulator.HandleStart(start);
+                            break;
+
+                        case StreamEvent.ToolCallDelta delta:
+                            toolAccumulator.HandleDelta(delta);
+                            break;
+
+                        case StreamEvent.Usage u:
+                            usage = u.TokenUsage;
+                            break;
+
+                        case StreamEvent.StreamCompleted completed:
+                            isTruncated = completed.IsTruncated;
+                            break;
+                    }
+
+                    var now = Environment.TickCount64;
+                    if (now - lastFlush >= 50)
+                    {
+                        if (thinkingBatch.Length > 0)
+                        {
+                            channel.Writer.TryWrite(new RenderCommand.FlushThinking(thinkingBatch.ToString()));
+                            thinkingBatch.Clear();
+                        }
                         if (textBatch.Length > 0)
                         {
-                            message.Content += textBatch.ToString();
-                            await _renderer.AppendTokenAsync(message.Id, textBatch.ToString());
+                            channel.Writer.TryWrite(new RenderCommand.FlushText(textBatch.ToString()));
                             textBatch.Clear();
                         }
-                        await _renderer.BeginThinkingBlockAsync(message.Id);
-                        thinkingBlockStarted = true;
+                        lastFlush = now;
                     }
-                    thinkingBatch.Append(thinking.Text);
-                    break;
-                case StreamEvent.TextDelta delta:
-                    textBatch.Append(delta.Text);
-                    break;
-                case StreamEvent.ToolCallStart start:
-                    toolAccumulator.HandleStart(start);
-                    break;
-                case StreamEvent.ToolCallDelta delta:
-                    toolAccumulator.HandleDelta(delta);
-                    break;
-                case StreamEvent.Usage u:
-                    usage = u.TokenUsage;
-                    break;
-                case StreamEvent.StreamCompleted completed:
-                    isTruncated = completed.IsTruncated;
-                    break;
-            }
+                }
 
-            // Flush batched tokens at intervals and yield to UI thread
-            var now = Environment.TickCount64;
-            if (now - lastFlush >= TokenBatchInterval.TotalMilliseconds)
-            {
+                // Final flush
                 if (thinkingBatch.Length > 0)
-                {
-                    message.ThinkingContent = (message.ThinkingContent ?? "") + thinkingBatch.ToString();
-                    await _renderer.AppendThinkingTokenAsync(message.Id, thinkingBatch.ToString());
-                    thinkingBatch.Clear();
-                }
+                    channel.Writer.TryWrite(new RenderCommand.FlushThinking(thinkingBatch.ToString()));
                 if (textBatch.Length > 0)
+                    channel.Writer.TryWrite(new RenderCommand.FlushText(textBatch.ToString()));
+
+                channel.Writer.Complete();
+            }
+            catch (Exception ex)
+            {
+                channel.Writer.Complete(ex);
+                throw;
+            }
+        }, ct);
+
+        // ── Consumer (UI thread) ──────────────────────────────────────
+        try
+        {
+            while (await channel.Reader.WaitToReadAsync(ct))
+            {
+                while (channel.Reader.TryRead(out var cmd))
                 {
-                    message.Content += textBatch.ToString();
-                    await _renderer.AppendTokenAsync(message.Id, textBatch.ToString());
-                    textBatch.Clear();
+                    switch (cmd)
+                    {
+                        case RenderCommand.FlushText ft:
+                            message.Content += ft.Text;
+                            await _renderer.AppendTokenAsync(message.Id, ft.Text);
+                            break;
+
+                        case RenderCommand.BeginThinking:
+                            await _renderer.BeginThinkingBlockAsync(message.Id);
+                            break;
+
+                        case RenderCommand.FlushThinking ft:
+                            message.ThinkingContent = (message.ThinkingContent ?? "") + ft.Text;
+                            await _renderer.AppendThinkingTokenAsync(message.Id, ft.Text);
+                            break;
+                    }
                 }
-                else
-                {
-                    // No text to render (e.g., tool call deltas only) — yield to keep UI responsive
-                    await Task.Delay(1);
-                }
-                lastFlush = now;
+
+                await Task.Delay(50, ct);
             }
         }
+        catch (ChannelClosedException)
+        {
+            // Producer exception — will be surfaced by await producer below
+        }
 
-        // Flush remaining tokens
-        if (thinkingBatch.Length > 0)
-        {
-            message.ThinkingContent = (message.ThinkingContent ?? "") + thinkingBatch.ToString();
-            await _renderer.AppendThinkingTokenAsync(message.Id, thinkingBatch.ToString());
-        }
-        if (textBatch.Length > 0)
-        {
-            message.Content += textBatch.ToString();
-            await _renderer.AppendTokenAsync(message.Id, textBatch.ToString());
-        }
+        // Propagate producer exceptions (HTTP errors, parsing failures, etc.)
+        await producer;
 
         if (thinkingBlockStarted)
             await _renderer.EndThinkingBlockAsync(message.Id);
