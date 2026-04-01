@@ -37,6 +37,13 @@ public class ToolCallExecutor
     /// </summary>
     public Func<string, string, Task<(bool Approved, string? UserNote)>>? ConfirmationHandler { get; set; }
 
+    /// <summary>
+    /// The user note from the most recent tool approval, or <c>null</c> if none was provided.
+    /// Reset after each <see cref="ExecuteAsync"/> call. The caller should inject this as a
+    /// user message in the next API request rather than appending to tool results.
+    /// </summary>
+    public string? LastUserNote { get; private set; }
+
     #endregion
 
     #region Public Methods
@@ -50,7 +57,7 @@ public class ToolCallExecutor
         var tool = _tools.FirstOrDefault(t => t.Name == call.FunctionName)
             ?? throw new InvalidOperationException($"Tool not found: {call.FunctionName}");
 
-        string? userNote = null;
+        LastUserNote = null;
         if (tool.RequiresConfirmation && ConfirmationHandler is not null)
         {
             var (approved, note) = await ConfirmationHandler(tool.Name, call.Arguments);
@@ -62,7 +69,7 @@ public class ToolCallExecutor
                 DiagnosticLogger.LogInfo($"[Tool] Rejected: {tool.Name} — {reason}");
                 return reason;
             }
-            userNote = note;
+            LastUserNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
         }
 
         var argsJson = string.IsNullOrWhiteSpace(call.Arguments) ? "{}" : call.Arguments;
@@ -73,10 +80,6 @@ public class ToolCallExecutor
         // Run tool execution on a thread pool thread to avoid blocking the UI thread.
         // ConfirmationHandler (above) has already run on the caller's context.
         var result = await Task.Run(() => tool.ExecuteAsync(args, ct), ct);
-
-        // Append user instruction if provided during approval
-        if (!string.IsNullOrWhiteSpace(userNote))
-            result += $"\n\n---\nUser instruction: {userNote}";
 
         DiagnosticLogger.LogInfo($"[Tool] Result: {tool.Name} → {Truncate(result, 500)}");
 

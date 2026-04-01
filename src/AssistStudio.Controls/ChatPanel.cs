@@ -2616,10 +2616,17 @@ public sealed partial class ChatPanel : Control
 
         StreamResult result;
         var round = 0;
+        string? pendingUserNote = null;
 
         do
         {
-            var request = await CreateRequestAsync([.. _messages], activeTools);
+            // Inject user note from previous tool approval as a transient user message
+            // (not persisted in _messages — only visible to the LLM in this API call)
+            IReadOnlyList<ChatMessage> messages = pendingUserNote is not null
+                ? [.. _messages, new ChatMessage(ChatRole.User, pendingUserNote)]
+                : [.. _messages];
+            pendingUserNote = null;
+            var request = await CreateRequestAsync(messages, activeTools);
             if (round == 0)
                 DiagnosticLogger.LogInfo($"[Chat] Request start — provider={Provider!.ProviderName}, model={Provider.ModelId}, tools={activeTools.Count}, thinking={request.ThinkingEnabled}");
             result = await ConsumeStreamAsync(Provider!.StreamAsync(request, ct), assistantMessage, ct);
@@ -2666,6 +2673,10 @@ public sealed partial class ChatPanel : Control
                     DiagnosticLogger.LogException(ex);
                     toolResult = $"{{\"error\":\"{ex.Message}\"}}";
                 }
+
+                // Capture user note from approval (if any) for injection in next API call
+                if (executor.LastUserNote is not null)
+                    pendingUserNote = executor.LastUserNote;
 
                 toolResult = GuardToolResultSize(toolResult, call.FunctionName);
 
