@@ -161,8 +161,8 @@ public sealed partial class ConnectPage : Page
         await SaveAndRefreshAsync();
         LoggingService.LogInfo($"[MCP] Server edited: {config.Name}, needsRestart={needsRestart}");
 
-        // Auto-restart if connected and config changed
-        if (needsRestart && connection.IsConnected)
+        // Auto-restart if config changed (reconnect even if previously failed)
+        if (needsRestart)
         {
             LoggingService.LogInfo($"[MCP] Restarting after edit: {config.Name}");
             try
