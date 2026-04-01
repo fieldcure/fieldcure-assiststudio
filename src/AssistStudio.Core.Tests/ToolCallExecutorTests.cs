@@ -59,14 +59,14 @@ public class ToolCallExecutorTests
     {
         var executor = new ToolCallExecutor([new ConfirmableTool()])
         {
-            ConfirmationHandler = (_, _) => Task.FromResult(false)
+            ConfirmationHandler = (_, _) => Task.FromResult<(bool, string?)>((false, null))
         };
         var call = new ToolCall { Id = "1", FunctionName = "dangerous", Arguments = "{}" };
 
         var result = await executor.ExecuteAsync(call);
 
-        Assert.IsTrue(result.Contains("skipped"));
-        Assert.IsTrue(result.Contains("User declined"));
+        Assert.IsTrue(result.Contains("rejected"));
+        Assert.IsTrue(result.Contains("Tool call rejected by user."));
     }
 
     [TestMethod]
@@ -74,7 +74,7 @@ public class ToolCallExecutorTests
     {
         var executor = new ToolCallExecutor([new ConfirmableTool()])
         {
-            ConfirmationHandler = (_, _) => Task.FromResult(true)
+            ConfirmationHandler = (_, _) => Task.FromResult<(bool, string?)>((true, null))
         };
         var call = new ToolCall { Id = "1", FunctionName = "dangerous", Arguments = "{}" };
 

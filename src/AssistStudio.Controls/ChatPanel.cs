@@ -572,7 +572,7 @@ public sealed partial class ChatPanel : Control
     /// <summary>
     /// Completion source for awaiting user approval/rejection of a tool call.
     /// </summary>
-    private TaskCompletionSource<bool>? _approvalTcs;
+    private TaskCompletionSource<(bool Approved, string? UserNote)>? _approvalTcs;
 
     private FrameworkElement? _searchBar;
     private TextBox? _searchTextBox;
@@ -2600,15 +2600,16 @@ public sealed partial class ChatPanel : Control
                     _approvalPanel.IsExpanded = false;
                     _inputArea.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
                     _approvalPanel.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+                    _approvalPanel.FocusUserNote();
 
-                    _approvalTcs = new TaskCompletionSource<bool>();
-                    var approved = await _approvalTcs.Task;
-                    DiagnosticLogger.LogInfo($"[Tool] Approval result: {toolName} → {(approved ? "approved" : "rejected")}");
+                    _approvalTcs = new TaskCompletionSource<(bool, string?)>();
+                    var (approved, userNote) = await _approvalTcs.Task;
+                    DiagnosticLogger.LogInfo($"[Tool] Approval result: {toolName} → {(approved ? "approved" : "rejected")}{(userNote is not null ? $" (note: {userNote})" : "")}");
 
                     _approvalPanel.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
                     _inputArea.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
 
-                    return approved;
+                    return (approved, userNote);
                 };
             }
         }
@@ -3106,12 +3107,12 @@ public sealed partial class ChatPanel : Control
     /// <summary>
     /// Handles the Approved event from the ToolApprovalPanel.
     /// </summary>
-    private void OnToolApproved(object? sender, EventArgs e) => _approvalTcs?.TrySetResult(true);
+    private void OnToolApproved(object? sender, string? userNote) => _approvalTcs?.TrySetResult((true, userNote));
 
     /// <summary>
     /// Handles the Rejected event from the ToolApprovalPanel.
     /// </summary>
-    private void OnToolRejected(object? sender, EventArgs e) => _approvalTcs?.TrySetResult(false);
+    private void OnToolRejected(object? sender, string? userNote) => _approvalTcs?.TrySetResult((false, userNote));
 
     /// <summary>
     /// Returns a localized display name for a tool, falling back to the tool name.

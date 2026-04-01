@@ -63,11 +63,11 @@ public sealed partial class ToolApprovalPanel : Control
 
     #region Events
 
-    /// <summary>Raised when the user clicks Allow.</summary>
-    public event EventHandler? Approved;
+    /// <summary>Raised when the user clicks Allow. The string argument contains the optional user note.</summary>
+    public event EventHandler<string?>? Approved;
 
-    /// <summary>Raised when the user clicks Reject.</summary>
-    public event EventHandler? Rejected;
+    /// <summary>Raised when the user clicks Reject. The string argument contains the optional user note.</summary>
+    public event EventHandler<string?>? Rejected;
 
     #endregion
 
@@ -80,6 +80,7 @@ public sealed partial class ToolApprovalPanel : Control
     private TextBlock? _promptText;
     private ScrollViewer? _argumentsContainer;
     private FontIcon? _expandIcon;
+    private TextBox? _userNoteBox;
     private string _approveLabel = "Allow";
     private string _rejectLabel = "Reject";
     private string _promptTemplate = "Allow {0} to execute?";
@@ -116,6 +117,7 @@ public sealed partial class ToolApprovalPanel : Control
         _promptText = GetTemplateChild("PART_PromptText") as TextBlock;
         _argumentsContainer = GetTemplateChild("PART_ArgumentsContainer") as ScrollViewer;
         _expandIcon = GetTemplateChild("PART_ExpandIcon") as FontIcon;
+        _userNoteBox = GetTemplateChild("PART_UserNoteBox") as TextBox;
 
         // Attach handlers
         if (_approveButton is not null) _approveButton.Click += OnApproveClick;
@@ -130,6 +132,8 @@ public sealed partial class ToolApprovalPanel : Control
             _approveLabel = loader.GetString("ToolApproval_Approve");
             _rejectLabel = loader.GetString("ToolApproval_Reject");
             _promptTemplate = loader.GetString("ToolApproval_Prompt");
+            if (_userNoteBox is not null)
+                _userNoteBox.PlaceholderText = loader.GetString("ToolApproval_NotePlaceholder");
         }
         catch { /* Use defaults */ }
 
@@ -146,11 +150,41 @@ public sealed partial class ToolApprovalPanel : Control
 
     #region Private Methods
 
+    /// <summary>Sets keyboard focus to the user note TextBox.</summary>
+    public void FocusUserNote() => _userNoteBox?.Focus(FocusState.Programmatic);
+
+    /// <summary>Gets the user note text, or <c>null</c> if empty.</summary>
+    private string? UserNote
+    {
+        get
+        {
+            var text = _userNoteBox?.Text;
+            return string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+        }
+    }
+
+    /// <summary>Clears the user note TextBox.</summary>
+    private void ClearUserNote()
+    {
+        if (_userNoteBox is not null)
+            _userNoteBox.Text = string.Empty;
+    }
+
     /// <summary>Handles the Approve button click.</summary>
-    private void OnApproveClick(object sender, RoutedEventArgs e) => Approved?.Invoke(this, EventArgs.Empty);
+    private void OnApproveClick(object sender, RoutedEventArgs e)
+    {
+        var note = UserNote;
+        ClearUserNote();
+        Approved?.Invoke(this, note);
+    }
 
     /// <summary>Handles the Reject button click.</summary>
-    private void OnRejectClick(object sender, RoutedEventArgs e) => Rejected?.Invoke(this, EventArgs.Empty);
+    private void OnRejectClick(object sender, RoutedEventArgs e)
+    {
+        var note = UserNote;
+        ClearUserNote();
+        Rejected?.Invoke(this, note);
+    }
 
     /// <summary>Toggles the arguments preview expansion.</summary>
     private void OnExpandClick(object sender, RoutedEventArgs e) => IsExpanded = !IsExpanded;

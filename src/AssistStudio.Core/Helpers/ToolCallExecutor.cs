@@ -32,9 +32,10 @@ public class ToolCallExecutor
 
     /// <summary>
     /// Callback invoked when a tool requires user confirmation before execution.
-    /// Receives the tool name and arguments JSON string. Return <see langword="true"/> to proceed, <see langword="false"/> to skip.
+    /// Receives the tool name and arguments JSON string. Returns a tuple of
+    /// (Approved, UserNote) where UserNote is an optional instruction from the user.
     /// </summary>
-    public Func<string, string, Task<bool>>? ConfirmationHandler { get; set; }
+    public Func<string, string, Task<(bool Approved, string? UserNote)>>? ConfirmationHandler { get; set; }
 
     #endregion
 
@@ -49,14 +50,19 @@ public class ToolCallExecutor
         var tool = _tools.FirstOrDefault(t => t.Name == call.FunctionName)
             ?? throw new InvalidOperationException($"Tool not found: {call.FunctionName}");
 
+        string? userNote = null;
         if (tool.RequiresConfirmation && ConfirmationHandler is not null)
         {
-            var approved = await ConfirmationHandler(tool.Name, call.Arguments);
+            var (approved, note) = await ConfirmationHandler(tool.Name, call.Arguments);
             if (!approved)
             {
-                DiagnosticLogger.LogInfo($"[Tool] Skipped (user declined): {tool.Name}");
-                return JsonSerializer.Serialize(new { skipped = true, reason = "User declined" });
+                var reason = string.IsNullOrWhiteSpace(note)
+                    ? "Tool call rejected by user."
+                    : $"Tool call rejected by user. Reason: {note}";
+                DiagnosticLogger.LogInfo($"[Tool] Rejected: {tool.Name} — {reason}");
+                return reason;
             }
+            userNote = note;
         }
 
         var argsJson = string.IsNullOrWhiteSpace(call.Arguments) ? "{}" : call.Arguments;
@@ -67,6 +73,10 @@ public class ToolCallExecutor
         // Run tool execution on a thread pool thread to avoid blocking the UI thread.
         // ConfirmationHandler (above) has already run on the caller's context.
         var result = await Task.Run(() => tool.ExecuteAsync(args, ct), ct);
+
+        // Append user instruction if provided during approval
+        if (!string.IsNullOrWhiteSpace(userNote))
+            result += $"\n\n---\nUser instruction: {userNote}";
 
         DiagnosticLogger.LogInfo($"[Tool] Result: {tool.Name} → {Truncate(result, 500)}");
 

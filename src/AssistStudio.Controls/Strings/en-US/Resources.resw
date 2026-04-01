@@ -163,6 +163,9 @@ Add them in Profile settings.</value>
   <data name="ToolApproval_Prompt" xml:space="preserve">
     <value>Allow {0} to execute?</value>
   </data>
+  <data name="ToolApproval_NotePlaceholder" xml:space="preserve">
+    <value>Additional instructions (optional)</value>
+  </data>
   <data name="ToolApproval_ExpandTooltip" xml:space="preserve">
     <value>Show details</value>
   </data>

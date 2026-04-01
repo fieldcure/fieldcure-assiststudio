@@ -318,6 +318,7 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
                             <!-- Row 0: Header -->
@@ -361,8 +362,32 @@
                                 </Border>
                             </ScrollViewer>
 
-                            <!-- Row 2: Action buttons -->
-                            <StackPanel Grid.Row="2" Orientation="Horizontal"
+                            <!-- Row 2: User instruction (always visible, borderless like ComposeBar) -->
+                            <TextBox x:Name="PART_UserNoteBox"
+                                     Grid.Row="2"
+                                     PlaceholderText="Additional instructions (optional)"
+                                     TextWrapping="Wrap"
+                                     AcceptsReturn="True"
+                                     MaxHeight="120"
+                                     MaxLength="500"
+                                     FontSize="13"
+                                     Padding="4,6"
+                                     BorderThickness="0"
+                                     Background="Transparent">
+                                <TextBox.Resources>
+                                    <SolidColorBrush x:Key="TextControlBackground" Color="Transparent" />
+                                    <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="Transparent" />
+                                    <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="Transparent" />
+                                    <SolidColorBrush x:Key="TextControlBorderBrush" Color="Transparent" />
+                                    <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="Transparent" />
+                                    <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="Transparent" />
+                                    <Thickness x:Key="TextControlBorderThemeThickness">0</Thickness>
+                                    <Thickness x:Key="TextControlBorderThemeThicknessFocused">0</Thickness>
+                                </TextBox.Resources>
+                            </TextBox>
+
+                            <!-- Row 3: Action buttons -->
+                            <StackPanel Grid.Row="3" Orientation="Horizontal"
                                         HorizontalAlignment="Right" Spacing="8">
                                 <Button x:Name="PART_RejectButton"
                                         Style="{StaticResource SubtleButtonStyle}"

@@ -163,6 +163,9 @@
   <data name="ToolApproval_Prompt" xml:space="preserve">
     <value>{0} 실행을 허용하시겠습니까?</value>
   </data>
+  <data name="ToolApproval_NotePlaceholder" xml:space="preserve">
+    <value>추가 지시사항 (선택)</value>
+  </data>
   <data name="ToolApproval_ExpandTooltip" xml:space="preserve">
     <value>상세 보기</value>
   </data>
