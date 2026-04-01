@@ -196,6 +196,18 @@ public static class AppSettings
         }
     }
 
+    /// <summary>
+    /// Gets or sets the last time built-in server tools were checked for updates (UTC).
+    /// Used to throttle NuGet update checks to once per 24 hours in Release builds.
+    /// </summary>
+    public static DateTime? LastToolUpdateCheck
+    {
+        get => Settings.Values["LastToolUpdateCheck"] is long ticks
+            ? new DateTime(ticks, DateTimeKind.Utc)
+            : null;
+        set => Settings.Values["LastToolUpdateCheck"] = value?.Ticks;
+    }
+
     #endregion
 
     #region Constants

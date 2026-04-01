@@ -22,16 +22,16 @@ public static class BuiltInServerHelper
         "FieldCure", "AssistStudio", "tools");
 
     /// <summary>
-    /// Maps server keys to their NuGet package IDs and required minimum versions.
-    /// Bump the version when the app requires a newer server release.
+    /// Maps server keys to their NuGet package IDs.
+    /// Versions are resolved automatically via <c>dotnet tool install/update</c> (always latest stable).
     /// </summary>
-    private static readonly Dictionary<string, (string PackageId, string RequiredVersion)> NuGetPackages = new()
+    private static readonly Dictionary<string, string> NuGetPackages = new()
     {
-        [FilesystemKey] = ("FieldCure.Mcp.Filesystem", "0.5.0"),
-        [RagKey] = ("FieldCure.Mcp.Rag", "0.10.1"),
-        [OutboxKey] = ("FieldCure.Mcp.Outbox", "0.4.0"),
-        [RunnerKey] = ("FieldCure.AssistStudio.Runner", "0.3.0"),
-        [EssentialsKey] = ("FieldCure.Mcp.Essentials", "0.4.0"),
+        [FilesystemKey] = "FieldCure.Mcp.Filesystem",
+        [RagKey] = "FieldCure.Mcp.Rag",
+        [OutboxKey] = "FieldCure.Mcp.Outbox",
+        [RunnerKey] = "FieldCure.AssistStudio.Runner",
+        [EssentialsKey] = "FieldCure.Mcp.Essentials",
     };
 
     /// <summary>NuGet package ID for the Filesystem server.</summary>
@@ -115,12 +115,6 @@ public static class BuiltInServerHelper
     #endregion
 
     #region Methods
-
-    /// <summary>
-    /// Returns the required NuGet package version for a built-in server key, or null if not found.
-    /// </summary>
-    public static string? GetRequiredVersion(string serverKey)
-        => NuGetPackages.TryGetValue(serverKey, out var pkg) ? pkg.RequiredVersion : null;
 
     /// <summary>
     /// Returns the default built-in server configurations.
@@ -225,59 +219,53 @@ public static class BuiltInServerHelper
 
     /// <summary>
     /// Ensures all built-in server tools are installed and up-to-date via <c>dotnet tool</c>.
-    /// Installs missing servers and updates outdated ones based on <see cref="NuGetPackages"/> versions.
+    /// Missing servers are always installed. Existing servers are updated only when
+    /// <see cref="ShouldCheckForUpdates"/> returns <c>true</c> (Debug = every launch,
+    /// Release = once per 24 hours).
     /// </summary>
     public static async Task EnsureInstalledAsync()
     {
         Directory.CreateDirectory(ToolInstallPath);
 
-        foreach (var (serverKey, (packageId, requiredVersion)) in NuGetPackages)
+        var checkUpdates = ShouldCheckForUpdates();
+        if (checkUpdates)
+            LoggingService.LogInfo("[BuiltIn] Update check enabled for this launch");
+        else
+            LoggingService.LogInfo("[BuiltIn] Skipping update check (checked recently)");
+
+        foreach (var (serverKey, packageId) in NuGetPackages)
         {
             if (!ServerDefinitions.TryGetValue(serverKey, out var def))
                 continue;
 
             var exeName = OperatingSystem.IsWindows() ? $"{def.ExeName}.exe" : def.ExeName;
             var exePath = Path.Combine(ToolInstallPath, exeName);
-            var required = Version.Parse(requiredVersion);
 
             if (File.Exists(exePath))
             {
-                // Check installed version
-                var installed = await GetInstalledVersionAsync(packageId);
-                if (installed is not null && installed >= required)
-                {
-                    LoggingService.LogInfo($"[BuiltIn] {packageId} v{installed} up-to-date (required {requiredVersion})");
+                if (!checkUpdates)
                     continue;
-                }
 
-                // Update needed
-                LoggingService.LogInfo($"[BuiltIn] Updating {packageId}: v{installed} → v{requiredVersion}");
-                NotifyAction(packageId, "BuiltIn_Updating", packageId, installed?.ToString() ?? "?", requiredVersion);
+                // Update to latest stable
+                LoggingService.LogInfo($"[BuiltIn] Checking for updates: {packageId}");
                 try
                 {
                     var result = await RunDotnetToolAsync("update", packageId, ToolInstallPath);
                     if (result == 0)
-                    {
-                        LoggingService.LogInfo($"[BuiltIn] {packageId} updated successfully");
-                        NotifyAction(packageId, "BuiltIn_Updated", packageId, installed?.ToString() ?? "?", requiredVersion);
-                    }
+                        LoggingService.LogInfo($"[BuiltIn] {packageId} is up-to-date");
                     else
-                    {
-                        LoggingService.LogWarning($"[BuiltIn] {packageId} update failed (exit code {result})");
-                        NotifyInstallFailure(def.DisplayName);
-                    }
+                        LoggingService.LogWarning($"[BuiltIn] {packageId} update failed (exit code {result}), continuing with existing version");
                 }
                 catch (Exception ex)
                 {
-                    LoggingService.LogError($"[BuiltIn] {packageId} update error: {ex.Message}");
-                    NotifyInstallFailure(def.DisplayName);
+                    LoggingService.LogWarning($"[BuiltIn] {packageId} update error: {ex.Message}, continuing with existing version");
                 }
                 continue;
             }
 
             // Fresh install
-            LoggingService.LogInfo($"[BuiltIn] Installing {packageId} v{requiredVersion}");
-            NotifyAction(packageId, "BuiltIn_Installing", packageId, requiredVersion);
+            LoggingService.LogInfo($"[BuiltIn] Installing {packageId}");
+            NotifyAction(packageId, "BuiltIn_Installing", packageId);
             try
             {
                 var result = await RunDotnetToolAsync("install", packageId, ToolInstallPath);
@@ -288,7 +276,7 @@ public static class BuiltInServerHelper
                 }
                 else
                 {
-                    LoggingService.LogWarning($"[BuiltIn] {packageId} install failed (exit code {result})");
+                    LoggingService.LogError($"[BuiltIn] {packageId} install failed (exit code {result})");
                     NotifyInstallFailure(def.DisplayName);
                 }
             }
@@ -298,11 +286,58 @@ public static class BuiltInServerHelper
                 NotifyInstallFailure(def.DisplayName);
             }
         }
+
+        // Cache installed versions for UI display (McpServerCard)
+        await RefreshVersionCacheAsync();
+
+        if (checkUpdates)
+            AppSettings.LastToolUpdateCheck = DateTime.UtcNow;
     }
 
     #endregion
 
     #region Private Helpers
+
+    /// <summary>
+    /// Cached installed versions populated by <see cref="RefreshVersionCacheAsync"/>.
+    /// Key: server key (e.g. "filesystem"), Value: version string (e.g. "0.5.0").
+    /// </summary>
+    private static readonly Dictionary<string, string> _versionCache = new();
+
+    /// <summary>
+    /// Returns the cached installed version for a built-in server, or <c>null</c> if unknown.
+    /// Call <see cref="EnsureInstalledAsync"/> first to populate the cache.
+    /// </summary>
+    public static string? GetInstalledVersion(string serverKey)
+        => _versionCache.TryGetValue(serverKey, out var v) ? v : null;
+
+    /// <summary>
+    /// Determines whether built-in server update checks should run on this launch.
+    /// Debug builds always check; Release builds check once per 24 hours.
+    /// </summary>
+    private static bool ShouldCheckForUpdates()
+    {
+#if DEBUG
+        return true;
+#else
+        var last = AppSettings.LastToolUpdateCheck;
+        return last is null || (DateTime.UtcNow - last.Value).TotalHours >= 24;
+#endif
+    }
+
+    /// <summary>
+    /// Refreshes <see cref="_versionCache"/> by querying installed versions for all built-in servers.
+    /// </summary>
+    private static async Task RefreshVersionCacheAsync()
+    {
+        _versionCache.Clear();
+        foreach (var (serverKey, packageId) in NuGetPackages)
+        {
+            var version = await GetInstalledVersionAsync(packageId);
+            if (version is not null)
+                _versionCache[serverKey] = version.ToString();
+        }
+    }
 
     /// <summary>
     /// Gets the installed version of a dotnet tool by parsing <c>dotnet tool list</c> output.

@@ -155,7 +155,7 @@ public sealed partial class McpServerCard : UserControl
             && config.Id.StartsWith("builtin_", StringComparison.Ordinal))
         {
             var serverKey = config.Id["builtin_".Length..];
-            version = BuiltInServerHelper.GetRequiredVersion(serverKey);
+            version = BuiltInServerHelper.GetInstalledVersion(serverKey);
         }
 
         if (!string.IsNullOrEmpty(version))
