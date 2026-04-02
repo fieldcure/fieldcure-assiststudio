@@ -226,7 +226,7 @@
     }
     .image-toolbar {
         position: absolute;
-        bottom: 12px;
+        top: 16px;
         right: 8px;
         display: flex;
         gap: 2px;
@@ -942,17 +942,6 @@
         var toolbar = document.createElement('div');
         toolbar.className = 'image-toolbar';
 
-        // Save button
-        var saveBtn = document.createElement('button');
-        saveBtn.className = 'msg-action-btn';
-        saveBtn.title = _L.imageSave || 'Save image';
-        saveBtn.textContent = '\uE74E';
-        saveBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            downloadImage(img);
-        });
-        toolbar.appendChild(saveBtn);
-
         // Copy button
         var copyBtn = document.createElement('button');
         copyBtn.className = 'msg-action-btn';
@@ -963,6 +952,17 @@
             copyImage(img, copyBtn);
         });
         toolbar.appendChild(copyBtn);
+
+        // Save button
+        var saveBtn = document.createElement('button');
+        saveBtn.className = 'msg-action-btn';
+        saveBtn.title = _L.imageSave || 'Save image';
+        saveBtn.textContent = '\uE74E';
+        saveBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            downloadImage(img);
+        });
+        toolbar.appendChild(saveBtn);
 
         // Expand button
         var expandBtn = document.createElement('button');
@@ -1753,6 +1753,10 @@
 
         showImageToast: function(message) {
             showImageToast(message);
+        },
+
+        closeImageModal: function() {
+            closeImageModal();
         },
 
         setTheme: function(isDark) {

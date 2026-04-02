@@ -324,6 +324,10 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         // Relay keyboard shortcut from WebView2 (separate HWND)
         panel.KeyboardShortcutPressed += (s, e) => KeyboardShortcutPressed?.Invoke(s, e);
 
+        // Relay notification requests (e.g., image saved/copied) to the app notification center
+        panel.NotificationRequested += (_, args) =>
+            NotificationCenter.Instance.Post(args.Title, args.Message);
+
         // Wire send-time tool resolution (auto-connect + connection filtering)
         panel.PrepareToolsForSendAsync = PrepareToolsForSendAsync;
 

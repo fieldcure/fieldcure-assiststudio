@@ -362,6 +362,11 @@ public sealed partial class ComposeBar : Control
     /// </summary>
     public event EventHandler? StopRequested;
 
+    /// <summary>
+    /// Occurs when the message text box receives focus.
+    /// </summary>
+    public event EventHandler? InputFocused;
+
     #endregion
 
     #region Overrides
@@ -417,6 +422,7 @@ public sealed partial class ComposeBar : Control
             _messageTextBox.PreviewKeyDown += MessageTextBox_PreviewKeyDown;
             _messageTextBox.Paste += MessageTextBox_Paste;
             _messageTextBox.TextChanged += MessageTextBox_TextChanged;
+            _messageTextBox.GotFocus += (_, _) => InputFocused?.Invoke(this, EventArgs.Empty);
         }
         if (_attachButton is not null)
             _attachButton.Click += AttachButton_Click;

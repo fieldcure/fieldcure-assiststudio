@@ -8,8 +8,12 @@ using Microsoft.UI.Xaml.Controls;
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.Text.RegularExpressions;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Channels;
+using FieldCure.AssistStudio.Controls.Helpers;
 using Windows.ApplicationModel.DataTransfer;
+using Windows.Storage.Pickers;
+using Windows.Storage.Streams;
 
 namespace FieldCure.AssistStudio.Controls;
 
@@ -1002,6 +1006,11 @@ public sealed partial class ChatPanel : Control
     /// </summary>
     public event EventHandler<string>? KeyboardShortcutPressed;
 
+    /// <summary>
+    /// Occurs when the control wants to display a notification (e.g., image saved/copied).
+    /// </summary>
+    public event EventHandler<(string Title, string Message)>? NotificationRequested;
+
     #endregion
 
     #region Constructors
@@ -1018,6 +1027,8 @@ public sealed partial class ChatPanel : Control
         _renderer.EditRequested += OnEditRequested;
         _renderer.BranchSwitchRequested += OnBranchSwitchRequested;
         _renderer.SummarizeRequested += OnSummarizeRequested;
+        _renderer.ImageSaveRequested += OnImageSaveRequested;
+        _renderer.ImageCopyRequested += OnImageCopyRequested;
         _renderer.KeyboardShortcutPressed += (_, shortcut) =>
         {
             if (shortcut == "Ctrl+F")
@@ -1149,6 +1160,10 @@ public sealed partial class ChatPanel : Control
         // Attach event handlers and sync current property values
         if (_inputArea is not null)
         {
+            _inputArea.InputFocused += async (_, _) =>
+            {
+                if (_isInitialized) await _renderer.CloseImageModalAsync();
+            };
             _inputArea.MessageSent += OnMessageSent;
             _inputArea.PresetChanged += OnInputPresetChanged;
             _inputArea.ProfileChanged += OnInputProfileChanged;
@@ -1707,6 +1722,124 @@ public sealed partial class ChatPanel : Control
             }
             UpdateSummarizeButtonState();
         }
+    }
+
+    /// <summary>
+    /// Handles the image save request by presenting a FileSavePicker and writing bytes to the chosen file.
+    /// </summary>
+    private async void OnImageSaveRequested(object? sender, string source)
+    {
+        try
+        {
+            byte[] bytes;
+            string ext;
+
+            if (source.StartsWith("data:"))
+            {
+                var commaIdx = source.IndexOf(',');
+                var header = source[..commaIdx];
+                ext = header.Contains("image/jpeg") ? ".jpg"
+                    : header.Contains("image/gif") ? ".gif"
+                    : header.Contains("image/webp") ? ".webp"
+                    : ".png";
+                bytes = Convert.FromBase64String(source[(commaIdx + 1)..]);
+            }
+            else
+            {
+                using var http = new HttpClient();
+                bytes = await http.GetByteArrayAsync(source);
+                ext = source.Contains(".jpg", StringComparison.OrdinalIgnoreCase)
+                   || source.Contains(".jpeg", StringComparison.OrdinalIgnoreCase) ? ".jpg" : ".png";
+            }
+
+            var picker = new FileSavePicker();
+            picker.SuggestedStartLocation = PickerLocationId.Downloads;
+            picker.SuggestedFileName = $"image_{DateTimeOffset.Now.ToUnixTimeMilliseconds()}";
+            picker.FileTypeChoices.Add("Image", new[] { ext });
+
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(GetWindow());
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+
+            var file = await picker.PickSaveFileAsync();
+            if (file is null) return;
+
+            // Atomic write: defer → write → complete to prevent partial files
+            Windows.Storage.CachedFileManager.DeferUpdates(file);
+            await Windows.Storage.FileIO.WriteBytesAsync(file, bytes);
+            var status = await Windows.Storage.CachedFileManager.CompleteUpdatesAsync(file);
+
+            if (status != Windows.Storage.Provider.FileUpdateStatus.Complete)
+            {
+                DiagnosticLogger.LogWarning($"[Image] Save not completed: {status}");
+                return;
+            }
+
+            NotificationRequested?.Invoke(this, (
+                Res.GetString("Chat_ImageSaved") ?? "Image saved",
+                file.Name));
+        }
+        catch (Exception ex)
+        {
+            DiagnosticLogger.LogWarning($"[Image] Save failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Handles the image copy request by decoding/downloading the image and placing it on the clipboard.
+    /// </summary>
+    private async void OnImageCopyRequested(object? sender, string source)
+    {
+        try
+        {
+            byte[] bytes;
+
+            if (source.StartsWith("data:"))
+            {
+                var commaIdx = source.IndexOf(',');
+                bytes = Convert.FromBase64String(source[(commaIdx + 1)..]);
+            }
+            else
+            {
+                using var http = new HttpClient();
+                bytes = await http.GetByteArrayAsync(source);
+            }
+
+            var stream = new InMemoryRandomAccessStream();
+            await stream.WriteAsync(bytes.AsBuffer());
+            stream.Seek(0);
+
+            var dp = new DataPackage();
+            dp.SetBitmap(RandomAccessStreamReference.CreateFromStream(stream));
+            Clipboard.SetContent(dp);
+            Clipboard.Flush();
+
+            NotificationRequested?.Invoke(this, (
+                Res.GetString("Chat_ImageCopied") ?? "Copied to clipboard",
+                ""));
+        }
+        catch (Exception ex)
+        {
+            DiagnosticLogger.LogWarning($"[Image] Copy failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Retrieves the parent <see cref="Window"/> for the current XamlRoot, used for native picker interop.
+    /// </summary>
+    private Window GetWindow()
+    {
+        if (XamlRoot?.Content is FrameworkElement fe)
+        {
+            if (fe.XamlRoot is not null)
+            {
+                foreach (var window in WindowHelper.ActiveWindows)
+                {
+                    if (window.Content?.XamlRoot == fe.XamlRoot)
+                        return window;
+                }
+            }
+        }
+        throw new InvalidOperationException("Unable to find the parent Window for FileSavePicker.");
     }
 
     /// <summary>

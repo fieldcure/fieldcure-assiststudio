@@ -9,8 +9,6 @@ using FieldCure.Ai.Providers.Models;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Web.WebView2.Core;
 using Windows.ApplicationModel.DataTransfer;
-using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.Storage.Streams;
 
 namespace FieldCure.AssistStudio.Controls.Rendering;
 
@@ -78,6 +76,16 @@ internal partial class WebViewChatRenderer
     /// Payload: (MessageId, Direction: -1 for previous, +1 for next).
     /// </summary>
     public event EventHandler<(string MessageId, int Direction)>? BranchSwitchRequested;
+
+    /// <summary>
+    /// Occurs when the user requests to save an image (data URI or URL).
+    /// </summary>
+    public event EventHandler<string>? ImageSaveRequested;
+
+    /// <summary>
+    /// Occurs when the user requests to copy an image (data URI or URL).
+    /// </summary>
+    public event EventHandler<string>? ImageCopyRequested;
 
     #endregion
 
@@ -343,6 +351,12 @@ internal partial class WebViewChatRenderer
             $"document.documentElement.style.setProperty('--font-size-base', '{fontSize}px');").AsTask();
     }
 
+    /// <summary>
+    /// Closes the image popover/modal if open.
+    /// </summary>
+    public Task CloseImageModalAsync()
+        => _webView.ExecuteScriptAsync("window.assistChat.closeImageModal()").AsTask();
+
     #endregion
 
     #region Event Handlers
@@ -459,25 +473,13 @@ internal partial class WebViewChatRenderer
                 CopyToClipboard(html);
             }
             else if (message?.StartsWith("saveImageUrl:") == true)
-            {
-                var url = message["saveImageUrl:".Length..];
-                SaveImageFromUrlAsync(url);
-            }
+                ImageSaveRequested?.Invoke(this, message["saveImageUrl:".Length..]);
             else if (message?.StartsWith("saveImage:") == true)
-            {
-                var dataUri = message["saveImage:".Length..];
-                SaveImageAsync(dataUri);
-            }
+                ImageSaveRequested?.Invoke(this, message["saveImage:".Length..]);
             else if (message?.StartsWith("copyImageUrl:") == true)
-            {
-                var url = message["copyImageUrl:".Length..];
-                CopyImageFromUrlAsync(url);
-            }
+                ImageCopyRequested?.Invoke(this, message["copyImageUrl:".Length..]);
             else if (message?.StartsWith("copyImage:") == true)
-            {
-                var dataUri = message["copyImage:".Length..];
-                CopyImageToClipboard(dataUri);
-            }
+                ImageCopyRequested?.Invoke(this, message["copyImage:".Length..]);
         }
         catch (Exception ex)
         {
@@ -643,145 +645,6 @@ internal partial class WebViewChatRenderer
         dp.SetText(text);
         Clipboard.SetContent(dp);
         Clipboard.Flush();
-    }
-
-    /// <summary>
-    /// Downloads an image from a URL and saves it to the Downloads folder.
-    /// Used as CORS fallback when canvas extraction fails.
-    /// </summary>
-    private async void SaveImageFromUrlAsync(string url)
-    {
-        DiagnosticLogger.LogInfo($"[Image] SaveImageFromUrlAsync called");
-        try
-        {
-            using var http = new System.Net.Http.HttpClient();
-            var bytes = await http.GetByteArrayAsync(url).ConfigureAwait(false);
-            var ext = url.Contains(".jpg", StringComparison.OrdinalIgnoreCase) ||
-                      url.Contains("jpeg", StringComparison.OrdinalIgnoreCase) ? ".jpg" : ".png";
-            var filename = $"image_{DateTimeOffset.Now.ToUnixTimeMilliseconds()}{ext}";
-
-            // DownloadsFolder requires UI thread — dispatch back
-            _webView.DispatcherQueue.TryEnqueue(async () =>
-            {
-                try
-                {
-                    var file = await Windows.Storage.DownloadsFolder.CreateFileAsync(
-                        filename, Windows.Storage.CreationCollisionOption.GenerateUniqueName);
-                    await Windows.Storage.FileIO.WriteBytesAsync(file, bytes);
-                    DiagnosticLogger.LogInfo($"[Image] Saved to: {file.Path}");
-
-                    var toastMsg = Js($"{file.Name}");
-                    await _webView.ExecuteScriptAsync(
-                        $"window.assistChat.showImageToast((window._L.imageSaved || 'Image saved') + ': ' + {toastMsg})");
-                }
-                catch (Exception ex2)
-                {
-                    DiagnosticLogger.LogWarning($"[Image] File write failed: {ex2.Message}");
-                }
-            });
-        }
-        catch (Exception ex)
-        {
-            DiagnosticLogger.LogWarning($"[Image] URL download failed: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// Downloads an image from a URL and copies it to the clipboard.
-    /// Used as CORS fallback when canvas extraction fails.
-    /// </summary>
-    private async void CopyImageFromUrlAsync(string url)
-    {
-        try
-        {
-            using var http = new System.Net.Http.HttpClient();
-            var bytes = await http.GetByteArrayAsync(url);
-
-            var stream = new InMemoryRandomAccessStream();
-            await stream.WriteAsync(bytes.AsBuffer());
-            stream.Seek(0);
-
-            var dp = new DataPackage();
-            dp.SetBitmap(RandomAccessStreamReference.CreateFromStream(stream));
-            Clipboard.SetContent(dp);
-            Clipboard.Flush();
-
-            await _webView.ExecuteScriptAsync(
-                "window.assistChat.showImageToast(window._L.imageCopied || 'Copied to clipboard')");
-        }
-        catch (Exception ex)
-        {
-            DiagnosticLogger.LogWarning($"[Image] URL copy failed: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// Saves an image from a data URI to the Downloads folder.
-    /// </summary>
-    private async void SaveImageAsync(string dataUri)
-    {
-        try
-        {
-            var commaIdx = dataUri.IndexOf(',');
-            if (commaIdx < 0) return;
-
-            // Determine extension from mime type
-            var header = dataUri[..commaIdx]; // e.g. "data:image/png;base64"
-            var ext = ".png";
-            if (header.Contains("image/jpeg")) ext = ".jpg";
-            else if (header.Contains("image/gif")) ext = ".gif";
-            else if (header.Contains("image/webp")) ext = ".webp";
-
-            var base64 = dataUri[(commaIdx + 1)..];
-            var bytes = Convert.FromBase64String(base64);
-            var filename = $"image_{DateTimeOffset.Now.ToUnixTimeMilliseconds()}{ext}";
-
-            var file = await Windows.Storage.DownloadsFolder.CreateFileAsync(
-                filename, Windows.Storage.CreationCollisionOption.GenerateUniqueName);
-            await Windows.Storage.FileIO.WriteBytesAsync(file, bytes);
-
-            DiagnosticLogger.LogInfo($"[Image] Saved to: {file.Path}");
-            var toastMsg = Js($"{file.Name}");
-            await _webView.ExecuteScriptAsync(
-                $"window.assistChat.showImageToast((window._L.imageSaved || 'Image saved') + ': ' + {toastMsg})");
-        }
-        catch (Exception ex)
-        {
-            DiagnosticLogger.LogWarning($"[Image] Save failed: {ex.Message}");
-            await _webView.ExecuteScriptAsync(
-                "window.assistChat.showImageToast('Save failed')");
-        }
-    }
-
-    /// <summary>
-    /// Copies an image from a data URI to the system clipboard as a bitmap.
-    /// </summary>
-    private async void CopyImageToClipboard(string dataUri)
-    {
-        try
-        {
-            // Parse data URI: data:image/png;base64,iVBOR...
-            var commaIdx = dataUri.IndexOf(',');
-            if (commaIdx < 0) return;
-            var base64 = dataUri[(commaIdx + 1)..];
-            var bytes = Convert.FromBase64String(base64);
-
-            var stream = new InMemoryRandomAccessStream();
-            await stream.WriteAsync(bytes.AsBuffer());
-            stream.Seek(0);
-
-            var dp = new DataPackage();
-            dp.SetBitmap(RandomAccessStreamReference.CreateFromStream(stream));
-            Clipboard.SetContent(dp);
-            Clipboard.Flush();
-
-            await _webView.ExecuteScriptAsync(
-                "window.assistChat.showImageToast(window._L.imageCopied || 'Copied to clipboard')");
-        }
-        catch (Exception ex)
-        {
-            DiagnosticLogger.LogWarning($"[Image] Copy failed: {ex.Message}");
-        }
     }
 
     /// <summary>
