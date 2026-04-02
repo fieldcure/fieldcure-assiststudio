@@ -919,4 +919,199 @@
   <data name="Contextualizer_DownloadFailed" xml:space="preserve">
     <value>Download failed</value>
   </data>
+
+  <!-- Common -->
+  <data name="Common_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Common_Error" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="Common_OK" xml:space="preserve">
+    <value>OK</value>
+  </data>
+
+  <!-- Cron Expression Descriptor -->
+  <data name="Cron_EveryMinute" xml:space="preserve">
+    <value>every minute</value>
+  </data>
+  <data name="Cron_EveryHour" xml:space="preserve">
+    <value>every hour</value>
+  </data>
+  <data name="Cron_EverySecond" xml:space="preserve">
+    <value>every second</value>
+  </data>
+  <data name="Cron_AnErrorOccurredWhenGeneratingTheExpressionD" xml:space="preserve">
+    <value>An error occurred when generating the expression description. Check the cron expression syntax.</value>
+  </data>
+  <data name="Cron_At" xml:space="preserve">
+    <value>At</value>
+  </data>
+  <data name="Cron_AtSpace" xml:space="preserve">
+    <value xml:space="preserve">At </value>
+  </data>
+  <data name="Cron_AtX0" xml:space="preserve">
+    <value>at {0}</value>
+  </data>
+  <data name="Cron_AtX0MinutesPastTheHour" xml:space="preserve">
+    <value>at {0} minutes past the hour</value>
+  </data>
+  <data name="Cron_AtX0SecondsPastTheMinute" xml:space="preserve">
+    <value>at {0} seconds past the minute</value>
+  </data>
+  <data name="Cron_BetweenX0AndX1" xml:space="preserve">
+    <value>between {0} and {1}</value>
+  </data>
+  <data name="Cron_EveryMinuteBetweenX0AndX1" xml:space="preserve">
+    <value>Every minute between {0} and {1}</value>
+  </data>
+  <data name="Cron_EveryX0Seconds" xml:space="preserve">
+    <value>every {0} seconds</value>
+  </data>
+  <data name="Cron_EveryX0Minutes" xml:space="preserve">
+    <value>every {0} minutes</value>
+  </data>
+  <data name="Cron_EveryX0Hours" xml:space="preserve">
+    <value>every {0} hours</value>
+  </data>
+  <data name="Cron_SecondsX0ThroughX1PastTheMinute" xml:space="preserve">
+    <value>seconds {0} through {1} past the minute</value>
+  </data>
+  <data name="Cron_MinutesX0ThroughX1PastTheHour" xml:space="preserve">
+    <value>minutes {0} through {1} past the hour</value>
+  </data>
+  <data name="Cron_ComaEveryDay" xml:space="preserve">
+    <value>, every day</value>
+  </data>
+  <data name="Cron_ComaEveryMinute" xml:space="preserve">
+    <value>, every minute</value>
+  </data>
+  <data name="Cron_ComaEveryHour" xml:space="preserve">
+    <value>, every hour</value>
+  </data>
+  <data name="Cron_ComaEveryX0Days" xml:space="preserve">
+    <value>, every {0} days</value>
+  </data>
+  <data name="Cron_ComaEveryX0DaysOfTheWeek" xml:space="preserve">
+    <value>, every {0} days of the week</value>
+  </data>
+  <data name="Cron_ComaEveryX0Months" xml:space="preserve">
+    <value>, every {0} months</value>
+  </data>
+  <data name="Cron_ComaEveryX0Years" xml:space="preserve">
+    <value>, every {0} years</value>
+  </data>
+  <data name="Cron_ComaOnDayX0OfTheMonth" xml:space="preserve">
+    <value>, on day {0} of the month</value>
+  </data>
+  <data name="Cron_ComaOnThe" xml:space="preserve">
+    <value xml:space="preserve">, on the </value>
+  </data>
+  <data name="Cron_ComaOnTheX0OfTheMonth" xml:space="preserve">
+    <value>, on the {0} of the month</value>
+  </data>
+  <data name="Cron_ComaOnTheLastDayOfTheMonth" xml:space="preserve">
+    <value>, on the last day of the month</value>
+  </data>
+  <data name="Cron_ComaOnTheLastWeekdayOfTheMonth" xml:space="preserve">
+    <value>, on the last weekday of the month</value>
+  </data>
+  <data name="Cron_ComaOnTheLastX0OfTheMonth" xml:space="preserve">
+    <value>, on the last {0} of the month</value>
+  </data>
+  <data name="Cron_ComaBetweenDayX0AndX1OfTheMonth" xml:space="preserve">
+    <value>, between day {0} and {1} of the month</value>
+  </data>
+  <data name="Cron_CommaDaysBeforeTheLastDayOfTheMonth" xml:space="preserve">
+    <value>, {0} days before the last day of the month</value>
+  </data>
+  <data name="Cron_ComaOnlyOnX0" xml:space="preserve">
+    <value>, only on {0}</value>
+  </data>
+  <data name="Cron_ComaOnlyInX0" xml:space="preserve">
+    <value>, only in {0}</value>
+  </data>
+  <data name="Cron_ComaOnlyInYearX0" xml:space="preserve">
+    <value>, only in {0}</value>
+  </data>
+  <data name="Cron_ComaX0ThroughX1" xml:space="preserve">
+    <value>, {0} through {1}</value>
+  </data>
+  <data name="Cron_CommaStartingX0" xml:space="preserve">
+    <value>, starting {0}</value>
+  </data>
+  <data name="Cron_First" xml:space="preserve">
+    <value>first</value>
+  </data>
+  <data name="Cron_Second" xml:space="preserve">
+    <value>second</value>
+  </data>
+  <data name="Cron_Third" xml:space="preserve">
+    <value>third</value>
+  </data>
+  <data name="Cron_Fourth" xml:space="preserve">
+    <value>fourth</value>
+  </data>
+  <data name="Cron_Fifth" xml:space="preserve">
+    <value>fifth</value>
+  </data>
+  <data name="Cron_FirstWeekday" xml:space="preserve">
+    <value>first weekday</value>
+  </data>
+  <data name="Cron_WeekdayNearestDayX0" xml:space="preserve">
+    <value>weekday nearest day {0}</value>
+  </data>
+  <data name="Cron_SpaceX0OfTheMonth" xml:space="preserve">
+    <value xml:space="preserve"> {0} of the month</value>
+  </data>
+  <data name="Cron_SpaceAnd" xml:space="preserve">
+    <value xml:space="preserve"> and</value>
+  </data>
+  <data name="Cron_SpaceAndSpace" xml:space="preserve">
+    <value xml:space="preserve"> and </value>
+  </data>
+  <data name="Cron_AMPeriod" xml:space="preserve">
+    <value>AM</value>
+  </data>
+  <data name="Cron_PMPeriod" xml:space="preserve">
+    <value>PM</value>
+  </data>
+
+  <!-- Schedule Page -->
+  <data name="Nav_Schedule.Content" xml:space="preserve">
+    <value>Schedule</value>
+  </data>
+  <data name="Schedule_Title.Text" xml:space="preserve">
+    <value>Schedule</value>
+  </data>
+  <data name="Schedule_Empty.Text" xml:space="preserve">
+    <value>No scheduled tasks registered.</value>
+  </data>
+  <data name="Schedule_EmptyHint.Text" xml:space="preserve">
+    <value>Say "do this every day at 9am" during a conversation and the AI will create a schedule.</value>
+  </data>
+  <data name="Schedule_Hint.Text" xml:space="preserve">
+    <value>Schedules are created during conversations. To edit a schedule, delete it and ask the AI to create a new one.</value>
+  </data>
+  <data name="Schedule_DeleteTooltip" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Schedule_DeleteConfirmTitle" xml:space="preserve">
+    <value>Delete Schedule</value>
+  </data>
+  <data name="Schedule_DeleteConfirmContent" xml:space="preserve">
+    <value>Are you sure you want to delete "{0}"?</value>
+  </data>
+  <data name="Schedule_Loading" xml:space="preserve">
+    <value>Loading schedules...</value>
+  </data>
+  <data name="Schedule_SearchPlaceholder" xml:space="preserve">
+    <value>Search schedules...</value>
+  </data>
+  <data name="Schedule_EnableTooltip" xml:space="preserve">
+    <value>Enable</value>
+  </data>
+  <data name="Schedule_DisableTooltip" xml:space="preserve">
+    <value>Disable</value>
+  </data>
 </root>

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="MSTest" Version="3.6.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
+  </ItemGroup>
+
+  <!-- Link Cron source files (no WinUI dependency) -->
+  <ItemGroup>
+    <Compile Include="..\..\src\AssistStudio\Helpers\Cron\ExpressionDescriptor.cs" Link="Cron\ExpressionDescriptor.cs" />
+    <Compile Include="..\..\src\AssistStudio\Helpers\Cron\ExpressionParser.cs" Link="Cron\ExpressionParser.cs" />
+    <Compile Include="..\..\src\AssistStudio\Helpers\Cron\Options.cs" Link="Cron\Options.cs" />
+    <Compile Include="..\..\src\AssistStudio\Helpers\Cron\KoreanPostProcessor.cs" Link="Cron\KoreanPostProcessor.cs" />
+  </ItemGroup>
+
+</Project>

@@ -47,6 +47,11 @@
                         <FontIcon Glyph="&#xE77C;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
+                <NavigationViewItem x:Uid="Nav_Schedule" Content="Schedule" Tag="Schedule">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE787;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
                 <NavigationViewItem x:Uid="Nav_Personalization" Content="Personalization" Tag="Personalization">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE771;" />
