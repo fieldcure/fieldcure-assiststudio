@@ -541,6 +541,9 @@ public static class AppSettings
 
     #region Provider Preset Methods
 
+    /// <summary>In-memory preset cache to avoid repeated PasswordVault reads.</summary>
+    private static ObservableCollection<ProviderPreset>? _presetsCache;
+
     /// <summary>
     /// Persists provider presets to local storage, saving API keys securely via the password vault.
     /// </summary>
@@ -562,16 +565,24 @@ public static class AppSettings
         var json = JsonSerializer.Serialize(list, AppJsonContext.Default.ListProviderPreset);
         Settings.Values["ProviderPresets"] = json;
 
+        // Update cache with the just-saved presets (already have API keys in memory)
+        if (list.Count > 0)
+            _presetsCache = new ObservableCollection<ProviderPreset>(list);
+
         PresetsChanged?.Invoke(null, EventArgs.Empty);
     }
 
     /// <summary>
     /// Loads provider presets from local storage, restoring API keys from the password vault.
     /// Falls back to building presets from vault keys if no saved presets exist.
+    /// Uses an in-memory cache to avoid repeated slow PasswordVault reads.
     /// </summary>
     /// <returns>An observable collection of provider presets.</returns>
     public static ObservableCollection<ProviderPreset> LoadPresets()
     {
+        if (_presetsCache is not null)
+            return new ObservableCollection<ProviderPreset>(_presetsCache);
+
         var json = Settings.Values["ProviderPresets"] as string;
         if (!string.IsNullOrEmpty(json))
         {
@@ -588,14 +599,17 @@ public static class AppSettings
                         }
                     }
 
-                    return new ObservableCollection<ProviderPreset>(list);
+                    _presetsCache = new ObservableCollection<ProviderPreset>(list);
+                    return new ObservableCollection<ProviderPreset>(_presetsCache);
                 }
             }
             catch { /* fall through to rebuild */ }
         }
 
         // No saved presets — build from PasswordVault API keys
-        return BuildPresetsFromVault();
+        var built = BuildPresetsFromVault();
+        _presetsCache = built;
+        return new ObservableCollection<ProviderPreset>(built);
     }
 
     #endregion

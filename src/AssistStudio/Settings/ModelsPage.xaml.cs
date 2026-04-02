@@ -89,9 +89,6 @@ public sealed partial class ModelsPage : Page
         UpdateAllSubHeaders();
         UpdateExpandedState();
 
-        // Presets are already loaded by AppSettings.LoadPresets() at startup.
-        // Individual event handlers persist changes directly via PersistPresets().
-
         // Initialize Ollama URL from saved settings
         OllamaUrlBox.Text = AppSettings.GetOllamaBaseUrl() ?? "http://localhost:11434";
 
@@ -433,8 +430,9 @@ public sealed partial class ModelsPage : Page
             _isPopulating = false;
         }
 
-        // Background refresh for providers that have API keys
-        _ = RefreshAllModelCachesAsync();
+        // Background refresh for providers that have API keys (Task.Run to
+        // avoid blocking UI thread during first-time network stack DLL loading)
+        _ = Task.Run(() => RefreshAllModelCachesAsync());
     }
 
     /// <summary>
@@ -716,8 +714,13 @@ public sealed partial class ModelsPage : Page
                 // Update ComboBox on UI thread, preserving current selection
                 DispatcherQueue.TryEnqueue(() =>
                 {
-                    var current = combo.SelectedItem as string;
-                    PopulateCombo(combo, [.. filtered], current ?? AppSettings.GetDefaultModel(provider));
+                    _isPopulating = true;
+                    try
+                    {
+                        var current = combo.SelectedItem as string;
+                        PopulateCombo(combo, [.. filtered], current ?? AppSettings.GetDefaultModel(provider));
+                    }
+                    finally { _isPopulating = false; }
                 });
             }
             finally
@@ -1030,6 +1033,7 @@ public sealed partial class ModelsPage : Page
     /// </summary>
     private void OnOllamaModelChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (_isPopulating) return;
         if (OllamaModelCombo.SelectedItem is string display && !string.IsNullOrEmpty(display))
         {
             // Strip fit-kind suffix before saving
@@ -1240,35 +1244,46 @@ public sealed partial class ModelsPage : Page
                 .ThenBy(x => x.Model.Id, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            OllamaModelCombo.Items.Clear();
-            foreach (var x in visibleModels)
+            _isPopulating = true;
+            try
             {
-                var suffix = x.Fit switch
+                OllamaModelCombo.Items.Clear();
+                foreach (var x in visibleModels)
                 {
-                    OllamaFitKind.Gpu => $"  ({L("Models_FitGpu")})",
-                    OllamaFitKind.Cpu => $"  ({L("Models_FitCpu")})",
-                    OllamaFitKind.Maybe => $"  ({L("Models_FitMaybe")})",
-                    _ => ""
-                };
-                OllamaModelCombo.Items.Add(x.Model.Id + suffix);
+                    var suffix = x.Fit switch
+                    {
+                        OllamaFitKind.Gpu => $"  ({L("Models_FitGpu")})",
+                        OllamaFitKind.Cpu => $"  ({L("Models_FitCpu")})",
+                        OllamaFitKind.Maybe => $"  ({L("Models_FitMaybe")})",
+                        _ => ""
+                    };
+                    OllamaModelCombo.Items.Add(x.Model.Id + suffix);
+                }
+
+                if (OllamaModelCombo.Items.Count > 0)
+                {
+                    OllamaModelCombo.IsEnabled = true;
+                    var saved = AppSettings.GetDefaultModel("Ollama");
+                    var found = false;
+                    for (var i = 0; i < OllamaModelCombo.Items.Count; i++)
+                    {
+                        if (OllamaModelCombo.Items[i] is string s && s.StartsWith(saved ?? ""))
+                        {
+                            OllamaModelCombo.SelectedIndex = i;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) OllamaModelCombo.SelectedIndex = 0;
+                }
+            }
+            finally
+            {
+                _isPopulating = false;
             }
 
-            if (OllamaModelCombo.Items.Count > 0)
-            {
-                OllamaModelCombo.IsEnabled = true;
-                var saved = AppSettings.GetDefaultModel("Ollama");
-                var found = false;
-                for (var i = 0; i < OllamaModelCombo.Items.Count; i++)
-                {
-                    if (OllamaModelCombo.Items[i] is string s && s.StartsWith(saved ?? ""))
-                    {
-                        OllamaModelCombo.SelectedIndex = i;
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) OllamaModelCombo.SelectedIndex = 0;
-            }
+            // Update thinking state now that model is selected
+            UpdateAllThinkingStates();
         }
         catch (Exception ex)
         {

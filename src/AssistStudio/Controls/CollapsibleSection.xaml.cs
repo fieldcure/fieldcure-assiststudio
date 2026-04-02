@@ -180,12 +180,17 @@ public sealed partial class CollapsibleSection : UserControl, INotifyPropertyCha
     /// <summary>
     /// Loads a localized string by key, returning a fallback if loading fails.
     /// </summary>
+    private static readonly Lazy<ResourceLoader> _loader = new(() =>
+    {
+        try { return new ResourceLoader(); }
+        catch { return null!; }
+    });
+
     private static string L(string key)
     {
         try
         {
-            var loader = new ResourceLoader();
-            return loader.GetString(key);
+            return _loader.Value?.GetString(key) ?? key;
         }
         catch
         {

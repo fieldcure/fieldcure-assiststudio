@@ -44,10 +44,12 @@ public static class HardwareProbe
     /// </summary>
     public static Task<HardwareBudget> GetAsync()
     {
-        var availableRam = DetectAvailableRam();
-        var vram = DetectVram();
-
-        return Task.FromResult(new HardwareBudget(availableRam, vram));
+        return Task.Run(() =>
+        {
+            var availableRam = DetectAvailableRam();
+            var vram = DetectVram();
+            return new HardwareBudget(availableRam, vram);
+        });
     }
 
     #endregion

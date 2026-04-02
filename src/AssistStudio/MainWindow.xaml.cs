@@ -75,10 +75,19 @@ public sealed partial class MainWindow : Window
             ApplyAppTheme(theme);
             ViewModel.ApplyThemeToAll(theme);
         };
+        // Debounce preset refreshes — ModelsPage fires PresetsChanged on every
+        // combo/toggle change, so we wait 1 s after the last fire before refreshing.
+        var presetsDebounce = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        presetsDebounce.Tick += (_, _) =>
+        {
+            presetsDebounce.Stop();
+            LoggingService.LogInfo($"[Settings] PresetsChanged (debounced) → refreshing on {ViewModel.Tabs.Count} tabs");
+            ViewModel.RefreshPresetsOnAll();
+        };
         AppSettings.PresetsChanged += (_, _) =>
         {
-            LoggingService.LogInfo($"[Settings] PresetsChanged → refreshing on {ViewModel.Tabs.Count} tabs");
-            ViewModel.RefreshPresetsOnAll();
+            presetsDebounce.Stop();
+            presetsDebounce.Start();
         };
         AppSettings.ProfilesChanged += (_, _) =>
         {

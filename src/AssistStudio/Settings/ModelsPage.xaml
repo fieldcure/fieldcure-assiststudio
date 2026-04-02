@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Page
     x:Class="AssistStudio.Settings.ModelsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -38,9 +38,7 @@
                            TextWrapping="Wrap" Margin="0,-16,0,0" />
 
                 <!-- Anthropic Claude -->
-                <controls:CollapsibleSection x:Name="ClaudeSection"
-                                              Header="Anthropic Claude"
-                                              IsExpanded="False">
+                <controls:CollapsibleSection x:Name="ClaudeSection" Header="Anthropic Claude" IsExpanded="False">
                     <controls:CollapsibleSection.Body>
                         <StackPanel Spacing="8">
                             <!-- Input state (no key) -->
@@ -126,9 +124,7 @@
                 </controls:CollapsibleSection>
 
                 <!-- OpenAI -->
-                <controls:CollapsibleSection x:Name="OpenAISection"
-                                              Header="OpenAI"
-                                              IsExpanded="False">
+                <controls:CollapsibleSection x:Name="OpenAISection" Header="OpenAI" IsExpanded="False">
                     <controls:CollapsibleSection.Body>
                         <StackPanel Spacing="8">
                             <Grid x:Name="OpenAIKeyInputPanel" ColumnSpacing="8">
@@ -210,9 +206,7 @@
                 </controls:CollapsibleSection>
 
                 <!-- Google Gemini -->
-                <controls:CollapsibleSection x:Name="GeminiSection"
-                                              Header="Google Gemini"
-                                              IsExpanded="False">
+                <controls:CollapsibleSection x:Name="GeminiSection" Header="Google Gemini" IsExpanded="False">
                     <controls:CollapsibleSection.Body>
                         <StackPanel Spacing="8">
                             <Grid x:Name="GeminiKeyInputPanel" ColumnSpacing="8">
@@ -294,9 +288,7 @@
                 </controls:CollapsibleSection>
 
                 <!-- Groq -->
-                <controls:CollapsibleSection x:Name="GroqSection"
-                                              Header="Groq"
-                                              IsExpanded="False">
+                <controls:CollapsibleSection x:Name="GroqSection" Header="Groq" IsExpanded="False">
                     <controls:CollapsibleSection.Body>
                         <StackPanel Spacing="8">
                             <Grid x:Name="GroqKeyInputPanel" ColumnSpacing="8">
@@ -386,9 +378,7 @@
                            Style="{StaticResource SubtitleTextBlockStyle}" />
 
                 <!-- Ollama -->
-                <controls:CollapsibleSection x:Name="OllamaSection"
-                                              Header="Ollama"
-                                              IsExpanded="False">
+                <controls:CollapsibleSection x:Name="OllamaSection" Header="Ollama" IsExpanded="False">
                     <controls:CollapsibleSection.Body>
                         <StackPanel Spacing="8">
                             <StackPanel Orientation="Horizontal" Spacing="10">
