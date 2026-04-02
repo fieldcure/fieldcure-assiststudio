@@ -522,6 +522,7 @@ public sealed partial class ModelsPage : Page
             ("OpenAI", OpenAIThinkingToggle, OpenAIThinkingBudget, OpenAIThinkingOverrideCombo),
             ("Gemini", GeminiThinkingToggle, GeminiThinkingBudget, GeminiThinkingOverrideCombo),
             ("Groq", GroqThinkingToggle, GroqThinkingBudget, GroqThinkingOverrideCombo),
+            ("Ollama", OllamaThinkingToggle, OllamaThinkingBudget, OllamaThinkingOverrideCombo),
         };
 
         foreach (var (provider, toggle, budget, overrideCombo) in controls)
@@ -564,6 +565,7 @@ public sealed partial class ModelsPage : Page
             ("OpenAI", OpenAIModelCombo, OpenAIThinkingOverrideCombo, OpenAIThinkingToggle, OpenAIThinkingBudget, OpenAIThinkingHint),
             ("Gemini", GeminiModelCombo, GeminiThinkingOverrideCombo, GeminiThinkingToggle, GeminiThinkingBudget, GeminiThinkingHint),
             ("Groq", GroqModelCombo, GroqThinkingOverrideCombo, GroqThinkingToggle, GroqThinkingBudget, GroqThinkingHint),
+            ("Ollama", OllamaModelCombo, OllamaThinkingOverrideCombo, OllamaThinkingToggle, OllamaThinkingBudget, OllamaThinkingHint),
         };
 
         foreach (var (provider, modelCombo, overrideCombo, toggle, budget, hint) in entries)
@@ -915,6 +917,7 @@ public sealed partial class ModelsPage : Page
             nameof(OpenAIThinkingToggle) => ("OpenAI", (NumberBox?)OpenAIThinkingBudget),
             nameof(GeminiThinkingToggle) => ("Gemini", (NumberBox?)GeminiThinkingBudget),
             nameof(GroqThinkingToggle) => ("Groq", (NumberBox?)GroqThinkingBudget),
+            nameof(OllamaThinkingToggle) => ("Ollama", (NumberBox?)OllamaThinkingBudget),
             _ => ((string?)null, (NumberBox?)null)
         };
         if (provider is null) return;
@@ -952,6 +955,7 @@ public sealed partial class ModelsPage : Page
             nameof(OpenAIThinkingOverrideCombo) => "OpenAI",
             nameof(GeminiThinkingOverrideCombo) => "Gemini",
             nameof(GroqThinkingOverrideCombo) => "Groq",
+            nameof(OllamaThinkingOverrideCombo) => "Ollama",
             _ => (string?)null
         };
         if (provider is null) return;
@@ -962,6 +966,7 @@ public sealed partial class ModelsPage : Page
             "OpenAI" => (OpenAIThinkingToggle, OpenAIThinkingBudget),
             "Gemini" => (GeminiThinkingToggle, GeminiThinkingBudget),
             "Groq" => (GroqThinkingToggle, GroqThinkingBudget),
+            "Ollama" => (OllamaThinkingToggle, OllamaThinkingBudget),
             _ => ((ToggleSwitch?)null, (NumberBox?)null)
         };
 
@@ -989,6 +994,7 @@ public sealed partial class ModelsPage : Page
             nameof(OpenAIThinkingBudget) => "OpenAI",
             nameof(GeminiThinkingBudget) => "Gemini",
             nameof(GroqThinkingBudget) => "Groq",
+            nameof(OllamaThinkingBudget) => "Ollama",
             _ => (string?)null
         };
         if (provider is null) return;

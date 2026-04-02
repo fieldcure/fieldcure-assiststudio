@@ -98,7 +98,8 @@ public partial class OllamaProvider : IAiProvider, IDisposable
     {
         if (string.IsNullOrEmpty(modelId)) return ThinkingSupport.NotSupported;
         if (modelId.Contains("deepseek-r1", StringComparison.OrdinalIgnoreCase)
-            || modelId.StartsWith("qwq", StringComparison.OrdinalIgnoreCase))
+            || modelId.StartsWith("qwq", StringComparison.OrdinalIgnoreCase)
+            || modelId.Contains(":cloud", StringComparison.OrdinalIgnoreCase))
             return ThinkingSupport.Optional;
         return ThinkingSupport.NotSupported;
     }
@@ -138,10 +139,13 @@ public partial class OllamaProvider : IAiProvider, IDisposable
             ? contentEl.GetString()
             : null;
 
-        // Separate <think>...</think> tags from content
-        string? thinkingContent = null;
+        // 1) Ollama native thinking field (cloud models, etc.)
+        string? thinkingContent = message.TryGetProperty("thinking", out var thinkEl)
+            ? thinkEl.GetString() : null;
+
+        // 2) Fallback: <think> tag parsing (deepseek-r1, qwq)
         var content = rawContent;
-        if (!string.IsNullOrEmpty(rawContent))
+        if (thinkingContent is null && !string.IsNullOrEmpty(rawContent))
             (thinkingContent, content) = ExtractThinkingBlock(rawContent);
 
         // Parse tool calls from the response
@@ -225,6 +229,14 @@ public partial class OllamaProvider : IAiProvider, IDisposable
 
             if (root.TryGetProperty("message", out var messageEl))
             {
+                // Ollama native thinking field (cloud models, etc.)
+                if (messageEl.TryGetProperty("thinking", out var thinkEl))
+                {
+                    var thinkText = thinkEl.GetString();
+                    if (!string.IsNullOrEmpty(thinkText))
+                        yield return new StreamEvent.ThinkingDelta(thinkText);
+                }
+
                 if (messageEl.TryGetProperty("content", out var contentEl))
                 {
                     var text = contentEl.GetString();
@@ -421,6 +433,10 @@ public partial class OllamaProvider : IAiProvider, IDisposable
                 ["num_predict"] = request.MaxTokens
             }
         };
+
+        // Enable thinking for models that support it (cloud models, etc.)
+        if (request.ThinkingEnabled)
+            body["think"] = true;
 
         // Add tool definitions when available
         if (request.Tools is { Count: > 0 })

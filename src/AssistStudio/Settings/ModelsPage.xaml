@@ -488,6 +488,29 @@
                                           HorizontalAlignment="Stretch"
                                           SelectionChanged="OnPdfHandlingChanged" />
                             </StackPanel>
+                            <StackPanel Spacing="4">
+                                <ComboBox x:Name="OllamaThinkingOverrideCombo"
+                                          x:Uid="Models_ThinkingOverride"
+                                          Header="Reasoning mode"
+                                          HorizontalAlignment="Stretch"
+                                          SelectionChanged="OnThinkingOverrideChanged" />
+                                <ToggleSwitch x:Name="OllamaThinkingToggle"
+                                              x:Uid="Models_ExtendedThinking"
+                                              Header="Extended reasoning"
+                                              Toggled="OnThinkingToggled" />
+                                <NumberBox x:Name="OllamaThinkingBudget"
+                                           x:Uid="Models_ThinkingBudget"
+                                           Header="Reasoning budget (tokens)"
+                                           Value="4096" Minimum="1024" Maximum="128000"
+                                           SpinButtonPlacementMode="Inline"
+                                           SmallChange="1024" LargeChange="4096"
+                                           IsEnabled="False"
+                                           ValueChanged="OnThinkingBudgetChanged" />
+                                <TextBlock x:Name="OllamaThinkingHint"
+                                           FontSize="12" Opacity="0.6"
+                                           TextWrapping="Wrap"
+                                           Visibility="Collapsed" />
+                            </StackPanel>
                         </StackPanel>
                     </controls:CollapsibleSection.Body>
                 </controls:CollapsibleSection>
