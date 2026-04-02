@@ -3241,7 +3241,10 @@ public sealed partial class ChatPanel : Control
                 ["imageExpand"] = loader.GetString("Chat_ImageExpand"),
                 ["imageClose"] = loader.GetString("Chat_ImageClose"),
                 ["imageSaved"] = loader.GetString("Chat_ImageSaved"),
-                ["imageCopied"] = loader.GetString("Chat_ImageCopied")
+                ["imageCopied"] = loader.GetString("Chat_ImageCopied"),
+                ["seconds"] = loader.GetString("Chat_Seconds"),
+                ["minutes"] = loader.GetString("Chat_Minutes"),
+                ["hours"] = loader.GetString("Chat_Hours")
             };
 
             // Filter out empty strings (key not found returns empty)

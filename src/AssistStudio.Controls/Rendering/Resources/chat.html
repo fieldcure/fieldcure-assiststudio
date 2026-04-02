@@ -879,6 +879,27 @@
         } catch { return ''; }
     }
 
+    /**
+     * Formats elapsed seconds into a localized duration string.
+     * @param {number} totalSeconds - Total elapsed seconds
+     * @param {boolean} precise - If true, shows decimal for seconds (finalize); if false, integer (streaming)
+     * @returns {string} e.g. "3초", "1분 23초", "1시간 2분 3초" / "3s", "1m 23s", "1h 2m 3s"
+     */
+    function formatElapsed(totalSeconds, precise) {
+        var h = Math.floor(totalSeconds / 3600);
+        var m = Math.floor((totalSeconds % 3600) / 60);
+        var s = precise ? (totalSeconds % 60) : Math.round(totalSeconds % 60);
+        var parts = [];
+        if (h > 0) parts.push(h + (_L.hours || 'h'));
+        if (m > 0 || h > 0) parts.push(m + (_L.minutes || 'm'));
+        if (precise) {
+            parts.push(s.toFixed(1) + (_L.seconds || 's'));
+        } else {
+            parts.push(Math.round(s) + (_L.seconds || 's'));
+        }
+        return parts.join(' ');
+    }
+
     function doScroll(behavior) {
         if (autoScroll) {
             window.scrollTo({ top: document.body.scrollHeight, behavior: behavior || 'smooth' });
@@ -1473,6 +1494,13 @@
             footer.appendChild(ts);
             msg.appendChild(footer);
 
+            // Start elapsed time counter
+            msg.dataset.streamStart = Date.now();
+            msg._streamTimer = setInterval(function() {
+                var elapsed = (Date.now() - parseInt(msg.dataset.streamStart)) / 1000;
+                if (elapsed >= 1) ts.textContent = formatElapsed(elapsed, false);
+            }, 1000);
+
             container.appendChild(msg);
             // Scroll just enough to reveal the assistant bubble without hiding the user message
             if (autoScroll) {
@@ -1696,17 +1724,29 @@
                     bubble.appendChild(btn);
                 }
             }
+            // Clear streaming timer
+            if (msg._streamTimer) { clearInterval(msg._streamTimer); msg._streamTimer = null; }
+
             var ts = msg.querySelector('.message-timestamp');
             if (ts) {
                 var timeStr = formatTimestamp(new Date().toISOString());
+                var parts = [];
+
                 if (tokenCount && tokenCount > 0) {
                     var formatted = tokenCount >= 1000
                         ? '~' + (tokenCount / 1000).toFixed(1) + 'k'
                         : tokenCount.toString();
-                    ts.textContent = formatted + ' ' + _L.tokens + ' \u00b7 ' + timeStr;
-                } else {
-                    ts.textContent = timeStr;
+                    parts.push(formatted + ' ' + _L.tokens);
                 }
+
+                if (msg.dataset.streamStart) {
+                    var sec = (Date.now() - parseInt(msg.dataset.streamStart)) / 1000;
+                    parts.push(formatElapsed(sec, true));
+                    delete msg.dataset.streamStart;
+                }
+
+                parts.push(timeStr);
+                ts.textContent = parts.join(' \u00b7 ');
             }
             doScroll('smooth');
         },

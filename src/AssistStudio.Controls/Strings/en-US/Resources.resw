@@ -108,6 +108,15 @@
   <data name="Chat_ImageCopied" xml:space="preserve">
     <value>Copied to clipboard</value>
   </data>
+  <data name="Chat_Seconds" xml:space="preserve">
+    <value>s</value>
+  </data>
+  <data name="Chat_Minutes" xml:space="preserve">
+    <value>m</value>
+  </data>
+  <data name="Chat_Hours" xml:space="preserve">
+    <value>h</value>
+  </data>
   <data name="ComposeBar_Placeholder" xml:space="preserve">
     <value>Type a message...</value>
   </data>
