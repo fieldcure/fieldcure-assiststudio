@@ -9,6 +9,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using Microsoft.Windows.ApplicationModel.Resources;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 
 namespace AssistStudio.Settings;
 
@@ -1146,7 +1147,8 @@ public sealed partial class ModelsPage : Page
         OllamaStatusText.ClearValue(TextBlock.ForegroundProperty);
         StartOllamaButton.Visibility = Visibility.Collapsed;
         OllamaInstallPanel.Visibility = Visibility.Collapsed;
-        BrowseModelsButton.Visibility = Visibility.Collapsed;
+        OllamaActionButtons.Visibility = Visibility.Collapsed;
+        OllamaCloudHint.Visibility = Visibility.Collapsed;
 
         try
         {
@@ -1163,7 +1165,8 @@ public sealed partial class ModelsPage : Page
                 {
                     OllamaStatusText.Text = L("Models_Running");
                     OllamaStatusText.Foreground = ThemeHelper.GetBrush("StatusAccentForegroundBrush");
-                    BrowseModelsButton.Visibility = Visibility.Visible;
+                    OllamaActionButtons.Visibility = Visibility.Visible;
+                    OllamaCloudHint.Visibility = Visibility.Visible;
                     await LoadOllamaModelsAsync();
                 }
                 else
@@ -1180,7 +1183,8 @@ public sealed partial class ModelsPage : Page
                 {
                     OllamaStatusText.Text = L("Models_Running");
                     OllamaStatusText.Foreground = ThemeHelper.GetBrush("StatusAccentForegroundBrush");
-                    BrowseModelsButton.Visibility = Visibility.Visible;
+                    OllamaActionButtons.Visibility = Visibility.Visible;
+                    OllamaCloudHint.Visibility = Visibility.Visible;
                     await LoadOllamaModelsAsync();
                 }
                 else if (OllamaHelper.IsOllamaInstalled())
@@ -1233,6 +1237,7 @@ public sealed partial class ModelsPage : Page
                 })
                 .Where(x => x.Fit != OllamaFitKind.NoFit)
                 .OrderBy(x => x.Fit)
+                .ThenBy(x => x.Model.Id, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
             OllamaModelCombo.Items.Clear();
@@ -1269,6 +1274,20 @@ public sealed partial class ModelsPage : Page
         {
             LoggingService.LogException(ex);
         }
+    }
+
+    /// <summary>
+    /// Opens a console window running <c>ollama login</c> for device authentication.
+    /// Cloud models require an Ollama account; this flow opens a browser for sign-in.
+    /// </summary>
+    private void OnOllamaLogin(object sender, RoutedEventArgs e)
+    {
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = "ollama",
+            Arguments = "login",
+            UseShellExecute = true
+        });
     }
 
     /// <summary>

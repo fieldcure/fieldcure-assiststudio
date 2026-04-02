@@ -234,17 +234,36 @@ public sealed partial class ModelSelectionDialog : ThemedContentDialog
     #region Event Handlers
 
     /// <summary>
-    /// Handles the delete button click for a local model with confirmation.
+    /// Handles the delete button click for a local model.
+    /// Shows a confirmation Flyout instead of a ContentDialog to avoid the WinUI 3
+    /// "Only a single ContentDialog can be open at any time" limitation.
     /// </summary>
-    private async void OnDeleteModel(object sender, RoutedEventArgs e)
+    private void OnDeleteModel(object sender, RoutedEventArgs e)
     {
-        if (sender is Button btn && btn.Tag is string modelName)
+        if (sender is not Button btn || btn.Tag is not string modelName) return;
+
+        var confirmText = new TextBlock
         {
-            if (await ConfirmDeleteAsync(modelName))
-            {
-                await DeleteModelAsync(modelName);
-            }
-        }
+            Text = string.Format(Loader.GetString("ModelDialog_DeleteConfirmMessage"), modelName),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 12)
+        };
+        var deleteBtn = new Button
+        {
+            Content = Loader.GetString("ModelDialog_Delete/Content"),
+            Style = (Style)Application.Current.Resources["AccentButtonStyle"]
+        };
+        var panel = new StackPanel();
+        panel.Children.Add(confirmText);
+        panel.Children.Add(deleteBtn);
+
+        var flyout = new Flyout { Content = panel };
+        deleteBtn.Click += async (_, _) =>
+        {
+            flyout.Hide();
+            await DeleteModelAsync(modelName);
+        };
+        flyout.ShowAt(btn);
     }
 
     /// <summary>

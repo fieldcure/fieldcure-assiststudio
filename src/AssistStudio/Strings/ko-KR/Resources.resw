@@ -151,6 +151,15 @@
   <data name="Models_BrowsePullModels.Content" xml:space="preserve">
     <value>모델 찾아보기</value>
   </data>
+  <data name="Models_OllamaLogin.Content" xml:space="preserve">
+    <value>Ollama 로그인</value>
+  </data>
+  <data name="Models_OllamaDefaultModel.Header" xml:space="preserve">
+    <value>기본 모델</value>
+  </data>
+  <data name="Models_OllamaCloudHint.Text" xml:space="preserve">
+    <value>클라우드 모델(:cloud) 사용 시 로그인이 필요합니다. 로그인 버튼을 누르면 명령 프롬프트 창이 열리고, 브라우저에서 인증을 완료하세요.</value>
+  </data>
   <!-- Memory Page -->
   <data name="Memory_Title.Text" xml:space="preserve">
     <value>메모리</value>
@@ -432,7 +441,7 @@
     <value>모델 삭제</value>
   </data>
   <data name="ModelDialog_DeleteConfirmMessage" xml:space="preserve">
-    <value>"{0}"을(를) 삭제하시겠습니까? 다시 다운로드해야 합니다.</value>
+    <value>'{0}' 모델을 삭제하시겠습니까?</value>
   </data>
   <data name="ModelDialog_Cancel" xml:space="preserve">
     <value>취소</value>

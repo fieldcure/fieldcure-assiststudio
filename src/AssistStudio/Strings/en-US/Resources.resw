@@ -151,6 +151,15 @@
   <data name="Models_BrowsePullModels.Content" xml:space="preserve">
     <value>Browse models</value>
   </data>
+  <data name="Models_OllamaLogin.Content" xml:space="preserve">
+    <value>Ollama Login</value>
+  </data>
+  <data name="Models_OllamaDefaultModel.Header" xml:space="preserve">
+    <value>Default model</value>
+  </data>
+  <data name="Models_OllamaCloudHint.Text" xml:space="preserve">
+    <value>Sign in required for cloud models (:cloud). Clicking Login opens a command prompt — complete authentication in your browser.</value>
+  </data>
   <!-- Memory Page -->
   <data name="Memory_Title.Text" xml:space="preserve">
     <value>Memory</value>
@@ -432,7 +441,7 @@
     <value>Delete Model</value>
   </data>
   <data name="ModelDialog_DeleteConfirmMessage" xml:space="preserve">
-    <value>Are you sure you want to delete "{0}"? You will need to download it again.</value>
+    <value>Delete '{0}'?</value>
   </data>
   <data name="ModelDialog_Cancel" xml:space="preserve">
     <value>Cancel</value>

@@ -454,11 +454,22 @@
                                     Content="Start Ollama" Click="OnStartOllama"
                                     Visibility="Collapsed" />
 
-                            <!-- Browse models -->
-                            <Button x:Name="BrowseModelsButton"
-                                    x:Uid="Models_BrowsePullModels"
-                                    Content="Browse models" Click="OnBrowseOllamaModels"
-                                    Visibility="Collapsed" />
+                            <!-- Browse models + Login -->
+                            <StackPanel x:Name="OllamaActionButtons" Orientation="Horizontal" Spacing="8"
+                                        Visibility="Collapsed">
+                                <Button x:Name="BrowseModelsButton"
+                                        x:Uid="Models_BrowsePullModels"
+                                        Content="Browse models" Click="OnBrowseOllamaModels" />
+                                <Button x:Name="OllamaLoginButton"
+                                        x:Uid="Models_OllamaLogin"
+                                        Content="Ollama Login" Click="OnOllamaLogin" />
+                            </StackPanel>
+                            <TextBlock x:Name="OllamaCloudHint"
+                                       x:Uid="Models_OllamaCloudHint"
+                                       Text="Sign in required for cloud models (:cloud). Clicking Login opens a command prompt — complete authentication in your browser."
+                                       FontSize="12" Opacity="0.6"
+                                       TextWrapping="Wrap"
+                                       Visibility="Collapsed" />
 
                             <!-- Download Progress -->
                             <StackPanel x:Name="PullProgressPanel" Visibility="Collapsed" Spacing="4"
@@ -467,14 +478,13 @@
                                 <ProgressBar x:Name="PullProgressBar" Minimum="0" Maximum="100" />
                             </StackPanel>
 
-                            <StackPanel Spacing="4">
-                                <TextBlock x:Uid="Models_DefaultModel" Text="Default model" FontSize="12" Opacity="0.7" />
-                                <ComboBox x:Name="OllamaModelCombo"
-                                          HorizontalAlignment="Stretch"
-                                          IsEnabled="False"
-                                          PlaceholderText="Not available"
-                                          SelectionChanged="OnOllamaModelChanged" />
-                            </StackPanel>
+                            <ComboBox x:Name="OllamaModelCombo"
+                                      x:Uid="Models_OllamaDefaultModel"
+                                      Header="Default model"
+                                      HorizontalAlignment="Stretch"
+                                      IsEnabled="False"
+                                      PlaceholderText="Not available"
+                                      SelectionChanged="OnOllamaModelChanged" />
                             <NumberBox x:Name="OllamaMaxTokensBox"
                                        x:Uid="Models_MaxTokens"
                                        Header="Max tokens"
