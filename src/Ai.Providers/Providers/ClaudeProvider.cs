@@ -119,6 +119,8 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
     {
         var body = BuildRequestBody(request, stream: false);
         LastRequestBody = body;
+        System.Diagnostics.Debug.WriteLine(
+            $"[ClaudeProvider.Complete] requestBody={body.Length:N0} chars, messages={request.Messages.Count}, tools={request.Tools?.Count ?? 0}");
         using var response = await SendRequestAsync(body, ct);
 
         var json = await response.Content.ReadAsStringAsync(ct);

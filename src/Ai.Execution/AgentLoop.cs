@@ -31,6 +31,11 @@ public sealed class AgentLoop : IAgentLoop
 
         try
         {
+            System.Diagnostics.Debug.WriteLine(
+                $"[AgentLoop] Starting: tools={toolList?.Count ?? 0}, maxRounds={context.MaxRounds}, "
+                + $"systemPrompt={context.SystemPrompt?.Length ?? 0} chars, userPrompt={context.UserPrompt?.Length ?? 0} chars, "
+                + $"provider={context.Provider.GetType().Name}");
+
             for (var round = 1; round <= context.MaxRounds; round++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -43,6 +48,11 @@ public sealed class AgentLoop : IAgentLoop
                     MaxTokens = context.MaxTokens ?? 4096,
                     Tools = toolList,
                 };
+
+                System.Diagnostics.Debug.WriteLine(
+                    $"[AgentLoop] Round {round}: messages={messages.Count}, "
+                    + $"totalContentChars={messages.Sum(m => m.Content?.Length ?? 0)}, "
+                    + $"tools={toolList?.Count ?? 0}");
 
                 var response = await context.Provider.CompleteAsync(request, cancellationToken);
 
@@ -69,6 +79,16 @@ public sealed class AgentLoop : IAgentLoop
 
                     var toolResult = await ExecuteToolCallAsync(toolCall, toolList, cancellationToken);
                     totalToolCalls++;
+
+                    // Guard against oversized tool results that would overflow the context window
+                    if (context.MaxToolResultChars > 0 && toolResult.Length > context.MaxToolResultChars)
+                    {
+                        var originalLength = toolResult.Length;
+                        toolResult = toolResult[..context.MaxToolResultChars]
+                            + $"\n\n[Truncated: {originalLength:N0} → {context.MaxToolResultChars:N0} chars]";
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[AgentLoop] Tool result truncated: {toolCall.FunctionName}, {originalLength:N0} → {context.MaxToolResultChars:N0} chars");
+                    }
 
                     messages.Add(new ChatMessage(ChatRole.Tool, toolResult)
                     {

@@ -2733,7 +2733,9 @@ public sealed partial class ChatPanel : Control
                 break;
 
             round++;
-            DiagnosticLogger.LogInfo($"[Chat] Tool round {round}/{MaxToolCallRounds}, toolCalls={result.ToolCalls!.Count}");
+            var delegateCount = result.ToolCalls!.Count(tc => tc.FunctionName == "delegate_task");
+            DiagnosticLogger.LogInfo($"[Chat] Tool round {round}/{MaxToolCallRounds}, toolCalls={result.ToolCalls!.Count}"
+                + (delegateCount > 1 ? $", delegate_task×{delegateCount} (parallel candidate)" : ""));
             if (round > MaxToolCallRounds)
             {
                 DiagnosticLogger.LogWarning($"[Tool] Max tool call rounds ({MaxToolCallRounds}) exceeded, stopping");
@@ -3317,7 +3319,8 @@ public sealed partial class ChatPanel : Control
                 + "- The task requires conversational back-and-forth with the user\n"
                 + "- You need to clarify requirements before proceeding\n\n"
                 + "When delegating, you may specify allowed_tools to limit which tools the sub-agent can use.\n"
-                + "You do NOT need to specify mcp_servers — the sub-agent inherits the current servers by default.";
+                + "You do NOT need to specify mcp_servers — the sub-agent inherits the current servers by default.\n"
+                + "You can call delegate_task multiple times in one response to run independent sub-tasks in parallel.";
         }
 
         var lastUserMsg = messages.LastOrDefault(m => m.Role == ChatRole.User)?.Content;

@@ -64,6 +64,13 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// </summary>
     private SubAgentTool? _subAgentTool;
 
+    /// <summary>
+    /// Parent conversation's enabled server IDs, cached from UI thread for thread-safe access
+    /// by <see cref="ResolveToolsForSubAgentAsync"/> which runs on ThreadPool.
+    /// Updated in <see cref="ResolveTools"/>.
+    /// </summary>
+    private IReadOnlyList<string> _parentEnabledServers = [];
+
     // RAG is now a shared multi-KB server — no per-tab connection needed.
     // The conversation stores a selected KB ID via _builtInServers[RagKey].
 
@@ -910,6 +917,9 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             }
         }
 
+        // Cache enabled servers for thread-safe access by SubAgent ToolResolver
+        _parentEnabledServers = [.. enabledServerIds];
+
         // Sub-Agent tool — available when at least one MCP server is enabled
         if (effectiveServerIds.Count > 0)
             tools.Add(GetOrCreateSubAgentTool());
@@ -1003,21 +1013,25 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         IReadOnlyList<string>? allowedTools,
         CancellationToken ct)
     {
-        // Inherit parent conversation's enabled servers when not specified
-        IEnumerable<string> serverIds;
-        if (mcpServers is null or { Count: 0 })
+        // Always start with parent conversation's enabled servers as base.
+        // AI-specified mcp_servers are merged (union), never replacing parent servers.
+        // This prevents the AI from accidentally excluding servers it doesn't know about (e.g., RAG).
+        // Uses _parentEnabledServers (cached on UI thread) instead of Panel.SelectedProfile
+        // to avoid COMException when called from ThreadPool.
+        var merged = new HashSet<string>(
+            _parentEnabledServers,
+            StringComparer.OrdinalIgnoreCase);
+
+        if (mcpServers is { Count: > 0 })
         {
-            var profile = Panel?.SelectedProfile;
-            var enabledServers = profile?.EnabledServers;
-            if (enabledServers is null or { Count: 0 })
-                return [];
-            serverIds = enabledServers;
+            foreach (var id in mcpServers.Select(NormalizeServerId))
+                merged.Add(id);
         }
-        else
-        {
-            // Map display names to server IDs (AI may use "Essentials" instead of "builtin_essentials")
-            serverIds = mcpServers.Select(NormalizeServerId);
-        }
+
+        if (merged.Count == 0)
+            return [];
+
+        IEnumerable<string> serverIds = merged;
 
         var effectiveServerIds = BuildEffectiveServerIds(serverIds);
         var connectedIds = await AutoConnectServersAsync(effectiveServerIds);
@@ -1028,12 +1042,10 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         var tools = new List<IAssistTool>();
         CollectToolsFromConnectedServers(connectedIds, tools);
 
-        // Apply allowlist filter
-        if (allowedTools is { Count: > 0 })
-        {
-            var allowed = allowedTools.ToHashSet(StringComparer.OrdinalIgnoreCase);
-            tools.RemoveAll(t => !allowed.Contains(t.Name));
-        }
+        // v1: allowed_tools is ignored — sub-agent gets all tools from merged servers.
+        // AI doesn't know internal tool names (e.g., search_documents) so filtering
+        // by allowed_tools would accidentally exclude critical tools like RAG.
+        // Future: expose available tool names in system prompt for informed selection.
 
         // No-nesting: always remove delegate_task from sub-agent tools
         tools.RemoveAll(t => t.Name == "delegate_task");
