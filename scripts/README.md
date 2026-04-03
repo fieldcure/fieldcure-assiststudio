@@ -2,7 +2,7 @@
 
 ## Publish Scripts
 
-Two separate scripts for independent release cycles. Both share common logic from `nuget-common.ps1`.
+Separate scripts for independent release cycles. All share common logic from `nuget-common.ps1`.
 
 ### publish-nuget.ps1 — AssistStudio (Core + Controls)
 
@@ -16,6 +16,26 @@ Two separate scripts for independent release cycles. Both share common logic fro
 |---|---|
 | `FieldCure.AssistStudio.Core` | src/AssistStudio.Core |
 | `FieldCure.AssistStudio.Controls.WinUI` | src/AssistStudio.Controls |
+
+### publish-providers.ps1 — Ai.Providers
+
+```powershell
+.\scripts\publish-providers.ps1 -NuGetApiKey <key>
+```
+
+| PackageId | Project |
+|---|---|
+| `FieldCure.Ai.Providers` | src/Ai.Providers |
+
+### publish-execution.ps1 — Ai.Execution
+
+```powershell
+.\scripts\publish-execution.ps1 -NuGetApiKey <key>
+```
+
+| PackageId | Project |
+|---|---|
+| `FieldCure.Ai.Execution` | src/Ai.Execution |
 
 ### publish-parsers.ps1 — DocumentParsers
 
