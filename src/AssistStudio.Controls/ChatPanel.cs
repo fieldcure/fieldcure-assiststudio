@@ -548,17 +548,9 @@ public sealed partial class ChatPanel : Control
     private TextBlock? _folderDisabledHint;
     private StackPanel? _folderList;
     private TextBlock? _folderEmpty;
-    private Button? _archiveSetButton;
     private TextBlock? _archiveDisabledHint;
-    private Grid? _archiveFolderRow;
-    private TextBlock? _archiveFolderText;
-    private Button? _archiveReindexButton;
-    private FontIcon? _archiveLockIcon;
-    private Button? _archiveRemoveButton;
+    private ComboBox? _kbSelector;
     private TextBlock? _archiveEmpty;
-    private ProgressBar? _archiveProgressBar;
-    private TextBlock? _archiveProgressText;
-    private Button? _archiveCancelButton;
 
     private bool _isConversationActive;
     private string? _greetingText;
@@ -986,20 +978,10 @@ public sealed partial class ChatPanel : Control
     public event EventHandler<string?>? KnowledgeArchiveFolderChanged;
 
     /// <summary>
-    /// Occurs when the user clicks "Set Folder" for Knowledge Archive.
-    /// The App layer should handle this to show a FolderPicker and update <see cref="KnowledgeArchiveFolder"/>.
+    /// Callback that returns the list of available knowledge bases for the KB selector.
+    /// Set by the App layer (e.g., ChatTabView) since Controls cannot reference App services.
     /// </summary>
-    public event EventHandler? KnowledgeArchiveFolderAddRequested;
-
-    /// <summary>
-    /// Occurs when the user clicks the re-index button in the Knowledge Archive flyout.
-    /// </summary>
-    public event EventHandler? KnowledgeArchiveReindexRequested;
-
-    /// <summary>
-    /// Occurs when the user clicks the cancel button during Knowledge Archive indexing.
-    /// </summary>
-    public event EventHandler? KnowledgeArchiveCancelRequested;
+    public Func<List<KbItem>>? KbItemsProvider { get; set; }
 
     /// <summary>
     /// Occurs when a keyboard shortcut is pressed inside the WebView2 that should be handled by the host.
@@ -1077,16 +1059,9 @@ public sealed partial class ChatPanel : Control
         _folderDisabledHint = null;
         _folderList = null;
         _folderEmpty = null;
-        _archiveSetButton = null;
         _archiveDisabledHint = null;
-        _archiveFolderRow = null;
-        _archiveFolderText = null;
-        _archiveReindexButton = null;
-        _archiveRemoveButton = null;
+        _kbSelector = null;
         _archiveEmpty = null;
-        _archiveProgressBar = null;
-        _archiveProgressText = null;
-        _archiveCancelButton = null;
 
         // Get template parts
         _rootGrid = GetTemplateChild("PART_RootGrid") as Grid;
@@ -1974,17 +1949,9 @@ public sealed partial class ChatPanel : Control
             _folderDisabledHint = FindDescendantByName<TextBlock>(root, "PART_FolderDisabledHint");
             _folderList = FindDescendantByName<StackPanel>(root, "PART_FolderList");
             _folderEmpty = FindDescendantByName<TextBlock>(root, "PART_FolderEmpty");
-            _archiveSetButton = FindDescendantByName<Button>(root, "PART_ArchiveSetButton");
             _archiveDisabledHint = FindDescendantByName<TextBlock>(root, "PART_ArchiveDisabledHint");
-            _archiveFolderRow = FindDescendantByName<Grid>(root, "PART_ArchiveFolderRow");
-            _archiveFolderText = FindDescendantByName<TextBlock>(root, "PART_ArchiveFolderText");
-            _archiveReindexButton = FindDescendantByName<Button>(root, "PART_ArchiveReindexButton");
-            _archiveRemoveButton = FindDescendantByName<Button>(root, "PART_ArchiveRemoveButton");
-            _archiveLockIcon = FindDescendantByName<FontIcon>(root, "PART_ArchiveLockIcon");
+            _kbSelector = FindDescendantByName<ComboBox>(root, "PART_KbSelector");
             _archiveEmpty = FindDescendantByName<TextBlock>(root, "PART_ArchiveEmpty");
-            _archiveProgressBar = FindDescendantByName<ProgressBar>(root, "PART_ArchiveProgressBar");
-            _archiveProgressText = FindDescendantByName<TextBlock>(root, "PART_ArchiveProgressText");
-            _archiveCancelButton = FindDescendantByName<Button>(root, "PART_ArchiveCancelButton");
 
             // Localize flyout text (x:Uid doesn't work in ControlTemplate)
             LocalizeFlyoutText(root);
@@ -1992,30 +1959,21 @@ public sealed partial class ChatPanel : Control
             // Wire click handlers (once)
             if (_folderAddButton is not null)
                 _folderAddButton.Click += (s, e2) => WorkspaceFolderAddRequested?.Invoke(this, EventArgs.Empty);
-            if (_archiveSetButton is not null)
-                _archiveSetButton.Click += (s, e2) => KnowledgeArchiveFolderAddRequested?.Invoke(this, EventArgs.Empty);
-            if (_archiveReindexButton is not null)
+            if (_kbSelector is not null)
             {
-                _archiveReindexButton.Click += (s, e2) => KnowledgeArchiveReindexRequested?.Invoke(this, EventArgs.Empty);
-                SetBottomRightToolTip(_archiveReindexButton, Res.GetString("Folder_ReindexArchive") ?? "Re-index documents");
-            }
-            if (_archiveCancelButton is not null)
-            {
-                _archiveCancelButton.Click += (s, e2) => KnowledgeArchiveCancelRequested?.Invoke(this, EventArgs.Empty);
-                SetBottomRightToolTip(_archiveCancelButton, Res.GetString("Folder_CancelIndexing") ?? "Cancel indexing");
-            }
-            if (_archiveRemoveButton is not null)
-            {
-                _archiveRemoveButton.Click += (s, e2) =>
+                _kbSelector.SelectionChanged += (s, e2) =>
                 {
-                    KnowledgeArchiveFolder = null;
-                    KnowledgeArchiveFolderChanged?.Invoke(this, null);
+                    if (_kbSelector.SelectedItem is KbItem selected)
+                    {
+                        KnowledgeArchiveFolder = selected.Id;
+                        KnowledgeArchiveFolderChanged?.Invoke(this, selected.Id);
+                    }
+                    else
+                    {
+                        KnowledgeArchiveFolder = null;
+                        KnowledgeArchiveFolderChanged?.Invoke(this, null);
+                    }
                 };
-                ToolTipService.SetToolTip(_archiveRemoveButton, new ToolTip
-                {
-                    Content = Res.GetString("FolderFlyout_RemoveTooltip") ?? "Remove",
-                    Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
-                });
             }
 
             // Populate now (Opening couldn't do it because parts weren't resolved yet)
@@ -2104,33 +2062,34 @@ public sealed partial class ChatPanel : Control
             _folderList.Children.Add(row);
         }
 
-        // Archive section
-        var archiveFolder = KnowledgeArchiveFolder;
+        // Archive section — KB selector
         var archiveEnabled = IsKnowledgeArchiveEnabled;
+        var selectedKbId = KnowledgeArchiveFolder; // stores KB ID
 
-        if (_archiveSetButton is not null)
-            _archiveSetButton.Visibility = string.IsNullOrEmpty(archiveFolder) ? Visibility.Visible : Visibility.Collapsed;
-        if (_archiveDisabledHint is not null)
-            _archiveDisabledHint.Visibility = !string.IsNullOrEmpty(archiveFolder)
-                ? Visibility.Visible : Visibility.Collapsed;
-        if (_archiveFolderRow is not null)
-            _archiveFolderRow.Visibility = !string.IsNullOrEmpty(archiveFolder) ? Visibility.Visible : Visibility.Collapsed;
-        if (_archiveEmpty is not null)
-            _archiveEmpty.Visibility = string.IsNullOrEmpty(archiveFolder) ? Visibility.Visible : Visibility.Collapsed;
-
-        if (!string.IsNullOrEmpty(archiveFolder))
+        if (_kbSelector is not null)
         {
-            if (_archiveFolderText is not null)
+            _kbSelector.Visibility = archiveEnabled ? Visibility.Visible : Visibility.Collapsed;
+            _kbSelector.IsEnabled = archiveEnabled;
+
+            // Populate KB list
+            var kbItems = KbItemsProvider?.Invoke() ?? [];
+            _kbSelector.ItemsSource = kbItems;
+
+            // Restore selection
+            if (!string.IsNullOrEmpty(selectedKbId))
             {
-                _archiveFolderText.Text = archiveFolder;
-                _archiveFolderText.Opacity = archiveEnabled ? 1.0 : 0.5;
+                var match = kbItems.FirstOrDefault(k => k.Id == selectedKbId);
+                if (match is not null)
+                    _kbSelector.SelectedItem = match;
             }
-            if (_archiveReindexButton is not null)
-                _archiveReindexButton.IsEnabled = archiveEnabled && !IsArchiveIndexing;
+
+            if (_archiveEmpty is not null)
+                _archiveEmpty.Visibility = kbItems.Count == 0 && archiveEnabled
+                    ? Visibility.Visible : Visibility.Collapsed;
         }
 
-        // Indexing progress UI
-        UpdateArchiveProgressUI();
+        if (_archiveDisabledHint is not null)
+            _archiveDisabledHint.Visibility = !archiveEnabled ? Visibility.Visible : Visibility.Collapsed;
     }
 
     /// <summary>
@@ -2158,35 +2117,8 @@ public sealed partial class ChatPanel : Control
     /// </summary>
     public void UpdateArchiveProgressUI()
     {
-        var indexing = IsArchiveIndexing;
-        var progress = ArchiveIndexingProgress;
-        var text = ArchiveIndexingText;
-
-        if (_archiveProgressBar is not null)
-        {
-            _archiveProgressBar.Visibility = indexing ? Visibility.Visible : Visibility.Collapsed;
-            _archiveProgressBar.Value = progress;
-        }
-        if (_archiveProgressText is not null)
-        {
-            _archiveProgressText.Visibility = indexing ? Visibility.Visible : Visibility.Collapsed;
-            _archiveProgressText.Text = indexing ? $"{progress:0}%" : "";
-        }
-        if (_archiveCancelButton is not null)
-            _archiveCancelButton.Visibility = indexing ? Visibility.Visible : Visibility.Collapsed;
-        if (_archiveRemoveButton is not null)
-            _archiveRemoveButton.IsEnabled = !indexing;
-        VisualStateManager.GoToState(this, indexing ? "Indexing" : "Idle", true);
-
-        // Lock / reindex button visibility
-        var locked = IsArchiveLocked;
-        if (_archiveReindexButton is not null)
-        {
-            _archiveReindexButton.Visibility = locked ? Visibility.Collapsed : Visibility.Visible;
-            _archiveReindexButton.IsEnabled = !indexing;
-        }
-        if (_archiveLockIcon is not null)
-            _archiveLockIcon.Visibility = locked ? Visibility.Visible : Visibility.Collapsed;
+        // Indexing progress is now managed by the KB Settings page.
+        // This method is kept for API compatibility but is a no-op.
     }
 
     /// <summary>
@@ -2205,17 +2137,9 @@ public sealed partial class ChatPanel : Control
         if (_folderDisabledHint is not null)
             _folderDisabledHint.Text = Res.GetString("Folder_DisabledHint") ?? "Enable Workspace in your profile to use these folders.";
         if (_archiveDisabledHint is not null)
-            _archiveDisabledHint.Text = Res.GetString("Folder_ArchiveDisabledHint") ?? "Enable Knowledge Archive in your profile to use this folder.";
+            _archiveDisabledHint.Text = Res.GetString("Folder_ArchiveDisabledHint") ?? "Enable Knowledge Archive in your profile.";
         if (_archiveEmpty is not null)
-            _archiveEmpty.Text = Res.GetString("Folder_Empty") ?? "(empty)";
-
-        // Set Folder button text — button starts Collapsed, so find text inside its content
-        if (_archiveSetButton?.Content is FrameworkElement setContent)
-        {
-            var tb = FindDescendantByName<TextBlock>(setContent, "PART_ArchiveSetButtonText");
-            if (tb is not null)
-                tb.Text = Res.GetString("Folder_SetArchive") ?? "Set Folder";
-        }
+            _archiveEmpty.Text = Res.GetString("Folder_ArchiveNoKbs") ?? "No knowledge bases. Create one in Settings.";
 
         static void SetText(FrameworkElement parent, string elementName, string resKey, string fallback)
         {
@@ -3320,11 +3244,13 @@ public sealed partial class ChatPanel : Control
             workspaceText = (workspaceText ?? "") + folderSection;
         }
 
-        // Knowledge Archive hint — if search_documents tool is available
-        if (activeTools.Any(t => t.Name == "search_documents"))
+        // Knowledge Archive hint — if search_documents tool is available and a KB is selected
+        if (activeTools.Any(t => t.Name == "search_documents") && !string.IsNullOrEmpty(KnowledgeArchiveFolder))
         {
+            var kbId = KnowledgeArchiveFolder;
             workspaceText = (workspaceText ?? "")
-                + "\n\n## Knowledge Archive\nUse `search_documents` to find relevant information before answering."
+                + $"\n\n## Knowledge Archive\nUse `search_documents` to find relevant information before answering."
+                + $"\nAlways pass kb_id=\"{kbId}\" when calling search_documents or get_document_chunk."
                 + "\nIf initial search returns no results, retry with a lower threshold (e.g., 0.1) or different query terms.";
         }
 
@@ -3441,4 +3367,19 @@ public sealed partial class ChatPanel : Control
     private static partial Regex ToolMarkerRegex();
 
     #endregion
+}
+
+/// <summary>
+/// Lightweight item for the KB selector ComboBox in the folder flyout.
+/// </summary>
+public sealed class KbItem
+{
+    /// <summary>Knowledge base UUID.</summary>
+    public required string Id { get; init; }
+
+    /// <summary>Display name.</summary>
+    public required string Name { get; init; }
+
+    /// <inheritdoc/>
+    public override string ToString() => Name;
 }

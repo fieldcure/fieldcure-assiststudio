@@ -89,7 +89,10 @@ public sealed partial class ChatTabView : UserControl
         Panel.WorkspaceFoldersChanged += vm.OnWorkspaceFoldersChanged;
         Panel.WorkspaceFolderAddRequested += OnWorkspaceFolderAddRequested;
         Panel.KnowledgeArchiveFolderChanged += vm.OnKnowledgeArchiveFolderChanged;
-        Panel.KnowledgeArchiveFolderAddRequested += OnKnowledgeArchiveFolderAddRequested;
+        Panel.KbItemsProvider = () =>
+            Mcp.KnowledgeBaseStore.ListAll()
+                .Select(kb => new FieldCure.AssistStudio.Controls.KbItem { Id = kb.Id, Name = kb.Name })
+                .ToList();
     }
 
     /// <summary>
@@ -106,7 +109,7 @@ public sealed partial class ChatTabView : UserControl
         Panel.WorkspaceFoldersChanged -= vm.OnWorkspaceFoldersChanged;
         Panel.WorkspaceFolderAddRequested -= OnWorkspaceFolderAddRequested;
         Panel.KnowledgeArchiveFolderChanged -= vm.OnKnowledgeArchiveFolderChanged;
-        Panel.KnowledgeArchiveFolderAddRequested -= OnKnowledgeArchiveFolderAddRequested;
+        Panel.KbItemsProvider = null;
     }
 
     /// <summary>
@@ -138,28 +141,7 @@ public sealed partial class ChatTabView : UserControl
         }
     }
 
-    /// <summary>
-    /// Handles the "Set Folder" request for Knowledge Archive by opening a FolderPicker.
-    /// </summary>
-    private async void OnKnowledgeArchiveFolderAddRequested(object? sender, EventArgs e)
-    {
-        var picker = new Windows.Storage.Pickers.FolderPicker();
-        picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
-        picker.FileTypeFilter.Add("*");
-
-        var window = (App.Current as App)?.MainWindow;
-        if (window is null) return;
-        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
-        WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
-
-        var folder = await picker.PickSingleFolderAsync();
-        if (folder is null) return;
-
-        Panel.KnowledgeArchiveFolder = folder.Path;
-
-        if (DataContext is ChatTabViewModel vm)
-            vm.OnKnowledgeArchiveFolderChanged(this, folder.Path);
-    }
+    // Knowledge Archive folder picker removed — KB selection is now via ComboBox in flyout.
 
     #endregion
 }
