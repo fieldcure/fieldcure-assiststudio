@@ -107,6 +107,7 @@ public static class AppSettings
     /// <summary>
     /// Gets or sets the preset name used for embedding (UI reference only).
     /// </summary>
+    [Obsolete("Embedding config moved to per-KB config.json. Will be removed in a future version.")]
     public static string EmbeddingPreset
     {
         get => Settings.Values["EmbeddingPreset"] as string ?? "";
@@ -116,6 +117,7 @@ public static class AppSettings
     /// <summary>
     /// Gets or sets the embedding model identifier (e.g., "nomic-embed-text").
     /// </summary>
+    [Obsolete("Embedding config moved to per-KB config.json. Will be removed in a future version.")]
     public static string EmbeddingModel
     {
         get => Settings.Values["EmbeddingModel"] as string ?? "";
@@ -126,6 +128,7 @@ public static class AppSettings
     /// Gets or sets the embedding API base URL.
     /// Stored independently of the preset so it survives preset deletion.
     /// </summary>
+    [Obsolete("Embedding config moved to per-KB config.json. Will be removed in a future version.")]
     public static string EmbeddingBaseUrl
     {
         get => Settings.Values["EmbeddingBaseUrl"] as string ?? "";
@@ -135,6 +138,7 @@ public static class AppSettings
     /// <summary>
     /// Gets or sets the contextualizer preset tag for UI restoration (e.g., "ollama/gemma3:4b", "none").
     /// </summary>
+    [Obsolete("Contextualizer config moved to per-KB config.json. Will be removed in a future version.")]
     public static string ContextualizerPreset
     {
         get => Settings.Values["ContextualizerPreset"] as string ?? "";
@@ -144,6 +148,7 @@ public static class AppSettings
     /// <summary>
     /// Gets or sets the contextualizer model identifier (e.g., "gemma3:4b", "gpt-4o-mini").
     /// </summary>
+    [Obsolete("Contextualizer config moved to per-KB config.json. Will be removed in a future version.")]
     public static string ContextualizerModel
     {
         get => Settings.Values["ContextualizerModel"] as string ?? "";
@@ -153,6 +158,7 @@ public static class AppSettings
     /// <summary>
     /// Gets or sets the contextualizer API base URL.
     /// </summary>
+    [Obsolete("Contextualizer config moved to per-KB config.json. Will be removed in a future version.")]
     public static string ContextualizerBaseUrl
     {
         get => Settings.Values["ContextualizerBaseUrl"] as string ?? "";
@@ -162,6 +168,7 @@ public static class AppSettings
     /// <summary>
     /// Gets or sets the contextualizer provider type ("openai" for Ollama/OpenAI, "anthropic" for Claude, "" for disabled).
     /// </summary>
+    [Obsolete("Contextualizer config moved to per-KB config.json. Will be removed in a future version.")]
     public static string ContextualizerProvider
     {
         get => Settings.Values["ContextualizerProvider"] as string ?? "";

@@ -40,6 +40,12 @@
                         <FontIcon Glyph="&#xEBD2;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
+                <!-- Knowledge Bases Page -->
+                <NavigationViewItem x:Uid="Nav_KnowledgeBases" Content="Knowledge Bases" Tag="KnowledgeBases">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE8F1;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
                 <!-- App Tasks Page -->
                 <NavigationViewItem x:Uid="Nav_AppTasks" Content="App Tasks" Tag="AppTasks">
                     <NavigationViewItem.Icon>

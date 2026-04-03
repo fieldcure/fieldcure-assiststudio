@@ -59,7 +59,7 @@ public static class BuiltInServerHelper
     public const string FilesystemDisplayName = "Workspace Folders";
 
     /// <summary>Display name for the RAG server.</summary>
-    public const string RagDisplayName = "Knowledge Folders";
+    public const string RagDisplayName = "Knowledge Archive";
 
     /// <summary>Config dictionary key for the Outbox server.</summary>
     public const string OutboxKey = "outbox";
@@ -153,8 +153,12 @@ public static class BuiltInServerHelper
         if (!config.IsEnabled)
             return null;
 
-        // Folder-based servers (Filesystem, RAG) require at least one folder
+        // Folder-based servers (Filesystem) require at least one folder
         if (!IsSharedServer(serverKey) && config.Folders.Count == 0)
+            return null;
+
+        // RAG shared server requires at least one KB to exist
+        if (serverKey == RagKey && !KnowledgeBaseStore.AnyExists())
             return null;
 
         if (!ServerDefinitions.TryGetValue(serverKey, out var def))
@@ -176,7 +180,7 @@ public static class BuiltInServerHelper
             Description = serverKey switch
             {
                 FilesystemKey => "Secure filesystem operations within allowed directories.",
-                RagKey => "Index and search local documents.",
+                RagKey => "Search local knowledge bases.",
                 OutboxKey => "Send messages via Slack, Telegram, Email, and KakaoTalk.",
                 RunnerKey => "Schedule and run headless LLM tasks.",
                 EssentialsKey => "Essential tools — HTTP, shell, JavaScript, file I/O, and environment info.",
@@ -188,8 +192,13 @@ public static class BuiltInServerHelper
         if (serverKey == RunnerKey)
             mcpConfig.Arguments = ["serve"];
 
-        // Load environment variables from PasswordVault for built-in servers (e.g., RAG embedding config)
-        if (config.EnvironmentVariableKeys is { Count: > 0 } keys)
+        // RAG uses multi-KB serve mode with --base-path
+        if (serverKey == RagKey)
+            mcpConfig.Arguments = ["serve", "--base-path", KnowledgeBaseStore.BasePath];
+
+        // Load environment variables from PasswordVault for built-in servers
+        // (RAG no longer uses env vars — config.json + PasswordVault presets instead)
+        if (serverKey != RagKey && config.EnvironmentVariableKeys is { Count: > 0 } keys)
         {
             mcpConfig.EnvironmentVariables = PasswordVaultHelper.LoadMcpEnvVars(mcpConfig.Id, keys);
         }
@@ -479,7 +488,7 @@ public static class BuiltInServerHelper
     /// Returns <see langword="true"/> if the built-in server is shared across all tabs (not per-tab).
     /// Shared servers do not require folder arguments.
     /// </summary>
-    public static bool IsSharedServer(string serverKey) => serverKey is EssentialsKey or OutboxKey or RunnerKey;
+    public static bool IsSharedServer(string serverKey) => serverKey is EssentialsKey or OutboxKey or RunnerKey or RagKey;
 
     /// <summary>
     /// Returns <see langword="true"/> if the given command matches a built-in server executable.

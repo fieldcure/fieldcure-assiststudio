@@ -570,6 +570,25 @@
   <data name="Nav_Connect.Content" xml:space="preserve">
     <value>연동</value>
   </data>
+  <data name="Nav_KnowledgeBases.Content" xml:space="preserve">
+    <value>지식보관소</value>
+  </data>
+  <!-- Knowledge Bases Page -->
+  <data name="KB_Title.Text" xml:space="preserve">
+    <value>지식보관소</value>
+  </data>
+  <data name="KB_Create.Content" xml:space="preserve">
+    <value>생성</value>
+  </data>
+  <data name="KB_Empty.Text" xml:space="preserve">
+    <value>지식보관소가 없습니다. 문서를 인덱싱하고 검색하려면 지식보관소를 만드세요.</value>
+  </data>
+  <data name="KB_Reindex.Content" xml:space="preserve">
+    <value>재인덱싱</value>
+  </data>
+  <data name="KB_Delete.Content" xml:space="preserve">
+    <value>삭제</value>
+  </data>
   <!-- Connect Page -->
   <data name="Connect_Title.Text" xml:space="preserve">
     <value>연동</value>

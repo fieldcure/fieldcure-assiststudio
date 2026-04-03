@@ -58,16 +58,8 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// </summary>
     private McpServerConnection? _filesystemConnection;
 
-    /// <summary>
-    /// Per-tab Knowledge Archive MCP server connection.
-    /// Each tab owns its own RAG server instance with a single archive folder.
-    /// </summary>
-    private McpServerConnection? _ragConnection;
-
-    /// <summary>
-    /// Cancellation source for the current indexing operation. Null when not indexing.
-    /// </summary>
-    private CancellationTokenSource? _indexingCts;
+    // RAG is now a shared multi-KB server — no per-tab connection needed.
+    // The conversation stores a selected KB ID via _builtInServers[RagKey].
 
     #endregion
 
@@ -294,12 +286,12 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             panel.WorkspaceFolders = savedConfig.Folders;
         }
 
-        // Initialize Knowledge Archive folder from per-conversation data (skip if folder deleted)
+        // Initialize Knowledge Base ID from per-conversation data
         if (_builtInServers is not null
             && _builtInServers.TryGetValue(BuiltInServerHelper.RagKey, out var ragSavedConfig)
-            && ragSavedConfig.Folders.Count > 0
-            && Directory.Exists(ragSavedConfig.Folders[0]))
+            && ragSavedConfig.Folders.Count > 0)
         {
+            // Folders[0] stores the KB ID in the new multi-KB model
             panel.KnowledgeArchiveFolder = ragSavedConfig.Folders[0];
         }
 
@@ -310,14 +302,6 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         // Set Knowledge Archive capability based on profile
         var ragServerId = $"builtin_{BuiltInServerHelper.RagKey}";
         panel.IsKnowledgeArchiveEnabled = SelectedProfile?.EnabledServers.Contains(ragServerId) ?? false;
-
-        // Reconnect RAG server if the conversation had a Knowledge Archive folder and
-        // the active profile enables RAG. Without this, save→load loses the search_documents tool.
-        if (!string.IsNullOrEmpty(panel.KnowledgeArchiveFolder)
-            && (SelectedProfile?.EnabledServers.Contains(ragServerId) ?? false))
-        {
-            _ = ConnectRagAsync(panel.KnowledgeArchiveFolder);
-        }
 
         // Memory text is now fetched from Essentials MCP at send time (PrepareToolsForSendAsync)
 
@@ -554,11 +538,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             _ = App.McpRegistry.RemoveAsync(_filesystemConnection);
             _filesystemConnection = null;
         }
-        if (_ragConnection is not null)
-        {
-            _ = App.McpRegistry.RemoveAsync(_ragConnection);
-            _ragConnection = null;
-        }
+        // RAG is shared — no per-tab cleanup needed
 
         if (AppTasksProvider is IDisposable utilDisposable)
         {
@@ -634,21 +614,9 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                     await ConnectFilesystemAsync(folders);
             }
 
-            // Knowledge Archive capability
+            // Knowledge Archive capability (shared server — no per-tab connect/disconnect)
             var ragServerId = $"builtin_{BuiltInServerHelper.RagKey}";
-            var isRagEnabled = profile.EnabledServers.Contains(ragServerId);
-            Panel.IsKnowledgeArchiveEnabled = isRagEnabled;
-
-            if (!isRagEnabled)
-            {
-                await DisconnectRagAsync();
-            }
-            else
-            {
-                var archiveFolder = Panel.KnowledgeArchiveFolder;
-                if (!string.IsNullOrEmpty(archiveFolder))
-                    await ConnectRagAsync(archiveFolder);
-            }
+            Panel.IsKnowledgeArchiveEnabled = profile.EnabledServers.Contains(ragServerId);
         }
 
         // Resolve tools from both built-in and MCP sources
@@ -764,27 +732,20 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Handles Knowledge Archive folder changes from the title bar flyout.
-    /// Connects the per-tab RAG server and starts indexing.
+    /// Handles Knowledge Base selection changes from the title bar flyout.
+    /// Saves the selected KB ID to conversation data. RAG is a shared server —
+    /// no per-tab connect/disconnect needed.
     /// </summary>
-    public async void OnKnowledgeArchiveFolderChanged(object? _sender, string? folder)
+    public void OnKnowledgeArchiveFolderChanged(object? _sender, string? kbId)
     {
-        // Save to conversation data
         _builtInServers ??= [];
 
-        if (!string.IsNullOrEmpty(folder))
+        if (!string.IsNullOrEmpty(kbId))
         {
             _builtInServers[BuiltInServerHelper.RagKey] = new BuiltInServerConfig
             {
                 IsEnabled = true,
-                Folders = [folder],
-                EnvironmentVariableKeys =
-                [
-                    "EMBEDDING_BASE_URL", "EMBEDDING_API_KEY",
-                    "EMBEDDING_MODEL", "EMBEDDING_DIMENSION",
-                    "CONTEXTUALIZER_PROVIDER", "CONTEXTUALIZER_BASE_URL",
-                    "CONTEXTUALIZER_API_KEY", "CONTEXTUALIZER_MODEL",
-                ],
+                Folders = [kbId], // Stores KB ID
             };
         }
         else
@@ -793,45 +754,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         }
         IsDirty = true;
 
-        // Connect/disconnect RAG server if profile has it enabled
-        var ragServerId = $"builtin_{BuiltInServerHelper.RagKey}";
-        var isRagEnabled = Panel?.SelectedProfile?.EnabledServers.Contains(ragServerId) ?? false;
-
-        if (isRagEnabled && !string.IsNullOrEmpty(folder))
-        {
-            await ConnectRagAsync(folder);
-        }
-        else
-        {
-            await DisconnectRagAsync();
-        }
-
         ResolveTools(Panel?.SelectedProfile);
-    }
-
-    /// <summary>
-    /// Handles re-index request from the Knowledge Archive flyout.
-    /// Runs index_documents with force=true in background.
-    /// </summary>
-    public async void OnKnowledgeArchiveReindexRequested(object? _sender, EventArgs _e)
-    {
-        if (_ragConnection is null || !_ragConnection.IsConnected)
-        {
-            LoggingService.LogWarning("[RAG] Re-index requested but RAG not connected");
-            return;
-        }
-
-        await RunIndexDocumentsAsync(force: true, label: "Re-indexing");
-    }
-
-    /// <summary>
-    /// Cancels the current indexing operation if one is in progress.
-    /// </summary>
-    public void OnKnowledgeArchiveCancelRequested(object? _sender, EventArgs _e)
-    {
-        if (_indexingCts is null) return;
-        LoggingService.LogInfo("[RAG] Indexing cancel requested by user");
-        _indexingCts.Cancel();
     }
 
     /// <summary>
@@ -881,209 +804,8 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             mcpConfig, supportsRoots: true);
     }
 
-    /// <summary>
-    /// Connects (or reconnects) the per-tab RAG MCP server for a single archive folder.
-    /// Syncs embedding env vars from AppSettings, then starts indexing with notification.
-    /// </summary>
-    private async Task ConnectRagAsync(string folder)
-    {
-        LoggingService.LogInfo($"[RAG] Connecting to folder: {folder}");
-
-        // Skip if folder no longer exists on disk
-        if (!Directory.Exists(folder))
-        {
-            LoggingService.LogWarning($"[RAG] Knowledge Archive folder not found: {folder}");
-            return;
-        }
-
-        await DisconnectRagAsync();
-
-        // Sync embedding + contextualizer env vars to vault
-        const string ragId = "builtin_rag";
-        PasswordVaultHelper.SaveMcpEnvVar(ragId, "EMBEDDING_BASE_URL", AppSettings.EmbeddingBaseUrl);
-        PasswordVaultHelper.SaveMcpEnvVar(ragId, "EMBEDDING_MODEL", AppSettings.EmbeddingModel);
-        PasswordVaultHelper.SaveMcpEnvVar(ragId, "EMBEDDING_DIMENSION", "0");
-        PasswordVaultHelper.SaveMcpEnvVar(ragId, "CONTEXTUALIZER_PROVIDER", AppSettings.ContextualizerProvider);
-        PasswordVaultHelper.SaveMcpEnvVar(ragId, "CONTEXTUALIZER_BASE_URL", AppSettings.ContextualizerBaseUrl);
-        PasswordVaultHelper.SaveMcpEnvVar(ragId, "CONTEXTUALIZER_MODEL", AppSettings.ContextualizerModel);
-
-        var ragConfig = new BuiltInServerConfig
-        {
-            IsEnabled = true,
-            Folders = [folder],
-            EnvironmentVariableKeys =
-            [
-                "EMBEDDING_BASE_URL", "EMBEDDING_API_KEY",
-                "EMBEDDING_MODEL", "EMBEDDING_DIMENSION",
-                "CONTEXTUALIZER_PROVIDER", "CONTEXTUALIZER_BASE_URL",
-                "CONTEXTUALIZER_API_KEY", "CONTEXTUALIZER_MODEL",
-            ],
-        };
-
-        var mcpConfig = BuiltInServerHelper.CreateMcpServerConfig(BuiltInServerHelper.RagKey, ragConfig);
-        if (mcpConfig is null) return;
-
-        mcpConfig.Id = $"builtin_{BuiltInServerHelper.RagKey}_{Id}";
-
-        _ragConnection = await App.McpRegistry.AddAndConnectAsync(mcpConfig);
-        LoggingService.LogInfo($"[RAG] Connection result: IsConnected={_ragConnection.IsConnected}, Tools={_ragConnection.Tools.Count}");
-
-        // Start indexing in background with notification
-        if (_ragConnection.IsConnected)
-        {
-            _ = IndexKnowledgeArchiveAsync();
-        }
-    }
-
-    /// <summary>
-    /// Disconnects the per-tab RAG server if connected.
-    /// </summary>
-    private async Task DisconnectRagAsync()
-    {
-        if (_ragConnection is not null)
-        {
-            await App.McpRegistry.RemoveAsync(_ragConnection);
-            _ragConnection = null;
-        }
-    }
-
-    /// <summary>
-    /// Runs index_documents on the connected RAG server with progress tracking.
-    /// </summary>
-    private Task IndexKnowledgeArchiveAsync() =>
-        RunIndexDocumentsAsync(force: false, label: "Indexing");
-
-    /// <summary>
-    /// Shared indexing logic used by both initial connect and manual re-index.
-    /// Tracks progress via MCP notifications and updates ChatPanel UI.
-    /// </summary>
-    private async Task RunIndexDocumentsAsync(bool force, string label)
-    {
-        if (_ragConnection is null || !_ragConnection.IsConnected) return;
-
-        var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
-        var title = loader.GetString("Connect_KnowledgeArchiveTitle") ?? "Knowledge Archive";
-        var progressMsg = force
-            ? loader.GetString("Connect_KnowledgeArchiveReindexing") ?? "Re-indexing documents…"
-            : loader.GetString("Connect_KnowledgeArchiveIndexing") ?? "Indexing documents…";
-        var readyTitle = loader.GetString("Connect_KnowledgeArchiveReady") ?? "Knowledge Archive — Ready";
-        var failedTitle = loader.GetString("Connect_KnowledgeArchiveFailed") ?? "Knowledge Archive — Failed";
-        var embeddingHint = loader.GetString("Connect_EmbeddingModelHint")
-            ?? "Make sure an embedding model is loaded: ollama pull nomic-embed-text";
-
-        LoggingService.LogInfo($"[RAG] {label} started (force={force})");
-        NotificationCenter.Instance.Post(
-            Microsoft.UI.Xaml.Controls.InfoBarSeverity.Informational,
-            title,
-            progressMsg);
-
-        // Set indexing state on ChatPanel
-        Panel?.DispatcherQueue.TryEnqueue(() =>
-            {
-                Panel.IsArchiveIndexing = true;
-                Panel.ArchiveIndexingProgress = 0;
-                Panel.ArchiveIndexingText = "";
-                Panel.UpdateArchiveProgressUI();
-            });
-
-        _indexingCts = new CancellationTokenSource();
-        var ct = _indexingCts.Token;
-
-        try
-        {
-            var args = System.Text.Json.JsonSerializer.SerializeToElement(new { force });
-            LoggingService.LogInfo($"[RAG] Calling index_documents tool (force={force})…");
-
-            var progress = new Progress<(double Current, double Total, string? Message)>(value =>
-            {
-                var pct = value.Total > 0 ? value.Current / value.Total * 100 : 0;
-                LoggingService.LogInfo($"[RAG] Progress: {value.Current}/{value.Total} — {value.Message}");
-
-                Panel?.DispatcherQueue.TryEnqueue(() =>
-                    {
-                        Panel.ArchiveIndexingProgress = pct;
-                        Panel.ArchiveIndexingText = value.Message ?? $"{value.Current}/{value.Total}";
-                        Panel.UpdateArchiveProgressUI();
-                    });
-            });
-
-            var resultJson = await _ragConnection.CallToolWithProgressAsync(
-                "index_documents", args, progress, ct);
-            LoggingService.LogInfo($"[RAG] index_documents result: {resultJson}");
-
-            var message = ParseIndexResult(resultJson, label);
-
-            NotificationCenter.Instance.Post(
-                Microsoft.UI.Xaml.Controls.InfoBarSeverity.Success,
-                readyTitle,
-                message,
-                5000);
-        }
-        catch (OperationCanceledException)
-        {
-            LoggingService.LogInfo($"[RAG] {label} cancelled by user");
-            NotificationCenter.Instance.Post(
-                Microsoft.UI.Xaml.Controls.InfoBarSeverity.Warning,
-                title,
-                loader.GetString("Connect_KnowledgeArchiveCancelled") ?? "Indexing cancelled.",
-                3000);
-        }
-        catch (Exception ex)
-        {
-            LoggingService.LogError($"[RAG] {label} failed: {ex.Message}");
-            NotificationCenter.Instance.Post(
-                Microsoft.UI.Xaml.Controls.InfoBarSeverity.Error,
-                failedTitle,
-                $"{ex.Message}\n{embeddingHint}",
-                8000);
-        }
-        finally
-        {
-            _indexingCts?.Dispose();
-            _indexingCts = null;
-
-            Panel?.DispatcherQueue.TryEnqueue(() =>
-                {
-                    Panel.IsArchiveIndexing = false;
-                    Panel.ArchiveIndexingProgress = 0;
-                    Panel.ArchiveIndexingText = "";
-                    Panel.UpdateArchiveProgressUI();
-                });
-        }
-    }
-
-    private static string ParseIndexResult(string? resultJson, string label)
-    {
-        if (string.IsNullOrEmpty(resultJson))
-            return $"{label} complete.";
-
-        try
-        {
-            using var doc = System.Text.Json.JsonDocument.Parse(resultJson);
-            var root = doc.RootElement;
-            var indexed = root.TryGetProperty("indexed", out var i) ? i.GetInt32() : 0;
-            var skipped = root.TryGetProperty("skipped", out var s) ? s.GetInt32() : 0;
-            var chunks = root.TryGetProperty("total_chunks", out var c) ? c.GetInt32() : 0;
-            var failed = root.TryGetProperty("failed", out var f) ? f.GetInt32() : 0;
-            var removed = root.TryGetProperty("removed", out var r) ? r.GetInt32() : 0;
-
-            var parts = new List<string>();
-            if (indexed > 0) parts.Add($"{indexed} indexed");
-            if (skipped > 0) parts.Add($"{skipped} unchanged");
-            if (removed > 0) parts.Add($"{removed} removed");
-            if (failed > 0) parts.Add($"{failed} failed");
-            parts.Add($"{chunks} chunks");
-
-            var message = string.Join(", ", parts);
-            LoggingService.LogInfo($"[RAG] {label} complete: {message}");
-            return message;
-        }
-        catch
-        {
-            LoggingService.LogWarning($"[RAG] Could not parse index result: {resultJson}");
-            return resultJson!;
-        }
-    }
+    // RAG is now a shared multi-KB server — per-tab ConnectRagAsync/DisconnectRagAsync removed.
+    // Indexing is managed via Settings > Knowledge Bases page (RagProcessManager.StartExec).
 
     /// <summary>
     /// Resolves registered tools for Flyout display (connection-independent).
@@ -1282,11 +1004,12 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                 result.Add(tool);
         }
 
-        // 4.2 RAG tools
-        if (_ragConnection?.IsConnected == true
-            && connectedIds.Contains(_ragConnection.Config.Id))
+        // 4.2 RAG tools — shared connection from McpRegistry
+        var ragConn = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.RagKey);
+        if (ragConn?.IsConnected == true
+            && connectedIds.Contains(ragConn.Config.Id))
         {
-            foreach (var ragTool in _ragConnection.Tools)
+            foreach (var ragTool in ragConn.Tools)
                 result.Add(ragTool);
         }
 
@@ -1393,11 +1116,6 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         {
             effective.Add(_filesystemConnection.Config.Id);
         }
-        if (_ragConnection is not null
-            && effective.Contains($"builtin_{BuiltInServerHelper.RagKey}"))
-        {
-            effective.Add(_ragConnection.Config.Id);
-        }
         return effective;
     }
 
@@ -1405,14 +1123,12 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     private McpServerConnection? ResolveConnection(string serverId)
     {
         if (_filesystemConnection?.Config.Id == serverId) return _filesystemConnection;
-        if (_ragConnection?.Config.Id == serverId) return _ragConnection;
         return App.McpRegistry.Connections.FirstOrDefault(c => c.Config.Id == serverId);
     }
 
     /// <summary>Finds the connection that owns the given tool.</summary>
     private McpServerConnection? FindConnectionForTool(IAssistTool tool)
     {
-        if (_ragConnection?.Tools.Contains(tool) == true) return _ragConnection;
         if (_filesystemConnection?.Tools.Contains(tool) == true) return _filesystemConnection;
         return App.McpRegistry.Connections.FirstOrDefault(c => c.Tools.Contains(tool));
     }

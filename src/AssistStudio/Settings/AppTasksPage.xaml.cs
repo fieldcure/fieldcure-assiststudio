@@ -7,6 +7,9 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using Windows.ApplicationModel.Resources;
 
+// Embedding/Contextualizer settings will move to KnowledgeBasesPage — suppress until removal
+#pragma warning disable CS0618 // Obsolete AppSettings.Embedding*/Contextualizer*
+
 namespace AssistStudio.Settings;
 
 /// <summary>

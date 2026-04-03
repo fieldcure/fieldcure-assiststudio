@@ -78,6 +78,7 @@ public sealed partial class SettingsPanel : Page
             "Profiles" => typeof(ProfilesPage),
             "Models" => typeof(ModelsPage),
             "Connect" => typeof(ConnectPage),
+            "KnowledgeBases" => typeof(KnowledgeBasesPage),
             "AppTasks" => typeof(AppTasksPage),
             "Memory" => typeof(MemoryPage),
             "Schedule" => typeof(SchedulePage),

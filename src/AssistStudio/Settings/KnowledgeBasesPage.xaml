@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="AssistStudio.Settings.KnowledgeBasesPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    NavigationCacheMode="Enabled">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Grid.Row="0" Padding="20,14,20,14"
+              BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+              BorderThickness="0,0,0,1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBlock x:Uid="KB_Title" Text="Knowledge Bases"
+                       Style="{StaticResource TitleTextBlockStyle}" />
+
+            <Button x:Name="CreateButton" Grid.Column="1"
+                    x:Uid="KB_Create" Content="Create"
+                    Style="{StaticResource AccentButtonStyle}"
+                    Click="OnCreateClicked" />
+        </Grid>
+
+        <!-- Content -->
+        <ScrollViewer Grid.Row="1">
+            <StackPanel Padding="20,20,20,44" Spacing="12"
+                        MaxWidth="700" HorizontalAlignment="Left">
+
+                <!-- Empty state -->
+                <TextBlock x:Name="EmptyText"
+                           x:Uid="KB_Empty"
+                           Text="No knowledge bases yet. Create one to index and search your documents."
+                           Opacity="0.6"
+                           TextWrapping="Wrap"
+                           Visibility="Collapsed" />
+
+                <!-- KB cards -->
+                <ItemsControl x:Name="KbList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Padding="16"
+                                    Margin="0,0,0,4">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Row 0: Name + Status -->
+                                    <Grid Grid.Row="0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Name}"
+                                                   Style="{StaticResource SubtitleTextBlockStyle}" />
+                                        <TextBlock x:Name="StatusBadge" Grid.Column="1"
+                                                   Text="{Binding StatusText}"
+                                                   Foreground="{Binding StatusBrush}"
+                                                   VerticalAlignment="Center" />
+                                    </Grid>
+
+                                    <!-- Row 1: Stats -->
+                                    <TextBlock Grid.Row="1"
+                                               Text="{Binding StatsText}"
+                                               Style="{StaticResource CaptionTextBlockStyle}"
+                                               Opacity="0.6"
+                                               Margin="0,4,0,0" />
+
+                                    <!-- Row 2: Source paths -->
+                                    <TextBlock Grid.Row="2"
+                                               Text="{Binding SourcePathsText}"
+                                               Style="{StaticResource CaptionTextBlockStyle}"
+                                               Opacity="0.5"
+                                               TextTrimming="CharacterEllipsis"
+                                               Margin="0,2,0,0" />
+
+                                    <!-- Row 3: Progress bar (indexing) -->
+                                    <ProgressBar Grid.Row="3"
+                                                 Value="{Binding Progress}"
+                                                 Maximum="100"
+                                                 Visibility="{Binding IsIndexing}"
+                                                 Margin="0,8,0,0" />
+
+                                    <!-- Row 3: Buttons (idle) -->
+                                    <StackPanel Grid.Row="3"
+                                                Orientation="Horizontal"
+                                                Spacing="8"
+                                                Margin="0,8,0,0"
+                                                HorizontalAlignment="Right">
+                                        <Button x:Uid="KB_Reindex" Content="Re-index"
+                                                Tag="{Binding Id}"
+                                                Click="OnReindexClicked" />
+                                        <Button x:Uid="KB_Delete" Content="Delete"
+                                                Tag="{Binding Id}"
+                                                Click="OnDeleteClicked" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>

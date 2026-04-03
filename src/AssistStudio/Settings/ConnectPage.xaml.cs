@@ -11,6 +11,8 @@ using Microsoft.UI.Xaml.Navigation;
 using Windows.ApplicationModel.Resources;
 
 
+#pragma warning disable CS0618 // Obsolete AppSettings.EmbeddingModel — RAG card will be simplified
+
 namespace AssistStudio.Settings;
 
 /// <summary>

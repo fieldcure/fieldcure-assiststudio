@@ -570,6 +570,25 @@
   <data name="Nav_Connect.Content" xml:space="preserve">
     <value>Connect</value>
   </data>
+  <data name="Nav_KnowledgeBases.Content" xml:space="preserve">
+    <value>Knowledge Bases</value>
+  </data>
+  <!-- Knowledge Bases Page -->
+  <data name="KB_Title.Text" xml:space="preserve">
+    <value>Knowledge Bases</value>
+  </data>
+  <data name="KB_Create.Content" xml:space="preserve">
+    <value>Create</value>
+  </data>
+  <data name="KB_Empty.Text" xml:space="preserve">
+    <value>No knowledge bases yet. Create one to index and search your documents.</value>
+  </data>
+  <data name="KB_Reindex.Content" xml:space="preserve">
+    <value>Re-index</value>
+  </data>
+  <data name="KB_Delete.Content" xml:space="preserve">
+    <value>Delete</value>
+  </data>
   <!-- Connect Page -->
   <data name="Connect_Title.Text" xml:space="preserve">
     <value>Connect</value>
