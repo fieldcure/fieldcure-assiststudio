@@ -22,61 +22,63 @@
                         IsBackButtonVisible="Collapsed">
 
             <NavigationView.MenuItems>
-                <!-- Profiles Page -->
+                <!-- Profiles -->
                 <NavigationViewItem x:Uid="Nav_Profiles" Content="Profiles" Tag="Profiles">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE716;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <!-- Models Page -->
+                <!-- Models -->
                 <NavigationViewItem x:Uid="Nav_Models" Content="Models" Tag="Models">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE794;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <!-- Connect Page -->
-                <NavigationViewItem x:Uid="Nav_Connect" Content="Connect" Tag="Connect">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xEBD2;" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
-                <!-- Knowledge Bases Page -->
-                <NavigationViewItem x:Uid="Nav_KnowledgeBases" Content="Knowledge Bases" Tag="KnowledgeBases">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE8F1;" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
-                <!-- App Tasks Page -->
+                <!-- App Tasks -->
                 <NavigationViewItem x:Uid="Nav_AppTasks" Content="App Tasks" Tag="AppTasks">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE99A;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <!-- Memory Page -->
+                <!-- Connect -->
+                <NavigationViewItem x:Uid="Nav_Connect" Content="Connect" Tag="Connect">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xEBD2;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <!-- Knowledge Bases -->
+                <NavigationViewItem x:Uid="Nav_KnowledgeBases" Content="Knowledge Bases" Tag="KnowledgeBases">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE8F1;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <!-- Memory -->
                 <NavigationViewItem x:Uid="Nav_Memory" Content="Memory" Tag="Memory">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE77C;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <!-- Scehdule Page -->
+                <!-- Schedule -->
                 <NavigationViewItem x:Uid="Nav_Schedule" Content="Schedule" Tag="Schedule">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE787;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <!-- Personalization Page -->
+                <!-- ─── -->
+                <NavigationViewItemSeparator />
+                <!-- Personalization -->
                 <NavigationViewItem x:Uid="Nav_Personalization" Content="Personalization" Tag="Personalization">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE771;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <!-- Advanced Page -->
+                <!-- Advanced -->
                 <NavigationViewItem x:Uid="Nav_Advanced" Content="Advanced" Tag="Advanced">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE9E9;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <!-- About Page -->
+                <!-- About -->
                 <NavigationViewItem x:Uid="Nav_About" Content="About" Tag="About">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE946;" />
