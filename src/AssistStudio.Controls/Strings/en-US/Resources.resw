@@ -178,6 +178,9 @@ Add them in Profile settings.</value>
   <data name="Tool_fetch_url" xml:space="preserve">
     <value>Fetch URL</value>
   </data>
+  <data name="Tool_delegate_task" xml:space="preserve">
+    <value>Sub-Agent</value>
+  </data>
   <data name="ChatPanel_EditTitleTooltip" xml:space="preserve">
     <value>Edit title</value>
   </data>

@@ -3,6 +3,7 @@ using AssistStudio.Helpers;
 using AssistStudio.Mcp;
 using AssistStudio.Tools;
 using CommunityToolkit.Mvvm.ComponentModel;
+using FieldCure.Ai.Execution;
 using FieldCure.Ai.Providers;
 using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Controls;
@@ -57,6 +58,11 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// Null if the profile/conversation has no workspace folders configured.
     /// </summary>
     private McpServerConnection? _filesystemConnection;
+
+    /// <summary>
+    /// Cached sub-agent tool instance. Invalidated on preset change.
+    /// </summary>
+    private SubAgentTool? _subAgentTool;
 
     // RAG is now a shared multi-KB server — no per-tab connection needed.
     // The conversation stores a selected KB ID via _builtInServers[RagKey].
@@ -572,6 +578,9 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         CurrentPreset = preset;
         Title = preset.Name;
 
+        // Invalidate sub-agent tool so it picks up the new default preset
+        _subAgentTool = null;
+
         PresetSwitched?.Invoke(this, preset);
     }
 
@@ -901,6 +910,10 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             }
         }
 
+        // Sub-Agent tool — available when at least one MCP server is enabled
+        if (effectiveServerIds.Count > 0)
+            tools.Add(GetOrCreateSubAgentTool());
+
         RegisteredTools = tools;
 
         // McpTools are resolved at send time by PrepareToolsForSendAsync
@@ -931,8 +944,110 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 
         var effectiveServerIds = BuildEffectiveServerIds(enabledServerIds);
 
-        // 1. Auto-connect disconnected servers
-        foreach (var serverId in effectiveServerIds)
+        // 1+2. Auto-connect and determine connected servers
+        var connectedIds = await AutoConnectServersAsync(effectiveServerIds);
+
+        // 3. Build final tool list from real tools + connected server tools
+        var result = new List<IAssistTool>();
+        foreach (var tool in realTools)
+        {
+            if (tool.Name == "search_tools")
+            {
+                if (connectedIds.Count > 0)
+                {
+                    if (tool is ISearchToolScope scoped)
+                        scoped.AllowedToolNames = GetToolNamesFromServers(connectedIds);
+                    result.Add(tool);
+                }
+            }
+            else
+            {
+                // Pass through non-placeholder, non-search_tools tools (e.g. delegate_task)
+                result.Add(tool);
+            }
+        }
+
+        // 4. Add directly-exposed tools from connected servers
+        CollectToolsFromConnectedServers(connectedIds, result);
+
+        // 5. Refresh memory text from Essentials server
+        var essentialsConn = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.EssentialsKey);
+        if (essentialsConn?.IsConnected == true)
+        {
+            try
+            {
+                var memoryText = await FetchMemoryTextAsync(essentialsConn);
+                if (Panel is not null)
+                    Panel.MemoryText = memoryText;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning($"[Send] Failed to fetch memory: {ex.Message}");
+            }
+        }
+
+        // 6. Update McpTools for ToolCallExecutor (search_tools-discovered tools)
+        McpTools = connectedIds.Count > 0
+            ? [.. GetToolsFromServers(connectedIds)]
+            : [];
+
+        return result;
+    }
+
+    /// <summary>
+    /// Resolves tools for a sub-agent session by connecting MCP servers and collecting tools.
+    /// Matches <see cref="FieldCure.Ai.Execution.SubAgentExecutor.ToolResolver"/> delegate signature.
+    /// </summary>
+    private async Task<IReadOnlyList<IAssistTool>> ResolveToolsForSubAgentAsync(
+        IReadOnlyList<string>? mcpServers,
+        IReadOnlyList<string>? allowedTools,
+        CancellationToken ct)
+    {
+        // Inherit parent conversation's enabled servers when not specified
+        IEnumerable<string> serverIds;
+        if (mcpServers is null or { Count: 0 })
+        {
+            var profile = Panel?.SelectedProfile;
+            var enabledServers = profile?.EnabledServers;
+            if (enabledServers is null or { Count: 0 })
+                return [];
+            serverIds = enabledServers;
+        }
+        else
+        {
+            // Map display names to server IDs (AI may use "Essentials" instead of "builtin_essentials")
+            serverIds = mcpServers.Select(NormalizeServerId);
+        }
+
+        var effectiveServerIds = BuildEffectiveServerIds(serverIds);
+        var connectedIds = await AutoConnectServersAsync(effectiveServerIds);
+
+        if (connectedIds.Count == 0)
+            return [];
+
+        var tools = new List<IAssistTool>();
+        CollectToolsFromConnectedServers(connectedIds, tools);
+
+        // Apply allowlist filter
+        if (allowedTools is { Count: > 0 })
+        {
+            var allowed = allowedTools.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            tools.RemoveAll(t => !allowed.Contains(t.Name));
+        }
+
+        // No-nesting: always remove delegate_task from sub-agent tools
+        tools.RemoveAll(t => t.Name == "delegate_task");
+
+        return tools;
+    }
+
+    /// <summary>
+    /// Auto-connects disconnected servers and returns the set of connected server IDs.
+    /// Shared by <see cref="PrepareToolsForSendAsync"/> and <see cref="ResolveToolsForSubAgentAsync"/>.
+    /// </summary>
+    private async Task<HashSet<string>> AutoConnectServersAsync(IEnumerable<string> serverIds)
+    {
+        foreach (var serverId in serverIds)
         {
             var conn = ResolveConnection(serverId);
 
@@ -970,33 +1085,24 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             }
         }
 
-        // 2. Determine which servers are now connected
         var connectedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var serverId in effectiveServerIds)
+        foreach (var serverId in serverIds)
         {
             var conn = ResolveConnection(serverId);
             if (conn?.IsConnected == true)
                 connectedIds.Add(serverId);
         }
+        return connectedIds;
+    }
 
-        // 3. Build final tool list from real tools + connected server tools
-        var result = new List<IAssistTool>();
-        foreach (var tool in realTools)
-        {
-            if (tool.Name == "search_tools")
-            {
-                if (connectedIds.Count > 0)
-                {
-                    if (tool is ISearchToolScope scoped)
-                        scoped.AllowedToolNames = GetToolNamesFromServers(connectedIds);
-                    result.Add(tool);
-                }
-            }
-        }
-
-        // 4. Add directly-exposed tools from connected servers
-
-        // 4.1 Filesystem tools — per-tab connection (higher priority than Essentials)
+    /// <summary>
+    /// Collects tools from connected MCP servers into the result list.
+    /// Applies priority ordering: Filesystem > RAG > Outbox > Runner > Essentials (with dedup).
+    /// Shared by <see cref="PrepareToolsForSendAsync"/> and <see cref="ResolveToolsForSubAgentAsync"/>.
+    /// </summary>
+    private void CollectToolsFromConnectedServers(HashSet<string> connectedIds, List<IAssistTool> result)
+    {
+        // Filesystem tools — per-tab connection (higher priority than Essentials)
         if (_filesystemConnection?.IsConnected == true
             && connectedIds.Contains(_filesystemConnection.Config.Id))
         {
@@ -1004,7 +1110,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                 result.Add(tool);
         }
 
-        // 4.2 RAG tools — shared connection from McpRegistry
+        // RAG tools — shared connection from McpRegistry
         var ragConn = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.RagKey);
         if (ragConn?.IsConnected == true
             && connectedIds.Contains(ragConn.Config.Id))
@@ -1013,7 +1119,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                 result.Add(ragTool);
         }
 
-        // 4.5 Outbox tools — shared connection from McpRegistry
+        // Outbox tools — shared connection from McpRegistry
         var outboxConn = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.OutboxKey);
         if (outboxConn?.IsConnected == true
             && connectedIds.Contains(outboxConn.Config.Id))
@@ -1022,7 +1128,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                 result.Add(tool);
         }
 
-        // 4.6 Runner tools — shared connection from McpRegistry
+        // Runner tools — shared connection from McpRegistry
         var runnerConn = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.RunnerKey);
         if (runnerConn?.IsConnected == true
             && connectedIds.Contains(runnerConn.Config.Id))
@@ -1031,12 +1137,11 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                 result.Add(tool);
         }
 
-        // 4.7 Essentials tools — shared connection from McpRegistry
+        // Essentials tools — shared connection from McpRegistry (lowest priority, dedup)
         var essentialsConn = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.EssentialsKey);
         if (essentialsConn?.IsConnected == true
             && connectedIds.Contains(essentialsConn.Config.Id))
         {
-            // Collect tool names already added by higher-priority (non-shared) servers
             var existingToolNames = new HashSet<string>(result.Select(t => t.Name), StringComparer.OrdinalIgnoreCase);
 
             foreach (var tool in essentialsConn.Tools)
@@ -1047,28 +1152,6 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                 result.Add(tool);
             }
         }
-
-        // 5. Refresh memory text from Essentials server
-        if (essentialsConn?.IsConnected == true)
-        {
-            try
-            {
-                var memoryText = await FetchMemoryTextAsync(essentialsConn);
-                if (Panel is not null)
-                    Panel.MemoryText = memoryText;
-            }
-            catch (Exception ex)
-            {
-                LoggingService.LogWarning($"[Send] Failed to fetch memory: {ex.Message}");
-            }
-        }
-
-        // 6. Update McpTools for ToolCallExecutor (search_tools-discovered tools)
-        McpTools = connectedIds.Count > 0
-            ? [.. GetToolsFromServers(connectedIds)]
-            : [];
-
-        return result;
     }
 
     /// <summary>
@@ -1119,6 +1202,44 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         return effective;
     }
 
+    /// <summary>
+    /// Normalizes a server identifier from AI input (display name or partial ID) to the canonical ID.
+    /// E.g., "Essentials" → "builtin_essentials", "rag" → "builtin_rag".
+    /// Already-canonical IDs pass through unchanged.
+    /// </summary>
+    private static string NormalizeServerId(string input)
+    {
+        // Already a canonical builtin ID
+        if (input.StartsWith("builtin_", StringComparison.OrdinalIgnoreCase))
+            return input;
+
+        // Try matching by display name or server key (case-insensitive)
+        var trimmed = input.Trim();
+        foreach (var key in new[] {
+            BuiltInServerHelper.EssentialsKey,
+            BuiltInServerHelper.FilesystemKey,
+            BuiltInServerHelper.RagKey,
+            BuiltInServerHelper.OutboxKey,
+            BuiltInServerHelper.RunnerKey })
+        {
+            var displayName = BuiltInServerHelper.GetDisplayName(key);
+            if (trimmed.Equals(key, StringComparison.OrdinalIgnoreCase)
+                || trimmed.Equals(displayName, StringComparison.OrdinalIgnoreCase))
+            {
+                return $"builtin_{key}";
+            }
+        }
+
+        // External server — try matching by connection name
+        var conn = App.McpRegistry.Connections.FirstOrDefault(c =>
+            c.Config.Name.Equals(trimmed, StringComparison.OrdinalIgnoreCase));
+        if (conn is not null)
+            return conn.Config.Id;
+
+        // Unknown — pass through as-is
+        return input;
+    }
+
     /// <summary>Resolves a server ID to its <see cref="McpServerConnection"/>.</summary>
     private McpServerConnection? ResolveConnection(string serverId)
     {
@@ -1165,6 +1286,44 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             .Where(t => serverIds.Contains(
                 App.McpRegistry.Connections
                     .FirstOrDefault(c => c.Tools.Contains(t))?.Config.Id ?? ""));
+    }
+
+    #endregion
+
+    #region Sub-Agent Helpers
+
+    /// <summary>
+    /// Returns the cached sub-agent tool, creating it on first access.
+    /// Invalidate by setting <see cref="_subAgentTool"/> to <c>null</c> on preset change.
+    /// </summary>
+    private SubAgentTool GetOrCreateSubAgentTool()
+    {
+        return _subAgentTool ??= new SubAgentTool(
+            new SubAgentExecutor(
+                new AgentLoop(),
+                ResolveProviderByName,
+                ResolveToolsForSubAgentAsync,
+                SelectedPreset?.Name ?? "Default"),
+            () => Panel?.KnowledgeArchiveFolder);
+    }
+
+    /// <summary>
+    /// Resolves a provider preset name to an <see cref="IAiProvider"/> instance.
+    /// Used as <see cref="SubAgentExecutor.ProviderResolver"/> delegate.
+    /// </summary>
+    private IAiProvider ResolveProviderByName(string presetName)
+    {
+        if (AvailablePresets is not null)
+        {
+            foreach (ProviderPreset p in AvailablePresets)
+            {
+                if (p.Name == presetName)
+                    return ProviderFactory.Create(p);
+            }
+        }
+
+        return Provider ?? throw new InvalidOperationException(
+            $"No provider found for preset '{presetName}' and no fallback available.");
     }
 
     #endregion

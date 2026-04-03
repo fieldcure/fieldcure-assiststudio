@@ -2416,6 +2416,45 @@ public sealed partial class ChatPanel : Control
         return "fetch_url";
     }
 
+    private static string FormatSubAgentLabel(string argumentsJson, string resultJson)
+    {
+        // Extract prompt (truncated) and status from sub-agent call
+        var promptSnippet = "Sub-Agent";
+        var statusIcon = "\u2713"; // ✓ default
+
+        try
+        {
+            using var argsDoc = System.Text.Json.JsonDocument.Parse(argumentsJson);
+            if (argsDoc.RootElement.TryGetProperty("prompt", out var promptProp))
+            {
+                var prompt = promptProp.GetString() ?? "";
+                promptSnippet = prompt.Length > 40
+                    ? $"Sub-Agent: {prompt[..40]}\u2026"
+                    : $"Sub-Agent: {prompt}";
+            }
+        }
+        catch { /* fall through */ }
+
+        try
+        {
+            using var resultDoc = System.Text.Json.JsonDocument.Parse(resultJson);
+            if (resultDoc.RootElement.TryGetProperty("status", out var statusProp))
+            {
+                statusIcon = statusProp.GetString() switch
+                {
+                    "completed" => "\u2713",           // ✓
+                    "failed" => "\u2717",               // ✗
+                    "timed_out" => "\u23F1",            // ⏱
+                    "max_rounds_reached" => "\u26A0",   // ⚠
+                    _ => "\u2713",
+                };
+            }
+        }
+        catch { /* fall through */ }
+
+        return $"{promptSnippet} {statusIcon}";
+    }
+
     private static string GuardToolResultSize(string toolResult, string toolName)
     {
         // Short results and error results pass through unchanged
@@ -2752,6 +2791,8 @@ public sealed partial class ChatPanel : Control
                     await _renderer.AppendSearchResultBlockAsync(assistantMessage.Id, toolResult, call.FunctionName);
                 else if (call.FunctionName == "fetch_url")
                     await _renderer.AppendToolBlockAsync(assistantMessage.Id, FormatFetchUrlLabel(call.Arguments, toolResult.Length));
+                else if (call.FunctionName == "delegate_task")
+                    await _renderer.AppendToolBlockAsync(assistantMessage.Id, FormatSubAgentLabel(call.Arguments, toolResult));
                 else
                     await _renderer.AppendToolBlockAsync(assistantMessage.Id, call.FunctionName);
 
@@ -2854,6 +2895,12 @@ public sealed partial class ChatPanel : Control
                     if (toolName == "fetch_url" && fetchUrlLabelQueue.Count > 0)
                     {
                         await _renderer.AppendToolBlockAsync(msg.Id, fetchUrlLabelQueue.Dequeue());
+                        continue;
+                    }
+
+                    if (toolName == "delegate_task")
+                    {
+                        await _renderer.AppendToolBlockAsync(msg.Id, "Sub-Agent");
                         continue;
                     }
 
@@ -3253,6 +3300,24 @@ public sealed partial class ChatPanel : Control
                 + $"\n\n## Knowledge Archive\nUse `search_documents` to find relevant information before answering."
                 + $"\nAlways pass kb_id=\"{kbId}\" when calling search_documents or get_document_chunk."
                 + "\nIf initial search returns no results, retry with a lower threshold (e.g., 0.1) or different query terms.";
+        }
+
+        // Sub-Agent hint — when delegate_task tool is available
+        if (activeTools.Any(t => t.Name == "delegate_task"))
+        {
+            workspaceText = (workspaceText ?? "")
+                + "\n\n## Sub-Agent\n\n"
+                + "You have a delegate_task tool that runs tasks in a separate context.\n\n"
+                + "**PREFER delegate_task when:**\n"
+                + "- The task involves 3+ sequential tool calls (e.g., research, multi-step data gathering)\n"
+                + "- The task is self-contained with a clear deliverable (e.g., \"investigate X and report\")\n"
+                + "- The user explicitly asks for research, analysis, or exploration\n\n"
+                + "**Do NOT delegate when:**\n"
+                + "- A single tool call suffices\n"
+                + "- The task requires conversational back-and-forth with the user\n"
+                + "- You need to clarify requirements before proceeding\n\n"
+                + "When delegating, you may specify allowed_tools to limit which tools the sub-agent can use.\n"
+                + "You do NOT need to specify mcp_servers — the sub-agent inherits the current servers by default.";
         }
 
         var lastUserMsg = messages.LastOrDefault(m => m.Role == ChatRole.User)?.Content;

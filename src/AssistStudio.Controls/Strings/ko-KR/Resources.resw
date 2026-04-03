@@ -178,6 +178,9 @@
   <data name="Tool_fetch_url" xml:space="preserve">
     <value>URL 가져오기</value>
   </data>
+  <data name="Tool_delegate_task" xml:space="preserve">
+    <value>서브 에이전트</value>
+  </data>
   <data name="ChatPanel_EditTitleTooltip" xml:space="preserve">
     <value>제목 편집</value>
   </data>

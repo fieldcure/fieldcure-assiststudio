@@ -54,6 +54,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Ai.Execution\Ai.Execution.csproj" />
     <ProjectReference Include="..\AssistStudio.Controls\AssistStudio.Controls.csproj" />
   </ItemGroup>
 
