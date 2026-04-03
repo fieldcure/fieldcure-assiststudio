@@ -71,6 +71,13 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// </summary>
     private IReadOnlyList<string> _parentEnabledServers = [];
 
+    /// <summary>
+    /// Cached Knowledge Archive folder (kb_id) from UI thread for thread-safe access
+    /// by <see cref="SubAgentTool.BuildContextHints"/> which runs on ThreadPool.
+    /// Updated in <see cref="ResolveTools"/>.
+    /// </summary>
+    private string? _cachedKbId;
+
     // RAG is now a shared multi-KB server — no per-tab connection needed.
     // The conversation stores a selected KB ID via _builtInServers[RagKey].
 
@@ -917,8 +924,9 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             }
         }
 
-        // Cache enabled servers for thread-safe access by SubAgent ToolResolver
+        // Cache values for thread-safe access by SubAgent (runs on ThreadPool)
         _parentEnabledServers = [.. enabledServerIds];
+        _cachedKbId = Panel?.KnowledgeArchiveFolder;
 
         // Sub-Agent tool — available when at least one MCP server is enabled
         if (effectiveServerIds.Count > 0)
@@ -1042,10 +1050,12 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         var tools = new List<IAssistTool>();
         CollectToolsFromConnectedServers(connectedIds, tools);
 
-        // v1: allowed_tools is ignored — sub-agent gets all tools from merged servers.
-        // AI doesn't know internal tool names (e.g., search_documents) so filtering
-        // by allowed_tools would accidentally exclude critical tools like RAG.
-        // Future: expose available tool names in system prompt for informed selection.
+        // Apply allowlist filter if AI specified allowed_tools
+        if (allowedTools is { Count: > 0 })
+        {
+            var allowed = allowedTools.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            tools.RemoveAll(t => !allowed.Contains(t.Name));
+        }
 
         // No-nesting: always remove delegate_task from sub-agent tools
         tools.RemoveAll(t => t.Name == "delegate_task");
@@ -1316,7 +1326,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                 ResolveProviderByName,
                 ResolveToolsForSubAgentAsync,
                 SelectedPreset?.Name ?? "Default"),
-            () => Panel?.KnowledgeArchiveFolder);
+            () => _cachedKbId);
     }
 
     /// <summary>
