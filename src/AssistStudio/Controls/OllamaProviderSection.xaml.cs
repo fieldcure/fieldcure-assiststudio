@@ -92,7 +92,7 @@ public sealed partial class OllamaProviderSection : UserControl
     /// <summary>
     /// Whether there are pending model downloads that need tracking.
     /// </summary>
-    public bool HasPendingPulls => _pendingPulls.Count > 0;
+    public static bool HasPendingPulls => _pendingPulls.Count > 0;
 
     /// <summary>
     /// Resumes pull progress tracking after page re-entry.

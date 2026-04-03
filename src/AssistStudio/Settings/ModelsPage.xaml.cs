@@ -49,9 +49,10 @@ public sealed partial class ModelsPage : Page
         _ = DelayedCheckOllamaAsync();
 
         // Resume progress tracking if downloads were started before navigating away
-        if (OllamaSection is not null && OllamaSection.HasPendingPulls)
+        if (OllamaProviderSection.HasPendingPulls)
         {
-            _ = OllamaSection.ResumePullTrackingAsync();
+            EnsureOllamaSectionLoaded();
+            _ = OllamaSection!.ResumePullTrackingAsync();
         }
 
         // Pre-load remaining sections during idle time so they're ready when user expands

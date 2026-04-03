@@ -872,7 +872,7 @@
     <value>웹 페이지 조회, 명령 실행, 메모리 관리 등 핵심 기능을 제공합니다.</value>
   </data>
   <data name="Embedding_OllamaNotRunning" xml:space="preserve">
-    <value>Ollama가 실행되지 않습니다. ollama serve 명령으로 시작하세요.</value>
+    <value>Ollama가 실행되지 않습니다. ollama serve 명령으로 시작하세요</value>
   </data>
   <data name="Embedding_OpenAiKeyMissing" xml:space="preserve">
     <value>Models 페이지에서 OpenAI API Key를 먼저 등록하세요.</value>
@@ -890,7 +890,7 @@
     <value>모델 다운로드</value>
   </data>
   <data name="Embedding_PullMessage" xml:space="preserve">
-    <value>{0}을(를) 다운로드할까요? ollama pull {0} 명령이 실행됩니다.</value>
+    <value>{0}을(를) 다운로드할까요? ollama pull {0} 명령이 실행됩니다</value>
   </data>
   <data name="Embedding_Downloading" xml:space="preserve">
     <value>{0} 다운로드 중…</value>
@@ -911,7 +911,7 @@
     <value>사용 안 함</value>
   </data>
   <data name="Contextualizer_OllamaNotRunning" xml:space="preserve">
-    <value>Ollama가 실행되지 않습니다. ollama serve 명령으로 시작하세요.</value>
+    <value>Ollama가 실행되지 않습니다. ollama serve 명령으로 시작하세요</value>
   </data>
   <data name="Contextualizer_OpenAiKeyMissing" xml:space="preserve">
     <value>Models 페이지에서 OpenAI API Key를 먼저 등록하세요.</value>
