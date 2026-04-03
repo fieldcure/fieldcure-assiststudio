@@ -101,6 +101,39 @@ public class ToolCallExecutor
         return result;
     }
 
+    /// <summary>
+    /// Executes a tool call without the confirmation check, for cases where
+    /// confirmation has already been obtained externally (e.g., parallel sub-agent flow).
+    /// </summary>
+    public async Task<ToolExecutionResult> ExecuteWithoutConfirmationAsync(
+        ToolCall call, string? userNote, CancellationToken ct = default)
+    {
+        var tool = _tools.FirstOrDefault(t => t.Name == call.FunctionName)
+            ?? throw new InvalidOperationException($"Tool not found: {call.FunctionName}");
+
+        LastUserNote = string.IsNullOrWhiteSpace(userNote) ? null : userNote?.Trim();
+
+        var argsJson = string.IsNullOrWhiteSpace(call.Arguments) ? "{}" : call.Arguments;
+        var args = JsonSerializer.Deserialize<JsonElement>(argsJson);
+
+        DiagnosticLogger.LogInfo($"[Tool] Calling (no-confirm): {tool.Name} args={call.Arguments}");
+
+        ToolExecutionResult result;
+        if (tool is IMultiContentTool multiContentTool)
+        {
+            result = await Task.Run(() => multiContentTool.ExecuteWithContentAsync(args, ct), ct);
+        }
+        else
+        {
+            var text = await Task.Run(() => tool.ExecuteAsync(args, ct), ct);
+            result = new ToolExecutionResult(text);
+        }
+
+        DiagnosticLogger.LogInfo($"[Tool] Result (no-confirm): {tool.Name} → {Truncate(result.Text, 500)}");
+
+        return result;
+    }
+
     #endregion
 
     #region Private Methods

@@ -2755,8 +2755,12 @@ public sealed partial class ChatPanel : Control
             RegisterInTree(toolCallMsg);
             _messages.Add(toolCallMsg);
 
-            // Execute each tool call and add results
-            foreach (var call in result.ToolCalls!)
+            // Split tool calls into regular and sub-agent groups
+            var subAgentCalls = result.ToolCalls!.Where(tc => tc.FunctionName == "delegate_task").ToList();
+            var otherCalls = result.ToolCalls!.Where(tc => tc.FunctionName != "delegate_task").ToList();
+
+            // Phase 1: Regular tools — sequential execution (existing behavior)
+            foreach (var call in otherCalls)
             {
                 DiagnosticLogger.LogInfo($"[Tool] Executing: {call.FunctionName} (id={call.Id})");
                 ToolExecutionResult execResult;
@@ -2773,7 +2777,6 @@ public sealed partial class ChatPanel : Control
                     execResult = new ToolExecutionResult($"{{\"error\":\"{ex.Message}\"}}");
                 }
 
-                // Capture user note from approval (if any) for injection in next API call
                 if (executor.LastUserNote is not null)
                     pendingUserNote = executor.LastUserNote;
 
@@ -2793,16 +2796,109 @@ public sealed partial class ChatPanel : Control
                     await _renderer.AppendSearchResultBlockAsync(assistantMessage.Id, toolResult, call.FunctionName);
                 else if (call.FunctionName == "fetch_url")
                     await _renderer.AppendToolBlockAsync(assistantMessage.Id, FormatFetchUrlLabel(call.Arguments, toolResult.Length));
-                else if (call.FunctionName == "delegate_task")
-                    await _renderer.AppendToolBlockAsync(assistantMessage.Id, FormatSubAgentLabel(call.Arguments, toolResult));
                 else
                     await _renderer.AppendToolBlockAsync(assistantMessage.Id, call.FunctionName);
 
-                // Render images from MCP tool results
                 if (execResult.ImageDataUris is { Count: > 0 } imageUris)
                 {
                     foreach (var dataUri in imageUris)
                         await _renderer.AppendToolImageAsync(assistantMessage.Id, dataUri);
+                }
+            }
+
+            // Phase 2: Sub-Agent calls — approve sequentially, execute in parallel
+            if (subAgentCalls.Count > 0)
+            {
+                var approved = new List<(ToolCall Call, string? UserNote, Task<ToolExecutionResult> Task)>();
+                var rejected = new List<(ToolCall Call, string RejectionText)>();
+
+                // 2a: Sequential approval, immediate execution start
+                foreach (var call in subAgentCalls)
+                {
+                    DiagnosticLogger.LogInfo($"[Tool] Sub-Agent approval: {call.FunctionName} (id={call.Id})");
+
+                    if (executor.ConfirmationHandler is not null)
+                    {
+                        var (isApproved, userNote) = await executor.ConfirmationHandler(call.FunctionName, call.Arguments);
+                        if (isApproved)
+                        {
+                            DiagnosticLogger.LogInfo($"[Tool] Sub-Agent approved, starting parallel: {call.Id}");
+                            var task = executor.ExecuteWithoutConfirmationAsync(call, userNote, ct);
+                            approved.Add((call, userNote, task));
+                        }
+                        else
+                        {
+                            var reason = string.IsNullOrWhiteSpace(userNote)
+                                ? "Tool call rejected by user."
+                                : $"Tool call rejected by user. Reason: {userNote}";
+                            DiagnosticLogger.LogInfo($"[Tool] Sub-Agent rejected: {call.Id} — {reason}");
+                            rejected.Add((call, reason));
+                        }
+                    }
+                    else
+                    {
+                        var task = executor.ExecuteWithoutConfirmationAsync(call, null, ct);
+                        approved.Add((call, null, task));
+                    }
+                }
+
+                // 2b: Wait for all parallel executions to complete
+                if (approved.Count > 0)
+                {
+                    DiagnosticLogger.LogInfo($"[Tool] Awaiting {approved.Count} parallel sub-agent tasks");
+                    try { await Task.WhenAll(approved.Select(a => a.Task)); }
+                    catch { /* individual errors handled in 2c */ }
+                }
+
+                // 2c: Collect results in original call order
+                foreach (var call in subAgentCalls)
+                {
+                    ToolExecutionResult execResult;
+                    string? noteForPending = null;
+
+                    var approvedEntry = approved.FirstOrDefault(a => a.Call.Id == call.Id);
+                    if (approvedEntry.Task is not null)
+                    {
+                        try
+                        {
+                            execResult = await approvedEntry.Task;
+                            DiagnosticLogger.LogInfo($"[Tool] Sub-Agent result: {call.Id}, length={execResult.Text.Length}");
+                            LogStructuredToolResult(call.FunctionName, execResult.Text);
+                            noteForPending = approvedEntry.UserNote;
+                        }
+                        catch (Exception ex)
+                        {
+                            DiagnosticLogger.LogWarning($"[Tool] Sub-Agent error: {call.Id} — {ex.Message}");
+                            DiagnosticLogger.LogException(ex);
+                            execResult = new ToolExecutionResult($"{{\"error\":\"{ex.Message}\"}}");
+                        }
+                    }
+                    else
+                    {
+                        var rejectedEntry = rejected.First(r => r.Call.Id == call.Id);
+                        execResult = new ToolExecutionResult(rejectedEntry.RejectionText);
+                    }
+
+                    if (noteForPending is not null)
+                        pendingUserNote = noteForPending;
+
+                    var toolResult = GuardToolResultSize(execResult.Text, call.FunctionName);
+                    var toolResultMsg = new ChatMessage(ChatRole.Tool, toolResult)
+                    {
+                        ToolCallId = call.Id,
+                        ParentId = toolCallMsg.Id
+                    };
+                    RegisterInTree(toolResultMsg);
+                    _messages.Add(toolResultMsg);
+
+                    assistantMessage.Content += $"[Tool: {call.FunctionName}]\n";
+                    await _renderer.AppendToolBlockAsync(assistantMessage.Id, FormatSubAgentLabel(call.Arguments, toolResult));
+
+                    if (execResult.ImageDataUris is { Count: > 0 } imageUris)
+                    {
+                        foreach (var dataUri in imageUris)
+                            await _renderer.AppendToolImageAsync(assistantMessage.Id, dataUri);
+                    }
                 }
             }
         } while (true);

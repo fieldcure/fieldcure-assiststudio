@@ -117,7 +117,7 @@ public sealed class SubAgentTool : IAssistTool
             ? ri.GetString() : null;
 
         // Auto-propagate ContextHints
-        var contextHints = BuildContextHints(mcpServers);
+        var contextHints = BuildContextHints(mcpServers, allowedTools);
 
         var request = new SubAgentRequest
         {
@@ -142,17 +142,20 @@ public sealed class SubAgentTool : IAssistTool
 
     /// <summary>
     /// Builds ContextHints from the current conversation state.
-    /// Automatically injects kb_id when RAG server is requested and a KB is selected.
+    /// Injects kb_id when RAG tools will be available — either via explicit mcp_servers
+    /// containing "rag", or via allowed_tools containing "search_documents"
+    /// (tools may be inherited from parent servers even without explicit mcp_servers).
     /// </summary>
-    private Dictionary<string, string>? BuildContextHints(IReadOnlyList<string>? mcpServers)
+    private Dictionary<string, string>? BuildContextHints(
+        IReadOnlyList<string>? mcpServers, IReadOnlyList<string>? allowedTools)
     {
-        if (mcpServers is null or { Count: 0 })
-            return null;
+        var hasRag = mcpServers?.Any(s =>
+            s.Contains("rag", StringComparison.OrdinalIgnoreCase)) == true;
 
-        var hasRag = mcpServers.Any(s =>
-            s.Contains("rag", StringComparison.OrdinalIgnoreCase));
+        var hasRagTool = allowedTools?.Any(t =>
+            t.Equals("search_documents", StringComparison.OrdinalIgnoreCase)) == true;
 
-        if (!hasRag)
+        if (!hasRag && !hasRagTool)
             return null;
 
         var kbId = _kbIdProvider();
