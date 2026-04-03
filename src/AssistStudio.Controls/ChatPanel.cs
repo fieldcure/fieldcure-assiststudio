@@ -2944,6 +2944,7 @@ public sealed partial class ChatPanel : Control
         // Uses linear _messages scan + explicit ToolCallId matching — no tree traversal.
         var searchResultQueue = new Queue<string>();
         var fetchUrlLabelQueue = new Queue<string>();
+        var subAgentLabelQueue = new Queue<string>();
         foreach (var m in _messages)
         {
             if (m.Role != ChatRole.Assistant || m.ToolCalls is not { Count: > 0 })
@@ -2957,6 +2958,8 @@ public sealed partial class ChatPanel : Control
                     searchResultQueue.Enqueue(resultMsg.Content);
                 else if (tc.FunctionName == "fetch_url")
                     fetchUrlLabelQueue.Enqueue(FormatFetchUrlLabel(tc.Arguments, resultMsg?.Content?.Length ?? 0));
+                else if (tc.FunctionName == "delegate_task")
+                    subAgentLabelQueue.Enqueue(FormatSubAgentLabel(tc.Arguments, resultMsg?.Content ?? ""));
             }
         }
 
@@ -2998,7 +3001,10 @@ public sealed partial class ChatPanel : Control
 
                     if (toolName == "delegate_task")
                     {
-                        await _renderer.AppendToolBlockAsync(msg.Id, "Sub-Agent");
+                        var label = subAgentLabelQueue.Count > 0
+                            ? subAgentLabelQueue.Dequeue()
+                            : "Sub-Agent";
+                        await _renderer.AppendToolBlockAsync(msg.Id, label);
                         continue;
                     }
 
