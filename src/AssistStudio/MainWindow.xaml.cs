@@ -96,11 +96,20 @@ public sealed partial class MainWindow : Window
             foreach (var tab in ViewModel.Tabs)
                 tab.RefreshTools();
         };
-        App.McpRegistry.ToolsChanged += (_, _) =>
+        // Debounce tool refreshes — parallel MCP server connections each fire
+        // ToolsChanged, so we wait 200 ms after the last fire before refreshing.
+        var toolsDebounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+        toolsDebounce.Tick += (_, _) =>
         {
-            LoggingService.LogInfo($"[Settings] MCP ToolsChanged → refreshing tools on {ViewModel.Tabs.Count} tabs");
+            toolsDebounce.Stop();
+            LoggingService.LogInfo($"[Settings] MCP ToolsChanged (debounced) → refreshing tools on {ViewModel.Tabs.Count} tabs");
             foreach (var tab in ViewModel.Tabs)
                 tab.RefreshTools();
+        };
+        App.McpRegistry.ToolsChanged += (_, _) =>
+        {
+            toolsDebounce.Stop();
+            toolsDebounce.Start();
         };
 
         // Navigate to SettingsPanel when the pane opens

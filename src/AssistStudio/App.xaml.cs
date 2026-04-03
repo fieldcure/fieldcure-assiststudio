@@ -209,29 +209,25 @@ public partial class App : Application
     {
         try
         {
-            // Check for built-in server updates in the background (non-blocking).
-            // Servers are already installed from a previous launch; update checks
-            // should not delay MCP server connections or the first user message.
-            _ = Task.Run(async () =>
-            {
-                try { await BuiltInServerHelper.EnsureInstalledAsync(); }
-                catch (Exception ex) { LoggingService.LogWarning($"[BuiltIn] Background update check failed: {ex.Message}"); }
-            });
-
             // Sync API keys from UWP PasswordVault to Win32 Credential Manager
             // so external processes (Runner serve/exec) can access them
             PasswordVaultHelper.SyncToCredentialManager();
 
+            // Connect external (user-configured) MCP servers first — these are
+            // independent of built-in server updates and can start immediately.
             var configs = await AppSettings.LoadMcpServersAsync();
             LoggingService.LogInfo($"[App] Initializing MCP servers ({configs.Count} configs)");
-            if (configs.Count > 0)
-            {
-                var errors = await McpRegistry.ConnectAllAsync(configs);
-                foreach (var error in errors)
-                    LoggingService.LogWarning($"MCP connect failed: {error}");
-            }
+            var externalTask = configs.Count > 0
+                ? McpRegistry.ConnectAllAsync(configs)
+                : Task.FromResult<IReadOnlyList<string>>([]);
 
-            // Connect built-in servers in parallel (filesystem is per-tab, skip here)
+            // Ensure built-in servers are installed/updated BEFORE starting them.
+            // This prevents "Access Denied" errors when dotnet tool update tries
+            // to remove exe files that are locked by running server processes.
+            try { await BuiltInServerHelper.EnsureInstalledAsync(); }
+            catch (Exception ex) { LoggingService.LogWarning($"[BuiltIn] Update check failed: {ex.Message}"); }
+
+            // Now start built-in servers (filesystem is per-tab, skip here)
             var builtInConfigs = AppSettings.BuiltInServers;
             var builtInTasks = builtInConfigs
                 .Where(kv => kv.Key != BuiltInServerHelper.FilesystemKey
@@ -239,6 +235,11 @@ public partial class App : Application
                              && (BuiltInServerHelper.IsSharedServer(kv.Key) || kv.Value.Folders.Count > 0))
                 .Select(kv => McpRegistry.ConnectBuiltInAsync(kv.Key, kv.Value));
             await Task.WhenAll(builtInTasks);
+
+            // Report external server connection errors
+            var errors = await externalTask;
+            foreach (var error in errors)
+                LoggingService.LogWarning($"MCP connect failed: {error}");
         }
         catch (Exception ex)
         {
