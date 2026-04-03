@@ -273,7 +273,7 @@ Add them in Profile settings.</value>
     <value>Set Folder</value>
   </data>
   <data name="Folder_ArchiveDisabledHint" xml:space="preserve">
-    <value>Search documents in these folders.</value>
+    <value>Current profile does not have Knowledge Archive enabled.</value>
   </data>
   <data name="Folder_ReindexArchive" xml:space="preserve">
     <value>Re-index documents</value>

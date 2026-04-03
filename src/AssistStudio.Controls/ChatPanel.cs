@@ -2062,14 +2062,13 @@ public sealed partial class ChatPanel : Control
             _folderList.Children.Add(row);
         }
 
-        // Archive section — KB selector
+        // Archive section — KB selector (always visible, hint when profile doesn't enable RAG)
         var archiveEnabled = IsKnowledgeArchiveEnabled;
         var selectedKbId = KnowledgeArchiveFolder; // stores KB ID
 
         if (_kbSelector is not null)
         {
-            _kbSelector.Visibility = archiveEnabled ? Visibility.Visible : Visibility.Collapsed;
-            _kbSelector.IsEnabled = archiveEnabled;
+            _kbSelector.Visibility = Visibility.Visible;
 
             // Populate KB list
             var kbItems = KbItemsProvider?.Invoke() ?? [];
@@ -2084,12 +2083,14 @@ public sealed partial class ChatPanel : Control
             }
 
             if (_archiveEmpty is not null)
-                _archiveEmpty.Visibility = kbItems.Count == 0 && archiveEnabled
+                _archiveEmpty.Visibility = kbItems.Count == 0
                     ? Visibility.Visible : Visibility.Collapsed;
         }
 
+        // Hint when profile doesn't have RAG enabled (but KB is selected)
         if (_archiveDisabledHint is not null)
-            _archiveDisabledHint.Visibility = !archiveEnabled ? Visibility.Visible : Visibility.Collapsed;
+            _archiveDisabledHint.Visibility = !archiveEnabled && !string.IsNullOrEmpty(selectedKbId)
+                ? Visibility.Visible : Visibility.Collapsed;
     }
 
     /// <summary>
@@ -2137,7 +2138,7 @@ public sealed partial class ChatPanel : Control
         if (_folderDisabledHint is not null)
             _folderDisabledHint.Text = Res.GetString("Folder_DisabledHint") ?? "Enable Workspace in your profile to use these folders.";
         if (_archiveDisabledHint is not null)
-            _archiveDisabledHint.Text = Res.GetString("Folder_ArchiveDisabledHint") ?? "Enable Knowledge Archive in your profile.";
+            _archiveDisabledHint.Text = Res.GetString("Folder_ArchiveDisabledHint") ?? "Current profile does not have Knowledge Archive enabled.";
         if (_archiveEmpty is not null)
             _archiveEmpty.Text = Res.GetString("Folder_ArchiveNoKbs") ?? "No knowledge bases. Create one in Settings.";
 
