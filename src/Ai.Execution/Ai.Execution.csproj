@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>FieldCure.Ai.Execution</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>12</LangVersion>
+    <Version>0.1.0</Version>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
+
+    <!-- NuGet Package Metadata -->
+    <PackageId>FieldCure.Ai.Execution</PackageId>
+    <Description>Agent loop and sub-agent execution engine. Provides IAgentLoop for autonomous LLM tool-use loops and ISubAgentExecutor for isolated sub-agent sessions.</Description>
+    <Authors>Jong Hyun Kim</Authors>
+    <Company>Fieldcure Co., Ltd.</Company>
+    <Copyright>Copyright (c) 2026 Fieldcure Co., Ltd.</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>ai;agent;execution;sub-agent;tool-use;llm</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="icon.png" Pack="true" PackagePath="" />
+    <None Include="README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
+    
+  <ItemGroup>
+    <ProjectReference Include="..\Ai.Providers\Ai.Providers.csproj" />
+  </ItemGroup>
+
+</Project>

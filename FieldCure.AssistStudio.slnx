@@ -13,49 +13,21 @@
   </Folder>
 
   <Folder Name="/src/">
+    <Project Path="src/Ai.Execution/Ai.Execution.csproj" />
+    <Project Path="src/Ai.Providers/Ai.Providers.csproj" />
+    <Project Path="src/AssistStudio.Controls/AssistStudio.Controls.csproj" />
+    <Project Path="src/AssistStudio.Core/AssistStudio.Core.csproj" />
     <Project Path="src/AssistStudio/AssistStudio.csproj" Id="ad2171d6-2c2f-4c6a-b467-425f09c13247">
       <Platform Project="x64" />
       <Deploy />
     </Project>
-    <Project Path="src/Ai.Providers/Ai.Providers.csproj">
-      <Configuration Solution="Debug|x64" Project="Debug|AnyCPU" />
-      <Configuration Solution="Debug|arm64" Project="Debug|AnyCPU" />
-      <Configuration Solution="Release|x64" Project="Release|AnyCPU" />
-      <Configuration Solution="Release|arm64" Project="Release|AnyCPU" />
-    </Project>
-    <Project Path="src/AssistStudio.Core/AssistStudio.Core.csproj">
-      <Configuration Solution="Debug|x64" Project="Debug|AnyCPU" />
-      <Configuration Solution="Debug|arm64" Project="Debug|AnyCPU" />
-      <Configuration Solution="Release|x64" Project="Release|AnyCPU" />
-      <Configuration Solution="Release|arm64" Project="Release|AnyCPU" />
-    </Project>
-    <Project Path="src/AssistStudio.Controls/AssistStudio.Controls.csproj">
-      <Configuration Solution="Debug|x64" Project="Debug|AnyCPU" />
-      <Configuration Solution="Debug|arm64" Project="Debug|AnyCPU" />
-      <Configuration Solution="Release|x64" Project="Release|AnyCPU" />
-      <Configuration Solution="Release|arm64" Project="Release|AnyCPU" />
-    </Project>
   </Folder>
 
   <Folder Name="/tests/">
-    <Project Path="tests/Ai.Providers.Tests/Ai.Providers.Tests.csproj">
-      <Configuration Solution="Debug|x64" Project="Debug|AnyCPU" />
-      <Configuration Solution="Debug|arm64" Project="Debug|AnyCPU" />
-      <Configuration Solution="Release|x64" Project="Release|AnyCPU" />
-      <Configuration Solution="Release|arm64" Project="Release|AnyCPU" />
-    </Project>
-    <Project Path="src/AssistStudio.Core.Tests/AssistStudio.Core.Tests.csproj">
-      <Configuration Solution="Debug|x64" Project="Debug|AnyCPU" />
-      <Configuration Solution="Debug|arm64" Project="Debug|AnyCPU" />
-      <Configuration Solution="Release|x64" Project="Release|AnyCPU" />
-      <Configuration Solution="Release|arm64" Project="Release|AnyCPU" />
-    </Project>
-    <Project Path="tests/AssistStudio.App.Tests/AssistStudio.App.Tests.csproj">
-      <Configuration Solution="Debug|x64" Project="Debug|AnyCPU" />
-      <Configuration Solution="Debug|arm64" Project="Debug|AnyCPU" />
-      <Configuration Solution="Release|x64" Project="Release|AnyCPU" />
-      <Configuration Solution="Release|arm64" Project="Release|AnyCPU" />
-    </Project>
+    <Project Path="src/AssistStudio.Core.Tests/AssistStudio.Core.Tests.csproj" />
+    <Project Path="tests/Ai.Execution.Tests/Ai.Execution.Tests.csproj" />
+    <Project Path="tests/Ai.Providers.Tests/Ai.Providers.Tests.csproj" />
+    <Project Path="tests/AssistStudio.App.Tests/AssistStudio.App.Tests.csproj" />
   </Folder>
 
 </Solution>
