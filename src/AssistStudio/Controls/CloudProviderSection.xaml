@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="AssistStudio.Controls.CloudProviderSection"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <StackPanel Spacing="8">
+        <!-- API Key Input (no key) -->
+        <Grid x:Name="KeyInputPanel" ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <PasswordBox x:Name="ApiKeyBox"
+                         x:Uid="Models_ApiKeyBox"
+                         PlaceholderText="API Key" />
+            <Button Grid.Column="1"
+                    x:Uid="Models_AddKeyButton"
+                    Content="Add"
+                    Click="OnAddKey" />
+        </Grid>
+
+        <!-- API Key Display (key exists) -->
+        <Grid x:Name="KeyDisplayPanel" Visibility="Collapsed" ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="MaskedKeyText"
+                       VerticalAlignment="Center" Opacity="0.7"
+                       IsTextSelectionEnabled="True" />
+            <Button Grid.Column="1"
+                    x:Uid="Models_RemoveKey"
+                    ToolTipService.ToolTip="Remove Key" ToolTipService.Placement="Mouse"
+                    Click="OnRemoveKey" Padding="6,4">
+                <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
+                          Glyph="&#xE74D;" FontSize="14" />
+            </Button>
+        </Grid>
+
+        <!-- Options (visible when key exists) -->
+        <StackPanel x:Name="OptionsPanel" Spacing="8" Visibility="Collapsed">
+            <StackPanel Spacing="4">
+                <TextBlock x:Uid="Models_DefaultModel" Text="Default model" FontSize="12" Opacity="0.7" />
+                <ComboBox x:Name="ModelCombo"
+                          x:Uid="Models_ModelNotAvailable"
+                          HorizontalAlignment="Stretch"
+                          IsEnabled="False"
+                          PlaceholderText="Not available"
+                          SelectionChanged="OnModelChanged" />
+            </StackPanel>
+            <NumberBox x:Name="MaxTokensBox"
+                       x:Uid="Models_MaxTokens"
+                       Header="Max tokens"
+                       Value="4096" Minimum="1" Maximum="1000000"
+                       SpinButtonPlacementMode="Inline"
+                       SmallChange="1024" LargeChange="4096"
+                       ValueChanged="OnMaxTokensChanged" />
+            <StackPanel Spacing="4">
+                <TextBlock x:Uid="Models_PdfHandling" Text="PDF handling" FontSize="12" Opacity="0.7" />
+                <ComboBox x:Name="PdfCombo"
+                          HorizontalAlignment="Stretch"
+                          SelectionChanged="OnPdfHandlingChanged" />
+            </StackPanel>
+            <StackPanel Spacing="4">
+                <ComboBox x:Name="ThinkingOverrideCombo"
+                          x:Uid="Models_ThinkingOverride"
+                          Header="Reasoning mode"
+                          HorizontalAlignment="Stretch"
+                          SelectionChanged="OnThinkingOverrideChanged" />
+                <ToggleSwitch x:Name="ThinkingToggle"
+                              x:Uid="Models_ExtendedThinking"
+                              Header="Extended reasoning"
+                              Toggled="OnThinkingToggled" />
+                <NumberBox x:Name="ThinkingBudgetBox"
+                           x:Uid="Models_ThinkingBudget"
+                           Header="Reasoning budget (tokens)"
+                           Value="4096" Minimum="1024" Maximum="128000"
+                           SpinButtonPlacementMode="Inline"
+                           SmallChange="1024" LargeChange="4096"
+                           IsEnabled="False"
+                           ValueChanged="OnThinkingBudgetChanged" />
+                <TextBlock x:Name="ThinkingHint"
+                           FontSize="12" Opacity="0.6"
+                           TextWrapping="Wrap"
+                           Visibility="Collapsed" />
+            </StackPanel>
+        </StackPanel>
+    </StackPanel>
+</UserControl>
