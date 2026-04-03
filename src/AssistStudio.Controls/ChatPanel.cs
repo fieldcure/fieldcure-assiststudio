@@ -3310,17 +3310,17 @@ public sealed partial class ChatPanel : Control
             workspaceText = (workspaceText ?? "")
                 + "\n\n## Sub-Agent\n\n"
                 + "You have a delegate_task tool that runs tasks in a separate context.\n\n"
-                + "**PREFER delegate_task when:**\n"
-                + "- The task involves 3+ sequential tool calls (e.g., research, multi-step data gathering)\n"
-                + "- The task is self-contained with a clear deliverable (e.g., \"investigate X and report\")\n"
-                + "- The user explicitly asks for research, analysis, or exploration\n\n"
-                + "**Do NOT delegate when:**\n"
-                + "- A single tool call suffices\n"
-                + "- The task requires conversational back-and-forth with the user\n"
-                + "- You need to clarify requirements before proceeding\n\n"
-                + "When delegating, you may specify allowed_tools to limit which tools the sub-agent can use.\n"
-                + "You do NOT need to specify mcp_servers — the sub-agent inherits the current servers by default.\n"
-                + "You can call delegate_task multiple times in one response to run independent sub-tasks in parallel.";
+                + "**ONLY delegate when ALL of these are true:**\n"
+                + "- The task requires 5+ tool calls with intermediate reasoning\n"
+                + "- The task is independent and does NOT need user clarification\n"
+                + "- Running it in the main conversation would consume excessive context\n\n"
+                + "**Do NOT delegate:**\n"
+                + "- Simple lookups or searches (just call the tools directly)\n"
+                + "- Tasks with fewer than 5 tool calls\n"
+                + "- When you can answer by combining 2-3 tool results yourself\n\n"
+                + "When delegating, specify allowed_tools to limit the sub-agent's tools.\n"
+                + "You do NOT need to specify mcp_servers \u2014 inherited by default.\n"
+                + "Multiple delegate_task calls in one response run as independent sub-tasks.";
         }
 
         var lastUserMsg = messages.LastOrDefault(m => m.Role == ChatRole.User)?.Content;
