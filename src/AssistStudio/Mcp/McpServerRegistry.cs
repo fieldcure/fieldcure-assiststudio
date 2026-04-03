@@ -70,21 +70,47 @@ public class McpServerRegistry : IAsyncDisposable
         IEnumerable<McpServerConfig> configs,
         CancellationToken ct = default)
     {
-        var errors = new List<string>();
-        var configList = configs.ToList();
-        LoggingService.LogInfo($"[MCP] ConnectAll: {configList.Count(c => c.IsEnabled)} enabled servers");
+        var configList = configs.Where(c => c.IsEnabled).ToList();
+        LoggingService.LogInfo($"[MCP] ConnectAll: {configList.Count} enabled servers (parallel)");
 
-        foreach (var config in configList.Where(c => c.IsEnabled))
+        // Phase 1: Add all connections to registry (lock-protected, fast)
+        var connections = new List<(McpServerConfig Config, McpServerConnection Conn)>();
+        await _lock.WaitAsync(ct);
+        try
+        {
+            foreach (var config in configList)
+            {
+                var connection = new McpServerConnection(config);
+                _connections.Add(connection);
+                connections.Add((config, connection));
+            }
+        }
+        finally { _lock.Release(); }
+
+        // Phase 2: Connect all in parallel (no lock — I/O bound)
+        var tasks = connections.Select(async x =>
         {
             try
             {
-                await AddAndConnectAsync(config, ct: ct);
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                cts.CancelAfter(TimeSpan.FromSeconds(30));
+                await x.Conn.ConnectAsync(cts.Token);
+                return (x.Config.Name, Error: (string?)null);
+            }
+            catch (OperationCanceledException)
+            {
+                return (x.Config.Name, Error: "timeout (30s)");
             }
             catch (Exception ex)
             {
-                errors.Add($"{config.Name}: {ex.Message}");
+                return (x.Config.Name, Error: ex.Message);
             }
-        }
+        });
+
+        var results = await Task.WhenAll(tasks);
+        ToolsChanged?.Invoke(this, EventArgs.Empty);
+
+        var errors = results.Where(r => r.Error is not null).Select(r => $"{r.Name}: {r.Error}").ToList();
 
         var connected = _connections.Count(c => c.IsConnected);
         if (connected > 0)
@@ -122,29 +148,33 @@ public class McpServerRegistry : IAsyncDisposable
         CancellationToken ct = default)
     {
         LoggingService.LogInfo($"[MCP] AddAndConnect: {config.Name}");
+
+        // Phase 1: Add to collection under lock (fast)
+        McpServerConnection connection;
         await _lock.WaitAsync(ct);
         try
         {
-            var connection = new McpServerConnection(config) { SupportsRoots = supportsRoots };
+            connection = new McpServerConnection(config) { SupportsRoots = supportsRoots };
             _connections.Add(connection);
-
-            try
-            {
-                await connection.ConnectAsync(ct);
-            }
-            catch
-            {
-                // Connection stays in the list with Error state
-                // so the user can see it and retry
-            }
-
-            ToolsChanged?.Invoke(this, EventArgs.Empty);
-            return connection;
         }
         finally
         {
             _lock.Release();
         }
+
+        // Phase 2: Connect outside lock (slow I/O)
+        try
+        {
+            await connection.ConnectAsync(ct);
+        }
+        catch
+        {
+            // Connection stays in the list with Error state
+            // so the user can see it and retry
+        }
+
+        ToolsChanged?.Invoke(this, EventArgs.Empty);
+        return connection;
     }
 
     /// <summary>
@@ -234,6 +264,9 @@ public class McpServerRegistry : IAsyncDisposable
         var builtInId = $"builtin_{serverKey}";
         LoggingService.LogInfo($"[MCP] ConnectBuiltIn: {serverKey}, enabled={config.IsEnabled}, folders={config.Folders.Count}");
 
+        McpServerConnection? connection = null;
+
+        // Phase 1: Collection manipulation under lock (fast)
         await _lock.WaitAsync(ct);
         try
         {
@@ -261,26 +294,26 @@ public class McpServerRegistry : IAsyncDisposable
                 return;
             }
 
-            // Connect the server
-            var connection = new McpServerConnection(mcpConfig);
+            connection = new McpServerConnection(mcpConfig);
             _connections.Add(connection);
-
-            try
-            {
-                await connection.ConnectAsync(ct);
-            }
-            catch (Exception ex)
-            {
-                LoggingService.LogError($"[MCP] Built-in server failed: {serverKey} — {ex.Message}");
-                // Connection stays in error state, tools will be empty
-            }
-
-            ToolsChanged?.Invoke(this, EventArgs.Empty);
         }
         finally
         {
             _lock.Release();
         }
+
+        // Phase 2: Connect outside lock (slow I/O — allows parallelism)
+        try
+        {
+            await connection.ConnectAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.LogError($"[MCP] Built-in server failed: {serverKey} — {ex.Message}");
+            // Connection stays in error state, tools will be empty
+        }
+
+        ToolsChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>

@@ -231,16 +231,14 @@ public partial class App : Application
                     LoggingService.LogWarning($"MCP connect failed: {error}");
             }
 
-            // Connect built-in servers (filesystem is per-tab, skip here)
+            // Connect built-in servers in parallel (filesystem is per-tab, skip here)
             var builtInConfigs = AppSettings.BuiltInServers;
-            foreach (var (key, config) in builtInConfigs)
-            {
-                if (key == BuiltInServerHelper.FilesystemKey) continue; // per-tab only
-                if (!config.IsEnabled) continue;
-                // Shared servers (e.g., Outbox) don't need folders
-                if (!BuiltInServerHelper.IsSharedServer(key) && config.Folders.Count == 0) continue;
-                await McpRegistry.ConnectBuiltInAsync(key, config);
-            }
+            var builtInTasks = builtInConfigs
+                .Where(kv => kv.Key != BuiltInServerHelper.FilesystemKey
+                             && kv.Value.IsEnabled
+                             && (BuiltInServerHelper.IsSharedServer(kv.Key) || kv.Value.Folders.Count > 0))
+                .Select(kv => McpRegistry.ConnectBuiltInAsync(kv.Key, kv.Value));
+            await Task.WhenAll(builtInTasks);
         }
         catch (Exception ex)
         {
