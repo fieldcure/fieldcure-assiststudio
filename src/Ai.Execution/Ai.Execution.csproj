@@ -22,6 +22,7 @@
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;agent;execution;sub-agent;tool-use;llm</PackageTags>
+    <PackageReleaseNotes>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)\..\..\RELEASENOTES.Execution.md'))</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
