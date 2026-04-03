@@ -1,6 +1,7 @@
 using AssistStudio.Controls;
 using AssistStudio.Helpers;
 using FieldCure.Ai.Providers.Models;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using Microsoft.Windows.ApplicationModel.Resources;
@@ -52,6 +53,9 @@ public sealed partial class ModelsPage : Page
         {
             _ = OllamaSection.ResumePullTrackingAsync();
         }
+
+        // Pre-load remaining sections during idle time so they're ready when user expands
+        PreLoadSectionsAsync();
     }
 
     /// <inheritdoc/>
@@ -70,36 +74,65 @@ public sealed partial class ModelsPage : Page
     /// </summary>
     private void OnSectionExpanded(object sender, EventArgs e)
     {
-        if (ReferenceEquals(sender, ClaudeHeader) && ClaudeSection is null)
+        if (ReferenceEquals(sender, ClaudeHeader))
+            EnsureSectionLoaded(nameof(ClaudeSection), ClaudeHeader, () => ClaudeSection);
+        else if (ReferenceEquals(sender, OpenAIHeader))
+            EnsureSectionLoaded(nameof(OpenAISection), OpenAIHeader, () => OpenAISection);
+        else if (ReferenceEquals(sender, GeminiHeader))
+            EnsureSectionLoaded(nameof(GeminiSection), GeminiHeader, () => GeminiSection);
+        else if (ReferenceEquals(sender, GroqHeader))
+            EnsureSectionLoaded(nameof(GroqSection), GroqHeader, () => GroqSection);
+        else if (ReferenceEquals(sender, OllamaHeader))
+            EnsureOllamaSectionLoaded();
+    }
+
+    /// <summary>
+    /// Pre-loads all deferred sections during idle time so they're instantly
+    /// available when the user expands them.
+    /// </summary>
+    private void PreLoadSectionsAsync()
+    {
+        var queue = new (string Name, Func<bool> IsLoaded, Action Load)[]
         {
-            FindName(nameof(ClaudeSection));
-            ClaudeSection!.SubHeaderChanged += (_, text) => ClaudeHeader.SubHeader = text;
-            ClaudeSection.Initialize(_presets);
-        }
-        else if (ReferenceEquals(sender, OpenAIHeader) && OpenAISection is null)
+            (nameof(ClaudeSection), () => ClaudeSection is not null, () => EnsureSectionLoaded(nameof(ClaudeSection), ClaudeHeader, () => ClaudeSection)),
+            (nameof(OpenAISection), () => OpenAISection is not null, () => EnsureSectionLoaded(nameof(OpenAISection), OpenAIHeader, () => OpenAISection)),
+            (nameof(GeminiSection), () => GeminiSection is not null, () => EnsureSectionLoaded(nameof(GeminiSection), GeminiHeader, () => GeminiSection)),
+            (nameof(GroqSection), () => GroqSection is not null, () => EnsureSectionLoaded(nameof(GroqSection), GroqHeader, () => GroqSection)),
+            // Ollama is loaded via DelayedCheckOllamaAsync — skip here
+        };
+
+        EnqueueSequential(queue, 0);
+    }
+
+    /// <summary>
+    /// Enqueues section pre-loading one at a time on Low priority,
+    /// yielding the UI thread between each section.
+    /// </summary>
+    private void EnqueueSequential((string Name, Func<bool> IsLoaded, Action Load)[] queue, int index)
+    {
+        if (index >= queue.Length) return;
+
+        DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
         {
-            FindName(nameof(OpenAISection));
-            OpenAISection!.SubHeaderChanged += (_, text) => OpenAIHeader.SubHeader = text;
-            OpenAISection.Initialize(_presets);
-        }
-        else if (ReferenceEquals(sender, GeminiHeader) && GeminiSection is null)
-        {
-            FindName(nameof(GeminiSection));
-            GeminiSection!.SubHeaderChanged += (_, text) => GeminiHeader.SubHeader = text;
-            GeminiSection.Initialize(_presets);
-        }
-        else if (ReferenceEquals(sender, GroqHeader) && GroqSection is null)
-        {
-            FindName(nameof(GroqSection));
-            GroqSection!.SubHeaderChanged += (_, text) => GroqHeader.SubHeader = text;
-            GroqSection.Initialize(_presets);
-        }
-        else if (ReferenceEquals(sender, OllamaHeader) && OllamaSection is null)
-        {
-            FindName(nameof(OllamaSection));
-            OllamaSection!.SubHeaderChanged += (_, text) => OllamaHeader.SubHeader = text;
-            OllamaSection.Initialize(_presets);
-        }
+            var (_, isLoaded, load) = queue[index];
+            if (!isLoaded()) load();
+
+            // Schedule next section
+            EnqueueSequential(queue, index + 1);
+        });
+    }
+
+    /// <summary>
+    /// Ensures a cloud section is loaded and initialized.
+    /// </summary>
+    private void EnsureSectionLoaded(string sectionName, CollapsibleSection header, Func<CloudProviderSection?> getSection)
+    {
+        if (getSection() is not null) return;
+        FindName(sectionName);
+        var section = getSection();
+        if (section is null) return;
+        section.SubHeaderChanged += (_, text) => header.SubHeader = text;
+        section.Initialize(_presets);
     }
 
     #endregion
@@ -179,14 +212,19 @@ public sealed partial class ModelsPage : Page
     private async Task DelayedCheckOllamaAsync()
     {
         await Task.Delay(300);
+        EnsureOllamaSectionLoaded();
+    }
 
-        // Ollama content is deferred — load it before accessing UI
-        if (OllamaSection is null)
-        {
-            FindName(nameof(OllamaSection));
-            OllamaSection!.SubHeaderChanged += (_, text) => OllamaHeader.SubHeader = text;
-            OllamaSection.Initialize(_presets);
-        }
+    /// <summary>
+    /// Ensures the Ollama section is loaded and initialized.
+    /// </summary>
+    private void EnsureOllamaSectionLoaded()
+    {
+        if (OllamaSection is not null) return;
+        FindName(nameof(OllamaSection));
+        if (OllamaSection is null) return;
+        OllamaSection.SubHeaderChanged += (_, text) => OllamaHeader.SubHeader = text;
+        OllamaSection.Initialize(_presets);
     }
 
     #endregion
