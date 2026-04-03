@@ -831,13 +831,13 @@
     <value>Reference documents for semantic search.</value>
   </data>
   <data name="Connect_RagActiveInstances" xml:space="preserve">
-    <value>Managed per conversation.</value>
+    <value>Shared across all conversations.</value>
   </data>
   <data name="Connect_RagActiveCount" xml:space="preserve">
     <value>{0} active instance(s)</value>
   </data>
   <data name="Connect_RagNeedsFolders" xml:space="preserve">
-    <value>Add a knowledge archive folder in a conversation to activate.</value>
+    <value>Create a knowledge base in Settings to activate.</value>
   </data>
   <data name="Connect_EmbeddingNotConfigured" xml:space="preserve">
     <value>Embedding provider not configured.</value>

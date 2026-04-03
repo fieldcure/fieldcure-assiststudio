@@ -26,22 +26,27 @@ public sealed class KnowledgeArchiveService
     #region Methods
 
     /// <summary>
-    /// Connects the shared RAG serve if knowledge bases exist and the server is enabled.
+    /// Connects the shared RAG serve if knowledge bases exist.
+    /// Auto-enables the RAG server when KBs are present.
     /// </summary>
     public async Task ConnectIfNeededAsync()
     {
-        var builtIn = AppSettings.BuiltInServers;
-        var ragConfig = builtIn.GetValueOrDefault(BuiltInServerHelper.RagKey);
-        if (ragConfig is null || !ragConfig.IsEnabled)
-        {
-            LoggingService.LogInfo("[KnowledgeArchive] Skipped — server disabled");
-            return;
-        }
-
         if (!KnowledgeBaseStore.AnyExists())
         {
             LoggingService.LogInfo("[KnowledgeArchive] Skipped — no knowledge bases exist");
             return;
+        }
+
+        // Auto-enable RAG server when KBs exist
+        var builtIn = AppSettings.BuiltInServers;
+        var ragConfig = builtIn.GetValueOrDefault(BuiltInServerHelper.RagKey)
+                        ?? new FieldCure.AssistStudio.Models.BuiltInServerConfig();
+        if (!ragConfig.IsEnabled)
+        {
+            ragConfig.IsEnabled = true;
+            builtIn[BuiltInServerHelper.RagKey] = ragConfig;
+            AppSettings.BuiltInServers = builtIn;
+            LoggingService.LogInfo("[KnowledgeArchive] Auto-enabled RAG server (KBs exist)");
         }
 
         LoggingService.LogInfo("[KnowledgeArchive] Connecting shared RAG serve…");

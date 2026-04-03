@@ -831,13 +831,13 @@
     <value>의미 검색을 위한 참조 문서입니다.</value>
   </data>
   <data name="Connect_RagActiveInstances" xml:space="preserve">
-    <value>대화별로 관리됩니다.</value>
+    <value>모든 대화에서 공유됩니다.</value>
   </data>
   <data name="Connect_RagActiveCount" xml:space="preserve">
     <value>{0}개 활성 인스턴스</value>
   </data>
   <data name="Connect_RagNeedsFolders" xml:space="preserve">
-    <value>대화에서 지식보관소 폴더를 추가하면 활성화됩니다.</value>
+    <value>설정에서 지식보관소를 생성하면 활성화됩니다.</value>
   </data>
   <data name="Connect_EmbeddingNotConfigured" xml:space="preserve">
     <value>임베딩 제공자가 설정되지 않았습니다.</value>
