@@ -589,6 +589,9 @@
   <data name="KB_Delete.Content" xml:space="preserve">
     <value>Delete</value>
   </data>
+  <data name="KB_IndexingNote.Text" xml:space="preserve">
+    <value>Indexing continues even after the app is closed.</value>
+  </data>
   <!-- Connect Page -->
   <data name="Connect_Title.Text" xml:space="preserve">
     <value>Connect</value>
@@ -873,7 +876,7 @@
     <value>Embedding settings</value>
   </data>
   <data name="Profiles_KnowledgeHint" xml:space="preserve">
-    <value>Add a knowledge archive folder in conversations.</value>
+    <value>Select a knowledge base in conversations.</value>
   </data>
   <data name="Profiles_OutboxHint" xml:space="preserve">
     <value>Send messages via Slack, Telegram, email, and KakaoTalk.</value>

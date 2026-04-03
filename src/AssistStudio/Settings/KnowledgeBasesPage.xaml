@@ -37,6 +37,13 @@
             <StackPanel Padding="20,20,20,44" Spacing="12"
                         MaxWidth="700" HorizontalAlignment="Left">
 
+                <!-- Note -->
+                <TextBlock x:Uid="KB_IndexingNote"
+                           Text="Indexing continues even after the app is closed."
+                           Style="{StaticResource CaptionTextBlockStyle}"
+                           Opacity="0.5"
+                           TextWrapping="Wrap" />
+
                 <!-- Empty state -->
                 <TextBlock x:Name="EmptyText"
                            x:Uid="KB_Empty"
