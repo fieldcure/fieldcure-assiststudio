@@ -84,13 +84,10 @@ public sealed partial class ModelsPage : Page
 
         _presets = AppSettings.LoadPresets();
 
-        LoadApiKeys();
-        PopulateModelCombos();
+        // All section bodies are deferred (x:Load="False").
+        // Individual sections are initialized via OnSectionExpanded when first expanded.
         UpdateAllSubHeaders();
         UpdateExpandedState();
-
-        // Initialize Ollama URL from saved settings
-        OllamaUrlBox.Text = AppSettings.GetOllamaBaseUrl() ?? "http://localhost:11434";
 
         // Lazy-check Ollama status to avoid blocking page entry
         _ = DelayedCheckOllamaAsync();
@@ -98,6 +95,12 @@ public sealed partial class ModelsPage : Page
         // Resume progress tracking if downloads were started before navigating away
         if (_pendingPulls.Count > 0)
         {
+            // Ollama content must be loaded to show pull progress UI
+            if (OllamaContent is null)
+            {
+                FindName(nameof(OllamaContent));
+                InitializeOllamaSection();
+            }
             _ = ResumePullTrackingAsync();
         }
     }
@@ -108,6 +111,164 @@ public sealed partial class ModelsPage : Page
         base.OnNavigatedFrom(e);
         _pullCts?.Cancel();
         _pullCts = null;
+    }
+
+    #endregion
+
+    #region Lazy Loading
+
+    /// <summary>
+    /// Handles CollapsibleSection expand to realize deferred (x:Load="False") content.
+    /// </summary>
+    private void OnSectionExpanded(object sender, EventArgs e)
+    {
+        if (ReferenceEquals(sender, ClaudeSection) && ClaudeContent is null)
+        {
+            FindName(nameof(ClaudeContent));
+            InitializeCloudSection("Claude", FallbackClaudeModels,
+                ClaudeKeyInputPanel, ClaudeKeyDisplayPanel, ClaudeMaskedKeyText,
+                ClaudeModelCombo, ClaudeOptionsPanel, ClaudePdfCombo, ClaudeMaxTokensBox,
+                ClaudeThinkingToggle, ClaudeThinkingBudget, ClaudeThinkingOverrideCombo, ClaudeThinkingHint,
+                ClaudeSection);
+        }
+        else if (ReferenceEquals(sender, OpenAISection) && OpenAIContent is null)
+        {
+            FindName(nameof(OpenAIContent));
+            InitializeCloudSection("OpenAI", FallbackOpenAIModels,
+                OpenAIKeyInputPanel, OpenAIKeyDisplayPanel, OpenAIMaskedKeyText,
+                OpenAIModelCombo, OpenAIOptionsPanel, OpenAIPdfCombo, OpenAIMaxTokensBox,
+                OpenAIThinkingToggle, OpenAIThinkingBudget, OpenAIThinkingOverrideCombo, OpenAIThinkingHint,
+                OpenAISection);
+        }
+        else if (ReferenceEquals(sender, GeminiSection) && GeminiContent is null)
+        {
+            FindName(nameof(GeminiContent));
+            InitializeCloudSection("Gemini", FallbackGeminiModels,
+                GeminiKeyInputPanel, GeminiKeyDisplayPanel, GeminiMaskedKeyText,
+                GeminiModelCombo, GeminiOptionsPanel, GeminiPdfCombo, GeminiMaxTokensBox,
+                GeminiThinkingToggle, GeminiThinkingBudget, GeminiThinkingOverrideCombo, GeminiThinkingHint,
+                GeminiSection);
+        }
+        else if (ReferenceEquals(sender, GroqSection) && GroqContent is null)
+        {
+            FindName(nameof(GroqContent));
+            InitializeCloudSection("Groq", FallbackGroqModels,
+                GroqKeyInputPanel, GroqKeyDisplayPanel, GroqMaskedKeyText,
+                GroqModelCombo, GroqOptionsPanel, GroqPdfCombo, GroqMaxTokensBox,
+                GroqThinkingToggle, GroqThinkingBudget, GroqThinkingOverrideCombo, GroqThinkingHint,
+                GroqSection);
+        }
+        else if (ReferenceEquals(sender, OllamaSection) && OllamaContent is null)
+        {
+            FindName(nameof(OllamaContent));
+            InitializeOllamaSection();
+        }
+    }
+
+    /// <summary>
+    /// Initializes a cloud provider section UI after its deferred content has been loaded.
+    /// </summary>
+    private void InitializeCloudSection(string provider, string[] fallbackModels,
+        Grid keyInputPanel, Grid keyDisplayPanel, TextBlock maskedKeyText,
+        ComboBox modelCombo, StackPanel optionsPanel, ComboBox pdfCombo, NumberBox maxTokensBox,
+        ToggleSwitch thinkingToggle, NumberBox thinkingBudget, ComboBox thinkingOverrideCombo, TextBlock thinkingHint,
+        CollapsibleSection section)
+    {
+        _isPopulating = true;
+        try
+        {
+            var keys = _presets.ToDictionary(p => p.ProviderType, p => p.ApiKey) ?? [];
+            keys.TryGetValue(provider, out var apiKey);
+            SetKeyState(apiKey ?? "", keyInputPanel, keyDisplayPanel, maskedKeyText, modelCombo, optionsPanel);
+
+            PopulateComboFromCacheOrFallback(provider, modelCombo, fallbackModels);
+            PopulateSinglePdfCombo(provider, pdfCombo);
+            PopulateSingleMaxTokens(provider, maxTokensBox);
+            PopulateSingleThinkingToggle(provider, thinkingToggle, thinkingBudget, thinkingOverrideCombo);
+            UpdateThinkingState(provider, modelCombo, thinkingOverrideCombo, thinkingToggle, thinkingBudget, thinkingHint);
+
+            UpdateProviderSubHeader(section, modelCombo, !string.IsNullOrEmpty(apiKey));
+        }
+        finally { _isPopulating = false; }
+
+        // Background model refresh if key exists
+        var preset = FindPreset(provider);
+        if (!string.IsNullOrEmpty(preset?.ApiKey))
+            _ = FetchAndCacheModelsAsync(provider, preset.ApiKey, modelCombo);
+    }
+
+    /// <summary>
+    /// Initializes the Ollama section UI after its deferred content has been loaded.
+    /// </summary>
+    private void InitializeOllamaSection()
+    {
+        _isPopulating = true;
+        try
+        {
+            OllamaUrlBox.Text = AppSettings.GetOllamaBaseUrl() ?? "http://localhost:11434";
+
+            PopulateComboFromCacheOrFallback("Ollama", OllamaModelCombo, []);
+            PopulateSinglePdfCombo("Ollama", OllamaPdfCombo);
+            PopulateSingleMaxTokens("Ollama", OllamaMaxTokensBox);
+            PopulateSingleThinkingToggle("Ollama", OllamaThinkingToggle, OllamaThinkingBudget, OllamaThinkingOverrideCombo);
+            UpdateThinkingState("Ollama", OllamaModelCombo, OllamaThinkingOverrideCombo,
+                OllamaThinkingToggle, OllamaThinkingBudget, OllamaThinkingHint);
+        }
+        finally { _isPopulating = false; }
+
+        _ = CheckOllamaStatusAsync();
+    }
+
+    /// <summary>
+    /// Populates a single PDF combo for one provider.
+    /// </summary>
+    private void PopulateSinglePdfCombo(string provider, ComboBox combo)
+    {
+        var presets = _presets.ToDictionary(p => p.ProviderType) ?? [];
+        combo.Items.Clear();
+        foreach (var (_, labelKey) in PdfOptions)
+            combo.Items.Add(L(labelKey));
+        var saved = presets.TryGetValue(provider, out var p) ? p.PdfCapability : PdfCapability.Auto;
+        var idx = Array.FindIndex(PdfOptions, o => o.Value == saved);
+        combo.SelectedIndex = idx >= 0 ? idx : 0;
+    }
+
+    /// <summary>
+    /// Populates a single MaxTokens NumberBox for one provider.
+    /// </summary>
+    private void PopulateSingleMaxTokens(string provider, NumberBox box)
+    {
+        var presets = _presets.ToDictionary(p => p.ProviderType) ?? [];
+        if (presets.TryGetValue(provider, out var p))
+            box.Value = p.MaxTokens;
+    }
+
+    /// <summary>
+    /// Populates a single thinking toggle/budget/override combo for one provider.
+    /// </summary>
+    private void PopulateSingleThinkingToggle(string provider, ToggleSwitch toggle, NumberBox budget, ComboBox overrideCombo)
+    {
+        var presets = _presets.ToDictionary(p => p.ProviderType) ?? [];
+
+        overrideCombo.Items.Clear();
+        foreach (var (_, labelKey) in ThinkingOverrideOptions)
+            overrideCombo.Items.Add(L(labelKey));
+
+        if (presets.TryGetValue(provider, out var p))
+        {
+            toggle.IsOn = p.ThinkingEnabled;
+            budget.Value = p.ThinkingBudget ?? 4096;
+            budget.IsEnabled = p.ThinkingEnabled;
+            var overrideIdx = Array.FindIndex(ThinkingOverrideOptions, o => o.Value == p.ThinkingOverride);
+            overrideCombo.SelectedIndex = overrideIdx >= 0 ? overrideIdx : 0;
+        }
+        else
+        {
+            toggle.IsOn = false;
+            budget.Value = 4096;
+            budget.IsEnabled = false;
+            overrideCombo.SelectedIndex = 0;
+        }
     }
 
     #endregion
@@ -157,6 +318,7 @@ public sealed partial class ModelsPage : Page
     /// </summary>
     private void UpdateOllamaSubHeader()
     {
+        if (OllamaContent is null) return; // Deferred content not yet loaded
         var display = OllamaModelCombo.SelectedItem as string ?? "";
         var model = StripFitSuffix(display);
         var status = OllamaStatusText.Text;
@@ -173,21 +335,26 @@ public sealed partial class ModelsPage : Page
         var keys = _presets.ToDictionary(p => p.ProviderType, p => p.ApiKey)
                    ?? [];
 
-        var sections = new (string Provider, CollapsibleSection Section, ComboBox Combo)[]
+        // All sections are deferred (x:Load) — use preset data directly for sub-headers
+        var cloudProviders = new[] { "Claude", "OpenAI", "Gemini", "Groq" };
+        foreach (var provider in cloudProviders)
         {
-            ("Claude", ClaudeSection, ClaudeModelCombo),
-            ("OpenAI", OpenAISection, OpenAIModelCombo),
-            ("Gemini", GeminiSection, GeminiModelCombo),
-            ("Groq", GroqSection, GroqModelCombo),
-        };
+            var section = GetSectionForProvider(provider);
+            if (section is null) continue;
 
-        foreach (var (provider, section, combo) in sections)
-        {
             keys.TryGetValue(provider, out var key);
-            UpdateProviderSubHeader(section, combo, !string.IsNullOrEmpty(key));
+            var preset = FindPreset(provider);
+            var model = preset?.ModelId ?? "";
+            var status = !string.IsNullOrEmpty(key) ? "\u2713" : L("Models_NoKey");
+            section.SubHeader = BuildSubHeader(
+                string.IsNullOrEmpty(model) ? null : model, status);
         }
 
-        UpdateOllamaSubHeader();
+        // Ollama sub-header from preset data (content may not be loaded yet)
+        var ollamaPreset = FindPreset("Ollama");
+        var ollamaModel = ollamaPreset?.ModelId ?? "";
+        OllamaSection.SubHeader = BuildSubHeader(
+            string.IsNullOrEmpty(ollamaModel) ? null : ollamaModel, null);
     }
 
     /// <summary>
@@ -237,25 +404,8 @@ public sealed partial class ModelsPage : Page
 
     #region API Key Management
 
-    /// <summary>
-    /// Loads API keys from the already-loaded presets and sets the UI state for each provider card.
-    /// Avoids redundant PasswordVault calls since keys were loaded during AppSettings.LoadPresets().
-    /// </summary>
-    private void LoadApiKeys()
-    {
-        var keys = _presets.ToDictionary(p => p.ProviderType, p => p.ApiKey)
-                   ?? [];
-
-        keys.TryGetValue("Claude", out var claudeKey);
-        keys.TryGetValue("OpenAI", out var openAIKey);
-        keys.TryGetValue("Gemini", out var geminiKey);
-        keys.TryGetValue("Groq", out var groqKey);
-
-        SetKeyState(claudeKey ?? "", ClaudeKeyInputPanel, ClaudeKeyDisplayPanel, ClaudeMaskedKeyText, ClaudeModelCombo, ClaudeOptionsPanel);
-        SetKeyState(openAIKey ?? "", OpenAIKeyInputPanel, OpenAIKeyDisplayPanel, OpenAIMaskedKeyText, OpenAIModelCombo, OpenAIOptionsPanel);
-        SetKeyState(geminiKey ?? "", GeminiKeyInputPanel, GeminiKeyDisplayPanel, GeminiMaskedKeyText, GeminiModelCombo, GeminiOptionsPanel);
-        SetKeyState(groqKey ?? "", GroqKeyInputPanel, GroqKeyDisplayPanel, GroqMaskedKeyText, GroqModelCombo, GroqOptionsPanel);
-    }
+    // LoadApiKeys() removed — all sections are deferred (x:Load="False"),
+    // each section is initialized via OnSectionExpanded → InitializeCloudSection/InitializeOllamaSection.
 
     /// <summary>
     /// Configures the visual state of a provider card based on whether an API key is present.
@@ -410,30 +560,8 @@ public sealed partial class ModelsPage : Page
     /// <summary>
     /// Populates all provider model combo boxes from cache or fallback values, then starts background refresh.
     /// </summary>
-    private void PopulateModelCombos()
-    {
-        // Suppress SelectionChanged → PersistPresets during initial population
-        _isPopulating = true;
-        try
-        {
-            PopulateComboFromCacheOrFallback("Claude", ClaudeModelCombo, FallbackClaudeModels);
-            PopulateComboFromCacheOrFallback("OpenAI", OpenAIModelCombo, FallbackOpenAIModels);
-            PopulateComboFromCacheOrFallback("Gemini", GeminiModelCombo, FallbackGeminiModels);
-            PopulateComboFromCacheOrFallback("Groq", GroqModelCombo, FallbackGroqModels);
-
-            PopulatePdfCombos();
-            PopulateMaxTokens();
-            PopulateThinkingToggles();
-        }
-        finally
-        {
-            _isPopulating = false;
-        }
-
-        // Background refresh for providers that have API keys (Task.Run to
-        // avoid blocking UI thread during first-time network stack DLL loading)
-        _ = Task.Run(() => RefreshAllModelCachesAsync());
-    }
+    // PopulateModelCombos() removed — all sections are deferred (x:Load="False"),
+    // each section is initialized via OnSectionExpanded → InitializeCloudSection/InitializeOllamaSection.
 
     /// <summary>
     /// Thinking override option items used in the thinking override combo boxes.
@@ -456,119 +584,25 @@ public sealed partial class ModelsPage : Page
         (PdfCapability.TextExtraction, "Models_PdfTextExtraction"),
     ];
 
-    /// <summary>
-    /// Populates all PDF handling combo boxes and selects the saved value from presets.
-    /// </summary>
-    private void PopulatePdfCombos()
-    {
-        var presets = _presets.ToDictionary(p => p.ProviderType) ?? [];
-
-        var combos = new (string Provider, ComboBox Combo)[]
-        {
-            ("Claude", ClaudePdfCombo),
-            ("OpenAI", OpenAIPdfCombo),
-            ("Gemini", GeminiPdfCombo),
-            ("Groq", GroqPdfCombo),
-            ("Ollama", OllamaPdfCombo),
-        };
-
-        foreach (var (provider, combo) in combos)
-        {
-            combo.Items.Clear();
-            foreach (var (_, labelKey) in PdfOptions)
-                combo.Items.Add(L(labelKey));
-
-            var saved = presets.TryGetValue(provider, out var p) ? p.PdfCapability : PdfCapability.Auto;
-            var idx = Array.FindIndex(PdfOptions, o => o.Value == saved);
-            combo.SelectedIndex = idx >= 0 ? idx : 0;
-        }
-    }
+    // PopulatePdfCombos(), PopulateMaxTokens(), PopulateThinkingToggles() removed —
+    // all sections are deferred (x:Load), each initialized via InitializeCloudSection/InitializeOllamaSection.
 
     /// <summary>
-    /// Populates all Max Tokens NumberBoxes from saved presets.
-    /// </summary>
-    private void PopulateMaxTokens()
-    {
-        var presets = _presets.ToDictionary(p => p.ProviderType) ?? [];
-
-        var boxes = new (string Provider, NumberBox Box)[]
-        {
-            ("Claude", ClaudeMaxTokensBox),
-            ("OpenAI", OpenAIMaxTokensBox),
-            ("Gemini", GeminiMaxTokensBox),
-            ("Groq", GroqMaxTokensBox),
-            ("Ollama", OllamaMaxTokensBox),
-        };
-
-        foreach (var (provider, box) in boxes)
-        {
-            if (presets.TryGetValue(provider, out var p))
-                box.Value = p.MaxTokens;
-        }
-    }
-
-    /// <summary>
-    /// Populates all Extended Thinking toggle switches, budget boxes, and override combos
-    /// from saved presets, then applies model-based thinking capability checks.
-    /// </summary>
-    private void PopulateThinkingToggles()
-    {
-        var presets = _presets.ToDictionary(p => p.ProviderType) ?? [];
-
-        var controls = new (string Provider, ToggleSwitch Toggle, NumberBox Budget, ComboBox OverrideCombo)[]
-        {
-            ("Claude", ClaudeThinkingToggle, ClaudeThinkingBudget, ClaudeThinkingOverrideCombo),
-            ("OpenAI", OpenAIThinkingToggle, OpenAIThinkingBudget, OpenAIThinkingOverrideCombo),
-            ("Gemini", GeminiThinkingToggle, GeminiThinkingBudget, GeminiThinkingOverrideCombo),
-            ("Groq", GroqThinkingToggle, GroqThinkingBudget, GroqThinkingOverrideCombo),
-            ("Ollama", OllamaThinkingToggle, OllamaThinkingBudget, OllamaThinkingOverrideCombo),
-        };
-
-        foreach (var (provider, toggle, budget, overrideCombo) in controls)
-        {
-            // Populate override combo
-            overrideCombo.Items.Clear();
-            foreach (var (_, labelKey) in ThinkingOverrideOptions)
-                overrideCombo.Items.Add(L(labelKey));
-
-            if (presets.TryGetValue(provider, out var p))
-            {
-                toggle.IsOn = p.ThinkingEnabled;
-                budget.Value = p.ThinkingBudget ?? 4096;
-                budget.IsEnabled = p.ThinkingEnabled;
-
-                var overrideIdx = Array.FindIndex(ThinkingOverrideOptions, o => o.Value == p.ThinkingOverride);
-                overrideCombo.SelectedIndex = overrideIdx >= 0 ? overrideIdx : 0;
-            }
-            else
-            {
-                toggle.IsOn = false;
-                budget.Value = 4096;
-                budget.IsEnabled = false;
-                overrideCombo.SelectedIndex = 0; // Auto
-            }
-        }
-
-        // Apply thinking capability checks based on selected models and overrides
-        UpdateAllThinkingStates();
-    }
-
-    /// <summary>
-    /// Updates the thinking UI state for all cloud providers based on currently selected models and overrides.
+    /// Updates the thinking UI state for all loaded cloud providers based on currently selected models and overrides.
     /// </summary>
     private void UpdateAllThinkingStates()
     {
-        var entries = new (string Provider, ComboBox ModelCombo, ComboBox OverrideCombo, ToggleSwitch Toggle, NumberBox Budget, TextBlock Hint)[]
-        {
-            ("Claude", ClaudeModelCombo, ClaudeThinkingOverrideCombo, ClaudeThinkingToggle, ClaudeThinkingBudget, ClaudeThinkingHint),
-            ("OpenAI", OpenAIModelCombo, OpenAIThinkingOverrideCombo, OpenAIThinkingToggle, OpenAIThinkingBudget, OpenAIThinkingHint),
-            ("Gemini", GeminiModelCombo, GeminiThinkingOverrideCombo, GeminiThinkingToggle, GeminiThinkingBudget, GeminiThinkingHint),
-            ("Groq", GroqModelCombo, GroqThinkingOverrideCombo, GroqThinkingToggle, GroqThinkingBudget, GroqThinkingHint),
-            ("Ollama", OllamaModelCombo, OllamaThinkingOverrideCombo, OllamaThinkingToggle, OllamaThinkingBudget, OllamaThinkingHint),
-        };
-
-        foreach (var (provider, modelCombo, overrideCombo, toggle, budget, hint) in entries)
-            UpdateThinkingState(provider, modelCombo, overrideCombo, toggle, budget, hint);
+        // Only update sections whose content has been loaded (x:Load realized)
+        if (ClaudeContent is not null)
+            UpdateThinkingState("Claude", ClaudeModelCombo, ClaudeThinkingOverrideCombo, ClaudeThinkingToggle, ClaudeThinkingBudget, ClaudeThinkingHint);
+        if (OpenAIContent is not null)
+            UpdateThinkingState("OpenAI", OpenAIModelCombo, OpenAIThinkingOverrideCombo, OpenAIThinkingToggle, OpenAIThinkingBudget, OpenAIThinkingHint);
+        if (GeminiContent is not null)
+            UpdateThinkingState("Gemini", GeminiModelCombo, GeminiThinkingOverrideCombo, GeminiThinkingToggle, GeminiThinkingBudget, GeminiThinkingHint);
+        if (GroqContent is not null)
+            UpdateThinkingState("Groq", GroqModelCombo, GroqThinkingOverrideCombo, GroqThinkingToggle, GroqThinkingBudget, GroqThinkingHint);
+        if (OllamaContent is not null)
+            UpdateThinkingState("Ollama", OllamaModelCombo, OllamaThinkingOverrideCombo, OllamaThinkingToggle, OllamaThinkingBudget, OllamaThinkingHint);
     }
 
     /// <summary>
@@ -677,17 +711,18 @@ public sealed partial class ModelsPage : Page
         var keys = _presets.ToDictionary(p => p.ProviderType, p => p.ApiKey);
         var tasks = new List<Task>();
 
-        var combos = new Dictionary<string, ComboBox>
+        // All sections are deferred (x:Load) — only refresh loaded ones
+        var combos = new Dictionary<string, ComboBox?>
         {
-            ["Claude"] = ClaudeModelCombo,
-            ["OpenAI"] = OpenAIModelCombo,
-            ["Gemini"] = GeminiModelCombo,
-            ["Groq"] = GroqModelCombo,
+            ["Claude"] = ClaudeContent is not null ? ClaudeModelCombo : null,
+            ["OpenAI"] = OpenAIContent is not null ? OpenAIModelCombo : null,
+            ["Gemini"] = GeminiContent is not null ? GeminiModelCombo : null,
+            ["Groq"] = GroqContent is not null ? GroqModelCombo : null,
         };
 
         foreach (var (provider, combo) in combos)
         {
-            if (keys.TryGetValue(provider, out var key) && !string.IsNullOrEmpty(key))
+            if (combo is not null && keys.TryGetValue(provider, out var key) && !string.IsNullOrEmpty(key))
                 tasks.Add(FetchAndCacheModelsAsync(provider, key, combo));
         }
 
@@ -1137,6 +1172,15 @@ public sealed partial class ModelsPage : Page
     private async Task DelayedCheckOllamaAsync()
     {
         await Task.Delay(300);
+
+        // Ollama content is deferred — load it before accessing UI elements
+        if (OllamaContent is null)
+        {
+            FindName(nameof(OllamaContent));
+            InitializeOllamaSection();
+            return; // InitializeOllamaSection already calls CheckOllamaStatusAsync
+        }
+
         await CheckOllamaStatusAsync();
     }
 

@@ -38,9 +38,11 @@
                            TextWrapping="Wrap" Margin="0,-16,0,0" />
 
                 <!-- Anthropic Claude -->
-                <controls:CollapsibleSection x:Name="ClaudeSection" Header="Anthropic Claude" IsExpanded="False">
+                <controls:CollapsibleSection x:Name="ClaudeSection" Header="Anthropic Claude" IsExpanded="False"
+                                             Expanded="OnSectionExpanded">
                     <controls:CollapsibleSection.Body>
-                        <StackPanel Spacing="8">
+                        <Grid>
+                        <StackPanel x:Name="ClaudeContent" x:Load="False" Spacing="8">
                             <!-- Input state (no key) -->
                             <Grid x:Name="ClaudeKeyInputPanel" ColumnSpacing="8">
                                 <Grid.ColumnDefinitions>
@@ -120,13 +122,16 @@
                                 </StackPanel>
                             </StackPanel>
                         </StackPanel>
+                        </Grid>
                     </controls:CollapsibleSection.Body>
                 </controls:CollapsibleSection>
 
                 <!-- OpenAI -->
-                <controls:CollapsibleSection x:Name="OpenAISection" Header="OpenAI" IsExpanded="False">
+                <controls:CollapsibleSection x:Name="OpenAISection" Header="OpenAI" IsExpanded="False"
+                                             Expanded="OnSectionExpanded">
                     <controls:CollapsibleSection.Body>
-                        <StackPanel Spacing="8">
+                        <Grid>
+                        <StackPanel x:Name="OpenAIContent" x:Load="False" Spacing="8">
                             <Grid x:Name="OpenAIKeyInputPanel" ColumnSpacing="8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -202,13 +207,16 @@
                                 </StackPanel>
                             </StackPanel>
                         </StackPanel>
+                        </Grid>
                     </controls:CollapsibleSection.Body>
                 </controls:CollapsibleSection>
 
                 <!-- Google Gemini -->
-                <controls:CollapsibleSection x:Name="GeminiSection" Header="Google Gemini" IsExpanded="False">
+                <controls:CollapsibleSection x:Name="GeminiSection" Header="Google Gemini" IsExpanded="False"
+                                             Expanded="OnSectionExpanded">
                     <controls:CollapsibleSection.Body>
-                        <StackPanel Spacing="8">
+                        <Grid>
+                        <StackPanel x:Name="GeminiContent" x:Load="False" Spacing="8">
                             <Grid x:Name="GeminiKeyInputPanel" ColumnSpacing="8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -284,13 +292,16 @@
                                 </StackPanel>
                             </StackPanel>
                         </StackPanel>
+                        </Grid>
                     </controls:CollapsibleSection.Body>
                 </controls:CollapsibleSection>
 
                 <!-- Groq -->
-                <controls:CollapsibleSection x:Name="GroqSection" Header="Groq" IsExpanded="False">
+                <controls:CollapsibleSection x:Name="GroqSection" Header="Groq" IsExpanded="False"
+                                             Expanded="OnSectionExpanded">
                     <controls:CollapsibleSection.Body>
-                        <StackPanel Spacing="8">
+                        <Grid>
+                        <StackPanel x:Name="GroqContent" x:Load="False" Spacing="8">
                             <Grid x:Name="GroqKeyInputPanel" ColumnSpacing="8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -366,6 +377,7 @@
                                 </StackPanel>
                             </StackPanel>
                         </StackPanel>
+                        </Grid>
                     </controls:CollapsibleSection.Body>
                 </controls:CollapsibleSection>
 
@@ -378,9 +390,11 @@
                            Style="{StaticResource SubtitleTextBlockStyle}" />
 
                 <!-- Ollama -->
-                <controls:CollapsibleSection x:Name="OllamaSection" Header="Ollama" IsExpanded="False">
+                <controls:CollapsibleSection x:Name="OllamaSection" Header="Ollama" IsExpanded="False"
+                                             Expanded="OnSectionExpanded">
                     <controls:CollapsibleSection.Body>
-                        <StackPanel Spacing="8">
+                        <Grid>
+                        <StackPanel x:Name="OllamaContent" x:Load="False" Spacing="8">
                             <StackPanel Orientation="Horizontal" Spacing="10">
                                 <TextBlock x:Name="OllamaStatusText"
                                            FontSize="12"
@@ -512,6 +526,7 @@
                                            Visibility="Collapsed" />
                             </StackPanel>
                         </StackPanel>
+                        </Grid>
                     </controls:CollapsibleSection.Body>
                 </controls:CollapsibleSection>
 

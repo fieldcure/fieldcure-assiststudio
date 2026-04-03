@@ -138,6 +138,15 @@ public sealed partial class CollapsibleSection : UserControl, INotifyPropertyCha
 
     #endregion
 
+    #region Events
+
+    /// <summary>
+    /// Occurs when the section is expanded (IsExpanded becomes true).
+    /// </summary>
+    public event EventHandler? Expanded;
+
+    #endregion
+
     #region Event Handlers
 
     /// <summary>
@@ -160,6 +169,9 @@ public sealed partial class CollapsibleSection : UserControl, INotifyPropertyCha
         {
             section._isExpanded = (bool)e.NewValue;
             section.UpdateVisualState(animated: false);
+
+            if (section._isExpanded)
+                section.Expanded?.Invoke(section, EventArgs.Empty);
         }
     }
 
