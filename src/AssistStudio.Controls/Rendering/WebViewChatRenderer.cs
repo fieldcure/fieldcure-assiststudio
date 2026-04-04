@@ -135,6 +135,13 @@ internal partial class WebViewChatRenderer
         // Unwanted browser shortcuts (Ctrl+F, Ctrl+P, etc.) are blocked via JS keydown handler.
         _webView.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled = true;
 
+        // Map temp media folder to a virtual host so <audio>/<video> can load file:// URIs.
+        // Without this, WebView2 blocks local file access from data: origin pages.
+        Directory.CreateDirectory(TempRoot);
+        _webView.CoreWebView2.SetVirtualHostNameToFolderMapping(
+            "assiststudio.temp", TempRoot,
+            CoreWebView2HostResourceAccessKind.Allow);
+
         var html = LoadEmbeddedResource("chat.html");
 
         _navigationTcs = new TaskCompletionSource();
@@ -238,6 +245,16 @@ internal partial class WebViewChatRenderer
     public Task AppendToolBlockAsync(string id, string toolName)
     {
         var script = $"window.assistChat.appendToolBlock({Js(id)}, {Js(toolName)})";
+        return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
+    /// <summary>
+    /// Pauses all playing audio and video elements in the chat.
+    /// Called when the tab is switched or hidden.
+    /// </summary>
+    public Task PauseAllMediaAsync()
+    {
+        var script = "document.querySelectorAll('audio, video').forEach(function(el) { el.pause(); })";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 

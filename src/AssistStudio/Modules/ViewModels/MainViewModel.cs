@@ -459,19 +459,22 @@ public partial class MainViewModel : ObservableObject
     /// <summary>
     /// Called when the selected tab changes. Focuses the input text box of the new tab.
     /// </summary>
-    partial void OnSelectedTabChanged(ChatTabViewModel? value)
+    partial void OnSelectedTabChanged(ChatTabViewModel? oldValue, ChatTabViewModel? newValue)
     {
-        if (value is null) return;
+        // Pause media on the previously active tab
+        oldValue?.Panel?.PauseAllMedia();
 
-        if (value.Panel is not null)
+        if (newValue is null) return;
+
+        if (newValue.Panel is not null)
         {
-            value.Panel.DispatcherQueue?.TryEnqueue(
+            newValue.Panel.DispatcherQueue?.TryEnqueue(
                 Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
-                () => value.Panel?.FocusInput());
+                () => newValue.Panel?.FocusInput());
         }
         else
         {
-            value.FocusPendingOnAttach = true;
+            newValue.FocusPendingOnAttach = true;
         }
     }
 

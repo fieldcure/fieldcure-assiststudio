@@ -1271,6 +1271,11 @@ public sealed partial class ChatPanel : Control
     public void FocusInput() => _inputArea?.FocusInput();
 
     /// <summary>
+    /// Pauses all playing audio and video elements. Called on tab switch.
+    /// </summary>
+    public void PauseAllMedia() => _ = _renderer.PauseAllMediaAsync();
+
+    /// <summary>
     /// Clears all messages and resets the chat panel to its empty state.
     /// </summary>
     public async void ClearConversation()
@@ -1730,6 +1735,21 @@ public sealed partial class ChatPanel : Control
                 var header = source[..commaIdx];
                 (ext, fileTypeLabel) = GuessFileTypeFromMime(header);
                 bytes = Convert.FromBase64String(source[(commaIdx + 1)..]);
+            }
+            else if (source.StartsWith("https://assiststudio.temp/", StringComparison.OrdinalIgnoreCase))
+            {
+                // Virtual host URL — resolve to local temp file
+                var fileName = source["https://assiststudio.temp/".Length..];
+                var localPath = Path.Combine(WebViewChatRenderer.TempRoot, fileName);
+                bytes = await File.ReadAllBytesAsync(localPath);
+                ext = Path.GetExtension(localPath);
+                fileTypeLabel = ext switch
+                {
+                    ".mp3" or ".wav" or ".ogg" or ".webm" => "Audio",
+                    ".mp4" or ".ogv" => "Video",
+                    ".pdf" => "PDF",
+                    _ => "File"
+                };
             }
             else
             {
@@ -2362,8 +2382,11 @@ public sealed partial class ChatPanel : Control
             var tempPath = Path.Combine(WebViewChatRenderer.TempRoot, $"{Guid.NewGuid()}{ext}");
             var bytes = Convert.FromBase64String(base64Part);
             File.WriteAllBytes(tempPath, bytes);
-            var fileUri = new Uri(tempPath).AbsoluteUri;
-            return new MediaContent(fileUri, media.MimeType, media.Kind);
+            // Use virtual host URL so WebView2 can load the file
+            // (file:// URIs are blocked from data: origin pages)
+            var fileName = Path.GetFileName(tempPath);
+            var virtualUrl = $"https://assiststudio.temp/{fileName}";
+            return new MediaContent(virtualUrl, media.MimeType, media.Kind);
         }
         catch (Exception ex)
         {
