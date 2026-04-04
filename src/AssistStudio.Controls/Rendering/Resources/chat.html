@@ -1716,9 +1716,13 @@
                 element = link;
             }
 
-            // Insert after the last tool-block, before .content
+            // Tag media with its owning tool-block index for re-insertion after finalize
             var toolBlocks = bubble.querySelectorAll('.tool-block');
-            var lastToolBlock = toolBlocks.length > 0 ? toolBlocks[toolBlocks.length - 1] : null;
+            var ownerIndex = toolBlocks.length > 0 ? toolBlocks.length - 1 : -1;
+            element.setAttribute('data-tool-index', ownerIndex);
+
+            // Insert right after its owning tool-block
+            var lastToolBlock = ownerIndex >= 0 ? toolBlocks[ownerIndex] : null;
             if (lastToolBlock && lastToolBlock.nextSibling) {
                 bubble.insertBefore(element, lastToolBlock.nextSibling);
             } else {
@@ -1801,12 +1805,11 @@
                 // Preserve thinking, tool blocks, and media elements before markdown re-render
                 var thinkingBlock = bubble.querySelector('.thinking-block');
                 var toolBlocks = Array.from(bubble.querySelectorAll('.tool-block'));
+                // Collect media elements with their owning tool-block index
                 var mediaElements = Array.from(bubble.querySelectorAll(
-                    '.image-wrapper, .tool-result-audio, .tool-result-video, .tool-result-download'
+                    '[data-tool-index]'
                 )).map(function(el) {
-                    // For video, the parent container holds both video and fallback
-                    return (el.classList.contains('tool-result-video') && el.parentElement !== bubble)
-                        ? el.parentElement : el;
+                    return { element: el, toolIndex: parseInt(el.getAttribute('data-tool-index'), 10) };
                 });
                 // Strip [Tool: ...] markers from content before markdown rendering
                 var cleanText = fullText.replace(/\[Tool:\s*[^\]]*\]\n?/g, '\n');
@@ -1816,17 +1819,27 @@
                 toolBlocks.reverse().forEach(function(tb) {
                     bubble.insertBefore(tb, bubble.firstChild);
                 });
-                // Re-insert media elements after the last tool-block, preserving order
-                var mediaAnchor = bubble.querySelector('.tool-block:last-of-type');
-                mediaElements.forEach(function(el) {
-                    if (mediaAnchor && mediaAnchor.nextSibling) {
-                        bubble.insertBefore(el, mediaAnchor.nextSibling);
-                    } else if (mediaAnchor) {
-                        mediaAnchor.parentNode.insertBefore(el, mediaAnchor.nextSibling);
+                // Re-insert each media element right after its owning tool-block
+                mediaElements.forEach(function(item) {
+                    var reinsertedBlocks = bubble.querySelectorAll('.tool-block');
+                    var owner = item.toolIndex >= 0 && item.toolIndex < reinsertedBlocks.length
+                        ? reinsertedBlocks[item.toolIndex] : null;
+                    if (owner) {
+                        // Find the insertion point: after the owner and any previously inserted media
+                        var insertAfter = owner;
+                        while (insertAfter.nextSibling && insertAfter.nextSibling.hasAttribute
+                            && insertAfter.nextSibling.hasAttribute('data-tool-index')) {
+                            insertAfter = insertAfter.nextSibling;
+                        }
+                        if (insertAfter.nextSibling) {
+                            bubble.insertBefore(item.element, insertAfter.nextSibling);
+                        } else {
+                            bubble.appendChild(item.element);
+                        }
                     } else {
-                        bubble.insertBefore(el, bubble.firstChild);
+                        // Fallback: insert at the top
+                        bubble.insertBefore(item.element, bubble.firstChild);
                     }
-                    mediaAnchor = el; // next media goes after this one
                 });
                 if (thinkingBlock) {
                     bubble.insertBefore(thinkingBlock, bubble.firstChild);
