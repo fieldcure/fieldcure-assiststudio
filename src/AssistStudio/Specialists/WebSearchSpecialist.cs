@@ -15,7 +15,17 @@ public sealed class WebSearchSpecialist : ISpecialist
     public string DisplayName => "Web Search Specialist";
 
     /// <inheritdoc />
-    public IReadOnlyList<string> AllowedTools { get; } = ["web_search", "web_fetch", "run_javascript"];
+    public IReadOnlyList<string> AllowedTools { get; } =
+    [
+        // Essentials built-in
+        "web_search", "web_fetch",
+        // Serper / SerpApi / Tavily MCP servers
+        "google_search", "googlesearch", "google_search_tool", "scrape",
+        // Brave Search MCP
+        "brave_search",
+        // Common utility
+        "run_javascript",
+    ];
 
     /// <inheritdoc />
     public IReadOnlyList<string> FallbackServers { get; } = ["builtin_essentials"];
@@ -75,13 +85,13 @@ public sealed class WebSearchSpecialist : ISpecialist
                - If initial results are insufficient, rephrase and retry (max 2 retries).
 
             2. **Source selection**
-               - From web_search results, pick the 2-3 most relevant URLs.
+               - From search results, pick the 2-3 most relevant URLs.
                - Prefer primary sources (official sites, papers, docs) over aggregators.
                - Skip forums, SEO spam, and low-quality sites.
 
             3. **Reading**
-               - Use web_fetch with max_length 8000 per page.
-               - If a page is too noisy, use run_javascript to extract specific sections.
+               - Fetch each selected page (max_length 8000) and read the content.
+               - If a page is too noisy, use a script to extract specific sections.
 
             4. **Report format**
                Return your report in this exact structure:
