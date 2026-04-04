@@ -124,6 +124,7 @@ internal partial class WebViewChatRenderer
         _webView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
         _webView.CoreWebView2.NavigationStarting += OnNavigationStarting;
         _webView.CoreWebView2.NewWindowRequested += OnNewWindowRequested;
+        _webView.CoreWebView2.DownloadStarting += OnDownloadStarting;
         _webView.CoreWebView2.IsDefaultDownloadDialogOpenChanged += (_, _) =>
         {
             if (_webView.CoreWebView2.IsDefaultDownloadDialogOpen)
@@ -434,6 +435,18 @@ internal partial class WebViewChatRenderer
                 // Malformed file URI — silently ignore
             }
         }
+    }
+
+    /// <summary>
+    /// Intercepts download requests from native audio/video controls (3-dot menu → Download)
+    /// and routes them through the ImageSaveRequested event for FileSavePicker handling.
+    /// </summary>
+    private void OnDownloadStarting(CoreWebView2 sender, CoreWebView2DownloadStartingEventArgs args)
+    {
+        args.Cancel = true;
+        var uri = args.DownloadOperation.Uri;
+        if (!string.IsNullOrEmpty(uri))
+            ImageSaveRequested?.Invoke(this, uri);
     }
 
     /// <summary>
