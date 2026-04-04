@@ -1016,6 +1016,10 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             ? [.. GetToolsFromServers(connectedIds)]
             : [];
 
+        // Sync to ChatPanel so ToolCallExecutor can find search_tools-discovered tools
+        if (Panel is not null)
+            Panel.McpTools = McpTools;
+
         return result;
     }
 

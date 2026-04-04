@@ -44,6 +44,13 @@ public class ToolCallExecutor
     /// </summary>
     public string? LastUserNote { get; private set; }
 
+    /// <summary>
+    /// Optional fallback resolver invoked when a tool is not found in the primary tool list.
+    /// Used by search_tools dynamic promotion: tools discovered at runtime can be resolved
+    /// from connected MCP servers without rebuilding the executor.
+    /// </summary>
+    public Func<string, IAssistTool?>? FallbackToolResolver { get; set; }
+
     #endregion
 
     #region Public Methods
@@ -61,6 +68,7 @@ public class ToolCallExecutor
     public async Task<ToolExecutionResult> ExecuteAsync(ToolCall call, CancellationToken ct = default)
     {
         var tool = _tools.FirstOrDefault(t => t.Name == call.FunctionName)
+            ?? FallbackToolResolver?.Invoke(call.FunctionName)
             ?? throw new InvalidOperationException($"Tool not found: {call.FunctionName}");
 
         LastUserNote = null;
@@ -109,6 +117,7 @@ public class ToolCallExecutor
         ToolCall call, string? userNote, CancellationToken ct = default)
     {
         var tool = _tools.FirstOrDefault(t => t.Name == call.FunctionName)
+            ?? FallbackToolResolver?.Invoke(call.FunctionName)
             ?? throw new InvalidOperationException($"Tool not found: {call.FunctionName}");
 
         LastUserNote = string.IsNullOrWhiteSpace(userNote) ? null : userNote?.Trim();

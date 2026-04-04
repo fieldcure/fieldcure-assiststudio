@@ -418,19 +418,19 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
         {
             switch (block)
             {
-                // ImageContentBlock — SDK 1.2: Data is ReadOnlyMemory<byte>
+                // ImageContentBlock — SDK 1.2: Data is base64-encoded UTF-8 bytes
                 case ImageContentBlock image:
                 {
-                    var base64 = Convert.ToBase64String(image.Data.Span);
+                    var base64 = Encoding.UTF8.GetString(image.Data.Span);
                     var dataUri = $"data:{image.MimeType};base64,{base64}";
                     (media ??= []).Add(new MediaContent(dataUri, image.MimeType, MediaContentKind.Image));
                     break;
                 }
 
-                // AudioContentBlock — SDK 1.2: Data is ReadOnlyMemory<byte>
+                // AudioContentBlock — SDK 1.2: Data is base64-encoded UTF-8 bytes
                 case AudioContentBlock audio:
                 {
-                    var base64 = Convert.ToBase64String(audio.Data.Span);
+                    var base64 = Encoding.UTF8.GetString(audio.Data.Span);
                     var dataUri = $"data:{audio.MimeType};base64,{base64}";
                     (media ??= []).Add(new MediaContent(dataUri, audio.MimeType, MediaContentKind.Audio));
                     break;
@@ -467,10 +467,11 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
         var kind = ClassifyMimeType(mimeType);
 
         // Form 1: Blob included (BlobResourceContents)
+        // SDK 1.2: Blob is base64-encoded UTF-8 bytes (same pattern as ImageContentBlock.Data)
         if (resource.Resource is BlobResourceContents blobResource
             && blobResource.Blob.Length > 0)
         {
-            var base64 = Convert.ToBase64String(blobResource.Blob.Span);
+            var base64 = Encoding.UTF8.GetString(blobResource.Blob.Span);
             var dataUri = $"data:{mimeType};base64,{base64}";
             return new MediaContent(dataUri, mimeType, kind);
         }

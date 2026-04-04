@@ -1722,15 +1722,13 @@ public sealed partial class ChatPanel : Control
         {
             byte[] bytes;
             string ext;
+            string fileTypeLabel;
 
             if (source.StartsWith("data:"))
             {
                 var commaIdx = source.IndexOf(',');
                 var header = source[..commaIdx];
-                ext = header.Contains("image/jpeg") ? ".jpg"
-                    : header.Contains("image/gif") ? ".gif"
-                    : header.Contains("image/webp") ? ".webp"
-                    : ".png";
+                (ext, fileTypeLabel) = GuessFileTypeFromMime(header);
                 bytes = Convert.FromBase64String(source[(commaIdx + 1)..]);
             }
             else
@@ -1739,12 +1737,21 @@ public sealed partial class ChatPanel : Control
                 bytes = await http.GetByteArrayAsync(source);
                 ext = source.Contains(".jpg", StringComparison.OrdinalIgnoreCase)
                    || source.Contains(".jpeg", StringComparison.OrdinalIgnoreCase) ? ".jpg" : ".png";
+                fileTypeLabel = "Image";
             }
+
+            var prefix = fileTypeLabel.ToLowerInvariant() switch
+            {
+                "audio" => "audio",
+                "video" => "video",
+                _ when ext == ".pdf" => "document",
+                _ => "image"
+            };
 
             var picker = new FileSavePicker();
             picker.SuggestedStartLocation = PickerLocationId.Downloads;
-            picker.SuggestedFileName = $"image_{DateTimeOffset.Now.ToUnixTimeMilliseconds()}";
-            picker.FileTypeChoices.Add("Image", new[] { ext });
+            picker.SuggestedFileName = $"{prefix}_{DateTimeOffset.Now.ToUnixTimeMilliseconds()}";
+            picker.FileTypeChoices.Add(fileTypeLabel, new[] { ext });
 
             var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(GetWindow());
             WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
@@ -2387,6 +2394,29 @@ public sealed partial class ChatPanel : Control
     };
 
     /// <summary>
+    /// Guesses file extension and type label from a data URI header string (e.g. "data:audio/mpeg;base64").
+    /// </summary>
+    private static (string Extension, string TypeLabel) GuessFileTypeFromMime(string dataUriHeader)
+    {
+        // Extract MIME from "data:{mime};base64" or "data:{mime}"
+        var mime = dataUriHeader.Replace("data:", "");
+        var semiIdx = mime.IndexOf(';');
+        if (semiIdx >= 0) mime = mime[..semiIdx];
+        mime = mime.Trim().ToLowerInvariant();
+
+        var ext = GuessFileExtension(mime);
+        var label = mime switch
+        {
+            _ when mime.StartsWith("image/") => "Image",
+            _ when mime.StartsWith("audio/") => "Audio",
+            _ when mime.StartsWith("video/") => "Video",
+            "application/pdf" => "PDF",
+            _ => "File"
+        };
+        return (ext, label);
+    }
+
+    /// <summary>
     /// Cleans up the temporary media directory. Called at app startup and shutdown.
     /// </summary>
     public static void CleanupTempMedia()
@@ -2855,6 +2885,9 @@ public sealed partial class ChatPanel : Control
                 ? [.. activeTools, .. mcpTools]
                 : activeTools;
             executor = new ToolCallExecutor(executableTools);
+            // Fallback: resolve tools discovered via search_tools from McpTools at runtime
+            executor.FallbackToolResolver = name =>
+                McpTools.FirstOrDefault(t => t.Name == name);
             if (_approvalPanel is not null && _inputArea is not null)
             {
                 executor.ConfirmationHandler = async (toolName, arguments) =>

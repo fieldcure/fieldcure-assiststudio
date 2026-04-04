@@ -1816,14 +1816,17 @@
                 toolBlocks.reverse().forEach(function(tb) {
                     bubble.insertBefore(tb, bubble.firstChild);
                 });
-                // Re-insert media elements after the last tool-block
+                // Re-insert media elements after the last tool-block, preserving order
+                var mediaAnchor = bubble.querySelector('.tool-block:last-of-type');
                 mediaElements.forEach(function(el) {
-                    var lastTb = bubble.querySelector('.tool-block:last-of-type');
-                    if (lastTb && lastTb.nextSibling) {
-                        bubble.insertBefore(el, lastTb.nextSibling);
+                    if (mediaAnchor && mediaAnchor.nextSibling) {
+                        bubble.insertBefore(el, mediaAnchor.nextSibling);
+                    } else if (mediaAnchor) {
+                        mediaAnchor.parentNode.insertBefore(el, mediaAnchor.nextSibling);
                     } else {
                         bubble.insertBefore(el, bubble.firstChild);
                     }
+                    mediaAnchor = el; // next media goes after this one
                 });
                 if (thinkingBlock) {
                     bubble.insertBefore(thinkingBlock, bubble.firstChild);

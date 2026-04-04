@@ -15,4 +15,8 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.*" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="Samples\*.*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
