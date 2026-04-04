@@ -106,21 +106,20 @@ public static class TestMediaTools
     }
 
     /// <summary>
-    /// Returns a large AudioContentBlock exceeding the temp file threshold (10MB).
+    /// Returns a large MP3 AudioContentBlock exceeding the temp file threshold (10MB).
     /// Tests the data URI to temp file to file:// URI conversion path.
     /// </summary>
     [McpServerTool(Name = "test_large_media")]
-    [Description("Returns a large WAV AudioContentBlock (default 12MB) for temp file testing")]
-    public static CallToolResult TestLargeMedia(
-        [Description("Size in megabytes (default: 12)")] int sizeMb = 12)
+    [Description("Returns a 14MB MP3 audio as AudioContentBlock for temp file testing")]
+    public static CallToolResult TestLargeMedia()
     {
-        var wavBytes = SampleDataGenerator.GenerateLargeWav(sizeMb);
+        var bytes = File.ReadAllBytes(SamplePath("large_sample.mp3"));
         return new CallToolResult
         {
             Content =
             [
-                new TextContentBlock { Text = $"Generated a {sizeMb}MB WAV file for large media testing." },
-                AudioContentBlock.FromBytes(new ReadOnlyMemory<byte>(wavBytes), "audio/wav")
+                new TextContentBlock { Text = $"Large MP3 audio ({bytes.Length / 1024}KB)." },
+                AudioContentBlock.FromBytes(new ReadOnlyMemory<byte>(bytes), "audio/mpeg")
             ]
         };
     }

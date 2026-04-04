@@ -270,6 +270,3 @@ SigningSettings.props
 
 # todo
 todo/
-
-# Test sample media files (binary, local only)
-tests/TestMcpServer/Samples/
