@@ -784,4 +784,29 @@ public static class AppSettings
     }
 
     #endregion
+
+    #region Specialist Settings
+
+    /// <summary>
+    /// Gets or sets whether the Web Search Specialist is enabled.
+    /// When enabled, the routing guideline is injected into the system prompt
+    /// and delegate_task calls with specialist="web_search_specialist" are auto-approved.
+    /// </summary>
+    public static bool WebSearchSpecialistEnabled
+    {
+        get => Settings.Values["WebSearchSpecialistEnabled"] is not false;
+        set => Settings.Values["WebSearchSpecialistEnabled"] = value;
+    }
+
+    /// <summary>
+    /// Gets or sets the provider preset name for specialist execution.
+    /// Null = fall back to delegate_task's preset_name or parent conversation preset.
+    /// </summary>
+    public static string? WebSearchSpecialistPreset
+    {
+        get => Settings.Values["WebSearchSpecialistPreset"] as string;
+        set => Settings.Values["WebSearchSpecialistPreset"] = value;
+    }
+
+    #endregion
 }

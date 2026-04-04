@@ -335,6 +335,12 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         // Wire send-time tool resolution (auto-connect + connection filtering)
         panel.PrepareToolsForSendAsync = PrepareToolsForSendAsync;
 
+        // Wire specialist callbacks for auto-approve and UI labeling
+        panel.IsRegisteredSpecialist = name =>
+            Specialists.SpecialistRegistry.Instance.TryGet(name, out _);
+        panel.SpecialistDisplayNameResolver = name =>
+            Specialists.SpecialistRegistry.Instance.TryGet(name, out var s) ? s.DisplayName : null;
+
         // Flush branch messages first (tree-only, not active path)
         foreach (var (role, content, providerName, modelId, id, parentId, toolCalls, toolCallId) in _pendingBranchMessages)
         {
@@ -611,6 +617,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         profile.ToolSettingsChanged += OnProfileToolSettingsChanged;
 
         SystemPrompt = profile.SystemPrompt;
+        AppendSpecialistGuideline(profile);
 
         // Update workspace capability: profile decides if filesystem is enabled
         var filesystemServerId = $"builtin_{BuiltInServerHelper.FilesystemKey}";
@@ -663,6 +670,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 
         // Sync system prompt from profile
         SystemPrompt = profile.SystemPrompt;
+        AppendSpecialistGuideline(profile);
 
         ResolveTools(profile);
 
@@ -1312,6 +1320,26 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 
     #endregion
 
+    #region Specialist Helpers
+
+    /// <summary>
+    /// Appends the specialist routing guideline to the system prompt
+    /// if the profile has Essentials enabled and the specialist setting is on.
+    /// </summary>
+    private void AppendSpecialistGuideline(FieldCure.AssistStudio.Models.Profile profile)
+    {
+        if (!AppSettings.WebSearchSpecialistEnabled)
+            return;
+
+        var essentialsId = $"builtin_{BuiltInServerHelper.EssentialsKey}";
+        if (!profile.EnabledServers.Contains(essentialsId))
+            return;
+
+        SystemPrompt += "\n\n" + Specialists.WebSearchSpecialist.RoutingGuideline;
+    }
+
+    #endregion
+
     #region Sub-Agent Helpers
 
     /// <summary>
@@ -1326,7 +1354,9 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                 ResolveProviderByName,
                 ResolveToolsForSubAgentAsync,
                 SelectedPreset?.Name ?? "Default"),
-            () => _cachedKbId);
+            () => _cachedKbId,
+            Specialists.SpecialistRegistry.Instance,
+            () => AppSettings.WebSearchSpecialistPreset);
     }
 
     /// <summary>

@@ -29,6 +29,8 @@ public sealed class AgentLoop : IAgentLoop
         string? errorMessage = null;
         var roundsExecuted = 0;
 
+        var forceFinish = false;
+
         try
         {
             System.Diagnostics.Debug.WriteLine(
@@ -40,24 +42,51 @@ public sealed class AgentLoop : IAgentLoop
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
+                // Level B context guard: check accumulated content size before LLM call.
+                // Measured AFTER tool results are added (previous round), BEFORE next LLM call.
+                var systemPromptForRound = context.SystemPrompt;
+                var toolsForRound = toolList;
+
+                if (context.MaxContextChars > 0)
+                {
+                    var totalChars = (context.SystemPrompt?.Length ?? 0)
+                        + messages.Sum(m => m.Content?.Length ?? 0);
+
+                    if (totalChars > context.MaxContextChars * 0.8)
+                    {
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[AgentLoop] Context limit reached: {totalChars:N0} chars "
+                            + $"(threshold: {context.MaxContextChars * 0.8:N0}). Forcing summary.");
+
+                        forceFinish = true;
+                        // Inject summarization instruction (ephemeral — not stored in messages)
+                        systemPromptForRound = context.SystemPrompt
+                            + "\n\n[URGENT] Context limit approaching. "
+                            + "Summarize your findings now and write your final report. "
+                            + "Do not make any more tool calls.";
+                        // Remove tools so LLM can only produce text
+                        toolsForRound = null;
+                    }
+                }
+
                 var request = new AiRequest
                 {
                     Messages = messages,
-                    SystemPrompt = context.SystemPrompt,
+                    SystemPrompt = systemPromptForRound,
                     Temperature = context.Temperature ?? 0.7,
                     MaxTokens = context.MaxTokens ?? 4096,
-                    Tools = toolList,
+                    Tools = toolsForRound,
                 };
 
                 System.Diagnostics.Debug.WriteLine(
                     $"[AgentLoop] Round {round}: messages={messages.Count}, "
                     + $"totalContentChars={messages.Sum(m => m.Content?.Length ?? 0)}, "
-                    + $"tools={toolList?.Count ?? 0}");
+                    + $"tools={toolsForRound?.Count ?? 0}{(forceFinish ? " (FORCE FINISH)" : "")}");
 
                 var response = await context.Provider.CompleteAsync(request, cancellationToken);
 
-                // No tool calls → task complete
-                if (!response.HasToolCalls)
+                // No tool calls or forced finish → task complete
+                if (!response.HasToolCalls || forceFinish)
                 {
                     lastSummary = response.Content?.Trim();
                     status = AgentLoopStatus.Completed;

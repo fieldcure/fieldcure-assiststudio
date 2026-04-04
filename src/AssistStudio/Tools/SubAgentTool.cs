@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AssistStudio.Specialists;
 using FieldCure.Ai.Execution;
 using FieldCure.Ai.Execution.Models;
 using FieldCure.Ai.Providers.Models;
@@ -9,6 +10,8 @@ namespace AssistStudio.Tools;
 /// Tool that delegates a task to an isolated sub-agent.
 /// The sub-agent runs in a separate LLM session with its own tools
 /// and returns a report to the parent conversation.
+/// When <c>specialist</c> is specified and registered in <see cref="SpecialistRegistry"/>,
+/// the call is auto-approved and uses the specialist's predefined configuration.
 /// </summary>
 public sealed class SubAgentTool : IAssistTool
 {
@@ -16,6 +19,8 @@ public sealed class SubAgentTool : IAssistTool
 
     private readonly ISubAgentExecutor _executor;
     private readonly Func<string?> _kbIdProvider;
+    private readonly SpecialistRegistry _registry;
+    private readonly Func<string?> _specialistPresetProvider;
 
     #endregion
 
@@ -29,10 +34,21 @@ public sealed class SubAgentTool : IAssistTool
     /// Returns the current conversation's Knowledge Archive folder (kb_id),
     /// or <c>null</c> if no KB is selected.
     /// </param>
-    public SubAgentTool(ISubAgentExecutor executor, Func<string?> kbIdProvider)
+    /// <param name="registry">Registry of built-in specialists for auto-approve lookup.</param>
+    /// <param name="specialistPresetProvider">
+    /// Returns the preferred provider preset for specialist execution,
+    /// or <c>null</c> to fall back to the delegate_task preset_name or parent preset.
+    /// </param>
+    public SubAgentTool(
+        ISubAgentExecutor executor,
+        Func<string?> kbIdProvider,
+        SpecialistRegistry registry,
+        Func<string?> specialistPresetProvider)
     {
         _executor = executor;
         _kbIdProvider = kbIdProvider;
+        _registry = registry;
+        _specialistPresetProvider = specialistPresetProvider;
     }
 
     #endregion
@@ -50,7 +66,7 @@ public sealed class SubAgentTool : IAssistTool
         "Delegate a task to an independent sub-agent that runs in an isolated context. " +
         "Use this when a task requires multiple tool calls (research, data processing, " +
         "file exploration, etc.). The sub-agent executes autonomously and returns a report. " +
-        "Specify which MCP servers and tools the sub-agent needs.";
+        "Specify which MCP servers and tools the sub-agent needs, or use a built-in specialist.";
 
     /// <inheritdoc/>
     public string ParameterSchema => """
@@ -60,6 +76,10 @@ public sealed class SubAgentTool : IAssistTool
             "prompt": {
               "type": "string",
               "description": "Task description for the sub-agent. Be specific about what to do and what to report."
+            },
+            "specialist": {
+              "type": "string",
+              "description": "Built-in specialist name (e.g. 'web_search_specialist'). When set, uses specialist's predefined config (prompt, tools, timeout). Other params except prompt are ignored."
             },
             "preset_name": {
               "type": "string",
@@ -104,6 +124,30 @@ public sealed class SubAgentTool : IAssistTool
         var presetName = parameters.TryGetProperty("preset_name", out var pn)
             ? pn.GetString() : null;
 
+        // Specialist path: auto-approved, uses specialist's predefined config
+        var specialistName = parameters.TryGetProperty("specialist", out var sp)
+            ? sp.GetString() : null;
+
+        if (specialistName is not null && _registry.TryGet(specialistName, out var specialist))
+        {
+            var contextHints = BuildContextHints(specialist.FallbackServers, specialist.AllowedTools);
+
+            var request = new SubAgentRequest
+            {
+                Prompt = specialist.BuildSystemPrompt(prompt, contextHints),
+                PresetName = _specialistPresetProvider() ?? presetName,
+                McpServers = specialist.FallbackServers.ToList(),
+                AllowedTools = specialist.AllowedTools.ToList(),
+                MaxRounds = specialist.MaxRounds,
+                Timeout = specialist.Timeout,
+                ContextHints = contextHints,
+            };
+
+            var result = await _executor.ExecuteAsync(request, ct);
+            return FormatResult(result);
+        }
+
+        // Standard sub-agent path: existing logic unchanged
         var mcpServers = ParseStringArray(parameters, "mcp_servers");
         var allowedTools = ParseStringArray(parameters, "allowed_tools");
 
@@ -117,9 +161,9 @@ public sealed class SubAgentTool : IAssistTool
             ? ri.GetString() : null;
 
         // Auto-propagate ContextHints
-        var contextHints = BuildContextHints(mcpServers, allowedTools);
+        var standardContextHints = BuildContextHints(mcpServers, allowedTools);
 
-        var request = new SubAgentRequest
+        var standardRequest = new SubAgentRequest
         {
             Prompt = prompt,
             PresetName = presetName,
@@ -128,12 +172,11 @@ public sealed class SubAgentTool : IAssistTool
             MaxRounds = maxRounds,
             Timeout = TimeSpan.FromSeconds(timeoutSeconds),
             ReportInstruction = reportInstruction,
-            ContextHints = contextHints,
+            ContextHints = standardContextHints,
         };
 
-        var result = await _executor.ExecuteAsync(request, ct);
-
-        return FormatResult(result);
+        var standardResult = await _executor.ExecuteAsync(standardRequest, ct);
+        return FormatResult(standardResult);
     }
 
     #endregion

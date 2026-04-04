@@ -685,6 +685,19 @@ public sealed partial class ChatPanel : Control
     public Func<IReadOnlyList<IAssistTool>, Task<IReadOnlyList<IAssistTool>>>? PrepareToolsForSendAsync { get; set; }
 
     /// <summary>
+    /// Validates whether a specialist name is registered and eligible for auto-approval.
+    /// Injected by the host to connect ChatPanel (Controls) to SpecialistRegistry (App)
+    /// without circular project references.
+    /// </summary>
+    public Func<string, bool>? IsRegisteredSpecialist { get; set; }
+
+    /// <summary>
+    /// Resolves a specialist name to its display name for UI labeling.
+    /// Returns null if the specialist is not found.
+    /// </summary>
+    public Func<string, string?>? SpecialistDisplayNameResolver { get; set; }
+
+    /// <summary>
     /// Gets or sets the font family name for chat message rendering.
     /// </summary>
     public new string? FontFamily
@@ -2416,6 +2429,82 @@ public sealed partial class ChatPanel : Control
         return "fetch_url";
     }
 
+    /// <summary>
+    /// Checks if a delegate_task call targets a registered specialist.
+    /// Only returns true if the specialist name is validated by
+    /// <see cref="IsRegisteredSpecialist"/>, preventing AI from bypassing
+    /// approval by injecting arbitrary specialist names.
+    /// </summary>
+    private bool IsRegisteredSpecialistCall(string argumentsJson)
+    {
+        var name = GetSpecialistName(argumentsJson);
+        return name is not null && IsRegisteredSpecialist?.Invoke(name) == true;
+    }
+
+    /// <summary>
+    /// Checks if a delegate_task call has a specialist field (for UI labeling).
+    /// </summary>
+    private static string? GetSpecialistName(string argumentsJson)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(argumentsJson);
+            if (doc.RootElement.TryGetProperty("specialist", out var sp))
+                return sp.GetString();
+        }
+        catch { /* fall through */ }
+        return null;
+    }
+
+    /// <summary>
+    /// Gets the display name for a specialist, or null if not found.
+    /// </summary>
+    private string? GetSpecialistDisplayName(string specialistName)
+        => SpecialistDisplayNameResolver?.Invoke(specialistName);
+
+    private string FormatSpecialistLabel(string argumentsJson, string resultJson)
+    {
+        var specialistName = GetSpecialistName(argumentsJson);
+        var displayName = specialistName is not null
+            ? GetSpecialistDisplayName(specialistName) ?? "Specialist"
+            : "Specialist";
+
+        var promptSnippet = displayName;
+        var statusIcon = "\u2713"; // ✓ default
+
+        try
+        {
+            using var argsDoc = System.Text.Json.JsonDocument.Parse(argumentsJson);
+            if (argsDoc.RootElement.TryGetProperty("prompt", out var promptProp))
+            {
+                var prompt = promptProp.GetString() ?? "";
+                promptSnippet = prompt.Length > 40
+                    ? $"\uD83D\uDD0D {displayName}: {prompt[..40]}\u2026"
+                    : $"\uD83D\uDD0D {displayName}: {prompt}";
+            }
+        }
+        catch { /* fall through */ }
+
+        try
+        {
+            using var resultDoc = System.Text.Json.JsonDocument.Parse(resultJson);
+            if (resultDoc.RootElement.TryGetProperty("status", out var statusProp))
+            {
+                statusIcon = statusProp.GetString() switch
+                {
+                    "completed" => "\u2713",           // ✓
+                    "failed" => "\u2717",               // ✗
+                    "timed_out" => "\u23F1",            // ⏱
+                    "max_rounds_reached" => "\u26A0",   // ⚠
+                    _ => "\u2713",
+                };
+            }
+        }
+        catch { /* fall through */ }
+
+        return $"{promptSnippet} {statusIcon}";
+    }
+
     private static string FormatSubAgentLabel(string argumentsJson, string resultJson)
     {
         // Extract prompt (truncated) and status from sub-agent call
@@ -2690,6 +2779,13 @@ public sealed partial class ChatPanel : Control
             {
                 executor.ConfirmationHandler = async (toolName, arguments) =>
                 {
+                    // Auto-approve specialist calls — validated against SpecialistRegistry
+                    if (toolName == "delegate_task" && IsRegisteredSpecialistCall(arguments))
+                    {
+                        DiagnosticLogger.LogInfo($"[Tool] Specialist auto-approved: {toolName}");
+                        return (true, null);
+                    }
+
                     DiagnosticLogger.LogInfo($"[Tool] Approval requested: {toolName}");
                     _approvalPanel.ToolName = toolName;
                     _approvalPanel.ToolDisplayName = GetLocalizedToolName(toolName);
@@ -2892,7 +2988,10 @@ public sealed partial class ChatPanel : Control
                     _messages.Add(toolResultMsg);
 
                     assistantMessage.Content += $"[Tool: {call.FunctionName}]\n";
-                    await _renderer.AppendToolBlockAsync(assistantMessage.Id, FormatSubAgentLabel(call.Arguments, toolResult));
+                    var subAgentLabel = GetSpecialistName(call.Arguments) is not null
+                        ? FormatSpecialistLabel(call.Arguments, toolResult)
+                        : FormatSubAgentLabel(call.Arguments, toolResult);
+                    await _renderer.AppendToolBlockAsync(assistantMessage.Id, subAgentLabel);
 
                     if (execResult.ImageDataUris is { Count: > 0 } imageUris)
                     {

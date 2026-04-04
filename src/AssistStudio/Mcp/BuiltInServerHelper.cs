@@ -90,6 +90,7 @@ public static class BuiltInServerHelper
         "list_tasks", "get_execution_status", "get_task_history",
         // Essentials
         "get_environment", "run_javascript", "http_request",
+        "web_search", "web_fetch",
         "remember", "forget", "list_memories",
     ];
 
