@@ -19,6 +19,17 @@ namespace FieldCure.AssistStudio.Controls.Rendering;
 /// </summary>
 internal partial class WebViewChatRenderer
 {
+    #region Constants
+
+    /// <summary>
+    /// Root directory for temporary media files (large audio/video from tool results).
+    /// </summary>
+    internal static readonly string TempRoot = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "FieldCure", "AssistStudio", "temp");
+
+    #endregion
+
     #region Fields
 
     /// <summary>
@@ -30,6 +41,16 @@ internal partial class WebViewChatRenderer
     /// Task completion source used to await the initial navigation completion.
     /// </summary>
     private TaskCompletionSource? _navigationTcs;
+
+    #endregion
+
+    #region Properties
+
+    /// <summary>
+    /// Gets or sets the workspace folder paths for the current conversation.
+    /// Used by <see cref="IsAllowedFilePath"/> to permit file:// navigation within workspace directories.
+    /// </summary>
+    internal IReadOnlyList<string>? WorkspaceFolders { get; set; }
 
     #endregion
 
@@ -220,14 +241,19 @@ internal partial class WebViewChatRenderer
     }
 
     /// <summary>
-    /// Appends an image to an assistant message, rendered below the most recent tool block.
-    /// Used for MCP <c>ImageContentBlock</c> results.
+    /// Appends media content to an assistant message, rendered below the most recent tool block.
+    /// Dispatches to the appropriate JS renderer based on the media kind (image, audio, video, download).
     /// </summary>
-    /// <param name="id">The assistant message identifier.</param>
-    /// <param name="dataUri">A data URI string (e.g. <c>data:image/png;base64,...</c>).</param>
-    public Task AppendToolImageAsync(string id, string dataUri)
+    public Task AppendToolMediaAsync(string id, MediaContent media)
     {
-        var script = $"window.assistChat.appendToolImage({Js(id)}, {Js(dataUri)})";
+        var kindStr = media.Kind switch
+        {
+            MediaContentKind.Image => "image",
+            MediaContentKind.Audio => "audio",
+            MediaContentKind.Video => "video",
+            _ => "download"
+        };
+        var script = $"window.assistChat.appendToolMedia({Js(id)}, {Js(media.MediaUri)}, {Js(kindStr)}, {Js(media.MimeType)})";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 
@@ -372,6 +398,7 @@ internal partial class WebViewChatRenderer
     /// <summary>
     /// Intercepts navigation attempts and opens external URLs in the default browser.
     /// Allows only the initial about:blank and NavigateToString loads.
+    /// File URIs are opened in the default app if they are within allowed directories.
     /// </summary>
     private void OnNavigationStarting(CoreWebView2 sender, CoreWebView2NavigationStartingEventArgs args)
     {
@@ -389,11 +416,23 @@ internal partial class WebViewChatRenderer
         // such as [Source](filename.md) rendered by marked.js)
         args.Cancel = true;
 
-        // Only open proper web URLs in the default browser; silently ignore local/relative paths
         if (uri.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
             uri.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
         {
             OpenInDefaultBrowser(uri);
+        }
+        else if (uri.StartsWith("file:///", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var localPath = new Uri(uri).LocalPath;
+                if (IsAllowedFilePath(localPath))
+                    OpenInDefaultApp(localPath);
+            }
+            catch (UriFormatException)
+            {
+                // Malformed file URI — silently ignore
+            }
         }
     }
 
@@ -480,6 +519,8 @@ internal partial class WebViewChatRenderer
                 ImageCopyRequested?.Invoke(this, message["copyImageUrl:".Length..]);
             else if (message?.StartsWith("copyImage:") == true)
                 ImageCopyRequested?.Invoke(this, message["copyImage:".Length..]);
+            else if (message?.StartsWith("saveMedia:") == true)
+                ImageSaveRequested?.Invoke(this, message["saveMedia:".Length..]);
         }
         catch (Exception ex)
         {
@@ -504,6 +545,52 @@ internal partial class WebViewChatRenderer
         {
             DiagnosticLogger.LogException(ex);
         }
+    }
+
+    /// <summary>
+    /// Opens a local file in the OS default application via shell execution.
+    /// </summary>
+    private static void OpenInDefaultApp(string filePath)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(filePath) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            DiagnosticLogger.LogException(ex);
+        }
+    }
+
+    /// <summary>
+    /// Checks whether the given local file path is within allowed directories
+    /// (temp root or workspace folders). Normalizes the path to prevent traversal attacks.
+    /// </summary>
+    private bool IsAllowedFilePath(string localPath)
+    {
+        try
+        {
+            var normalized = Path.GetFullPath(localPath);
+
+            if (normalized.StartsWith(TempRoot, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (WorkspaceFolders is { } folders)
+            {
+                foreach (var root in folders)
+                {
+                    var normalizedRoot = Path.GetFullPath(root);
+                    if (normalized.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
+                        return true;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            DiagnosticLogger.LogWarning($"[Link] Failed to validate file path: {ex.Message}");
+        }
+
+        return false;
     }
 
     /// <summary>

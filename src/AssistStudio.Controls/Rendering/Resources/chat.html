@@ -303,6 +303,54 @@
         opacity: 0;
     }
 
+    /* ===== Tool Result Audio ===== */
+    .tool-result-audio {
+        width: 100%;
+        max-width: 400px;
+        margin: 8px 0;
+        border-radius: 8px;
+    }
+
+    /* ===== Tool Result Video ===== */
+    .tool-result-video {
+        width: 100%;
+        max-width: 560px;
+        margin: 8px 0;
+        border-radius: 8px;
+        background: #000;
+    }
+    .tool-result-video-fallback {
+        font-size: 12px;
+        color: var(--timestamp-color);
+        margin: 4px 0 8px 0;
+    }
+    .tool-result-video-fallback a {
+        color: var(--link-color, #58a6ff);
+    }
+
+    /* ===== Tool Result Download ===== */
+    .tool-result-download {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 12px;
+        margin: 4px 0 8px 0;
+        border-radius: 6px;
+        border: 1px solid var(--border-color);
+        background: var(--bg-secondary, var(--bg-primary));
+        color: var(--text-primary);
+        font-size: 13px;
+        text-decoration: none;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+    .tool-result-download:hover {
+        background: var(--bg-tertiary, var(--border-color));
+    }
+    .tool-result-download-icon {
+        font-size: 16px;
+    }
+
     /* ===== Search Result Block ===== */
     /* Collapsed: identical to .tool-block + .tool-header. Expanded: shows hit list below. */
     .search-result-block details > summary {
@@ -949,6 +997,22 @@
         });
     }
 
+    // ===== Media Helpers =====
+
+    function guessExtension(mimeType) {
+        if (!mimeType) return '';
+        var map = {
+            'image/png': '.png', 'image/jpeg': '.jpg', 'image/gif': '.gif',
+            'image/webp': '.webp', 'image/svg+xml': '.svg',
+            'audio/wav': '.wav', 'audio/mp3': '.mp3', 'audio/mpeg': '.mp3',
+            'audio/ogg': '.ogg', 'audio/webm': '.webm',
+            'video/mp4': '.mp4', 'video/webm': '.webm', 'video/ogg': '.ogv',
+            'application/pdf': '.pdf', 'application/zip': '.zip',
+            'application/json': '.json', 'text/plain': '.txt'
+        };
+        return map[mimeType.toLowerCase()] || '';
+    }
+
     // ===== Image Toolbar & Modal =====
 
     function wrapImageWithToolbar(img) {
@@ -1592,28 +1656,77 @@
             doScroll('instant');
         },
 
-        appendToolImage: function(id, dataUri) {
+        appendToolMedia: function(id, mediaUri, kind, mimeType) {
             var msg = document.getElementById('msg-' + id);
             if (!msg) return;
             var bubble = msg.querySelector('.message-bubble');
             if (!bubble) return;
-            var img = document.createElement('img');
-            img.className = 'tool-result-image';
-            img.src = dataUri;
-            img.alt = 'Tool result image';
-            wrapImageWithToolbar(img);
-            var wrapper = img.parentElement;
+
+            var element;
+            if (kind === 'image') {
+                var img = document.createElement('img');
+                img.className = 'tool-result-image';
+                img.src = mediaUri;
+                img.alt = 'Tool result image';
+                wrapImageWithToolbar(img);
+                element = img.parentElement;
+            } else if (kind === 'audio') {
+                var audio = document.createElement('audio');
+                audio.className = 'tool-result-audio';
+                audio.controls = true;
+                audio.src = mediaUri;
+                audio.preload = 'metadata';
+                element = audio;
+            } else if (kind === 'video') {
+                var container = document.createElement('div');
+                var video = document.createElement('video');
+                video.className = 'tool-result-video';
+                video.controls = true;
+                video.src = mediaUri;
+                video.preload = 'metadata';
+                container.appendChild(video);
+                // Fallback message for unsupported codecs
+                var fallback = document.createElement('div');
+                fallback.className = 'tool-result-video-fallback';
+                fallback.style.display = 'none';
+                fallback.innerHTML = 'Unable to play this format. <a href="#" onclick="window.chrome.webview.postMessage(\'saveMedia:\' + this.dataset.uri); return false;" data-uri="' + mediaUri.replace(/"/g, '&quot;') + '">Download</a>';
+                container.appendChild(fallback);
+                video.addEventListener('error', function() {
+                    fallback.style.display = 'block';
+                    video.style.display = 'none';
+                });
+                element = container;
+            } else {
+                // Download link
+                var ext = guessExtension(mimeType);
+                var link = document.createElement('a');
+                link.className = 'tool-result-download';
+                link.href = '#';
+                link.onclick = function(e) {
+                    e.preventDefault();
+                    window.chrome.webview.postMessage('saveMedia:' + mediaUri);
+                };
+                var icon = document.createElement('span');
+                icon.className = 'tool-result-download-icon';
+                icon.textContent = '\uD83D\uDCCE';
+                link.appendChild(icon);
+                var label = document.createElement('span');
+                label.textContent = 'Download' + (ext ? ' (' + ext + ')' : '');
+                link.appendChild(label);
+                element = link;
+            }
+
             // Insert after the last tool-block, before .content
             var toolBlocks = bubble.querySelectorAll('.tool-block');
             var lastToolBlock = toolBlocks.length > 0 ? toolBlocks[toolBlocks.length - 1] : null;
             if (lastToolBlock && lastToolBlock.nextSibling) {
-                bubble.insertBefore(wrapper, lastToolBlock.nextSibling);
+                bubble.insertBefore(element, lastToolBlock.nextSibling);
             } else {
                 var contentSpan = bubble.querySelector('.content');
                 if (contentSpan) {
-                    bubble.insertBefore(wrapper, contentSpan);
+                    bubble.insertBefore(element, contentSpan);
                 } else {
-                    bubble.appendChild(wrapper);
+                    bubble.appendChild(element);
                 }
             }
             doScroll('instant');
@@ -1685,25 +1798,31 @@
             if (bubble) {
                 bubble.classList.remove('streaming');
                 bubble.classList.add('rendered');
-                // Preserve thinking, tool blocks, and image wrappers before markdown re-render
+                // Preserve thinking, tool blocks, and media elements before markdown re-render
                 var thinkingBlock = bubble.querySelector('.thinking-block');
                 var toolBlocks = Array.from(bubble.querySelectorAll('.tool-block'));
-                var imageWrappers = Array.from(bubble.querySelectorAll('.image-wrapper'));
+                var mediaElements = Array.from(bubble.querySelectorAll(
+                    '.image-wrapper, .tool-result-audio, .tool-result-video, .tool-result-download'
+                )).map(function(el) {
+                    // For video, the parent container holds both video and fallback
+                    return (el.classList.contains('tool-result-video') && el.parentElement !== bubble)
+                        ? el.parentElement : el;
+                });
                 // Strip [Tool: ...] markers from content before markdown rendering
                 var cleanText = fullText.replace(/\[Tool:\s*[^\]]*\]\n?/g, '\n');
                 cleanText = cleanText.replace(/\[source\]\(([^)]+)\)/gi, '(Source: $1)');
                 bubble.innerHTML = renderMarkdown(cleanText);
-                // Re-insert tool blocks and their image wrappers at the top (in original order)
+                // Re-insert tool blocks at the top (in original order)
                 toolBlocks.reverse().forEach(function(tb) {
                     bubble.insertBefore(tb, bubble.firstChild);
                 });
-                imageWrappers.forEach(function(w) {
-                    // Insert after the last tool-block
+                // Re-insert media elements after the last tool-block
+                mediaElements.forEach(function(el) {
                     var lastTb = bubble.querySelector('.tool-block:last-of-type');
                     if (lastTb && lastTb.nextSibling) {
-                        bubble.insertBefore(w, lastTb.nextSibling);
+                        bubble.insertBefore(el, lastTb.nextSibling);
                     } else {
-                        bubble.insertBefore(w, bubble.firstChild);
+                        bubble.insertBefore(el, bubble.firstChild);
                     }
                 });
                 if (thinkingBlock) {

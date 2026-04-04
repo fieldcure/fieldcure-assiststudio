@@ -363,6 +363,9 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
         return ExtractTextResult(result);
     }
 
+    /// <summary>
+    /// Invokes an MCP tool and extracts both text and media content from the result.
+    /// </summary>
     private static async Task<ToolExecutionResult> InvokeMcpToolAsync(
         McpClientTool mcpTool,
         JsonElement arguments,
@@ -371,8 +374,8 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
         var argsDict = ConvertJsonArguments(arguments);
         var result = await mcpTool.CallAsync(argsDict, cancellationToken: ct);
         var text = ExtractTextResult(result);
-        var images = ExtractImageDataUris(result);
-        return new ToolExecutionResult(text, images);
+        var media = ExtractMediaContents(result);
+        return new ToolExecutionResult(text, media);
     }
 
     private static Dictionary<string, object?> ConvertJsonArguments(JsonElement arguments)
@@ -401,25 +404,130 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
     }
 
     /// <summary>
-    /// Extracts image content blocks from an MCP tool result and converts them to data URIs.
+    /// Extracts media content from an MCP tool result.
+    /// Handles ImageContentBlock, AudioContentBlock, and EmbeddedResourceBlock.
     /// </summary>
-    private static IReadOnlyList<string>? ExtractImageDataUris(ModelContextProtocol.Protocol.CallToolResult result)
+    private static IReadOnlyList<MediaContent>? ExtractMediaContents(CallToolResult result)
     {
         if (result.Content is not { Count: > 0 } content)
             return null;
 
-        List<string>? uris = null;
+        List<MediaContent>? media = null;
+
         foreach (var block in content)
         {
-            if (block is ImageContentBlock image)
+            switch (block)
             {
-                var base64 = Encoding.UTF8.GetString(image.Data.Span);
-                var dataUri = $"data:{image.MimeType};base64,{base64}";
-                uris ??= [];
-                uris.Add(dataUri);
+                // ImageContentBlock — SDK 1.2: Data is ReadOnlyMemory<byte>
+                case ImageContentBlock image:
+                {
+                    var base64 = Convert.ToBase64String(image.Data.Span);
+                    var dataUri = $"data:{image.MimeType};base64,{base64}";
+                    (media ??= []).Add(new MediaContent(dataUri, image.MimeType, MediaContentKind.Image));
+                    break;
+                }
+
+                // AudioContentBlock — SDK 1.2: Data is ReadOnlyMemory<byte>
+                case AudioContentBlock audio:
+                {
+                    var base64 = Convert.ToBase64String(audio.Data.Span);
+                    var dataUri = $"data:{audio.MimeType};base64,{base64}";
+                    (media ??= []).Add(new MediaContent(dataUri, audio.MimeType, MediaContentKind.Audio));
+                    break;
+                }
+
+                // EmbeddedResourceBlock — resource with optional blob
+                case EmbeddedResourceBlock resource:
+                {
+                    var extracted = ExtractFromResource(resource);
+                    if (extracted is not null)
+                        (media ??= []).Add(extracted);
+                    break;
+                }
             }
         }
-        return uris;
+
+        return media;
+    }
+
+    /// <summary>
+    /// Extracts media content from an EmbeddedResourceBlock.
+    /// Handles blob-included and URI-only resource forms.
+    /// </summary>
+    private static MediaContent? ExtractFromResource(EmbeddedResourceBlock resource)
+    {
+        var mimeType = resource.Resource?.MimeType;
+        if (string.IsNullOrEmpty(mimeType))
+            return null;
+
+        // Skip text resources — handled by ExtractTextResult
+        if (mimeType.StartsWith("text/", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        var kind = ClassifyMimeType(mimeType);
+
+        // Form 1: Blob included (BlobResourceContents)
+        if (resource.Resource is BlobResourceContents blobResource
+            && blobResource.Blob.Length > 0)
+        {
+            var base64 = Convert.ToBase64String(blobResource.Blob.Span);
+            var dataUri = $"data:{mimeType};base64,{base64}";
+            return new MediaContent(dataUri, mimeType, kind);
+        }
+
+        // Form 2: URI only — pass through for downstream handling
+        var uri = resource.Resource?.Uri;
+        if (uri is null)
+            return null;
+
+        if (uri.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var path = new Uri(uri).LocalPath;
+                if (File.Exists(path))
+                {
+                    var bytes = File.ReadAllBytes(path);
+                    var base64 = Convert.ToBase64String(bytes);
+                    var dataUri = $"data:{mimeType};base64,{base64}";
+                    return new MediaContent(dataUri, mimeType, kind);
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning(
+                    $"[MCP] Failed to read resource file: {ex.Message}");
+            }
+
+            return null;
+        }
+
+        // http(s):// URI — return as-is for link rendering
+        if (uri.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            uri.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            return new MediaContent(uri, mimeType, kind);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Classifies a MIME type into a rendering category.
+    /// </summary>
+    private static MediaContentKind ClassifyMimeType(string? mimeType)
+    {
+        if (string.IsNullOrEmpty(mimeType))
+            return MediaContentKind.Download;
+
+        if (mimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+            return MediaContentKind.Image;
+        if (mimeType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase))
+            return MediaContentKind.Audio;
+        if (mimeType.StartsWith("video/", StringComparison.OrdinalIgnoreCase))
+            return MediaContentKind.Video;
+
+        return MediaContentKind.Download;
     }
 
     private static object? ConvertJsonElement(JsonElement element) => element.ValueKind switch

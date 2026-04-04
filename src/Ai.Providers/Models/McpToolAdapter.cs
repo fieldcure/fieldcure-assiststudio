@@ -34,7 +34,7 @@ public class McpToolAdapter : IMultiContentTool
     /// <param name="executeFunc">
     /// Delegate that invokes the MCP tool. Receives the parsed parameters
     /// and returns a <see cref="ToolExecutionResult"/> containing the text result
-    /// and optional image data URIs.
+    /// and optional media contents.
     /// </param>
     public McpToolAdapter(
         string name,

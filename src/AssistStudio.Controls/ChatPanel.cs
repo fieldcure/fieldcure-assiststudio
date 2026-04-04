@@ -400,6 +400,7 @@ public sealed partial class ChatPanel : Control
         if (d is ChatPanel panel)
         {
             panel.UpdateFolderButtonBadge();
+            panel._renderer.WorkspaceFolders = e.NewValue as IReadOnlyList<string>;
         }
     }
 
@@ -2323,6 +2324,85 @@ public sealed partial class ChatPanel : Control
     #region Private Methods
 
     /// <summary>
+    /// Threshold in bytes for converting data URI media to temporary files.
+    /// Data URIs larger than this are saved to disk and replaced with file:// URIs.
+    /// </summary>
+    private const int LargeMediaThreshold = 10 * 1024 * 1024; // 10 MB
+
+    /// <summary>
+    /// Converts a large data URI media item to a temp file, returning a new <see cref="MediaContent"/>
+    /// with a file:// URI. Returns the original if below the threshold or not a data URI.
+    /// </summary>
+    private static MediaContent ConvertLargeMediaToTempFile(MediaContent media)
+    {
+        if (!media.MediaUri.StartsWith("data:", StringComparison.Ordinal))
+            return media;
+
+        var commaIdx = media.MediaUri.IndexOf(',');
+        if (commaIdx < 0)
+            return media;
+
+        var base64Part = media.MediaUri[(commaIdx + 1)..];
+        // Approximate decoded size: base64 is ~4/3 of original
+        var estimatedBytes = (long)base64Part.Length * 3 / 4;
+        if (estimatedBytes < LargeMediaThreshold)
+            return media;
+
+        try
+        {
+            Directory.CreateDirectory(WebViewChatRenderer.TempRoot);
+            var ext = GuessFileExtension(media.MimeType);
+            var tempPath = Path.Combine(WebViewChatRenderer.TempRoot, $"{Guid.NewGuid()}{ext}");
+            var bytes = Convert.FromBase64String(base64Part);
+            File.WriteAllBytes(tempPath, bytes);
+            var fileUri = new Uri(tempPath).AbsoluteUri;
+            return new MediaContent(fileUri, media.MimeType, media.Kind);
+        }
+        catch (Exception ex)
+        {
+            DiagnosticLogger.LogWarning($"[Media] Failed to write temp file: {ex.Message}");
+            return media;
+        }
+    }
+
+    /// <summary>
+    /// Guesses a file extension from a MIME type for temp file creation.
+    /// </summary>
+    private static string GuessFileExtension(string mimeType) => mimeType.ToLowerInvariant() switch
+    {
+        "image/png" => ".png",
+        "image/jpeg" => ".jpg",
+        "image/gif" => ".gif",
+        "image/webp" => ".webp",
+        "image/svg+xml" => ".svg",
+        "audio/wav" => ".wav",
+        "audio/mp3" or "audio/mpeg" => ".mp3",
+        "audio/ogg" => ".ogg",
+        "audio/webm" => ".webm",
+        "video/mp4" => ".mp4",
+        "video/webm" => ".webm",
+        "video/ogg" => ".ogv",
+        "application/pdf" => ".pdf",
+        _ => ".bin"
+    };
+
+    /// <summary>
+    /// Cleans up the temporary media directory. Called at app startup and shutdown.
+    /// </summary>
+    public static void CleanupTempMedia()
+    {
+        try
+        {
+            if (Directory.Exists(WebViewChatRenderer.TempRoot))
+                Directory.Delete(WebViewChatRenderer.TempRoot, recursive: true);
+        }
+        catch
+        {
+            // Ignore — files may be locked or already deleted
+        }
+    }
+
+    /// <summary>
     /// Returns the currently active tools, filtered by the input area's enabled tool selection.
     /// Tool policy (search_tools substitution, etc.) is applied at the App layer (ResolveTools).
     /// </summary>
@@ -2895,10 +2975,11 @@ public sealed partial class ChatPanel : Control
                 else
                     await _renderer.AppendToolBlockAsync(assistantMessage.Id, call.FunctionName);
 
-                if (execResult.ImageDataUris is { Count: > 0 } imageUris)
+                if (execResult.MediaContents is { Count: > 0 } mediaItems)
                 {
-                    foreach (var dataUri in imageUris)
-                        await _renderer.AppendToolImageAsync(assistantMessage.Id, dataUri);
+                    foreach (var media in mediaItems)
+                        await _renderer.AppendToolMediaAsync(
+                            assistantMessage.Id, ConvertLargeMediaToTempFile(media));
                 }
             }
 
@@ -2993,10 +3074,10 @@ public sealed partial class ChatPanel : Control
                         : FormatSubAgentLabel(call.Arguments, toolResult);
                     await _renderer.AppendToolBlockAsync(assistantMessage.Id, subAgentLabel);
 
-                    if (execResult.ImageDataUris is { Count: > 0 } imageUris)
+                    if (execResult.MediaContents is { Count: > 0 } mediaItems)
                     {
-                        foreach (var dataUri in imageUris)
-                            await _renderer.AppendToolImageAsync(assistantMessage.Id, dataUri);
+                        foreach (var media in mediaItems)
+                            await _renderer.AppendToolMediaAsync(assistantMessage.Id, media);
                     }
                 }
             }

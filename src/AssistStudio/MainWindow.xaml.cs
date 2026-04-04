@@ -1,6 +1,7 @@
 ﻿using AssistStudio.Dialogs;
 using AssistStudio.Helpers;
 using AssistStudio.Models;
+using FieldCure.AssistStudio.Controls;
 using AssistStudio.Modules.ViewModels;
 using Microsoft.UI;
 using Microsoft.UI.Input;
@@ -660,6 +661,7 @@ public sealed partial class MainWindow : Window
         {
             _appWindow!.Hide();
             await ShutdownMcpServersAsync();
+            ChatPanel.CleanupTempMedia();
             LoggingService.LogInfo("[App] Calling Environment.Exit(0)...");
             LoggingService.LogInfo("[App] Exiting process...");
         ExitProcess(0);
@@ -699,6 +701,7 @@ public sealed partial class MainWindow : Window
 
         _appWindow!.Hide();
         await ShutdownMcpServersAsync();
+        ChatPanel.CleanupTempMedia();
         LoggingService.LogInfo("[App] Exiting process...");
         ExitProcess(0);
     }

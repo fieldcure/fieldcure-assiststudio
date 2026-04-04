@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.Windows.AppLifecycle;
 using Windows.ApplicationModel.Activation;
 using Windows.Storage;
+using FieldCure.AssistStudio.Controls;
 using FieldCure.DocumentParsers.Pdf;
 using WindowHelper = FieldCure.AssistStudio.Controls.Helpers.WindowHelper;
 
@@ -54,6 +55,9 @@ public partial class App : Application
     {
         DocumentParserFactoryExtensions.AddPdfSupport();
         ConversationManager.Initialize(ApplicationData.Current.LocalFolder.Path);
+
+        // Clean up leftover temp media from previous sessions (e.g. abnormal shutdown)
+        ChatPanel.CleanupTempMedia();
 
         var appDataPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
