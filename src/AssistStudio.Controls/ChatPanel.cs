@@ -2479,8 +2479,8 @@ public sealed partial class ChatPanel : Control
             {
                 var prompt = promptProp.GetString() ?? "";
                 promptSnippet = prompt.Length > 40
-                    ? $"\uD83D\uDD0D {displayName}: {prompt[..40]}\u2026"
-                    : $"\uD83D\uDD0D {displayName}: {prompt}";
+                    ? $"{displayName}: {prompt[..40]}\u2026"
+                    : $"{displayName}: {prompt}";
             }
         }
         catch { /* fall through */ }

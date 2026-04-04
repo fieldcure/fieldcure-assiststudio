@@ -15,6 +15,9 @@ public sealed class WebSearchSpecialist : ISpecialist
     public string DisplayName => "Web Search Specialist";
 
     /// <inheritdoc />
+    public string? Icon => null;
+
+    /// <inheritdoc />
     public IReadOnlyList<string> AllowedTools { get; } =
     [
         // Essentials built-in

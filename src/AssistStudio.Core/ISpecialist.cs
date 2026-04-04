@@ -19,6 +19,11 @@ public interface ISpecialist
     string DisplayName { get; }
 
     /// <summary>
+    /// Display icon (emoji or Segoe Fluent Icons glyph). May be null.
+    /// </summary>
+    string? Icon { get; }
+
+    /// <summary>
     /// Tool names the specialist requires. Only these tools are available.
     /// The harness resolves which servers provide them using parent conversation
     /// servers + <see cref="FallbackServers"/>.
