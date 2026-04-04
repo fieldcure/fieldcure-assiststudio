@@ -936,9 +936,8 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         _parentEnabledServers = [.. enabledServerIds];
         _cachedKbId = Panel?.KnowledgeArchiveFolder;
 
-        // Sub-Agent tool — available when at least one MCP server is enabled
-        if (effectiveServerIds.Count > 0)
-            tools.Add(GetOrCreateSubAgentTool());
+        // Sub-Agent tool — always available (works without tools for text-only tasks)
+        tools.Add(GetOrCreateSubAgentTool());
 
         RegisteredTools = tools;
 
