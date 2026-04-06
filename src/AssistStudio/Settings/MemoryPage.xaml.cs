@@ -153,7 +153,7 @@ public sealed partial class MemoryPage : Page
 
                 var deleteButton = new Button
                 {
-                    Content = new FontIcon { Glyph = "\uE711", FontSize = 12 },
+                    Content = new FontIcon { Glyph = "\uE74D", FontSize = 12 },
                     Padding = new Thickness(6),
                     MinWidth = 0,
                     MinHeight = 0,
