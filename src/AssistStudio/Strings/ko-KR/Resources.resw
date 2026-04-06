@@ -616,6 +616,21 @@
   <data name="KB_FooterHint.Text" xml:space="preserve">
     <value>지식보관소는 앱이 닫혀도 백그라운드에서 인덱싱됩니다.</value>
   </data>
+  <data name="KB_DialogName" xml:space="preserve">
+    <value>이름</value>
+  </data>
+  <data name="KB_DialogSourceFolders" xml:space="preserve">
+    <value>소스 폴더</value>
+  </data>
+  <data name="KB_DialogAddFolder" xml:space="preserve">
+    <value>폴더 추가</value>
+  </data>
+  <data name="KB_DialogEmbeddingModel" xml:space="preserve">
+    <value>임베딩 모델</value>
+  </data>
+  <data name="KB_DialogContextualizer" xml:space="preserve">
+    <value>컨텍스추얼라이저</value>
+  </data>
   <!-- Connect Page -->
   <data name="Connect_Title.Text" xml:space="preserve">
     <value>연동</value>

@@ -616,6 +616,21 @@
   <data name="KB_FooterHint.Text" xml:space="preserve">
     <value>Knowledge bases are indexed in the background, even after the app is closed.</value>
   </data>
+  <data name="KB_DialogName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="KB_DialogSourceFolders" xml:space="preserve">
+    <value>Source Folders</value>
+  </data>
+  <data name="KB_DialogAddFolder" xml:space="preserve">
+    <value>Add Folder</value>
+  </data>
+  <data name="KB_DialogEmbeddingModel" xml:space="preserve">
+    <value>Embedding Model</value>
+  </data>
+  <data name="KB_DialogContextualizer" xml:space="preserve">
+    <value>Contextualizer</value>
+  </data>
   <!-- Connect Page -->
   <data name="Connect_Title.Text" xml:space="preserve">
     <value>Connect</value>

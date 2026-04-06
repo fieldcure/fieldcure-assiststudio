@@ -74,19 +74,19 @@ public sealed partial class KnowledgeBasesPage : Page
             DefaultButton = ContentDialogButton.Primary,
         };
 
-        var panel = new StackPanel { Spacing = 12, MinWidth = 400 };
+        var panel = new StackPanel { Spacing = 12, MinWidth = 400, MaxWidth = 500 };
 
-        var nameBox = new TextBox { Header = "Name", PlaceholderText = "e.g., Project Docs" };
+        var nameBox = new TextBox { Header = _loader.GetString("KB_DialogName"), PlaceholderText = "e.g., Project Docs" };
         panel.Children.Add(nameBox);
 
         var folderPanel = new StackPanel { Spacing = 4 };
-        var folderHeader = new TextBlock { Text = "Source Folders", Opacity = 0.8 };
+        var folderHeader = new TextBlock { Text = _loader.GetString("KB_DialogSourceFolders"), Opacity = 0.8 };
         folderPanel.Children.Add(folderHeader);
 
         var folderList = new StackPanel { Spacing = 4 };
         folderPanel.Children.Add(folderList);
 
-        var addFolderButton = new Button { Content = "Add Folder" };
+        var addFolderButton = new Button { Content = _loader.GetString("KB_DialogAddFolder") };
         addFolderButton.Click += async (s, args) =>
         {
             var picker = new Windows.Storage.Pickers.FolderPicker();
@@ -100,20 +100,39 @@ public sealed partial class KnowledgeBasesPage : Page
             var folder = await picker.PickSingleFolderAsync();
             if (folder is not null)
             {
-                var item = new TextBlock
+                var row = new Grid { ColumnSpacing = 4 };
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                var label = new TextBlock
                 {
                     Text = folder.Path,
                     Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
                     TextTrimming = TextTrimming.CharacterEllipsis,
+                    VerticalAlignment = VerticalAlignment.Center,
                 };
-                folderList.Children.Add(item);
+                Grid.SetColumn(label, 0);
+                row.Children.Add(label);
+
+                var removeBtn = new Button
+                {
+                    Content = new FontIcon { Glyph = "\uE74D", FontSize = 12 },
+                    Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
+                    Padding = new Thickness(4),
+                    VerticalAlignment = VerticalAlignment.Center,
+                };
+                removeBtn.Click += (_, _) => folderList.Children.Remove(row);
+                Grid.SetColumn(removeBtn, 1);
+                row.Children.Add(removeBtn);
+
+                folderList.Children.Add(row);
             }
         };
         folderPanel.Children.Add(addFolderButton);
         panel.Children.Add(folderPanel);
 
         // Embedding model selection
-        var embeddingHeader = new TextBlock { Text = "Embedding Model", Margin = new Thickness(0, 8, 0, 0) };
+        var embeddingHeader = new TextBlock { Text = _loader.GetString("KB_DialogEmbeddingModel"), Margin = new Thickness(0, 8, 0, 0) };
         panel.Children.Add(embeddingHeader);
 
         var embeddingRadio = new RadioButtons();
@@ -123,7 +142,7 @@ public sealed partial class KnowledgeBasesPage : Page
         panel.Children.Add(embeddingRadio);
 
         // Contextualizer selection
-        var ctxHeader = new TextBlock { Text = "Contextualizer", Margin = new Thickness(0, 8, 0, 0) };
+        var ctxHeader = new TextBlock { Text = _loader.GetString("KB_DialogContextualizer"), Margin = new Thickness(0, 8, 0, 0) };
         panel.Children.Add(ctxHeader);
 
         var ctxRadio = new RadioButtons();
@@ -145,7 +164,8 @@ public sealed partial class KnowledgeBasesPage : Page
             return;
 
         var sourcePaths = folderList.Children
-            .OfType<TextBlock>()
+            .OfType<Grid>()
+            .SelectMany(g => g.Children.OfType<TextBlock>())
             .Select(t => t.Text)
             .ToList();
 

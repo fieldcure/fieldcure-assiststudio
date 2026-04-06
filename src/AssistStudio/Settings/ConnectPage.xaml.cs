@@ -506,7 +506,7 @@ public sealed partial class ConnectPage : Page
             };
         }
 
-        var panel = new StackPanel { Spacing = 12, MinWidth = 400 };
+        var panel = new StackPanel { Spacing = 12, MinWidth = 400, MaxWidth = 500 };
         panel.Children.Add(nameBox);
         panel.Children.Add(descriptionBox);
         panel.Children.Add(transportCombo);
@@ -560,7 +560,7 @@ public sealed partial class ConnectPage : Page
     private async Task ShowImportDialogAsync(IReadOnlyList<ImportSource> sources)
     {
         var serversLabel = _loader.GetString("Connect_Servers");
-        var panel = new StackPanel { Spacing = 12, MinWidth = 400 };
+        var panel = new StackPanel { Spacing = 12, MinWidth = 400, MaxWidth = 500 };
         var checkBoxes = new List<(CheckBox Check, ImportSource Source)>();
 
         foreach (var source in sources)

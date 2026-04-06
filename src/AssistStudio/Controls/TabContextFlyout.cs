@@ -169,7 +169,7 @@ internal sealed class TabContextFlyout : MenuFlyout
         if (_tab?.FilePath is null || _tab.Panel is null) return;
 
         var currentName = Path.GetFileNameWithoutExtension(_tab.FilePath);
-        var input = new TextBox { Text = currentName, SelectionStart = currentName.Length };
+        var input = new TextBox { Text = currentName, SelectionStart = currentName.Length, MaxWidth = 400 };
         var dialog = new Dialogs.ThemedContentDialog
         {
             Title = Res.GetString("TabContext_RenameDialog"),
