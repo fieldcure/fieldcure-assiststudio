@@ -284,6 +284,12 @@ Add them in Profile settings.</value>
   <data name="Folder_CancelIndexing" xml:space="preserve">
     <value>Cancel indexing</value>
   </data>
+  <data name="Folder_ArchiveNoKbs" xml:space="preserve">
+    <value>No knowledge bases. Create one in Settings.</value>
+  </data>
+  <data name="Folder_KbPlaceholder" xml:space="preserve">
+    <value>Select knowledge base</value>
+  </data>
   <data name="FolderFlyout_RemoveTooltip" xml:space="preserve">
     <value>Remove</value>
   </data>

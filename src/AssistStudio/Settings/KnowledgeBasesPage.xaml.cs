@@ -7,6 +7,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using Microsoft.UI.Xaml.Shapes;
+using IOPath = System.IO.Path;
 using Windows.ApplicationModel.Resources;
 
 namespace AssistStudio.Settings;
@@ -62,6 +63,7 @@ public sealed partial class KnowledgeBasesPage : Page
 
     /// <summary>
     /// Opens the KB creation dialog.
+    /// Folder selection comes first; name auto-generates from the first folder.
     /// </summary>
     private async void OnCreateClicked(object sender, RoutedEventArgs e)
     {
@@ -72,13 +74,13 @@ public sealed partial class KnowledgeBasesPage : Page
             PrimaryButtonText = _loader.GetString("KB_Create/Content"),
             CloseButtonText = _loader.GetString("Dialog_Cancel"),
             DefaultButton = ContentDialogButton.Primary,
+            IsPrimaryButtonEnabled = false,
         };
 
         var panel = new StackPanel { Spacing = 12, MinWidth = 400, MaxWidth = 500 };
+        var nameManuallyEdited = false;
 
-        var nameBox = new TextBox { Header = _loader.GetString("KB_DialogName"), PlaceholderText = "e.g., Project Docs" };
-        panel.Children.Add(nameBox);
-
+        // --- Source Folders (first) ---
         var folderPanel = new StackPanel { Spacing = 4 };
         var folderHeader = new TextBlock { Text = _loader.GetString("KB_DialogSourceFolders"), Opacity = 0.8 };
         folderPanel.Children.Add(folderHeader);
@@ -86,106 +88,95 @@ public sealed partial class KnowledgeBasesPage : Page
         var folderList = new StackPanel { Spacing = 4 };
         folderPanel.Children.Add(folderList);
 
+        // --- Name (auto-generated) ---
+        var nameBox = new TextBox { Header = _loader.GetString("KB_DialogName"), PlaceholderText = "e.g., Project Docs" };
+        var nameHint = new TextBlock
+        {
+            Text = _loader.GetString("KB_DialogNameHint"),
+            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+            Opacity = 0.5,
+        };
+        nameBox.TextChanged += (_, _) => { if (nameBox.FocusState != FocusState.Unfocused) nameManuallyEdited = true; };
+
+        // Warning text for folder already used in another KB
+        var folderWarning = new TextBlock
+        {
+            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+            Foreground = new SolidColorBrush(Microsoft.UI.Colors.Orange),
+            TextWrapping = TextWrapping.Wrap,
+            Visibility = Visibility.Collapsed,
+        };
+
         var addFolderButton = new Button { Content = _loader.GetString("KB_DialogAddFolder") };
         addFolderButton.Click += async (s, args) =>
         {
-            var picker = new Windows.Storage.Pickers.FolderPicker();
-            picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
-            picker.FileTypeFilter.Add("*");
+            var folder = await PickFolderAsync();
+            if (folder is null) return;
 
-            var window = (App.Current as App)?.MainWindow;
-            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
-            WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+            // Skip if already in the list
+            var currentPaths = CollectFolderPaths(folderList);
+            if (currentPaths.Any(p => string.Equals(p, folder.Path, StringComparison.OrdinalIgnoreCase)))
+                return;
 
-            var folder = await picker.PickSingleFolderAsync();
-            if (folder is not null)
+            folderList.Children.Add(BuildFolderRow(folder.Path, folderList));
+            dialog.IsPrimaryButtonEnabled = true;
+
+            // Auto-fill name from first folder if not manually edited
+            if (!nameManuallyEdited && folderList.Children.Count == 1)
+                nameBox.Text = IOPath.GetFileName(folder.Path.TrimEnd(IOPath.DirectorySeparatorChar));
+
+            // Warn if folder is used in another KB
+            var existingKbs = KnowledgeBaseStore.ListAll();
+            var otherKb = existingKbs.FirstOrDefault(k =>
+                k.SourcePaths.Any(p => string.Equals(p, folder.Path, StringComparison.OrdinalIgnoreCase)));
+            if (otherKb is not null)
             {
-                var row = new Grid { ColumnSpacing = 4 };
-                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-                var label = new TextBlock
-                {
-                    Text = folder.Path,
-                    Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-                    TextTrimming = TextTrimming.CharacterEllipsis,
-                    VerticalAlignment = VerticalAlignment.Center,
-                };
-                Grid.SetColumn(label, 0);
-                row.Children.Add(label);
-
-                var removeBtn = new Button
-                {
-                    Content = new FontIcon { Glyph = "\uE74D", FontSize = 12 },
-                    Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
-                    Padding = new Thickness(4),
-                    VerticalAlignment = VerticalAlignment.Center,
-                };
-                removeBtn.Click += (_, _) => folderList.Children.Remove(row);
-                Grid.SetColumn(removeBtn, 1);
-                row.Children.Add(removeBtn);
-
-                folderList.Children.Add(row);
+                folderWarning.Text = string.Format(_loader.GetString("KB_FolderUsedWarning"), otherKb.Name);
+                folderWarning.Visibility = Visibility.Visible;
             }
         };
         folderPanel.Children.Add(addFolderButton);
+        folderPanel.Children.Add(folderWarning);
         panel.Children.Add(folderPanel);
 
-        // Embedding model selection
-        var embeddingHeader = new TextBlock { Text = _loader.GetString("KB_DialogEmbeddingModel"), Margin = new Thickness(0, 8, 0, 0) };
-        panel.Children.Add(embeddingHeader);
+        panel.Children.Add(nameBox);
+        panel.Children.Add(nameHint);
 
-        var embeddingRadio = new RadioButtons();
-        embeddingRadio.Items.Add("Ollama — nomic-embed-text");
-        embeddingRadio.Items.Add("OpenAI — text-embedding-3-small");
-        embeddingRadio.SelectedIndex = 0;
-        panel.Children.Add(embeddingRadio);
+        // --- Model Selection ---
+        var modelSelector = new Controls.EmbeddingModelSelector();
+        modelSelector.Initialize();
+        panel.Children.Add(modelSelector);
 
-        // Contextualizer selection
-        var ctxHeader = new TextBlock { Text = _loader.GetString("KB_DialogContextualizer"), Margin = new Thickness(0, 8, 0, 0) };
-        panel.Children.Add(ctxHeader);
-
-        var ctxRadio = new RadioButtons();
-        ctxRadio.Items.Add("None");
-        ctxRadio.Items.Add("Anthropic — claude-haiku-4-5-20251001");
-        ctxRadio.Items.Add("OpenAI — gpt-4o-mini");
-        ctxRadio.Items.Add("Ollama — gemma3:4b");
-        ctxRadio.SelectedIndex = 0;
-        panel.Children.Add(ctxRadio);
-
-        dialog.Content = panel;
+        dialog.Content = new ScrollViewer
+        {
+            Content = panel,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            MaxHeight = 600,
+        };
 
         var result = await dialog.ShowAsync();
         if (result != ContentDialogResult.Primary)
             return;
 
-        var name = nameBox.Text.Trim();
-        if (string.IsNullOrEmpty(name))
-            return;
-
-        var sourcePaths = folderList.Children
-            .OfType<Grid>()
-            .SelectMany(g => g.Children.OfType<TextBlock>())
-            .Select(t => t.Text)
-            .ToList();
-
+        var sourcePaths = CollectFolderPaths(folderList);
         if (sourcePaths.Count == 0)
             return;
 
-        var embedding = ResolveEmbeddingConfig(embeddingRadio.SelectedIndex);
-        var contextualizer = ResolveContextualizerConfig(ctxRadio.SelectedIndex);
+        var name = nameBox.Text.Trim();
+        if (string.IsNullOrEmpty(name))
+            name = GenerateKbName(sourcePaths);
 
-        var kb = KnowledgeBaseStore.Create(name, sourcePaths, embedding, contextualizer);
+        var kb = KnowledgeBaseStore.Create(name, sourcePaths,
+            modelSelector.GetEmbeddingConfig(), modelSelector.GetContextualizerConfig());
         LoggingService.LogInfo($"[KB] Created: {kb.Name} ({kb.Id})");
 
-        // Start indexing
         RagProcessManager.StartExec(kb.Id);
 
-        // Ensure shared serve is running (first KB triggers dynamic start)
         var archiveService = new KnowledgeArchiveService(App.McpRegistry);
         await archiveService.EnsureConnectedAsync();
 
         RefreshList();
+        _pollTimer.Start();
     }
 
     /// <summary>
@@ -222,16 +213,180 @@ public sealed partial class KnowledgeBasesPage : Page
     }
 
     /// <summary>
-    /// Re-indexes a knowledge base.
+    /// Immediately starts incremental re-indexing (new/changed files only).
     /// </summary>
-    private void OnReindexClicked(object sender, RoutedEventArgs e)
+    private void OnQuickReindexClicked(object sender, RoutedEventArgs e)
     {
         if (sender is not Button btn || btn.Tag is not string kbId) return;
 
-        RagProcessManager.StartExec(kbId, force: true);
-        LoggingService.LogInfo($"[KB] Re-index started: {kbId}");
+        RagProcessManager.StartExec(kbId);
+        LoggingService.LogInfo($"[KB] Quick re-index started: {kbId}");
+
+        // Replace entire button panel with a spinner
+        if (btn.Parent is StackPanel buttonsPanel)
+        {
+            buttonsPanel.Children.Clear();
+            buttonsPanel.Children.Add(new ProgressRing { Width = 16, Height = 16, IsActive = true });
+        }
+
+        _pollTimer.Start();
+    }
+
+    /// <summary>
+    /// Opens the KB settings dialog for editing folders, name, and models.
+    /// Primary = Save &amp; Re-index, Secondary = Save only.
+    /// </summary>
+    private async void OnSettingsClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn || btn.Tag is not string kbId) return;
+
+        var allKbs = KnowledgeBaseStore.ListAll();
+        var kb = allKbs.FirstOrDefault(k => k.Id == kbId);
+        if (kb is null) return;
+
+        var panel = new StackPanel { Spacing = 12, MinWidth = 400, MaxWidth = 500 };
+
+        // --- Source Folders (editable) ---
+        var folderPanel = new StackPanel { Spacing = 4 };
+        var folderHeader = new TextBlock { Text = _loader.GetString("KB_DialogSourceFolders"), Opacity = 0.8 };
+        folderPanel.Children.Add(folderHeader);
+
+        var folderList = new StackPanel { Spacing = 4 };
+        foreach (var path in kb.SourcePaths)
+            folderList.Children.Add(BuildFolderRow(path, folderList));
+        folderPanel.Children.Add(folderList);
+
+        var folderWarning = new TextBlock
+        {
+            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+            Foreground = new SolidColorBrush(Microsoft.UI.Colors.Orange),
+            TextWrapping = TextWrapping.Wrap,
+            Visibility = Visibility.Collapsed,
+        };
+
+        var addFolderButton = new Button { Content = _loader.GetString("KB_DialogAddFolder") };
+        addFolderButton.Click += async (s, args) =>
+        {
+            var folder = await PickFolderAsync();
+            if (folder is null) return;
+
+            var currentPaths = CollectFolderPaths(folderList);
+            if (currentPaths.Any(p => string.Equals(p, folder.Path, StringComparison.OrdinalIgnoreCase)))
+                return;
+
+            folderList.Children.Add(BuildFolderRow(folder.Path, folderList));
+
+            var otherKb = allKbs.FirstOrDefault(k => k.Id != kbId &&
+                k.SourcePaths.Any(p => string.Equals(p, folder.Path, StringComparison.OrdinalIgnoreCase)));
+            if (otherKb is not null)
+            {
+                folderWarning.Text = string.Format(_loader.GetString("KB_FolderUsedWarning"), otherKb.Name);
+                folderWarning.Visibility = Visibility.Visible;
+            }
+        };
+        folderPanel.Children.Add(addFolderButton);
+        folderPanel.Children.Add(folderWarning);
+        panel.Children.Add(folderPanel);
+
+        // --- Name ---
+        var nameBox = new TextBox { Header = _loader.GetString("KB_DialogName"), Text = kb.Name };
+        panel.Children.Add(nameBox);
+
+        // --- Model Selection ---
+        var modelSelector = new Controls.EmbeddingModelSelector
+        {
+            CurrentEmbeddingModel = kb.Embedding.Model,
+            CurrentContextualizer = kb.Contextualizer.Model,
+        };
+        modelSelector.Initialize();
+        panel.Children.Add(modelSelector);
+
+        // Warning
+        var warning = new TextBlock
+        {
+            Text = "\u26a0\ufe0f " + _loader.GetString("KB_ReindexWarning"),
+            TextWrapping = TextWrapping.Wrap,
+            Opacity = 0.7,
+            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+        };
+        panel.Children.Add(warning);
+
+        var dialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = string.Format(_loader.GetString("KB_SettingsDialogTitle"), kb.Name),
+            PrimaryButtonText = _loader.GetString("KB_SaveAndReindex"),
+            SecondaryButtonText = _loader.GetString("KB_Save"),
+            CloseButtonText = _loader.GetString("Dialog_Cancel"),
+            DefaultButton = ContentDialogButton.Primary,
+            Content = new ScrollViewer
+            {
+                Content = panel,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                MaxHeight = 600,
+            },
+        };
+
+        var result = await dialog.ShowAsync();
+        if (result == ContentDialogResult.None)
+            return;
+
+        // Collect updated values
+        var newPaths = CollectFolderPaths(folderList);
+        if (newPaths.Count == 0) return;
+
+        var newName = nameBox.Text.Trim();
+        if (!string.IsNullOrEmpty(newName)) kb.Name = newName;
+        kb.SourcePaths = newPaths;
+        kb.Embedding = modelSelector.GetEmbeddingConfig();
+        kb.Contextualizer = modelSelector.GetContextualizerConfig();
+        KnowledgeBaseStore.Update(kb);
+        LoggingService.LogInfo($"[KB] Settings saved: {kb.Name} ({kbId})");
+
+        if (result == ContentDialogResult.Primary)
+        {
+            // Save & Re-index
+            var modelChanged = modelSelector.EmbeddingModelChanged || modelSelector.ContextualizerChanged;
+            if (modelChanged)
+            {
+                var dbPath = IOPath.Combine(KnowledgeBaseStore.GetKbPath(kbId), "rag.db");
+                try
+                {
+                    if (File.Exists(dbPath))
+                        File.Delete(dbPath);
+                }
+                catch (IOException ex)
+                {
+                    LoggingService.LogWarning($"[KB] Could not delete rag.db (in use?): {ex.Message}");
+                }
+
+                LoggingService.LogInfo($"[KB] Model changed, full re-index: {kbId}");
+                RagProcessManager.StartExec(kbId);
+            }
+            else
+            {
+                LoggingService.LogInfo($"[KB] Re-index started: {kbId}");
+                RagProcessManager.StartExec(kbId, force: true);
+            }
+
+            _pollTimer.Start();
+        }
 
         RefreshList();
+    }
+
+    /// <summary>
+    /// Cancels an in-progress indexing operation and disables the button.
+    /// </summary>
+    private void OnCancelIndexClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn || btn.Tag is not string kbId) return;
+
+        RagProcessManager.CancelExec(kbId);
+        LoggingService.LogInfo($"[KB] Indexing cancelled: {kbId}");
+
+        btn.IsEnabled = false;
+        btn.Content = new ProgressRing { Width = 14, Height = 14, IsActive = true };
     }
 
     /// <summary>
@@ -446,15 +601,40 @@ public sealed partial class KnowledgeBasesPage : Page
                 });
             }
 
-            // Row 5: Progress bar (indexing) or action buttons
+            // Row 5: Progress bar + stop (indexing) or action buttons
             if (item.IsIndexing == Visibility.Visible)
             {
-                row.Children.Add(new ProgressBar
+                var progressRow = new Grid { Margin = new Thickness(0, 6, 0, 0) };
+                progressRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                progressRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                var progressBar = new ProgressBar
                 {
                     Value = item.Progress,
                     Maximum = 100,
-                    Margin = new Thickness(0, 6, 0, 0),
+                    VerticalAlignment = VerticalAlignment.Center,
+                };
+                Grid.SetColumn(progressBar, 0);
+                progressRow.Children.Add(progressBar);
+
+                var stopBtn = new Button
+                {
+                    Tag = item.Id,
+                    Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
+                    Padding = new Thickness(6),
+                    Content = new FontIcon { Glyph = "\uE71A", FontSize = 14 },
+                    Margin = new Thickness(8, 0, 0, 0),
+                };
+                ToolTipService.SetToolTip(stopBtn, new ToolTip
+                {
+                    Content = _loader.GetString("KB_CancelIndexing") ?? "Cancel indexing",
+                    Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
                 });
+                stopBtn.Click += OnCancelIndexClicked;
+                Grid.SetColumn(stopBtn, 1);
+                progressRow.Children.Add(stopBtn);
+
+                row.Children.Add(progressRow);
             }
             else
             {
@@ -465,6 +645,21 @@ public sealed partial class KnowledgeBasesPage : Page
                     Margin = new Thickness(0, 6, 0, 0),
                     HorizontalAlignment = HorizontalAlignment.Right,
                 };
+
+                var settingsBtn = new Button
+                {
+                    Tag = item.Id,
+                    Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
+                    Padding = new Thickness(6),
+                    Content = new FontIcon { Glyph = "\uE70F", FontSize = 14 },
+                };
+                ToolTipService.SetToolTip(settingsBtn, new ToolTip
+                {
+                    Content = _loader.GetString("KB_Settings") ?? "Settings",
+                    Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
+                });
+                settingsBtn.Click += OnSettingsClicked;
+                buttons.Children.Add(settingsBtn);
 
                 var reindexBtn = new Button
                 {
@@ -478,7 +673,7 @@ public sealed partial class KnowledgeBasesPage : Page
                     Content = _loader.GetString("KB_Reindex/Content") ?? "Re-index",
                     Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
                 });
-                reindexBtn.Click += OnReindexClicked;
+                reindexBtn.Click += OnQuickReindexClicked;
                 buttons.Children.Add(reindexBtn);
 
                 var deleteBtn = new Button
@@ -512,47 +707,85 @@ public sealed partial class KnowledgeBasesPage : Page
     }
 
     /// <summary>
-    /// Resolves embedding config from create dialog selection index.
+    /// Opens a folder picker dialog and returns the selected folder, or null.
     /// </summary>
-    private static KbProviderConfig ResolveEmbeddingConfig(int index) => index switch
+    private async Task<Windows.Storage.StorageFolder?> PickFolderAsync()
     {
-        1 => new KbProviderConfig
-        {
-            Provider = "openai",
-            Model = "text-embedding-3-small",
-            ApiKeyPreset = "OpenAI",
-        },
-        _ => new KbProviderConfig
-        {
-            Provider = "ollama",
-            Model = "nomic-embed-text",
-        },
-    };
+        var picker = new Windows.Storage.Pickers.FolderPicker();
+        picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
+        picker.FileTypeFilter.Add("*");
+
+        var window = (App.Current as App)?.MainWindow;
+        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+
+        return await picker.PickSingleFolderAsync();
+    }
 
     /// <summary>
-    /// Resolves contextualizer config from create dialog selection index.
+    /// Builds a folder row with path label and delete button.
     /// </summary>
-    private static KbProviderConfig ResolveContextualizerConfig(int index) => index switch
+    private static Grid BuildFolderRow(string path, StackPanel folderList)
     {
-        1 => new KbProviderConfig
+        var row = new Grid { ColumnSpacing = 4 };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var label = new TextBlock
         {
-            Provider = "anthropic",
-            Model = "claude-haiku-4-5-20251001",
-            ApiKeyPreset = "Claude",
-        },
-        2 => new KbProviderConfig
+            Text = path,
+            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        Grid.SetColumn(label, 0);
+        row.Children.Add(label);
+
+        var removeBtn = new Button
         {
-            Provider = "openai",
-            Model = "gpt-4o-mini",
-            ApiKeyPreset = "OpenAI",
-        },
-        3 => new KbProviderConfig
-        {
-            Provider = "ollama",
-            Model = "gemma3:4b",
-        },
-        _ => new KbProviderConfig(),
-    };
+            Content = new FontIcon { Glyph = "\uE74D", FontSize = 12 },
+            Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
+            Padding = new Thickness(4),
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        removeBtn.Click += (_, _) => folderList.Children.Remove(row);
+        Grid.SetColumn(removeBtn, 1);
+        row.Children.Add(removeBtn);
+
+        return row;
+    }
+
+    /// <summary>
+    /// Collects folder paths from the folder list panel.
+    /// </summary>
+    private static List<string> CollectFolderPaths(StackPanel folderList) =>
+        folderList.Children
+            .OfType<Grid>()
+            .SelectMany(g => g.Children.OfType<TextBlock>())
+            .Select(t => t.Text)
+            .ToList();
+
+    /// <summary>
+    /// Generates a KB name from the first source folder path,
+    /// with deduplication suffix if needed.
+    /// </summary>
+    private static string GenerateKbName(IReadOnlyList<string> folderPaths)
+    {
+        if (folderPaths.Count == 0)
+            return "Untitled";
+
+        var baseName = IOPath.GetFileName(folderPaths[0].TrimEnd(IOPath.DirectorySeparatorChar));
+        if (string.IsNullOrWhiteSpace(baseName))
+            baseName = "Untitled";
+
+        var existingNames = KnowledgeBaseStore.ListAll().Select(kb => kb.Name).ToList();
+        var name = baseName;
+        var counter = 2;
+        while (existingNames.Contains(name, StringComparer.OrdinalIgnoreCase))
+            name = $"{baseName} ({counter++})";
+
+        return name;
+    }
 
     #endregion
 }

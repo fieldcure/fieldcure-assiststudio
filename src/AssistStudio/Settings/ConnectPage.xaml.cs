@@ -55,9 +55,13 @@ public sealed partial class ConnectPage : Page
             searchSection.Initialize(_registry);
             EssentialsCard.BottomContent = searchSection;
 
-            var embeddingSection = new EmbeddingSection();
-            embeddingSection.Initialize();
-            RagCard.BottomContent = embeddingSection;
+            RagCard.BottomContent = new TextBlock
+            {
+                Text = _loader.GetString("Connect_RagKbPageHint"),
+                Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                Opacity = 0.5,
+                TextWrapping = TextWrapping.Wrap,
+            };
 
             var channelsSection = new ChannelsSection();
             channelsSection.Initialize(_registry);

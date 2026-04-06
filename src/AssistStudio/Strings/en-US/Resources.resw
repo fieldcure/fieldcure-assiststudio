@@ -629,7 +629,46 @@
     <value>Embedding Model</value>
   </data>
   <data name="KB_DialogContextualizer" xml:space="preserve">
-    <value>Contextualizer</value>
+    <value>Chunk contextualization</value>
+  </data>
+  <data name="KB_DialogContextDisabled" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="KB_DialogNameHint" xml:space="preserve">
+    <value>Auto-generated from folder name if empty</value>
+  </data>
+  <data name="KB_ReindexDialogTitle" xml:space="preserve">
+    <value>Re-index {0}</value>
+  </data>
+  <data name="KB_ReindexWarning" xml:space="preserve">
+    <value>Changing the model requires full re-indexing. The existing index will be deleted.</value>
+  </data>
+  <data name="KB_ReindexButton" xml:space="preserve">
+    <value>Re-index</value>
+  </data>
+  <data name="KB_ModelCurrent" xml:space="preserve">
+    <value>(current)</value>
+  </data>
+  <data name="KB_CancelIndexing" xml:space="preserve">
+    <value>Cancel indexing</value>
+  </data>
+  <data name="KB_FolderUsedWarning" xml:space="preserve">
+    <value>This folder is also used in: {0}</value>
+  </data>
+  <data name="KB_SettingsDialogTitle" xml:space="preserve">
+    <value>{0} settings</value>
+  </data>
+  <data name="KB_SaveAndReindex" xml:space="preserve">
+    <value>Save &amp; Re-index</value>
+  </data>
+  <data name="KB_Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="KB_Settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Connect_RagKbPageHint" xml:space="preserve">
+    <value>Create, re-index, and delete in the Knowledge Bases page.</value>
   </data>
   <!-- Connect Page -->
   <data name="Connect_Title.Text" xml:space="preserve">

@@ -2182,6 +2182,8 @@ public sealed partial class ChatPanel : Control
             _archiveDisabledHint.Text = Res.GetString("Folder_ArchiveDisabledHint") ?? "Current profile does not have Knowledge Archive enabled.";
         if (_archiveEmpty is not null)
             _archiveEmpty.Text = Res.GetString("Folder_ArchiveNoKbs") ?? "No knowledge bases. Create one in Settings.";
+        if (_kbSelector is not null)
+            _kbSelector.PlaceholderText = Res.GetString("Folder_KbPlaceholder") ?? "Select knowledge base";
 
         static void SetText(FrameworkElement parent, string elementName, string resKey, string fallback)
         {

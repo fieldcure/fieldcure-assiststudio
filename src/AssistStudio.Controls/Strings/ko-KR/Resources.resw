@@ -284,6 +284,12 @@
   <data name="Folder_CancelIndexing" xml:space="preserve">
     <value>인덱싱 취소</value>
   </data>
+  <data name="Folder_ArchiveNoKbs" xml:space="preserve">
+    <value>지식보관소가 없습니다. 설정에서 생성하세요.</value>
+  </data>
+  <data name="Folder_KbPlaceholder" xml:space="preserve">
+    <value>지식보관소 선택</value>
+  </data>
   <data name="FolderFlyout_RemoveTooltip" xml:space="preserve">
     <value>제거</value>
   </data>

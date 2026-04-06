@@ -629,7 +629,46 @@
     <value>임베딩 모델</value>
   </data>
   <data name="KB_DialogContextualizer" xml:space="preserve">
-    <value>컨텍스추얼라이저</value>
+    <value>청크 문맥화</value>
+  </data>
+  <data name="KB_DialogContextDisabled" xml:space="preserve">
+    <value>사용 안 함</value>
+  </data>
+  <data name="KB_DialogNameHint" xml:space="preserve">
+    <value>비워두면 폴더명으로 자동 생성</value>
+  </data>
+  <data name="KB_ReindexDialogTitle" xml:space="preserve">
+    <value>{0} 재인덱싱</value>
+  </data>
+  <data name="KB_ReindexWarning" xml:space="preserve">
+    <value>모델을 변경하면 전체 재인덱싱이 필요합니다. 기존 인덱스는 삭제됩니다.</value>
+  </data>
+  <data name="KB_ReindexButton" xml:space="preserve">
+    <value>재인덱싱</value>
+  </data>
+  <data name="KB_ModelCurrent" xml:space="preserve">
+    <value>(현재)</value>
+  </data>
+  <data name="KB_CancelIndexing" xml:space="preserve">
+    <value>인덱싱 취소</value>
+  </data>
+  <data name="KB_FolderUsedWarning" xml:space="preserve">
+    <value>이 폴더는 {0}에서도 사용 중입니다.</value>
+  </data>
+  <data name="KB_SettingsDialogTitle" xml:space="preserve">
+    <value>{0} 설정</value>
+  </data>
+  <data name="KB_SaveAndReindex" xml:space="preserve">
+    <value>저장 후 재인덱싱</value>
+  </data>
+  <data name="KB_Save" xml:space="preserve">
+    <value>저장</value>
+  </data>
+  <data name="KB_Settings" xml:space="preserve">
+    <value>설정</value>
+  </data>
+  <data name="Connect_RagKbPageHint" xml:space="preserve">
+    <value>지식보관소 페이지에서 생성, 재인덱싱, 삭제할 수 있습니다.</value>
   </data>
   <!-- Connect Page -->
   <data name="Connect_Title.Text" xml:space="preserve">
