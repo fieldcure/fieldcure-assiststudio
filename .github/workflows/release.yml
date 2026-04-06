@@ -1,0 +1,67 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  release:
+    if: startsWith(github.event.head_commit.message, 'Release ')
+    runs-on: windows-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Parse commit message
+        id: parse
+        shell: bash
+        run: |
+          MESSAGE="${{ github.event.head_commit.message }}"
+          # "Release vX.X.X" (all) or "Release <Name> vX.X.X" (single)
+          if echo "$MESSAGE" | grep -qE '^Release v[0-9]'; then
+            VERSION=$(echo "$MESSAGE" | sed -n 's/Release v\([0-9]*\.[0-9]*\.[0-9]*\).*/\1/p')
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+            echo "name=" >> "$GITHUB_OUTPUT"
+            echo "mode=all" >> "$GITHUB_OUTPUT"
+          else
+            PACKAGE=$(echo "$MESSAGE" | sed -n 's/Release \(.*\) v[0-9].*/\1/p')
+            VERSION=$(echo "$MESSAGE" | sed -n 's/.*v\([0-9]*\.[0-9]*\.[0-9]*\).*/\1/p')
+            TAG_NAME=$(echo "$PACKAGE" | tr '[:upper:]' '[:lower:]')
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "tag=${TAG_NAME}-v${VERSION}" >> "$GITHUB_OUTPUT"
+            echo "name=$PACKAGE" >> "$GITHUB_OUTPUT"
+            echo "mode=single" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build release body
+        shell: bash
+        run: |
+          MODE="${{ steps.parse.outputs.mode }}"
+          NAME="${{ steps.parse.outputs.name }}"
+          if [ "$MODE" = "all" ]; then
+            {
+              for f in RELEASENOTES.*.md; do
+                TITLE=$(echo "$f" | sed 's/RELEASENOTES\.\(.*\)\.md/\1/')
+                echo "# $TITLE"
+                echo ""
+                cat "$f"
+                echo ""
+                echo "---"
+                echo ""
+              done
+            } > RELEASE_BODY.md
+          else
+            cp "RELEASENOTES.${NAME}.md" RELEASE_BODY.md
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.parse.outputs.tag }}
+          name: ${{ steps.parse.outputs.name && format('{0} v{1}', steps.parse.outputs.name, steps.parse.outputs.version) || format('v{0}', steps.parse.outputs.version) }}
+          body_path: RELEASE_BODY.md
+          generate_release_notes: false
