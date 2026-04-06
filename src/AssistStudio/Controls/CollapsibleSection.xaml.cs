@@ -67,6 +67,14 @@ public sealed partial class CollapsibleSection : UserControl, INotifyPropertyCha
         DependencyProperty.Register(nameof(IsExpanded), typeof(bool), typeof(CollapsibleSection),
             new PropertyMetadata(true, OnIsExpandedChanged));
 
+    /// <summary>
+    /// Whether to use a compact visual style (smaller header, subdued colors).
+    /// Suited for sections nested inside cards where the header should be subordinate.
+    /// </summary>
+    public static readonly DependencyProperty IsCompactProperty =
+        DependencyProperty.Register(nameof(IsCompact), typeof(bool), typeof(CollapsibleSection),
+            new PropertyMetadata(false, OnIsCompactChanged));
+
     #endregion
 
     #region Properties
@@ -114,6 +122,15 @@ public sealed partial class CollapsibleSection : UserControl, INotifyPropertyCha
     {
         get => (bool)GetValue(IsExpandedProperty);
         set => SetValue(IsExpandedProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets whether to use a compact visual style (smaller header, subdued colors).
+    /// </summary>
+    public bool IsCompact
+    {
+        get => (bool)GetValue(IsCompactProperty);
+        set => SetValue(IsCompactProperty, value);
     }
 
     /// <summary>
@@ -176,6 +193,15 @@ public sealed partial class CollapsibleSection : UserControl, INotifyPropertyCha
     }
 
     /// <summary>
+    /// Applies compact visual adjustments when the IsCompact property changes.
+    /// </summary>
+    private static void OnIsCompactChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is CollapsibleSection section)
+            section.ApplyCompactStyle((bool)e.NewValue);
+    }
+
+    /// <summary>
     /// Handles toggle button click.
     /// </summary>
     private void OnHeaderButtonClick(object sender, RoutedEventArgs e)
@@ -212,6 +238,36 @@ public sealed partial class CollapsibleSection : UserControl, INotifyPropertyCha
                 "CollapsibleSection_ExpandTooltip" => "Expand section",
                 _ => key
             };
+        }
+    }
+
+    /// <summary>
+    /// Applies compact visual style: smaller font, secondary text color, reduced button height.
+    /// </summary>
+    private void ApplyCompactStyle(bool compact)
+    {
+        if (compact)
+        {
+            HeaderText.Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"];
+            HeaderText.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
+            HeaderText.Opacity = 0.7;
+            SubHeaderText.FontSize = 11;
+            SubHeaderText.Opacity = 0.5;
+            HeaderButton.MinHeight = 32;
+            HeaderButton.Padding = new Thickness(8, 2, 8, 2);
+            ToggleIcon.FontSize = 10;
+            ContentContainer.FontSize = 12;
+        }
+        else
+        {
+            HeaderText.Style = (Style)Application.Current.Resources["BodyStrongTextBlockStyle"];
+            HeaderText.Opacity = 1.0;
+            SubHeaderText.FontSize = 12;
+            SubHeaderText.Opacity = 0.6;
+            HeaderButton.MinHeight = 40;
+            HeaderButton.Padding = new Thickness(12, 4, 12, 4);
+            ToggleIcon.FontSize = 12;
+            ContentContainer.ClearValue(FontSizeProperty);
         }
     }
 

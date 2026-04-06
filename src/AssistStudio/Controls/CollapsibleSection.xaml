@@ -52,12 +52,14 @@
                 </Grid.ColumnDefinitions>
 
                 <TextBlock
+                    x:Name="HeaderText"
                     Grid.Column="0"
                     Text="{x:Bind Header, Mode=OneWay}"
                     Style="{StaticResource BodyStrongTextBlockStyle}"
                     VerticalAlignment="Center"/>
 
                 <TextBlock
+                    x:Name="SubHeaderText"
                     Grid.Column="1"
                     Text="{x:Bind SubHeader, Mode=OneWay}"
                     FontSize="12"

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="AssistStudio.Controls.EmbeddingSection"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:AssistStudio.Controls">
+
+    <StackPanel Spacing="4">
+        <controls:CollapsibleSection x:Name="EmbeddingModelSection" IsExpanded="False" IsCompact="True"
+                                     Expanded="OnEmbeddingModelExpanded">
+            <controls:CollapsibleSection.Body>
+                <StackPanel x:Name="EmbeddingModelPanel" Spacing="6" />
+            </controls:CollapsibleSection.Body>
+        </controls:CollapsibleSection>
+
+        <controls:CollapsibleSection x:Name="ContextualizerSection" IsExpanded="False" IsCompact="True"
+                                     Expanded="OnContextualizerExpanded">
+            <controls:CollapsibleSection.Body>
+                <StackPanel x:Name="ContextualizerPanel" Spacing="6" />
+            </controls:CollapsibleSection.Body>
+        </controls:CollapsibleSection>
+    </StackPanel>
+</UserControl>

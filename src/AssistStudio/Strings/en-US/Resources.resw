@@ -905,6 +905,30 @@
   <data name="Connect_ApiKeyPlaceholder" xml:space="preserve">
     <value>API key</value>
   </data>
+  <data name="Connect_EmbeddingModel" xml:space="preserve">
+    <value>Embedding model</value>
+  </data>
+  <data name="Connect_ChunkContextualization" xml:space="preserve">
+    <value>Chunk contextualization</value>
+  </data>
+  <data name="Connect_ChunkDisabled" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="Connect_Channels" xml:space="preserve">
+    <value>Channels</value>
+  </data>
+  <data name="Connect_Multilingual" xml:space="preserve">
+    <value>multilingual</value>
+  </data>
+  <data name="Connect_EmbeddingHint" xml:space="preserve">
+    <value>Applied when creating new knowledge archives</value>
+  </data>
+  <data name="Connect_OutboxNotConnected" xml:space="preserve">
+    <value>Unable to load channels</value>
+  </data>
+  <data name="Connect_NoChannels" xml:space="preserve">
+    <value>No channels configured. Add channels in a conversation.</value>
+  </data>
   <data name="Embedding_OllamaNotRunning" xml:space="preserve">
     <value>Ollama is not running. Start with: ollama serve</value>
   </data>
