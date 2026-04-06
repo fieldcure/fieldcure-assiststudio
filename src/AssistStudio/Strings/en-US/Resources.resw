@@ -589,6 +589,24 @@
   <data name="KB_SearchPlaceholder" xml:space="preserve">
     <value>Search knowledge bases...</value>
   </data>
+  <data name="KB_CreateDialogTitle" xml:space="preserve">
+    <value>Create Knowledge Base</value>
+  </data>
+  <data name="KB_DeleteDialogTitle" xml:space="preserve">
+    <value>Delete Knowledge Base</value>
+  </data>
+  <data name="KB_DeleteDialogMessage" xml:space="preserve">
+    <value>This will permanently delete the knowledge base and its index. This cannot be undone.</value>
+  </data>
+  <data name="KB_StatusReady" xml:space="preserve">
+    <value>Ready</value>
+  </data>
+  <data name="KB_StatusIndexing" xml:space="preserve">
+    <value>Indexing</value>
+  </data>
+  <data name="KB_StatusNoIndex" xml:space="preserve">
+    <value>No index</value>
+  </data>
   <data name="KB_Reindex.Content" xml:space="preserve">
     <value>Re-index</value>
   </data>

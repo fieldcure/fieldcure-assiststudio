@@ -68,9 +68,9 @@ public sealed partial class KnowledgeBasesPage : Page
         var dialog = new ContentDialog
         {
             XamlRoot = XamlRoot,
-            Title = "Create Knowledge Base",
-            PrimaryButtonText = "Create",
-            CloseButtonText = "Cancel",
+            Title = _loader.GetString("KB_CreateDialogTitle"),
+            PrimaryButtonText = _loader.GetString("KB_Create/Content"),
+            CloseButtonText = _loader.GetString("Dialog_Cancel"),
             DefaultButton = ContentDialogButton.Primary,
         };
 
@@ -178,10 +178,10 @@ public sealed partial class KnowledgeBasesPage : Page
         var dialog = new ContentDialog
         {
             XamlRoot = XamlRoot,
-            Title = "Delete Knowledge Base",
-            Content = "This will permanently delete the knowledge base and its index. This cannot be undone.",
-            PrimaryButtonText = "Delete",
-            CloseButtonText = "Cancel",
+            Title = _loader.GetString("KB_DeleteDialogTitle"),
+            Content = _loader.GetString("KB_DeleteDialogMessage"),
+            PrimaryButtonText = _loader.GetString("KB_Delete/Content"),
+            CloseButtonText = _loader.GetString("Dialog_Cancel"),
             DefaultButton = ContentDialogButton.Close,
         };
 
@@ -252,7 +252,8 @@ public sealed partial class KnowledgeBasesPage : Page
                 item.Progress = status.Total > 0
                     ? (double)status.Current / status.Total * 100
                     : 0;
-                item.StatusText = $"Indexing ({status.Current}/{status.Total})";
+                var indexingLabel = _loader.GetString("KB_StatusIndexing") ?? "Indexing";
+                item.StatusText = $"{indexingLabel} ({status.Current}/{status.Total})";
                 item.StatusBrush = new SolidColorBrush(Colors.DodgerBlue);
             }
             else
@@ -263,13 +264,13 @@ public sealed partial class KnowledgeBasesPage : Page
                 var stats = KnowledgeBaseStore.GetStats(item.Id);
                 if (stats is not null)
                 {
-                    item.StatusText = "Ready";
-                    item.StatusBrush = new SolidColorBrush(Colors.ForestGreen);
+                    item.StatusText = _loader.GetString("KB_StatusReady") ?? "Ready";
+                    item.StatusBrush = new SolidColorBrush(Colors.Gray);
                     item.StatsText = $"{stats.TotalFiles} files, {stats.TotalChunks} chunks";
                 }
                 else
                 {
-                    item.StatusText = "No index";
+                    item.StatusText = _loader.GetString("KB_StatusNoIndex") ?? "No index";
                     item.StatusBrush = new SolidColorBrush(Colors.Gray);
                     item.StatsText = "";
                 }
@@ -314,13 +315,13 @@ public sealed partial class KnowledgeBasesPage : Page
                 Progress = status is not null && status.Total > 0
                     ? (double)status.Current / status.Total * 100 : 0,
                 StatusText = status is not null
-                    ? $"Indexing ({status.Current}/{status.Total})"
-                    : stats is not null ? "Ready" : "No index",
+                    ? $"{_loader.GetString("KB_StatusIndexing") ?? "Indexing"} ({status.Current}/{status.Total})"
+                    : stats is not null
+                        ? _loader.GetString("KB_StatusReady") ?? "Ready"
+                        : _loader.GetString("KB_StatusNoIndex") ?? "No index",
                 StatusBrush = status is not null
                     ? new SolidColorBrush(Colors.DodgerBlue)
-                    : stats is not null
-                        ? new SolidColorBrush(Colors.ForestGreen)
-                        : new SolidColorBrush(Colors.Gray),
+                    : new SolidColorBrush(Colors.Gray),
                 StatsText = stats is not null
                     ? $"{stats.TotalFiles} files, {stats.TotalChunks} chunks"
                     : "",
@@ -445,13 +446,33 @@ public sealed partial class KnowledgeBasesPage : Page
                     HorizontalAlignment = HorizontalAlignment.Right,
                 };
 
-                var reindexBtn = new Button { Tag = item.Id };
-                reindexBtn.Content = _loader.GetString("KB_Reindex") ?? "Re-index";
+                var reindexBtn = new Button
+                {
+                    Tag = item.Id,
+                    Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
+                    Padding = new Thickness(6),
+                    Content = new FontIcon { Glyph = "\uE72C", FontSize = 14 },
+                };
+                ToolTipService.SetToolTip(reindexBtn, new ToolTip
+                {
+                    Content = _loader.GetString("KB_Reindex/Content") ?? "Re-index",
+                    Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
+                });
                 reindexBtn.Click += OnReindexClicked;
                 buttons.Children.Add(reindexBtn);
 
-                var deleteBtn = new Button { Tag = item.Id };
-                deleteBtn.Content = _loader.GetString("KB_Delete") ?? "Delete";
+                var deleteBtn = new Button
+                {
+                    Tag = item.Id,
+                    Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
+                    Padding = new Thickness(6),
+                    Content = new FontIcon { Glyph = "\uE74D", FontSize = 14 },
+                };
+                ToolTipService.SetToolTip(deleteBtn, new ToolTip
+                {
+                    Content = _loader.GetString("KB_Delete/Content") ?? "Delete",
+                    Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
+                });
                 deleteBtn.Click += OnDeleteClicked;
                 buttons.Children.Add(deleteBtn);
 
