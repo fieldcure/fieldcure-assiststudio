@@ -6,18 +6,23 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
+using Microsoft.UI.Xaml.Shapes;
+using Windows.ApplicationModel.Resources;
 
 namespace AssistStudio.Settings;
 
 /// <summary>
 /// Settings page for managing knowledge bases (create, delete, re-index, monitor).
+/// Flat list style unified with Memory and Schedule pages.
 /// </summary>
 public sealed partial class KnowledgeBasesPage : Page
 {
     #region Fields
 
     private readonly DispatcherTimer _pollTimer;
-    private readonly List<KbViewModel> _items = [];
+    private readonly List<KbViewModel> _allItems = [];
+    private readonly ResourceLoader _loader = new();
+    private string _searchQuery = "";
 
     #endregion
 
@@ -29,18 +34,22 @@ public sealed partial class KnowledgeBasesPage : Page
 
         _pollTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
         _pollTimer.Tick += OnPollTick;
+
+        SearchBox.PlaceholderText = _loader.GetString("KB_SearchPlaceholder");
     }
 
     #endregion
 
     #region Navigation
 
+    /// <inheritdoc/>
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
         RefreshList();
     }
 
+    /// <inheritdoc/>
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         base.OnNavigatedFrom(e);
@@ -51,6 +60,9 @@ public sealed partial class KnowledgeBasesPage : Page
 
     #region Event Handlers
 
+    /// <summary>
+    /// Opens the KB creation dialog.
+    /// </summary>
     private async void OnCreateClicked(object sender, RoutedEventArgs e)
     {
         var dialog = new ContentDialog
@@ -156,6 +168,9 @@ public sealed partial class KnowledgeBasesPage : Page
         RefreshList();
     }
 
+    /// <summary>
+    /// Deletes a knowledge base after confirmation.
+    /// </summary>
     private async void OnDeleteClicked(object sender, RoutedEventArgs e)
     {
         if (sender is not Button btn || btn.Tag is not string kbId) return;
@@ -177,7 +192,7 @@ public sealed partial class KnowledgeBasesPage : Page
         if (RagProcessManager.IsExecRunning(kbId))
         {
             RagProcessManager.CancelExec(kbId);
-            await Task.Delay(2000); // Give exec time to exit
+            await Task.Delay(2000);
         }
 
         KnowledgeBaseStore.Delete(kbId);
@@ -186,6 +201,9 @@ public sealed partial class KnowledgeBasesPage : Page
         RefreshList();
     }
 
+    /// <summary>
+    /// Re-indexes a knowledge base.
+    /// </summary>
     private void OnReindexClicked(object sender, RoutedEventArgs e)
     {
         if (sender is not Button btn || btn.Tag is not string kbId) return;
@@ -196,11 +214,35 @@ public sealed partial class KnowledgeBasesPage : Page
         RefreshList();
     }
 
+    /// <summary>
+    /// Handles search query submission.
+    /// </summary>
+    private void OnSearchQuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
+    {
+        _searchQuery = args.QueryText?.Trim() ?? "";
+        ApplyFilter();
+    }
+
+    /// <summary>
+    /// Handles search text changes for live filtering.
+    /// </summary>
+    private void OnSearchTextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
+    {
+        if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
+        {
+            _searchQuery = sender.Text?.Trim() ?? "";
+            ApplyFilter();
+        }
+    }
+
+    /// <summary>
+    /// Polls indexing status and updates the list.
+    /// </summary>
     private void OnPollTick(object? sender, object e)
     {
         var anyIndexing = false;
 
-        foreach (var item in _items)
+        foreach (var item in _allItems)
         {
             var status = KnowledgeBaseStore.GetIndexingStatus(item.Id);
             if (status is not null)
@@ -234,8 +276,7 @@ public sealed partial class KnowledgeBasesPage : Page
             }
         }
 
-        KbList.ItemsSource = null;
-        KbList.ItemsSource = _items;
+        ApplyFilter();
 
         if (!anyIndexing)
             _pollTimer.Stop();
@@ -245,21 +286,30 @@ public sealed partial class KnowledgeBasesPage : Page
 
     #region Private Methods
 
+    /// <summary>
+    /// Refreshes the full KB list from disk.
+    /// </summary>
     private void RefreshList()
     {
         var kbs = KnowledgeBaseStore.ListAll();
-        _items.Clear();
+        _allItems.Clear();
 
         foreach (var kb in kbs)
         {
             var status = KnowledgeBaseStore.GetIndexingStatus(kb.Id);
             var stats = KnowledgeBaseStore.GetStats(kb.Id);
 
-            _items.Add(new KbViewModel
+            // Model info line: "embedding-model · contextualizer-model" or just "embedding-model"
+            var modelInfo = kb.Embedding.Model;
+            if (!string.IsNullOrEmpty(kb.Contextualizer.Model))
+                modelInfo += $" \u00b7 {kb.Contextualizer.Model}";
+
+            _allItems.Add(new KbViewModel
             {
                 Id = kb.Id,
                 Name = kb.Name,
                 SourcePathsText = string.Join(", ", kb.SourcePaths),
+                ModelInfoText = modelInfo,
                 IsIndexing = status is not null ? Visibility.Visible : Visibility.Collapsed,
                 Progress = status is not null && status.Total > 0
                     ? (double)status.Current / status.Total * 100 : 0,
@@ -277,16 +327,152 @@ public sealed partial class KnowledgeBasesPage : Page
             });
         }
 
-        KbList.ItemsSource = _items;
-        EmptyText.Visibility = _items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-
         // Start polling if any KB is indexing
-        if (_items.Any(i => i.IsIndexing == Visibility.Visible))
+        if (_allItems.Any(i => i.IsIndexing == Visibility.Visible))
             _pollTimer.Start();
         else
             _pollTimer.Stop();
+
+        ApplyFilter();
     }
 
+    /// <summary>
+    /// Applies the current search filter and updates the UI.
+    /// </summary>
+    private void ApplyFilter()
+    {
+        var filtered = string.IsNullOrEmpty(_searchQuery)
+            ? _allItems
+            : _allItems.Where(i =>
+                i.Name.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase)
+                || i.SourcePathsText.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase))
+              .ToList();
+
+        // Update counter
+        CounterText.Text = _allItems.Count.ToString();
+
+        // Build flat list UI
+        KbList.ItemsSource = null;
+        var panel = new StackPanel { Spacing = 0 };
+
+        for (int idx = 0; idx < filtered.Count; idx++)
+        {
+            var item = filtered[idx];
+
+            // Divider between items
+            if (idx > 0)
+            {
+                panel.Children.Add(new Rectangle
+                {
+                    Height = 1,
+                    Fill = (Brush)Application.Current.Resources["DividerStrokeColorDefaultBrush"],
+                    Margin = new Thickness(0, 8, 0, 8),
+                });
+            }
+
+            var row = new StackPanel { Spacing = 2, Padding = new Thickness(0, 4, 0, 4) };
+
+            // Row 1: Name + Status
+            var headerRow = new Grid();
+            headerRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            headerRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            headerRow.Children.Add(new TextBlock
+            {
+                Text = item.Name,
+                Style = (Style)Application.Current.Resources["BodyStrongTextBlockStyle"],
+            });
+
+            var statusText = new TextBlock
+            {
+                Text = item.StatusText,
+                Foreground = item.StatusBrush,
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            Grid.SetColumn(statusText, 1);
+            headerRow.Children.Add(statusText);
+            row.Children.Add(headerRow);
+
+            // Row 2: Stats
+            if (!string.IsNullOrEmpty(item.StatsText))
+            {
+                row.Children.Add(new TextBlock
+                {
+                    Text = item.StatsText,
+                    Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                    Opacity = 0.6,
+                });
+            }
+
+            // Row 3: Source paths
+            row.Children.Add(new TextBlock
+            {
+                Text = item.SourcePathsText,
+                Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                Opacity = 0.5,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+            });
+
+            // Row 4: Model info
+            if (!string.IsNullOrEmpty(item.ModelInfoText))
+            {
+                row.Children.Add(new TextBlock
+                {
+                    Text = item.ModelInfoText,
+                    Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                    Opacity = 0.45,
+                    FontSize = 11,
+                });
+            }
+
+            // Row 5: Progress bar (indexing) or action buttons
+            if (item.IsIndexing == Visibility.Visible)
+            {
+                row.Children.Add(new ProgressBar
+                {
+                    Value = item.Progress,
+                    Maximum = 100,
+                    Margin = new Thickness(0, 6, 0, 0),
+                });
+            }
+            else
+            {
+                var buttons = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Spacing = 8,
+                    Margin = new Thickness(0, 6, 0, 0),
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                };
+
+                var reindexBtn = new Button { Tag = item.Id };
+                reindexBtn.Content = _loader.GetString("KB_Reindex") ?? "Re-index";
+                reindexBtn.Click += OnReindexClicked;
+                buttons.Children.Add(reindexBtn);
+
+                var deleteBtn = new Button { Tag = item.Id };
+                deleteBtn.Content = _loader.GetString("KB_Delete") ?? "Delete";
+                deleteBtn.Click += OnDeleteClicked;
+                buttons.Children.Add(deleteBtn);
+
+                row.Children.Add(buttons);
+            }
+
+            panel.Children.Add(row);
+        }
+
+        KbList.ItemsSource = new[] { panel };
+
+        // Show/hide states
+        var hasItems = filtered.Count > 0;
+        EmptyPanel.Visibility = _allItems.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        HintDivider.Visibility = hasItems ? Visibility.Visible : Visibility.Collapsed;
+        HintText.Visibility = hasItems ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>
+    /// Resolves embedding config from create dialog selection index.
+    /// </summary>
     private static KbProviderConfig ResolveEmbeddingConfig(int index) => index switch
     {
         1 => new KbProviderConfig
@@ -302,6 +488,9 @@ public sealed partial class KnowledgeBasesPage : Page
         },
     };
 
+    /// <summary>
+    /// Resolves contextualizer config from create dialog selection index.
+    /// </summary>
     private static KbProviderConfig ResolveContextualizerConfig(int index) => index switch
     {
         1 => new KbProviderConfig
@@ -321,20 +510,21 @@ public sealed partial class KnowledgeBasesPage : Page
             Provider = "ollama",
             Model = "gemma3:4b",
         },
-        _ => new KbProviderConfig(), // None — empty model = NullChunkContextualizer
+        _ => new KbProviderConfig(),
     };
 
     #endregion
 }
 
 /// <summary>
-/// View model for a knowledge base card in the list.
+/// View model for a knowledge base item in the list.
 /// </summary>
 internal class KbViewModel
 {
     public string Id { get; set; } = "";
     public string Name { get; set; } = "";
     public string SourcePathsText { get; set; } = "";
+    public string ModelInfoText { get; set; } = "";
     public string StatusText { get; set; } = "";
     public Brush StatusBrush { get; set; } = new SolidColorBrush(Colors.Gray);
     public string StatsText { get; set; } = "";

@@ -581,7 +581,13 @@
     <value>Create</value>
   </data>
   <data name="KB_Empty.Text" xml:space="preserve">
-    <value>No knowledge bases yet. Create one to index and search your documents.</value>
+    <value>No knowledge bases yet.</value>
+  </data>
+  <data name="KB_EmptyHint.Text" xml:space="preserve">
+    <value>Click Create to add one and start indexing your documents.</value>
+  </data>
+  <data name="KB_SearchPlaceholder" xml:space="preserve">
+    <value>Search knowledge bases...</value>
   </data>
   <data name="KB_Reindex.Content" xml:space="preserve">
     <value>Re-index</value>
@@ -589,8 +595,8 @@
   <data name="KB_Delete.Content" xml:space="preserve">
     <value>Delete</value>
   </data>
-  <data name="KB_IndexingNote.Text" xml:space="preserve">
-    <value>Indexing continues even after the app is closed.</value>
+  <data name="KB_FooterHint.Text" xml:space="preserve">
+    <value>Knowledge bases are indexed in the background, even after the app is closed.</value>
   </data>
   <!-- Connect Page -->
   <data name="Connect_Title.Text" xml:space="preserve">

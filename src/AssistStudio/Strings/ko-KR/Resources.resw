@@ -581,7 +581,13 @@
     <value>생성</value>
   </data>
   <data name="KB_Empty.Text" xml:space="preserve">
-    <value>지식보관소가 없습니다. 문서를 인덱싱하고 검색하려면 지식보관소를 만드세요.</value>
+    <value>지식보관소가 없습니다.</value>
+  </data>
+  <data name="KB_EmptyHint.Text" xml:space="preserve">
+    <value>생성 버튼을 눌러 문서를 인덱싱하고 검색할 수 있습니다.</value>
+  </data>
+  <data name="KB_SearchPlaceholder" xml:space="preserve">
+    <value>지식보관소 검색...</value>
   </data>
   <data name="KB_Reindex.Content" xml:space="preserve">
     <value>재인덱싱</value>
@@ -589,8 +595,8 @@
   <data name="KB_Delete.Content" xml:space="preserve">
     <value>삭제</value>
   </data>
-  <data name="KB_IndexingNote.Text" xml:space="preserve">
-    <value>앱을 종료해도 인덱싱은 계속 진행됩니다.</value>
+  <data name="KB_FooterHint.Text" xml:space="preserve">
+    <value>지식보관소는 앱이 닫혀도 백그라운드에서 인덱싱됩니다.</value>
   </data>
   <!-- Connect Page -->
   <data name="Connect_Title.Text" xml:space="preserve">

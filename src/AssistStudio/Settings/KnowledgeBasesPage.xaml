@@ -11,119 +11,73 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Header -->
+        <!-- Header: title + counter + Create button -->
         <Grid Grid.Row="0" Padding="20,14,20,14"
               BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
               BorderThickness="0,0,0,1">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
             <TextBlock x:Uid="KB_Title" Text="Knowledge Bases"
+                       Grid.Column="0"
                        Style="{StaticResource TitleTextBlockStyle}" />
 
-            <Button x:Name="CreateButton" Grid.Column="1"
+            <TextBlock x:Name="CounterText" Grid.Column="2"
+                       Style="{StaticResource CaptionTextBlockStyle}"
+                       Opacity="0.6"
+                       VerticalAlignment="Center"
+                       Margin="0,0,12,0" />
+
+            <Button x:Name="CreateButton" Grid.Column="3"
                     x:Uid="KB_Create" Content="Create"
-                    Style="{StaticResource AccentButtonStyle}"
                     Click="OnCreateClicked" />
         </Grid>
 
+        <!-- Search box -->
+        <AutoSuggestBox x:Name="SearchBox" Grid.Row="1"
+                        Margin="20,12,20,0"
+                        QueryIcon="Find"
+                        QuerySubmitted="OnSearchQuerySubmitted"
+                        TextChanged="OnSearchTextChanged" />
+
         <!-- Content -->
-        <ScrollViewer Grid.Row="1">
-            <StackPanel Padding="20,20,20,44" Spacing="12"
-                        MaxWidth="700" HorizontalAlignment="Left">
+        <ScrollViewer Grid.Row="2" Padding="20,12">
+            <StackPanel Spacing="0" Padding="0,0,0,24" MaxWidth="700" HorizontalAlignment="Left">
 
-                <!-- Note -->
-                <TextBlock x:Uid="KB_IndexingNote"
-                           Text="Indexing continues even after the app is closed."
+                <!-- KB list -->
+                <ItemsRepeater x:Name="KbList" />
+
+                <!-- Divider before hint -->
+                <Rectangle x:Name="HintDivider" Visibility="Collapsed"
+                           Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+                <!-- Hint text (shown when entries exist) -->
+                <TextBlock x:Name="HintText" x:Uid="KB_FooterHint"
+                           Visibility="Collapsed"
                            Style="{StaticResource CaptionTextBlockStyle}"
-                           Opacity="0.5"
-                           TextWrapping="Wrap" />
-
-                <!-- Empty state -->
-                <TextBlock x:Name="EmptyText"
-                           x:Uid="KB_Empty"
-                           Text="No knowledge bases yet. Create one to index and search your documents."
-                           Opacity="0.6"
                            TextWrapping="Wrap"
-                           Visibility="Collapsed" />
+                           Opacity="0.5"
+                           Margin="0,12,0,0" />
 
-                <!-- KB cards -->
-                <ItemsControl x:Name="KbList">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="8"
-                                    Padding="16"
-                                    Margin="0,0,0,4">
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
-
-                                    <!-- Row 0: Name + Status -->
-                                    <Grid Grid.Row="0">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="{Binding Name}"
-                                                   Style="{StaticResource SubtitleTextBlockStyle}" />
-                                        <TextBlock x:Name="StatusBadge" Grid.Column="1"
-                                                   Text="{Binding StatusText}"
-                                                   Foreground="{Binding StatusBrush}"
-                                                   VerticalAlignment="Center" />
-                                    </Grid>
-
-                                    <!-- Row 1: Stats -->
-                                    <TextBlock Grid.Row="1"
-                                               Text="{Binding StatsText}"
-                                               Style="{StaticResource CaptionTextBlockStyle}"
-                                               Opacity="0.6"
-                                               Margin="0,4,0,0" />
-
-                                    <!-- Row 2: Source paths -->
-                                    <TextBlock Grid.Row="2"
-                                               Text="{Binding SourcePathsText}"
-                                               Style="{StaticResource CaptionTextBlockStyle}"
-                                               Opacity="0.5"
-                                               TextTrimming="CharacterEllipsis"
-                                               Margin="0,2,0,0" />
-
-                                    <!-- Row 3: Progress bar (indexing) -->
-                                    <ProgressBar Grid.Row="3"
-                                                 Value="{Binding Progress}"
-                                                 Maximum="100"
-                                                 Visibility="{Binding IsIndexing}"
-                                                 Margin="0,8,0,0" />
-
-                                    <!-- Row 3: Buttons (idle) -->
-                                    <StackPanel Grid.Row="3"
-                                                Orientation="Horizontal"
-                                                Spacing="8"
-                                                Margin="0,8,0,0"
-                                                HorizontalAlignment="Right">
-                                        <Button x:Uid="KB_Reindex" Content="Re-index"
-                                                Tag="{Binding Id}"
-                                                Click="OnReindexClicked" />
-                                        <Button x:Uid="KB_Delete" Content="Delete"
-                                                Tag="{Binding Id}"
-                                                Click="OnDeleteClicked" />
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                <!-- Empty state (shown when no entries) -->
+                <StackPanel x:Name="EmptyPanel" Visibility="Collapsed" Spacing="4"
+                            Margin="0,8,0,0">
+                    <TextBlock x:Uid="KB_Empty"
+                               Style="{StaticResource BodyTextBlockStyle}"
+                               Opacity="0.6" />
+                    <TextBlock x:Uid="KB_EmptyHint"
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               TextWrapping="Wrap"
+                               Opacity="0.5" />
+                </StackPanel>
 
             </StackPanel>
         </ScrollViewer>
