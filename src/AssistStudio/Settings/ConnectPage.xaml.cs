@@ -25,6 +25,15 @@ public sealed partial class ConnectPage : Page
 
     private McpServerRegistry? _registry;
     private readonly ResourceLoader _loader = new();
+    private bool _searchEngineLoaded;
+
+    #endregion
+
+    #region Constants
+
+    private const string SerperVaultKey = "FieldCure:Essentials:SerperApiKey";
+    private const string TavilyVaultKey = "FieldCure:Essentials:TavilyApiKey";
+    private const string SerpApiVaultKey = "FieldCure:Essentials:SerpApiApiKey";
 
     #endregion
 
@@ -48,6 +57,10 @@ public sealed partial class ConnectPage : Page
         AddServerText.Text = _loader.GetString("Connect_AddServer");
         ImportText.Text = _loader.GetString("Connect_ImportFrom");
         EmptyStateText.Text = _loader.GetString("Connect_EmptyState");
+
+        // Localize search engine section header
+        SearchEngineSection.Header = _loader.GetString("Connect_SearchEngine");
+
         RefreshServerList();
     }
 
@@ -228,6 +241,244 @@ public sealed partial class ConnectPage : Page
             InfoBarSeverity.Success,
             string.Format(_loader.GetString("Connect_ServerRemoved"), name),
             string.Empty);
+    }
+
+    #endregion
+
+    #region Search Engine Section
+
+    /// <summary>
+    /// Handles the search engine section expander being opened for the first time, triggering lazy UI construction.
+    /// </summary>
+    private void OnSearchEngineSectionExpanded(object? sender, EventArgs e)
+    {
+        if (_searchEngineLoaded) return;
+        _searchEngineLoaded = true;
+
+        FindName(nameof(SearchEnginePanel));
+        if (SearchEnginePanel is null) return;
+
+        BuildSearchEngineUI();
+    }
+
+    /// <summary>
+    /// Constructs the search engine selection UI with free and paid engine radio buttons.
+    /// </summary>
+    private void BuildSearchEngineUI()
+    {
+        var panel = SearchEnginePanel;
+        panel.Children.Clear();
+
+        var configs = AppSettings.BuiltInServers;
+        configs.TryGetValue(BuiltInServerHelper.EssentialsKey, out var essentialsConfig);
+        var rawEngine = essentialsConfig?.SearchEngine;
+        var currentEngine = string.IsNullOrEmpty(rawEngine) ? "default" : rawEngine;
+
+        var freeHint = _loader.GetString("Connect_SearchEngineFreeHint");
+        var apiKeyPlaceholder = _loader.GetString("Connect_ApiKeyPlaceholder") ?? "API key";
+
+        // Bing / DuckDuckGo (free)
+        var freeRadio = new RadioButton
+        {
+            GroupName = "SearchEngine",
+            Tag = "default",
+            IsChecked = currentEngine is "default" or "" or null,
+            Margin = new Thickness(0),
+        };
+        var freeContent = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        freeContent.Children.Add(new TextBlock
+        {
+            Text = _loader.GetString("Connect_SearchEngineFree"),
+            VerticalAlignment = VerticalAlignment.Center,
+        });
+        freeContent.Children.Add(new TextBlock
+        {
+            Text = freeHint,
+            Opacity = 0.5,
+            VerticalAlignment = VerticalAlignment.Center,
+            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+        });
+        freeRadio.Content = freeContent;
+        freeRadio.Checked += OnSearchEngineChanged;
+        panel.Children.Add(freeRadio);
+
+        // Paid engines
+        AddPaidEngineRow(panel, "Serper", "serper", SerperVaultKey, currentEngine!, apiKeyPlaceholder);
+        AddPaidEngineRow(panel, "Tavily", "tavily", TavilyVaultKey, currentEngine!, apiKeyPlaceholder);
+        AddPaidEngineRow(panel, "SerpApi", "serpapi", SerpApiVaultKey, currentEngine!, apiKeyPlaceholder);
+    }
+
+    /// <summary>
+    /// Adds a paid search engine row with a radio button, API key input, reveal toggle, and clear button.
+    /// </summary>
+    private void AddPaidEngineRow(
+        StackPanel parent, string displayName, string engineKey, string vaultKey,
+        string currentEngine, string apiKeyPlaceholder)
+    {
+        var row = new Grid();
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var radio = new RadioButton
+        {
+            Content = displayName,
+            GroupName = "SearchEngine",
+            Tag = engineKey,
+            IsChecked = currentEngine == engineKey,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0),
+        };
+        radio.Checked += OnSearchEngineChanged;
+        Grid.SetColumn(radio, 0);
+        row.Children.Add(radio);
+
+        var existingKey = PasswordVaultHelper.ReadDirectCredential(vaultKey);
+        var hasKey = !string.IsNullOrEmpty(existingKey);
+
+        var passwordBox = new PasswordBox
+        {
+            PlaceholderText = apiKeyPlaceholder,
+            Password = hasKey ? existingKey : "",
+            Width = 220,
+            Tag = vaultKey,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        passwordBox.PasswordChanged += OnApiKeyChanged;
+        Grid.SetColumn(passwordBox, 1);
+        row.Children.Add(passwordBox);
+
+        var revealButton = new Button
+        {
+            Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
+            Padding = new Thickness(6),
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(4, 0, 0, 0),
+            Tag = passwordBox,
+        };
+        revealButton.Content = new FontIcon { Glyph = "\uE7B3", FontSize = 14 };
+        revealButton.Click += OnRevealApiKey;
+        Grid.SetColumn(revealButton, 2);
+        row.Children.Add(revealButton);
+
+        var clearButton = new Button
+        {
+            Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
+            Padding = new Thickness(6),
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(2, 0, 0, 0),
+            Tag = passwordBox,
+        };
+        clearButton.Content = new FontIcon { Glyph = "\uE711", FontSize = 14 };
+        clearButton.Click += OnClearApiKey;
+        Grid.SetColumn(clearButton, 3);
+        row.Children.Add(clearButton);
+
+        parent.Children.Add(row);
+    }
+
+    /// <summary>
+    /// Handles search engine radio button selection changes, persists the choice, and triggers Essentials reconnection.
+    /// </summary>
+    private void OnSearchEngineChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is not RadioButton radio || radio.Tag is not string engineKey) return;
+
+        var configs = AppSettings.BuiltInServers;
+        if (!configs.TryGetValue(BuiltInServerHelper.EssentialsKey, out var config))
+        {
+            config = new BuiltInServerConfig { IsEnabled = true };
+            configs[BuiltInServerHelper.EssentialsKey] = config;
+        }
+
+        config.SearchEngine = engineKey == "default" ? null : engineKey;
+        AppSettings.BuiltInServers = configs;
+        LoggingService.LogInfo($"[MCP] Search engine changed to: {engineKey}");
+
+        _ = ReconnectEssentialsAsync();
+    }
+
+    /// <summary>
+    /// Persists or deletes the API key in PasswordVault when the user modifies a paid engine's key field.
+    /// </summary>
+    private void OnApiKeyChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is not PasswordBox pb || pb.Tag is not string vaultKey) return;
+
+        var value = pb.Password?.Trim() ?? "";
+        if (string.IsNullOrEmpty(value))
+            PasswordVaultHelper.DeleteDirectCredential(vaultKey);
+        else
+            PasswordVaultHelper.WriteDirectCredential(vaultKey, value);
+    }
+
+    /// <summary>
+    /// Toggles the API key password box between visible and hidden reveal modes.
+    /// </summary>
+    private void OnRevealApiKey(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn || btn.Tag is not PasswordBox pb) return;
+
+        if (pb.PasswordRevealMode == PasswordRevealMode.Visible)
+        {
+            pb.PasswordRevealMode = PasswordRevealMode.Hidden;
+            if (btn.Content is FontIcon icon)
+                icon.Glyph = "\uE7B3"; // Eye
+        }
+        else
+        {
+            pb.PasswordRevealMode = PasswordRevealMode.Visible;
+            if (btn.Content is FontIcon icon)
+                icon.Glyph = "\uED1A"; // Eye off
+        }
+    }
+
+    /// <summary>
+    /// Clears the API key from the password box and removes it from PasswordVault.
+    /// </summary>
+    private void OnClearApiKey(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn || btn.Tag is not PasswordBox pb) return;
+
+        pb.Password = "";
+        if (pb.Tag is string vaultKey)
+        {
+            PasswordVaultHelper.DeleteDirectCredential(vaultKey);
+            LoggingService.LogInfo($"[MCP] API key cleared: {vaultKey}");
+        }
+    }
+
+    /// <summary>
+    /// Rebuilds the Essentials MCP server configuration with the updated search engine and reconnects.
+    /// </summary>
+    private async Task ReconnectEssentialsAsync()
+    {
+        if (_registry is null) return;
+
+        var conn = _registry.GetBuiltInConnection(BuiltInServerHelper.EssentialsKey);
+        if (conn is null) return;
+
+        try
+        {
+            // Rebuild config with updated search engine arg
+            var configs = AppSettings.BuiltInServers;
+            configs.TryGetValue(BuiltInServerHelper.EssentialsKey, out var config);
+            var newMcpConfig = BuiltInServerHelper.CreateMcpServerConfig(BuiltInServerHelper.EssentialsKey, config ?? new BuiltInServerConfig { IsEnabled = true });
+            if (newMcpConfig is not null)
+            {
+                conn.Config.Arguments = newMcpConfig.Arguments;
+            }
+
+            await _registry.ReconnectAsync(conn);
+            LoggingService.LogInfo("[MCP] Essentials reconnected with new search engine config");
+        }
+        catch (Exception ex)
+        {
+            LoggingService.LogError($"[MCP] Essentials reconnect failed: {ex.Message}");
+        }
+
+        DispatcherQueue.TryEnqueue(RefreshServerList);
     }
 
     #endregion

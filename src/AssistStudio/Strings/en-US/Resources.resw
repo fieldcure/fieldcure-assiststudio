@@ -893,6 +893,18 @@
   <data name="Connect_EssentialsDescription" xml:space="preserve">
     <value>Fetch web pages, run commands, and manage memory in conversations.</value>
   </data>
+  <data name="Connect_SearchEngine" xml:space="preserve">
+    <value>Search engine</value>
+  </data>
+  <data name="Connect_SearchEngineFree" xml:space="preserve">
+    <value>Bing / DuckDuckGo</value>
+  </data>
+  <data name="Connect_SearchEngineFreeHint" xml:space="preserve">
+    <value>(free)</value>
+  </data>
+  <data name="Connect_ApiKeyPlaceholder" xml:space="preserve">
+    <value>API key</value>
+  </data>
   <data name="Embedding_OllamaNotRunning" xml:space="preserve">
     <value>Ollama is not running. Start with: ollama serve</value>
   </data>

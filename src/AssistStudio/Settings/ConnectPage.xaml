@@ -34,8 +34,18 @@
                 <!-- Built-in servers (grouped, tight spacing) -->
                 <StackPanel Spacing="8">
 
-                <!-- 1. Essentials — shared instance, no folders -->
-                <controls:McpServerCard x:Name="EssentialsCard" />
+                <!-- 1. Essentials — shared instance, with search engine config -->
+                <controls:McpServerCard x:Name="EssentialsCard">
+                    <controls:McpServerCard.BottomContent>
+                        <controls:CollapsibleSection x:Name="SearchEngineSection"
+                            IsExpanded="False"
+                            Expanded="OnSearchEngineSectionExpanded">
+                            <controls:CollapsibleSection.Body>
+                                <StackPanel x:Name="SearchEnginePanel" x:Load="False" Spacing="10" />
+                            </controls:CollapsibleSection.Body>
+                        </controls:CollapsibleSection>
+                    </controls:McpServerCard.BottomContent>
+                </controls:McpServerCard>
 
                 <!-- 2. Workspace Folders (Filesystem) — info-only placeholder -->
                 <controls:McpServerCard x:Name="FilesystemCard" />

@@ -31,4 +31,12 @@ public class BuiltInServerConfig
     /// (EMBEDDING_BASE_URL, EMBEDDING_API_KEY, EMBEDDING_MODEL, EMBEDDING_DIMENSION).
     /// </summary>
     public List<string>? EnvironmentVariableKeys { get; set; }
+
+    /// <summary>
+    /// Gets or sets the search engine name for the Essentials server.
+    /// Passed as <c>--search-engine</c> CLI argument.
+    /// Values: <c>null</c> or <c>"default"</c> for Bing/DuckDuckGo fallback,
+    /// or <c>"serper"</c>, <c>"tavily"</c>, <c>"serpapi"</c> for paid engines.
+    /// </summary>
+    public string? SearchEngine { get; set; }
 }

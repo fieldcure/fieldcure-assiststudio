@@ -25,6 +25,14 @@ public sealed partial class McpServerCard : UserControl
             typeof(McpServerCard),
             new PropertyMetadata(null, OnConnectionChanged));
 
+    /// <summary>Identifies the <see cref="BottomContent"/> dependency property.</summary>
+    public static readonly DependencyProperty BottomContentProperty =
+        DependencyProperty.Register(
+            nameof(BottomContent),
+            typeof(UIElement),
+            typeof(McpServerCard),
+            new PropertyMetadata(null, OnBottomContentChanged));
+
     #endregion
 
     #region Fields
@@ -73,6 +81,15 @@ public sealed partial class McpServerCard : UserControl
         set => SetValue(ConnectionProperty, value);
     }
 
+    /// <summary>
+    /// Gets or sets optional content displayed below the card info (e.g., CollapsibleSection).
+    /// </summary>
+    public UIElement? BottomContent
+    {
+        get => (UIElement?)GetValue(BottomContentProperty);
+        set => SetValue(BottomContentProperty, value);
+    }
+
     #endregion
 
     #region Private Methods
@@ -95,6 +112,17 @@ public sealed partial class McpServerCard : UserControl
     private void OnConnectionPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         DispatcherQueue.TryEnqueue(UpdateUI);
+    }
+
+    /// <summary>
+    /// Updates the bottom content presenter visibility when the BottomContent dependency property changes.
+    /// </summary>
+    private static void OnBottomContentChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is McpServerCard card)
+            card.BottomContentPresenter.Visibility = e.NewValue is not null
+                ? Visibility.Visible
+                : Visibility.Collapsed;
     }
 
     private void UpdateUI()

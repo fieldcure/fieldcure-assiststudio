@@ -10,6 +10,7 @@
     <Border Padding="16,12" CornerRadius="6" BorderThickness="1"
             BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+        <StackPanel>
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -81,5 +82,13 @@
                 </StackPanel>
             </StackPanel>
         </Grid>
+
+        <!-- Optional bottom content slot (e.g., CollapsibleSection for built-in server settings) -->
+        <ContentPresenter
+            x:Name="BottomContentPresenter"
+            Content="{x:Bind BottomContent, Mode=OneWay}"
+            Visibility="Collapsed"
+            Margin="0,8,0,0" />
+        </StackPanel>
     </Border>
 </UserControl>

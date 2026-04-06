@@ -210,9 +210,104 @@ internal static class PasswordVaultHelper
         }
     }
 
+    /// <summary>
+    /// Writes a credential directly to Win32 Credential Manager with a custom resource name.
+    /// Used for credentials that external processes (e.g., Essentials MCP) read via their own
+    /// PasswordVault/CredRead with a different resource pattern than AssistStudio's UWP vault.
+    /// </summary>
+    /// <param name="resourceName">The resource name (e.g., <c>FieldCure:Essentials:SerperApiKey</c>).</param>
+    /// <param name="value">The credential value. If empty, the credential is deleted instead.</param>
+    /// <param name="userName">The user name (default: <c>default</c>).</param>
+    public static void WriteDirectCredential(string resourceName, string value, string userName = "default")
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            DeleteDirectCredential(resourceName, userName);
+            return;
+        }
+
+        var targetName = $"{resourceName}/{userName}";
+        var secretBytes = Encoding.Unicode.GetBytes(value);
+        var credential = new CREDENTIAL
+        {
+            Type = 1,
+            TargetName = targetName,
+            UserName = userName,
+            CredentialBlobSize = (uint)secretBytes.Length,
+            CredentialBlob = Marshal.AllocHGlobal(secretBytes.Length),
+            Persist = 2,
+        };
+
+        try
+        {
+            Marshal.Copy(secretBytes, 0, credential.CredentialBlob, secretBytes.Length);
+            CredWrite(ref credential, 0);
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(credential.CredentialBlob);
+        }
+    }
+
+    /// <summary>
+    /// Reads a credential directly from Win32 Credential Manager by resource name.
+    /// </summary>
+    public static string? ReadDirectCredential(string resourceName, string userName = "default")
+    {
+        var targetName = $"{resourceName}/{userName}";
+        if (!CredRead(targetName, 1, 0, out var credPtr))
+            return null;
+
+        try
+        {
+            var cred = Marshal.PtrToStructure<CREDENTIAL>(credPtr);
+            if (cred.CredentialBlobSize == 0 || cred.CredentialBlob == IntPtr.Zero)
+                return null;
+
+            var bytes = new byte[cred.CredentialBlobSize];
+            Marshal.Copy(cred.CredentialBlob, bytes, 0, (int)cred.CredentialBlobSize);
+            return Encoding.Unicode.GetString(bytes);
+        }
+        finally
+        {
+            CredFree(credPtr);
+        }
+    }
+
+    /// <summary>
+    /// Checks whether a direct credential exists in Win32 Credential Manager.
+    /// </summary>
+    public static bool HasDirectCredential(string resourceName, string userName = "default")
+    {
+        var targetName = $"{resourceName}/{userName}";
+        if (!CredRead(targetName, 1, 0, out var credPtr))
+            return false;
+
+        CredFree(credPtr);
+        return true;
+    }
+
+    /// <summary>
+    /// Deletes a credential from Win32 Credential Manager by resource name.
+    /// </summary>
+    public static void DeleteDirectCredential(string resourceName, string userName = "default")
+    {
+        var targetName = $"{resourceName}/{userName}";
+        CredDelete(targetName, 1, 0);
+    }
+
 #pragma warning disable SYSLIB1054
     [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     private static extern bool CredWrite(ref CREDENTIAL credential, uint flags);
+
+    [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern bool CredRead(string targetName, int type, int flags, out IntPtr credential);
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    private static extern void CredFree(IntPtr buffer);
+
+    [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern bool CredDelete(string targetName, int type, int flags);
 #pragma warning restore SYSLIB1054
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]

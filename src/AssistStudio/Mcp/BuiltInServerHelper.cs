@@ -197,6 +197,14 @@ public static class BuiltInServerHelper
         if (serverKey == RagKey)
             mcpConfig.Arguments = ["serve", "--base-path", KnowledgeBaseStore.BasePath];
 
+        // Essentials: pass --search-engine arg if a non-default engine is configured
+        if (serverKey == EssentialsKey
+            && !string.IsNullOrEmpty(config.SearchEngine)
+            && !config.SearchEngine.Equals("default", StringComparison.OrdinalIgnoreCase))
+        {
+            mcpConfig.Arguments = ["--search-engine", config.SearchEngine];
+        }
+
         // Load environment variables from PasswordVault for built-in servers
         // (RAG no longer uses env vars — config.json + PasswordVault presets instead)
         if (serverKey != RagKey && config.EnvironmentVariableKeys is { Count: > 0 } keys)

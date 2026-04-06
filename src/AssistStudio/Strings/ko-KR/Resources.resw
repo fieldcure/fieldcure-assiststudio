@@ -893,6 +893,18 @@
   <data name="Connect_EssentialsDescription" xml:space="preserve">
     <value>웹 페이지 조회, 명령 실행, 메모리 관리 등 핵심 기능을 제공합니다.</value>
   </data>
+  <data name="Connect_SearchEngine" xml:space="preserve">
+    <value>검색 엔진</value>
+  </data>
+  <data name="Connect_SearchEngineFree" xml:space="preserve">
+    <value>Bing / DuckDuckGo</value>
+  </data>
+  <data name="Connect_SearchEngineFreeHint" xml:space="preserve">
+    <value>(무료)</value>
+  </data>
+  <data name="Connect_ApiKeyPlaceholder" xml:space="preserve">
+    <value>API 키</value>
+  </data>
   <data name="Embedding_OllamaNotRunning" xml:space="preserve">
     <value>Ollama가 실행되지 않습니다. ollama serve 명령으로 시작하세요</value>
   </data>
