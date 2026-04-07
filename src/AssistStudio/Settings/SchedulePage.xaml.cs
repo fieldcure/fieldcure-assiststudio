@@ -176,10 +176,12 @@ public sealed partial class SchedulePage : Page
             Grid.SetColumn(infoPanel, 0);
             grid.Children.Add(infoPanel);
 
-            // Column 1: toggle switch
+            // Column 1: toggle switch (disabled for completed one-time tasks)
+            var isOnceCompleted = item.ScheduleOnce.HasValue && item.ScheduleOnce.Value.ToLocalTime() <= DateTimeOffset.Now;
             var toggle = new ToggleSwitch
             {
                 IsOn = item.IsEnabled,
+                IsEnabled = !isOnceCompleted,
                 OnContent = "",
                 OffContent = "",
                 MinWidth = 0,
@@ -187,9 +189,10 @@ public sealed partial class SchedulePage : Page
                 Tag = item.Id,
                 Margin = new Thickness(8, 0, 0, 0),
             };
-            ToolTipService.SetToolTip(toggle, item.IsEnabled ? _disableTooltip : _enableTooltip);
+            ToolTipService.SetToolTip(toggle, isOnceCompleted ? "" : item.IsEnabled ? _disableTooltip : _enableTooltip);
             ToolTipService.SetPlacement(toggle, Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse);
-            toggle.Toggled += OnToggled;
+            if (!isOnceCompleted)
+                toggle.Toggled += OnToggled;
             Grid.SetColumn(toggle, 1);
             grid.Children.Add(toggle);
 
