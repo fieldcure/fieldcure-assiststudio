@@ -1,5 +1,9 @@
 # Release Notes — FieldCure.Ai.Execution
 
+## v0.2.0
+
+- `AgentLoopResult.Messages`: expose full conversation history (user, assistant, tool messages) accumulated during the loop for detailed audit trails and execution logging
+
 ## v0.1.0
 
 - Initial release — agent loop and sub-agent execution engine

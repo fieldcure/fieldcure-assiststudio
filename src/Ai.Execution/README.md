@@ -9,7 +9,7 @@ Agent loop and sub-agent execution engine for autonomous LLM tool-use workflows.
 | `IAgentLoop` / `AgentLoop` | Prompt - model call - tool execution - repeat loop |
 | `ISubAgentExecutor` / `SubAgentExecutor` | Isolated sub-agent sessions with context propagation |
 | `AgentLoopContext` | Loop input: provider, system prompt, tools, guards |
-| `AgentLoopResult` | Loop output: status, summary, tool call count |
+| `AgentLoopResult` | Loop output: status, summary, tool call count, messages |
 | `SubAgentRequest` | Sub-agent task definition with ContextHints |
 | `SubAgentResult` | Sub-agent report, status, duration |
 | `ContextHintKeys` | Well-known keys for context propagation (kb_id, etc.) |
@@ -35,8 +35,9 @@ var result = await loop.RunAsync(new AgentLoopContext
     MaxRounds = 10,
 });
 
-Console.WriteLine(result.Summary);  // Last assistant message
-Console.WriteLine(result.Status);   // Completed, MaxRoundsReached, Failed
+Console.WriteLine(result.Summary);   // Last assistant message
+Console.WriteLine(result.Status);    // Completed, MaxRoundsReached, Failed
+Console.WriteLine(result.Messages);  // Full conversation for audit logging
 ```
 
 ### SubAgentExecutor
