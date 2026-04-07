@@ -1,3 +1,5 @@
+using FieldCure.Ai.Providers.Models;
+
 namespace FieldCure.Ai.Execution;
 
 /// <summary>
@@ -30,6 +32,13 @@ public sealed class AgentLoopResult
     /// Total number of tool calls executed across all rounds.
     /// </summary>
     public int ToolCallCount { get; init; }
+
+    /// <summary>
+    /// Full conversation messages accumulated during the loop.
+    /// Includes user, assistant (with tool calls), and tool result messages.
+    /// Available for detailed logging and audit trails.
+    /// </summary>
+    public IReadOnlyList<ChatMessage>? Messages { get; init; }
 }
 
 /// <summary>

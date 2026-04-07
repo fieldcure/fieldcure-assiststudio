@@ -152,6 +152,7 @@ public sealed class AgentLoop : IAgentLoop
             Summary = lastSummary,
             ErrorMessage = errorMessage,
             ToolCallCount = totalToolCalls,
+            Messages = messages,
         };
     }
 
