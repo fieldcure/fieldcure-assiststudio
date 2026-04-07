@@ -3,6 +3,7 @@
 **AI Chat Controls for WinUI 3 + Windows AI Workspace App — Bring Your Own Key, pick any provider.**
 
 [![NuGet Providers](https://img.shields.io/nuget/v/FieldCure.Ai.Providers?label=Ai.Providers)](https://www.nuget.org/packages/FieldCure.Ai.Providers)
+[![NuGet Execution](https://img.shields.io/nuget/v/FieldCure.Ai.Execution?label=Ai.Execution)](https://www.nuget.org/packages/FieldCure.Ai.Execution)
 [![NuGet Core](https://img.shields.io/nuget/v/FieldCure.AssistStudio.Core?label=Core)](https://www.nuget.org/packages/FieldCure.AssistStudio.Core)
 [![NuGet Controls](https://img.shields.io/nuget/v/FieldCure.AssistStudio.Controls.WinUI?label=Controls.WinUI)](https://www.nuget.org/packages/FieldCure.AssistStudio.Controls.WinUI)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
