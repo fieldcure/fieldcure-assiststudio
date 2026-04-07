@@ -25,18 +25,22 @@ AssistStudio is two things:
 
 - **BYOK (Bring Your Own Key)** — Users supply their own API keys. No proxy, no middleman.
 - **Multi-Provider** — Claude, OpenAI, Gemini, Ollama, and Groq out of the box. Implement `IAiProvider` to add your own.
-- **Streaming** — Real-time structured event streaming via `IAsyncEnumerable<StreamEvent>` — a discriminated union covering text, thinking, tool calls, usage, and completion.
-- **Extended Thinking** — Per-provider thinking/reasoning support (Claude extended thinking, OpenAI o-series reasoning, Ollama think tags). Configurable via `ThinkingOverride` and `ThinkingBudget`.
+- **Streaming** — Real-time structured event streaming via `IAsyncEnumerable<StreamEvent>` — a discriminated union covering text, thinking, tool calls, usage, and completion. Elapsed time display during streaming.
+- **Extended Thinking** — Per-provider thinking/reasoning support (Claude extended thinking, OpenAI o-series reasoning, Ollama native thinking field). Configurable via `ThinkingOverride` and `ThinkingBudget`.
 - **Conversation Branching** — Tree-based message editing with branch navigator (◀ 1/2 ▶). Edit any message to explore alternatives without losing history.
 - **MCP Integration** — Connect to MCP servers (Stdio / HTTP) to aggregate tools from any Model Context Protocol source. `McpToolAdapter` bridges MCP tools to the `IAssistTool` pipeline.
-- **Built-in MCP Servers** — Filesystem, Knowledge Archive (RAG), and Outbox servers ship as built-ins, auto-installed via `dotnet tool`. Per-tab or shared instances with MCP Roots protocol support.
-- **Vision & Documents** — Attach images (PNG, JPG, WebP, GIF), PDFs, DOCX, HWPX, XLSX, and PPTX files. Document text extraction via [FieldCure.DocumentParsers](https://github.com/fieldcure/fieldcure-document-parsers). Per-provider `PdfCapability` (Auto / TextExtraction / NativePdf / PageAsImage).
-- **Tool / Function Calling** — Define tools with `IAssistTool`. `ToolCallExecutor` orchestrates execution with confirmation flow. `ToolApprovalPanel` shows inline approval UI.
+- **Built-in MCP Servers** — Essentials, Filesystem, Knowledge Archive (RAG), and Outbox servers ship as built-ins, auto-installed and auto-updated via `dotnet tool`. Per-tab or shared instances with MCP Roots protocol support.
+- **Vision & Documents** — Attach images (PNG, JPG, WebP, GIF), PDFs, DOCX, HWPX, XLSX, and PPTX files. Automatic image compression via `ImageCompressor`. Document text extraction via [FieldCure.DocumentParsers](https://github.com/fieldcure/fieldcure-document-parsers). Per-provider `PdfCapability` (Auto / TextExtraction / NativePdf / PageAsImage).
+- **Multimedia Tool Results** — MCP tools returning image, audio, and video content are rendered inline with native controls. Image hover toolbar with zoom (popover viewer), save, and copy.
+- **Sub-Agent Delegation** — `delegate_task` tool for autonomous sub-agent execution with parallel dispatch. `ISpecialist` interface for domain-specific routing (e.g., Web Search Specialist).
+- **Tool / Function Calling** — Define tools with `IAssistTool`. `ToolCallExecutor` orchestrates execution with confirmation flow and parallel execution. `ToolApprovalPanel` shows inline approval UI with user instruction input.
 - **Token Tracking** — Input/output token counts exposed after every request.
 - **Re-templatable WinUI 3 Controls** — `ChatPanel`, `ComposeBar`, `AttachmentPreviewBar`, and `ToolApprovalPanel` are `TemplatedControl`s. Override `Generic.xaml` to fully customize the UI.
 - **Profiles & Presets** — Save provider configurations as presets; switch system prompts and tool selections with profiles.
 - **Workspace Context** — `IWorkspaceContext` for dynamic system prompt injection based on app state.
-- **Conversation Persistence** — Save and load conversations in `.astd` (JSON) format with full branching tree.
+- **Conversation Persistence** — Save and load conversations in `.astd` (JSON) format with full branching tree and media persistence.
+- **Knowledge Archive** — Multi-KB management with create/delete/settings UI, embedding model selection, and per-conversation KB selector.
+- **Schedule** — Cron schedule management with bilingual (en/ko) human-readable cron descriptions.
 - **Localization** — Built-in en-US and ko-KR resource strings.
 - **Structured Logging** — `DiagnosticLogger` with pluggable `OnException`, `OnWarning`, `OnInfo` callbacks.
 
@@ -67,13 +71,19 @@ AssistStudio is two things:
                                    │ McpToolAdapter
 ┌──────────────────────────────────┼──────────────────┐
 │  AssistStudio (Workspace App)                       │
-│  WinUI 3 — MCP · Built-in Servers · Profiles        │
+│  WinUI 3 — MCP · SubAgent · Schedule · KB · Media  │
 ├─────────────────────────────────────────────────────┤
 │  AssistStudio.Controls            ← NuGet package   │
-│  ChatPanel · Branching · ThinkingBlock · EditMode   │
+│  ChatPanel · Multimedia · Branching · ThinkingBlock │
 │  WebView2 rendering · Themes · Localization         │
 ├─────────────────────────────────────────────────────┤
 │  AssistStudio.Core                ← NuGet package   │
+│  ISpecialist · ToolCallExecutor · ToolResolver      │
+├─────────────────────────────────────────────────────┤
+│  Ai.Execution                     ← NuGet package   │
+│  AgentLoop · SubAgentExecutor                       │
+├─────────────────────────────────────────────────────┤
+│  Ai.Providers                     ← NuGet package   │
 │  IAiProvider · StreamEvent · IAssistTool · Models   │
 │  Claude │ OpenAI │ Gemini │ Ollama │ Groq           │
 └─────────────────────────────────────────────────────┘
@@ -81,9 +91,11 @@ AssistStudio is two things:
 
 | Project | NuGet Package | TFM | Key Types |
 |---------|--------------|-----|-----------|
-| **AssistStudio.Core** | `FieldCure.AssistStudio.Core` | `net8.0` | `IAiProvider`, `StreamEvent`, `IAssistTool`, `AiRequest`, `AiResponse`, `ChatMessage`, `ToolCallExecutor`, `ToolResolver`, `McpToolAdapter`, `IWorkspaceContext`, `ProviderPreset`, `Profile`, `ConversationManager` — depends on [`FieldCure.DocumentParsers`](https://www.nuget.org/packages/FieldCure.DocumentParsers) |
+| **AssistStudio.Core** | `FieldCure.AssistStudio.Core` | `net8.0` | `ISpecialist`, `KnowledgeBase`, `ToolCallExecutor`, `ToolResolver`, `McpToolAdapter`, `IWorkspaceContext`, `BuiltInServerConfig`, `Profile` — depends on [`FieldCure.Ai.Providers`](https://www.nuget.org/packages/FieldCure.Ai.Providers) |
 | **AssistStudio.Controls** | `FieldCure.AssistStudio.Controls.WinUI` | `net8.0-windows10.0.19041.0`<br>`net9.0-windows10.0.19041.0` | `ChatPanel`, `ComposeBar`, `AttachmentPreviewBar`, `ToolApprovalPanel`, `ChatTheme` |
-| **AssistStudio** | *(workspace app)* | `net9.0-windows10.0.19041.0` | Reference implementation with settings, MCP server management, built-in tools, and `PasswordVaultHelper` |
+| **Ai.Providers** | `FieldCure.Ai.Providers` | `net8.0` | `IAiProvider`, `StreamEvent`, `IAssistTool`, `AiRequest`, `AiResponse`, `ChatMessage`, `ProviderPreset`, `ImageCompressor`, `IMultiContentTool`, `MediaContent` |
+| **Ai.Execution** | `FieldCure.Ai.Execution` | `net8.0` | `IAgentLoop`, `AgentLoop`, `ISubAgentExecutor`, `SubAgentExecutor`, `AgentLoopContext`, `AgentLoopResult` |
+| **AssistStudio** | *(workspace app)* | `net9.0-windows10.0.19041.0` | Reference implementation with settings, MCP server management, sub-agent delegation, schedule, and `PasswordVaultHelper` |
 
 > **Core is platform-agnostic** (`net8.0`). It has no Windows-specific dependencies — you can reference it from a console app, a server, or any .NET project.
 
@@ -281,12 +293,11 @@ MCP servers are configured with Stdio or HTTP transport and connected at app sta
 
 The workspace app bundles MCP servers that are auto-installed and managed:
 
-- **Essentials** — In-process virtual server bundling built-in tools (`read_file`, `remember`, `forget`). `read_file` supports PDF, DOCX, XLSX, PPTX, HWPX via DocumentParsers.
-- **Memory** — Persistent cross-conversation memory with `remember` / `forget` tools.
+- **Essentials** ([`FieldCure.Mcp.Essentials`](https://www.nuget.org/packages/FieldCure.Mcp.Essentials)) — 12–16 tools: HTTP client, web search (Bing/Serper/SerpApi/Tavily + category search for news/images/scholar/patents), web/document fetching, shell commands, JavaScript sandbox, environment info, file I/O, persistent memory (`remember`/`forget`).
 - **Filesystem** ([`FieldCure.Mcp.Filesystem`](https://www.nuget.org/packages/FieldCure.Mcp.Filesystem)) — Secure file operations within workspace folders. Per-tab instances with MCP Roots protocol for dynamic folder updates.
-- **Knowledge Archive** ([`FieldCure.Mcp.Rag`](https://www.nuget.org/packages/FieldCure.Mcp.Rag)) — Index and search local documents for RAG. Per-tab instances with auto-indexing on folder selection. Supports PDF, DOCX, XLSX, PPTX, HWPX.
-- **Outbox** ([`FieldCure.Mcp.Outbox`](https://www.nuget.org/packages/FieldCure.Mcp.Outbox)) — Send messages via Slack, Telegram, Email (SMTP), and KakaoTalk. Shared instance across all tabs.
-- **BuiltInServerHelper** — Auto-installs and updates built-in servers via `dotnet tool` on app startup. Read-only tools (read, list, search) skip user approval.
+- **Knowledge Archive** ([`FieldCure.Mcp.Rag`](https://www.nuget.org/packages/FieldCure.Mcp.Rag)) — Multi-KB document indexing and search for RAG. Shared server with `kb_id` parameter, per-conversation KB selection, and embedding model configuration.
+- **Outbox** ([`FieldCure.Mcp.Outbox`](https://www.nuget.org/packages/FieldCure.Mcp.Outbox)) — Send messages via Slack, Telegram, Discord, Email (SMTP), and KakaoTalk. Shared instance across all tabs.
+- **BuiltInServerHelper** — Auto-installs and auto-updates built-in servers to latest NuGet version via `dotnet tool` on app startup. Read-only tools (read, list, search) skip user approval.
 
 ---
 
@@ -340,25 +351,25 @@ var profile = new Profile
 
 ### MCP Servers
 
-| Package | Description |
-|---------|-------------|
-| [FieldCure.Mcp.Essentials](https://www.nuget.org/packages/FieldCure.Mcp.Essentials) | Web search (+ news/images/scholar/patents), web/document fetching, shell, JavaScript, file I/O, persistent memory |
-| [FieldCure.Mcp.Outbox](https://www.nuget.org/packages/FieldCure.Mcp.Outbox) | Multi-channel messaging — Slack, Telegram, Email (SMTP/Graph), KakaoTalk |
-| [FieldCure.Mcp.Filesystem](https://www.nuget.org/packages/FieldCure.Mcp.Filesystem) | Sandboxed file/directory operations with built-in document parsing (DOCX, HWPX, XLSX, PDF) |
-| [FieldCure.Mcp.Rag](https://www.nuget.org/packages/FieldCure.Mcp.Rag) | Document search — hybrid BM25 + vector retrieval, multi-KB, incremental indexing |
-| [FieldCure.Mcp.PublicData.Kr](https://www.nuget.org/packages/FieldCure.Mcp.PublicData.Kr) | Korean public data gateway — data.go.kr (80,000+ APIs) |
-| [FieldCure.AssistStudio.Runner](https://www.nuget.org/packages/FieldCure.AssistStudio.Runner) | Headless LLM task runner with scheduling via Windows Task Scheduler |
+| Package | Version | Description |
+|---------|---------|-------------|
+| [FieldCure.Mcp.Essentials](https://github.com/fieldcure/fieldcure-mcp-essentials) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.Mcp.Essentials)](https://www.nuget.org/packages/FieldCure.Mcp.Essentials) | 12–16 tools — HTTP, web search (+ news/images/scholar/patents), web/document fetching, shell, JavaScript sandbox, environment info, file I/O, persistent memory |
+| [FieldCure.Mcp.Outbox](https://github.com/fieldcure/fieldcure-mcp-outbox) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.Mcp.Outbox)](https://www.nuget.org/packages/FieldCure.Mcp.Outbox) | Multi-channel messaging — Slack, Telegram, Discord, Email (SMTP/Graph), KakaoTalk |
+| [FieldCure.Mcp.Filesystem](https://github.com/fieldcure/fieldcure-mcp-filesystem) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.Mcp.Filesystem)](https://www.nuget.org/packages/FieldCure.Mcp.Filesystem) | Sandboxed file/directory operations with built-in document parsing (DOCX, HWPX, XLSX, PDF) |
+| [FieldCure.Mcp.Rag](https://github.com/fieldcure/fieldcure-mcp-rag) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.Mcp.Rag)](https://www.nuget.org/packages/FieldCure.Mcp.Rag) | Document search — hybrid BM25 + vector retrieval, multi-KB, incremental indexing |
+| [FieldCure.Mcp.PublicData.Kr](https://github.com/fieldcure/fieldcure-mcp-publicdata) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.Mcp.PublicData.Kr)](https://www.nuget.org/packages/FieldCure.Mcp.PublicData.Kr) | Korean public data gateway — data.go.kr (80,000+ APIs) |
+| [FieldCure.AssistStudio.Runner](https://github.com/fieldcure/fieldcure-assiststudio-runner) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.AssistStudio.Runner)](https://www.nuget.org/packages/FieldCure.AssistStudio.Runner) | Headless LLM task runner with scheduling via Windows Task Scheduler |
 
 ### Libraries
 
-| Package | Description |
-|---------|-------------|
-| [FieldCure.Ai.Providers](https://www.nuget.org/packages/FieldCure.Ai.Providers) | Multi-provider AI client — Claude, OpenAI, Gemini, Ollama, Groq with streaming and tool use |
-| [FieldCure.Ai.Execution](https://www.nuget.org/packages/FieldCure.Ai.Execution) | Agent loop and sub-agent execution engine for autonomous tool-use workflows |
-| [FieldCure.AssistStudio.Core](https://www.nuget.org/packages/FieldCure.AssistStudio.Core) | MCP server management, tool orchestration, and conversation persistence |
-| [FieldCure.AssistStudio.Controls.WinUI](https://www.nuget.org/packages/FieldCure.AssistStudio.Controls.WinUI) | WinUI 3 chat UI controls — WebView2 rendering, streaming, conversation branching |
-| [FieldCure.DocumentParsers](https://www.nuget.org/packages/FieldCure.DocumentParsers) | Document text extraction — DOCX, HWPX, XLSX, PPTX with math-to-LaTeX |
-| [FieldCure.DocumentParsers.Pdf](https://www.nuget.org/packages/FieldCure.DocumentParsers.Pdf) | PDF text extraction add-on for DocumentParsers |
+| Package | Version | Description |
+|---------|---------|-------------|
+| [FieldCure.Ai.Providers](https://github.com/fieldcure/fieldcure-assiststudio) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.Ai.Providers)](https://www.nuget.org/packages/FieldCure.Ai.Providers) | Multi-provider AI client — Claude, OpenAI, Gemini, Ollama, Groq with streaming and tool use |
+| [FieldCure.Ai.Execution](https://github.com/fieldcure/fieldcure-assiststudio) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.Ai.Execution)](https://www.nuget.org/packages/FieldCure.Ai.Execution) | Agent loop and sub-agent execution engine for autonomous tool-use workflows |
+| [FieldCure.AssistStudio.Core](https://github.com/fieldcure/fieldcure-assiststudio) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.AssistStudio.Core)](https://www.nuget.org/packages/FieldCure.AssistStudio.Core) | MCP server management, tool orchestration, and conversation persistence |
+| [FieldCure.AssistStudio.Controls.WinUI](https://github.com/fieldcure/fieldcure-assiststudio) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.AssistStudio.Controls.WinUI)](https://www.nuget.org/packages/FieldCure.AssistStudio.Controls.WinUI) | WinUI 3 chat UI controls — WebView2 rendering, streaming, conversation branching |
+| [FieldCure.DocumentParsers](https://github.com/fieldcure/fieldcure-document-parsers) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.DocumentParsers)](https://www.nuget.org/packages/FieldCure.DocumentParsers) | Document text extraction — DOCX, HWPX, XLSX, PPTX with math-to-LaTeX |
+| [FieldCure.DocumentParsers.Pdf](https://github.com/fieldcure/fieldcure-document-parsers) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.DocumentParsers.Pdf)](https://www.nuget.org/packages/FieldCure.DocumentParsers.Pdf) | PDF text extraction add-on for DocumentParsers |
 
 ---
 

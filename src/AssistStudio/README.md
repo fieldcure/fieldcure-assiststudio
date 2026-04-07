@@ -24,9 +24,9 @@ Chat with five AI providers from a single app. Switch providers mid-conversation
 
 ### Streaming & Extended Thinking
 
-- Real-time token-by-token streaming with typing indicator
+- Real-time token-by-token streaming with typing indicator and elapsed time display
 - Extended thinking/reasoning visualization — collapsible thinking blocks show the model's step-by-step reasoning
-- Supports Claude extended thinking, OpenAI o-series reasoning, and Ollama think tags
+- Supports Claude extended thinking, OpenAI o-series reasoning, and Ollama native thinking field
 
 ### Conversation Management
 
@@ -35,13 +35,16 @@ Chat with five AI providers from a single app. Switch providers mid-conversation
 - **Conversation Branching** — Edit any message to explore alternatives. The original path is preserved, and you can switch between branches with the ◀ 1/2 ▶ navigator
 - **Auto-titling** — AI-generated conversation titles
 
-### Attachments
+### Attachments & Media
 
 Attach files to any message via drag-and-drop, paste, or file picker:
 
-- Images: PNG, JPG, WebP, GIF, BMP
+- Images: PNG, JPG, WebP, GIF, BMP (auto-compressed before sending)
 - Documents: PDF, DOCX, XLSX, PPTX, HWPX (native, text extraction, or page-as-image for PDF)
 - Text files: TXT, CSV, LOG, MD, JSON, XML
+- Multimedia tool results: inline image, audio, and video rendering from MCP tools
+- Image hover toolbar: zoom (popover viewer), save, and copy
+- Media persistence: images and media saved in `.astd` files
 
 ### MCP Integration (Model Context Protocol)
 
@@ -51,24 +54,27 @@ Connect to external MCP servers to extend AI capabilities with custom tools:
 - **Tool aggregation** — Tools from all connected servers appear alongside built-in tools
 - **Tool approval** — Tools that require confirmation show an inline approval panel before execution
 - **Search tools** — Meta-tool for efficiently searching across large tool sets
-- **Built-in servers** — Essentials (in-process), Memory, Filesystem, and Knowledge Archive servers. External servers auto-installed via `dotnet tool` with per-tab instances and MCP Roots protocol
+- **Sub-Agent delegation** — `delegate_task` tool for autonomous sub-agent execution with parallel dispatch and specialist routing (e.g., Web Search Specialist)
+- **Built-in servers** — Essentials, Filesystem, Knowledge Archive, and Outbox servers. Auto-installed and auto-updated via `dotnet tool` with per-tab instances and MCP Roots protocol
 
 ### Workspace Folders & Knowledge Archive
 
 - **Per-conversation folders** — Each conversation tab has its own set of workspace folders
 - **Title bar folder button** — Add/remove folders and manage Knowledge Archive from the folder flyout
-- **Knowledge Archive (RAG)** — Index local documents for retrieval-augmented generation. Per-tab RAG server with auto-indexing
-- **System prompt injection** — Workspace folder paths and archive search hints are automatically injected into the system prompt
+- **Knowledge Archive page** — Unified KB management with create/delete/settings dialog and embedding model selection
+- **Multi-KB support** — Multiple Knowledge Archives with shared RAG server and per-conversation KB selection
+- **Knowledge Archive (RAG)** — Index local documents for retrieval-augmented generation via `FieldCure.Mcp.Rag`
+- **System prompt injection** — Workspace folder paths, archive search hints, and persistent memory are automatically injected into the system prompt
 - **Tool CWD** — File and command tools operate within workspace folder context
 
 ### Built-in Tools
 
-- **Essentials** — `read_file` with PDF/DOCX/XLSX/PPTX/HWPX support (up to 50 MB), `fetch_url` with SSRF protection
-- **Memory** — `remember` and `forget` for persistent cross-conversation context
+- **Essentials** — `read_file` with PDF/DOCX/XLSX/PPTX/HWPX support (up to 50 MB), `http_request`, web search (with search engine selection), `remember`/`forget` persistent memory, shell commands
 - **Filesystem** — Read, write, list, and search files within workspace folders (via MCP Filesystem)
 - **Knowledge Archive** — Index and search local documents for RAG (via MCP Rag)
-- **Command execution** — Run shell commands (with approval)
+- **Outbox** — Send messages via Slack, Telegram, Discord, Email (SMTP), and KakaoTalk
 - **Search Tools** — Find the right tool across large MCP tool sets
+- **Sub-Agent** — Delegate complex tasks to autonomous sub-agents with specialist routing
 
 ### Profiles & Presets
 
@@ -78,9 +84,13 @@ Connect to external MCP servers to extend AI capabilities with custom tools:
 
 ### Settings
 
-- **Models** — Configure providers, API keys, model selection, Ollama model pulling
+- **Connect** — Add and manage MCP server connections (built-in and external) with search engine selection
+- **Models** — Configure providers, API keys, model selection, Ollama model pulling and login
 - **Profiles** — Create and manage system prompt profiles with tool bindings
-- **Connect** — Add and manage MCP server connections (built-in and external)
+- **Knowledge Archive** — Create, configure, and manage Knowledge Archives with embedding model selection
+- **Memory** — View and manage persistent memory entries (via Essentials MCP)
+- **Schedule** — Cron schedule management with bilingual (en/ko) human-readable descriptions
+- **Tasks** — Monitor and manage running background tasks
 - **Personalization** — Light / Dark / System theme, language (English, Korean)
 - **Advanced** — Debug mode, conversation pruning, thinking budget, tool call limits
 

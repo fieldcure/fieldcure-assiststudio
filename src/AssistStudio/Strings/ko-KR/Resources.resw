@@ -573,7 +573,7 @@
   <data name="Nav_KnowledgeBases.Content" xml:space="preserve">
     <value>지식보관소</value>
   </data>
-  <!-- Knowledge Bases Page -->
+  <!-- Knowledge Archive Page -->
   <data name="KB_Title.Text" xml:space="preserve">
     <value>지식보관소</value>
   </data>

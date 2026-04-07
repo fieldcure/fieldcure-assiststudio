@@ -13,7 +13,11 @@
 - **Conversation Branching** — Tree-based message editing. Edit any user message to create a new branch. Navigate between branches with the ◀ 1/2 ▶ navigator in message footers.
 - **Code Copy-to-Clipboard** — One-click copy button on every rendered code block.
 - **Folder Flyout** — XAML-based folder management flyout with workspace folders and Knowledge Archive controls. `{ThemeResource}` bindings for automatic light/dark theme support.
-- **Tool Approval** — Inline `ToolApprovalPanel` for user confirmation before tool execution, with expandable JSON arguments preview.
+- **Multimedia Rendering** — MCP image, audio, and video content blocks rendered inline with native controls.
+- **Image Hover Toolbar** — Zoom (popover viewer), save (`FileSavePicker`), and copy buttons on hover over inline images.
+- **Knowledge Archive Selector** — `ComposeBar` flyout for per-conversation KB selection with `kb_id` system prompt hint injection.
+- **Tool Approval** — Inline `ToolApprovalPanel` for user confirmation before tool execution, with expandable JSON arguments preview and user instruction input field.
+- **Streaming Elapsed Time** — Real-time elapsed timer displayed in `ComposeBar` during streaming responses.
 - **TemplatedControls** — All controls are `TemplatedControl`s with `PART_` conventions. Override `Generic.xaml` to fully customize.
 - **Theming** — Light, Dark, and System themes. Set `Theme="System"` to follow the app theme.
 - **Localization** — Built-in en-US and ko-KR resource strings.
@@ -40,7 +44,7 @@ dotnet add package FieldCure.AssistStudio.Controls.WinUI
 ```
 
 ```csharp
-using FieldCure.AssistStudio.Providers;
+using FieldCure.Ai.Providers;
 
 // Code-behind — assign a provider
 Chat.Provider = new ClaudeProvider(apiKey: "sk-ant-...", modelId: "claude-sonnet-4-20250514");
@@ -89,9 +93,18 @@ The main control. Provides message list (WebView2), input area, streaming, attac
 | `ShowTitleBar` | `bool` | Show/hide the title bar |
 | `AllowAttachments` | `bool` | Enable/disable file attachments |
 | `IsReadOnly` | `bool` | Read-only conversation view |
-| `FontFamily` | `string` | Chat font family |
-| `FontSize` | `double` | Chat font size |
+| `WorkspaceFolders` | `IList<string>` | Workspace folder paths for the current tab |
+| `IsWorkspaceEnabled` | `bool` | Enable/disable workspace folder features |
+| `KnowledgeArchiveFolder` | `string` | Knowledge Archive folder path (kb_id) for the current conversation |
+| `IsKnowledgeArchiveEnabled` | `bool` | Whether Knowledge Archive is enabled in the current profile |
+| `IsArchiveIndexing` | `bool` | Whether the Knowledge Archive is currently indexing |
+| `ArchiveIndexingProgress` | `double` | Indexing progress (0–100) |
+| `ArchiveIndexingText` | `string` | Current indexing file name for tooltip display |
+| `IsArchiveLocked` | `bool` | Whether the archive folder is locked by another process |
+| `McpTools` | `IReadOnlyList<IAssistTool>` | MCP tools from connected servers |
+| `MemoryText` | `string` | Persistent memory text injected into system prompt |
 | `ChatZoomFactor` | `double` | CSS zoom factor for chat rendering (default 1.05) |
+| `AllowAttachments` | `bool` | Enable/disable file attachments |
 | `EmptyStateContent` | `object` | Custom empty state UI |
 | `AvailableServers` | `IList<ServerInfo>` | MCP server status for tools flyout |
 

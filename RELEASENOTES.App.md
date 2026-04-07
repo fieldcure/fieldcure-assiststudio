@@ -1,5 +1,43 @@
 ﻿# Release Notes — AssistStudio App
 
+## [0.14.0] - 2026-04-07
+
+### Added
+- **Sub-Agent delegation** — `delegate_task` tool for autonomous sub-agent execution with parallel dispatch and specialist routing
+- **Web Search Specialist** — dedicated search agent with `ISpecialist` architecture and external search MCP compatibility
+- **Schedule page** — cron schedule management UI with bilingual cron descriptor (en/ko) and one-time schedule display
+- **Knowledge Archive page** — unified KB management with create/delete/settings dialog, `EmbeddingModelSelector`, progress/stop UI
+- **Media persistence** — images, audio, and video saved in `.astd` files via `MediaStore` with per-conversation media directory
+- **Image compression** — automatic JPEG compression and resize before sending to providers (`ImageCompressor` via SkiaSharp)
+- **Memory → Essentials MCP** — memory tools migrated from in-process virtual server to Essentials MCP; system prompt injection via `list_memories`
+- **MCP server auto-update** — built-in servers automatically updated to latest NuGet version on startup
+- **Search engine selection UI** — Essentials MCP search engine configuration on Connect page
+- **Ollama native thinking** — support for Ollama native `thinking` field and cloud model reasoning UI
+- **Ollama login button** — Ollama.com model hub login, sorted model list, nested dialog crash fix
+- **User instruction on tool approval** — free-text input field on `ToolApprovalPanel` for injecting user notes into tool results
+- **Streaming elapsed time** — real-time elapsed timer displayed during streaming responses
+- **Image hover toolbar** — zoom, save, and copy buttons on hover over inline images with popover viewer
+
+### Changed
+- **ModelsPage refactored** — split into `CloudProviderSection` and `OllamaProviderSection` standalone UserControls with deferred loading
+- **RAG multi-KB** — shared RAG server with `kb_id` parameter; KB selector in `ChatPanel` flyout
+- **MCP server startup parallelized** — `Task.WhenAll` for concurrent server initialization
+- **Settings navigation reordered** — natural workflow order (Connect → Models → Profiles → Knowledge → Memory → Schedule → Tasks)
+- **AppTasks page simplified** — lightweight flat list replacing complex grid
+- **Preset management optimized** — debounced `PresetsChanged`, cached presets, suppressed initialization saves
+- **DocumentParsers updated** to v1.x
+
+### Fixed
+- Completed one-time tasks toggle now disabled on Schedule page
+- MCP server race condition on early message send prevented
+- MCP server reconnection after edit even if previously failed
+- Nested dialog crash in Ollama model management
+- ko-KR punctuation localization warnings resolved
+- User message hidden when assistant response starts
+- Image save/copy routed through `ChatPanel` instead of renderer
+
+---
+
 ## [0.13.0] - 2026-03-31
 
 ### Added

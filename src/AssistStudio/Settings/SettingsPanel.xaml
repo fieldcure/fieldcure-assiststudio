@@ -46,8 +46,8 @@
                         <FontIcon Glyph="&#xEBD2;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <!-- Knowledge Bases -->
-                <NavigationViewItem x:Uid="Nav_KnowledgeBases" Content="Knowledge Bases" Tag="KnowledgeBases">
+                <!-- Knowledge Archive -->
+                <NavigationViewItem x:Uid="Nav_KnowledgeBases" Content="Knowledge Archive" Tag="KnowledgeBases">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE8F1;" />
                     </NavigationViewItem.Icon>

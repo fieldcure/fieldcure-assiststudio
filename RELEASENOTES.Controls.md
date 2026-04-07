@@ -1,5 +1,31 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Controls.WinUI
 
+## [0.14.0] - 2026-04-07
+
+### Added
+- **Multimedia rendering** — MCP `ImageContentBlock` inline display, audio/video player elements with native controls
+- **Image hover toolbar** — zoom (popover viewer), save (`FileSavePicker`), and copy buttons on image hover
+- **Knowledge Base selector** — flyout in `ComposeBar` for per-conversation KB selection with `kb_id` system prompt hint
+- **Tool approval user instruction** — free-text input field on `ToolApprovalPanel` for injecting user notes as transient messages
+- **Streaming elapsed time** — real-time elapsed timer in `ComposeBar` during streaming responses
+- **Sub-Agent tool result blocks** — collapsible delegate_task result display with restored labels on conversation load
+
+### Changed
+- Streaming consumption moved off UI thread via `Channel<T>` producer-consumer pattern for reduced UI thread contention
+- Media file download routed through `FileSavePicker` (audio/video) and virtual host (temp files)
+- Image save/copy logic moved from `WebViewChatRenderer` to `ChatPanel` for cleaner separation
+- `search_tools` dynamically promoted based on available tool count
+
+### Fixed
+- Base64 double-encoding on MCP image content blocks
+- Media element positioning after `finalizeMessage` call
+- Tab switch now pauses playing audio/video elements
+- Tool result images preserved during message finalization (no longer stripped)
+- User message no longer hidden when assistant response starts streaming
+- User instruction injected as transient user message instead of tool result append
+
+---
+
 ## [0.13.0] - 2026-03-31
 
 ### Changed

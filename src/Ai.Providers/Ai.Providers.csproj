@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CA1416</NoWarn>
 
@@ -22,7 +22,7 @@
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;claude;openai;gemini;ollama;llm;provider;streaming</PackageTags>
-    <PackageReleaseNotes>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)\..\..\RELEASENOTES.Providers.md'))</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.2.0: ImageCompressor for automatic JPEG compression. IMultiContentTool and MediaContent/ToolExecutionResult models for multimedia tool results. ChatMessage.MediaItems for media persistence. Ollama native thinking field support.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

@@ -36,14 +36,34 @@ var response = await provider.CompleteAsync(request);
 Console.WriteLine(response.Content);
 ```
 
+## Features
+
+- **Image Compression** — `ImageCompressor` automatically compresses and resizes large images (JPEG, via SkiaSharp) before sending to providers, reducing token usage and API costs.
+- **Multimedia Tool Results** — `IMultiContentTool` interface for tools returning structured multimedia content (images, audio, video) alongside text via `ToolExecutionResult`.
+- **Media Persistence** — `ChatMessage.MediaItems` stores media attachments with conversation messages for save/load in `.astd` files.
+- **Ollama Native Thinking** — Support for Ollama native `thinking` field in addition to `<think>` tag parsing.
+
 ## Models
 
-- `ChatMessage`, `ChatRole` — conversation messages
+**Core models**
+- `ChatMessage`, `ChatRole` — conversation messages (with `MediaItems` for media persistence)
 - `AiRequest`, `AiResponse` — LLM request/response
 - `ProviderPreset` — provider configuration
-- `ToolCall`, `IAssistTool` — function calling
-- `StreamEvent` — streaming response events
-- `McpToolAdapter` — MCP tool wrapper
+
+**Tool calling**
+- `ToolCall`, `IAssistTool` — function calling interface with optional confirmation
+- `IMultiContentTool` — tools returning multimedia content alongside text
+- `ToolExecutionResult` — combined text + media content return type
+
+**Media**
+- `MediaContent` — typed media payload (MimeType, Base64Data, FileName)
+- `ImageCompressor` — JPEG compression and resize helper (via SkiaSharp)
+
+**Streaming**
+- `StreamEvent` — discriminated union: `TextDelta`, `ThinkingDelta`, `ToolCallStart`, `ToolCallDelta`, `Usage`, `StreamCompleted`
+
+**Adapters**
+- `McpToolAdapter` — bridges MCP tools to `IAssistTool` with multimedia content block support
 
 ## License
 

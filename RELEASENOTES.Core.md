@@ -1,5 +1,21 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Core
 
+## [0.14.0] - 2026-04-07
+
+### Added
+- `ISpecialist` interface — specialist agent abstraction with `Name`, `Description`, `Icon`, `AllowedTools`, and `ExecuteAsync` for domain-specific sub-agent routing
+- `KnowledgeBase` model — persistent KB metadata (Id, Name, FolderPath, EmbeddingModel, CreatedAt) for multi-KB management
+- `BuiltInServerConfig.RequiredVersion` property for minimum version enforcement on built-in MCP servers
+
+### Changed
+- `ToolCallExecutor` — supports multimedia tool results (`IMultiContentTool`), parallel execution for multiple tool calls in a single round
+- `ToolResolver` — stable sort order for deterministic tool list presentation
+
+### Fixed
+- `HardwareProbe` — WMIC fallback for GPU detection on systems without WMI CIM provider
+
+---
+
 ## [0.13.0] - 2026-03-31
 
 ### Changed

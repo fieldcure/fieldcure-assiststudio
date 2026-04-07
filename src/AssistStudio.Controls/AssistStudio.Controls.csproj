@@ -9,7 +9,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
-    <Version>0.13.0</Version>
+    <Version>0.14.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
@@ -25,7 +25,7 @@
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;chat;winui;winui3;controls;claude;openai;gemini;ollama;webview2</PackageTags>
-    <PackageReleaseNotes>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)\..\..\RELEASENOTES.Controls.md'))</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.14.0: MCP multimedia rendering (image/audio/video), image hover toolbar with popover viewer, Knowledge Base selector flyout, tool approval user instruction input, streaming elapsed time, off-UI-thread streaming via Channel.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

@@ -571,11 +571,11 @@
     <value>Connect</value>
   </data>
   <data name="Nav_KnowledgeBases.Content" xml:space="preserve">
-    <value>Knowledge Bases</value>
+    <value>Knowledge Archive</value>
   </data>
-  <!-- Knowledge Bases Page -->
+  <!-- Knowledge Archive Page -->
   <data name="KB_Title.Text" xml:space="preserve">
-    <value>Knowledge Bases</value>
+    <value>Knowledge Archive</value>
   </data>
   <data name="KB_Create.Content" xml:space="preserve">
     <value>Create</value>
@@ -668,7 +668,7 @@
     <value>Settings</value>
   </data>
   <data name="Connect_RagKbPageHint" xml:space="preserve">
-    <value>Create, re-index, and delete in the Knowledge Bases page.</value>
+    <value>Create, re-index, and delete in the Knowledge Archive page.</value>
   </data>
   <!-- Connect Page -->
   <data name="Connect_Title.Text" xml:space="preserve">
