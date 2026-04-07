@@ -12,6 +12,7 @@ public record ScheduleItem(
     string Name,
     string? Description,
     string? Schedule,
+    DateTimeOffset? ScheduleOnce,
     bool IsEnabled,
     string? OutputChannel,
     DateTimeOffset CreatedAt);
@@ -63,7 +64,7 @@ public static class ScheduleHelper
 
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = """
-            SELECT Id, Name, Description, Schedule, IsEnabled, OutputChannel, CreatedAt
+            SELECT Id, Name, Description, Schedule, ScheduleOnce, IsEnabled, OutputChannel, CreatedAt
             FROM Tasks
             ORDER BY CreatedAt DESC
             """;
@@ -76,9 +77,11 @@ public static class ScheduleHelper
                 Name: reader.GetString(1),
                 Description: reader.IsDBNull(2) ? null : reader.GetString(2),
                 Schedule: reader.IsDBNull(3) ? null : reader.GetString(3),
-                IsEnabled: reader.GetInt32(4) != 0,
-                OutputChannel: reader.IsDBNull(5) ? null : reader.GetString(5),
-                CreatedAt: DateTimeOffset.TryParse(reader.GetString(6), out var dt)
+                ScheduleOnce: !reader.IsDBNull(4) && DateTimeOffset.TryParse(reader.GetString(4), out var once)
+                    ? once : null,
+                IsEnabled: reader.GetInt32(5) != 0,
+                OutputChannel: reader.IsDBNull(6) ? null : reader.GetString(6),
+                CreatedAt: DateTimeOffset.TryParse(reader.GetString(7), out var dt)
                     ? dt : DateTimeOffset.MinValue));
         }
 

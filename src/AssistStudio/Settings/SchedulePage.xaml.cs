@@ -152,7 +152,13 @@ public sealed partial class SchedulePage : Page
 
             // Schedule (human-readable) + output channel info line
             var detailParts = new List<string>();
-            if (!string.IsNullOrWhiteSpace(item.Schedule))
+            if (item.ScheduleOnce.HasValue)
+            {
+                var local = item.ScheduleOnce.Value.ToLocalTime();
+                var suffix = local <= DateTimeOffset.Now ? " (\uc644\ub8cc)" : " (1\ud68c)";
+                detailParts.Add($"{local:yyyy-MM-dd HH:mm}{suffix}");
+            }
+            else if (!string.IsNullOrWhiteSpace(item.Schedule))
                 detailParts.Add(ScheduleHelper.DescribeCron(item.Schedule));
             if (!string.IsNullOrWhiteSpace(item.OutputChannel))
                 detailParts.Add($"\u2192 {item.OutputChannel}");
