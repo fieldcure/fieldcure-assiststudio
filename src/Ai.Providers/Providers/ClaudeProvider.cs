@@ -384,15 +384,18 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
             }
 
             var role = msg.Role == ChatRole.User ? "user" : "assistant";
-            var imageAttachments = msg.Attachments
-                .Where(a => a.Type == AttachmentType.Image)
-                .ToList();
+
+            // Only process binary attachments (images, documents) for user messages.
+            // Other roles should never have attachments, but guard defensively.
+            var imageAttachments = msg.Role == ChatRole.User
+                ? msg.Attachments.Where(a => a.Type == AttachmentType.Image).ToList()
+                : [];
             var textAttachments = msg.Attachments
                 .Where(a => a.Type == AttachmentType.TextFile)
                 .ToList();
-            var documentAttachments = msg.Attachments
-                .Where(a => a.Type == AttachmentType.Document)
-                .ToList();
+            var documentAttachments = msg.Role == ChatRole.User
+                ? msg.Attachments.Where(a => a.Type == AttachmentType.Document).ToList()
+                : [];
 
             if (imageAttachments.Count > 0 || documentAttachments.Count > 0)
             {

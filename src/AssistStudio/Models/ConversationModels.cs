@@ -39,6 +39,12 @@ public class ConversationData
     public string? ActiveRootChildId { get; set; }
 
     /// <summary>
+    /// A stable unique identifier for this conversation, used as the media storage folder key.
+    /// Generated on first save if null. Legacy files will have this as null.
+    /// </summary>
+    public string? ConversationId { get; set; }
+
+    /// <summary>
     /// Gets or sets the built-in MCP server configurations for this conversation.
     /// Keys: "filesystem", "rag", etc.
     /// Null means use defaults from App Settings.
@@ -85,7 +91,31 @@ public class SavedMessage
     /// <summary>The ID of the active child at this branch point. Null if linear or last child is active.</summary>
     public string? ActiveChildId { get; set; }
 
+    /// <summary>Media files associated with this message (images, audio, video).</summary>
+    public List<MediaReference>? Media { get; set; }
+
     #endregion
+}
+
+/// <summary>
+/// Reference to a media file stored in the media directory.
+/// </summary>
+public class MediaReference
+{
+    /// <summary>Unique identifier for matching in rendered content.</summary>
+    public required string Id { get; set; }
+
+    /// <summary>File name in the media directory (no path — directory determined by conversation ID).</summary>
+    public required string FileName { get; set; }
+
+    /// <summary>MIME type of the media file.</summary>
+    public required string MimeType { get; set; }
+
+    /// <summary>Origin of the media: "user_upload", "mcp_tool", "assistant_generated".</summary>
+    public required string Source { get; set; }
+
+    /// <summary>Associated tool call ID (for mcp_tool source).</summary>
+    public string? ToolCallId { get; set; }
 }
 
 /// <summary>

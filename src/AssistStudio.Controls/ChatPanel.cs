@@ -1246,11 +1246,13 @@ public sealed partial class ChatPanel : Control
         string? providerName = null, string? providerModelId = null,
         string? id = null, string? parentId = null,
         IReadOnlyList<ToolCall>? toolCalls = null, string? toolCallId = null,
-        string? activeChildId = null)
+        string? activeChildId = null,
+        IReadOnlyList<ChatAttachment>? attachments = null,
+        IReadOnlyList<MediaContent>? toolMedia = null)
     {
         var msg = id is not null
-            ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId }
-            : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId };
+            ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia }
+            : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia };
         RegisterInTree(msg);
         _messages.Add(msg);
     }
@@ -3019,7 +3021,8 @@ public sealed partial class ChatPanel : Control
                 var toolResultMsg = new ChatMessage(ChatRole.Tool, toolResult)
                 {
                     ToolCallId = call.Id,
-                    ParentId = toolCallMsg.Id
+                    ParentId = toolCallMsg.Id,
+                    ToolMedia = execResult.MediaContents
                 };
                 RegisterInTree(toolResultMsg);
                 _messages.Add(toolResultMsg);
@@ -3183,6 +3186,7 @@ public sealed partial class ChatPanel : Control
         var searchResultQueue = new Queue<string>();
         var fetchUrlLabelQueue = new Queue<string>();
         var subAgentLabelQueue = new Queue<string>();
+        var toolMediaQueue = new Queue<IReadOnlyList<MediaContent>>();
         foreach (var m in _messages)
         {
             if (m.Role != ChatRole.Assistant || m.ToolCalls is not { Count: > 0 })
@@ -3198,6 +3202,10 @@ public sealed partial class ChatPanel : Control
                     fetchUrlLabelQueue.Enqueue(FormatFetchUrlLabel(tc.Arguments, resultMsg?.Content?.Length ?? 0));
                 else if (tc.FunctionName == "delegate_task")
                     subAgentLabelQueue.Enqueue(FormatSubAgentLabel(tc.Arguments, resultMsg?.Content ?? ""));
+
+                // Queue tool result media for rendering after the corresponding tool block
+                if (resultMsg?.ToolMedia is { Count: > 0 } media)
+                    toolMediaQueue.Enqueue(media);
             }
         }
 
@@ -3228,25 +3236,29 @@ public sealed partial class ChatPanel : Control
                     if (toolName == "search_documents" && searchResultQueue.Count > 0)
                     {
                         await _renderer.AppendSearchResultBlockAsync(msg.Id, searchResultQueue.Dequeue(), toolName);
-                        continue;
                     }
-
-                    if (toolName == "fetch_url" && fetchUrlLabelQueue.Count > 0)
+                    else if (toolName == "fetch_url" && fetchUrlLabelQueue.Count > 0)
                     {
                         await _renderer.AppendToolBlockAsync(msg.Id, fetchUrlLabelQueue.Dequeue());
-                        continue;
                     }
-
-                    if (toolName == "delegate_task")
+                    else if (toolName == "delegate_task")
                     {
                         var label = subAgentLabelQueue.Count > 0
                             ? subAgentLabelQueue.Dequeue()
                             : "Sub-Agent";
                         await _renderer.AppendToolBlockAsync(msg.Id, label);
-                        continue;
+                    }
+                    else
+                    {
+                        await _renderer.AppendToolBlockAsync(msg.Id, toolName);
                     }
 
-                    await _renderer.AppendToolBlockAsync(msg.Id, toolName);
+                    // Render tool result media (images, audio, video) after each tool block
+                    if (toolMediaQueue.Count > 0)
+                    {
+                        foreach (var media in toolMediaQueue.Dequeue())
+                            await _renderer.AppendToolMediaAsync(msg.Id, media);
+                    }
                 }
 
                 await _renderer.FinalizeMessageAsync(msg.Id, msg.Content ?? "");

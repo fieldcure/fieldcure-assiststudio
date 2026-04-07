@@ -434,7 +434,7 @@ public sealed partial class MainWindow : Window
         if (data is not null)
         {
             LoggingService.LogInfo($"[File] Load: {Path.GetFileName(file.Path)}, messages={data.Messages.Count}");
-            ViewModel.LoadConversation(data, file.Path);
+            await ViewModel.LoadConversation(data, file.Path);
             AppSettings.AddRecentFile(file.Path);
         }
     }
@@ -483,7 +483,7 @@ public sealed partial class MainWindow : Window
                 var data = await ConversationManager.LoadConversationAsync(path);
                 if (data is not null)
                 {
-                    ViewModel.LoadConversation(data, path);
+                    await ViewModel.LoadConversation(data, path);
                     AppSettings.AddRecentFile(path);
                 }
             };
@@ -752,7 +752,7 @@ public sealed partial class MainWindow : Window
         if (data is not null)
         {
             LoggingService.LogInfo($"[File] Activation load: {Path.GetFileName(filePath)}, messages={data.Messages.Count}");
-            ViewModel.LoadConversation(data, filePath);
+            await ViewModel.LoadConversation(data, filePath);
             AppSettings.AddRecentFile(filePath);
         }
     }

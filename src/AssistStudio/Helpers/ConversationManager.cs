@@ -49,14 +49,15 @@ public static class ConversationManager
         string? providerPresetName,
         IReadOnlyList<ChatMessage> messages,
         string? activeRootChildId = null,
-        Dictionary<string, BuiltInServerConfig>? builtInServers = null)
+        Dictionary<string, BuiltInServerConfig>? builtInServers = null,
+        string? conversationId = null)
     {
         EnsureInitialized();
         if (messages.Count == 0) return;
 
         var fileName = SanitizeFileName(tabName) + FileExtension;
         var filePath = Path.Combine(_conversationsFolder, fileName);
-        await SaveToFileAsync(filePath, tabName, providerPresetName, messages, activeRootChildId, builtInServers);
+        await SaveToFileAsync(filePath, tabName, providerPresetName, messages, activeRootChildId, builtInServers, conversationId);
     }
 
     /// <summary>
@@ -68,18 +69,18 @@ public static class ConversationManager
         string? providerPresetName,
         IReadOnlyList<ChatMessage> messages,
         string? activeRootChildId = null,
-        Dictionary<string, BuiltInServerConfig>? builtInServers = null)
+        Dictionary<string, BuiltInServerConfig>? builtInServers = null,
+        string? conversationId = null)
     {
         if (messages.Count == 0) return;
 
-        var data = new ConversationData
+        // Ensure a stable conversation ID for media storage
+        conversationId ??= Guid.NewGuid().ToString("N");
+
+        var savedMessages = new List<SavedMessage>(messages.Count);
+        foreach (var m in messages)
         {
-            TabName = tabName,
-            ProviderPresetName = providerPresetName,
-            ActiveRootChildId = activeRootChildId,
-            BuiltInServers = builtInServers,
-            SavedAt = DateTime.UtcNow,
-            Messages = messages.Select(m => new SavedMessage
+            var saved = new SavedMessage
             {
                 Id = m.Id,
                 Role = m.Role,
@@ -91,12 +92,66 @@ public static class ConversationManager
                 ToolCallId = m.ToolCallId,
                 ParentId = m.ParentId,
                 ActiveChildId = m.ActiveChildId,
-            }).ToList(),
+            };
+
+            // Persist user image attachments
+            if (m.Role == ChatRole.User && m.Attachments is { Count: > 0 })
+            {
+                foreach (var att in m.Attachments.Where(a => a.Type == AttachmentType.Image))
+                {
+                    var fileName = await MediaStore.SaveAsync(
+                        conversationId, att.FileName, att.Data);
+                    saved.Media ??= [];
+                    saved.Media.Add(new MediaReference
+                    {
+                        Id = $"upload_{saved.Media.Count}",
+                        FileName = fileName,
+                        MimeType = att.MimeType ?? "image/png",
+                        Source = "user_upload"
+                    });
+                }
+            }
+
+            // Persist tool result media (images from MCP tools, etc.)
+            if (m.Role == ChatRole.Tool && m.ToolMedia is { Count: > 0 })
+            {
+                foreach (var media in m.ToolMedia)
+                {
+                    var bytes = DecodeMediaUri(media.MediaUri);
+                    if (bytes is null) continue;
+
+                    var ext = MimeToExtension(media.MimeType);
+                    var fileName = await MediaStore.SaveAsync(
+                        conversationId, $"tool_{m.ToolCallId}{ext}", bytes);
+                    saved.Media ??= [];
+                    saved.Media.Add(new MediaReference
+                    {
+                        Id = $"tool_{saved.Media.Count}",
+                        FileName = fileName,
+                        MimeType = media.MimeType,
+                        Source = "mcp_tool",
+                        ToolCallId = m.ToolCallId
+                    });
+                }
+            }
+
+            savedMessages.Add(saved);
+        }
+
+        var data = new ConversationData
+        {
+            TabName = tabName,
+            ProviderPresetName = providerPresetName,
+            ConversationId = conversationId,
+            ActiveRootChildId = activeRootChildId,
+            BuiltInServers = builtInServers,
+            SavedAt = DateTime.UtcNow,
+            Messages = savedMessages,
         };
 
         var json = JsonSerializer.Serialize(data, ConversationTypeInfo);
         await AtomicWriteAsync(filePath, json);
-        LoggingService.LogInfo($"[File] Saved: {Path.GetFileName(filePath)}, messages={messages.Count}");
+        LoggingService.LogInfo($"[File] Saved: {Path.GetFileName(filePath)}, messages={messages.Count}, conversationId={conversationId}");
     }
 
     /// <summary>
@@ -138,11 +193,15 @@ public static class ConversationManager
     }
 
     /// <summary>
-    /// Deletes all saved conversation files from the conversations folder.
+    /// Deletes all saved conversation files and associated media from the conversations folder.
     /// </summary>
     public static void ClearAll()
     {
         EnsureInitialized();
+
+        // Delete all media files
+        MediaStore.ClearAll();
+
         if (!Directory.Exists(_conversationsFolder)) return;
 
         var files = Directory.GetFiles(_conversationsFolder, "*" + FileExtension);
@@ -179,6 +238,44 @@ public static class ConversationManager
             throw;
         }
     }
+
+    /// <summary>
+    /// Decodes a data URI to raw bytes. Returns null for non-data URIs.
+    /// </summary>
+    private static byte[]? DecodeMediaUri(string mediaUri)
+    {
+        if (!mediaUri.StartsWith("data:", StringComparison.Ordinal))
+            return null;
+
+        var commaIdx = mediaUri.IndexOf(',');
+        if (commaIdx < 0) return null;
+
+        try
+        {
+            return Convert.FromBase64String(mediaUri[(commaIdx + 1)..]);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Maps a MIME type to a file extension.
+    /// </summary>
+    private static string MimeToExtension(string mimeType) => mimeType switch
+    {
+        "image/png" => ".png",
+        "image/jpeg" => ".jpg",
+        "image/gif" => ".gif",
+        "image/webp" => ".webp",
+        "image/svg+xml" => ".svg",
+        "audio/wav" => ".wav",
+        "audio/mpeg" => ".mp3",
+        "video/mp4" => ".mp4",
+        "video/webm" => ".webm",
+        _ => ".bin"
+    };
 
     /// <summary>Sanitizes a file name by replacing invalid characters with underscores.</summary>
     private static string SanitizeFileName(string name)

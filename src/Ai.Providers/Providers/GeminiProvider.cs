@@ -372,15 +372,16 @@ public partial class GeminiProvider : IAiProvider, IDisposable
             var role = msg.Role == ChatRole.User ? "user" : "model";
             var parts = new JsonArray();
 
-            var imageAttachments = msg.Attachments
-                .Where(a => a.Type == AttachmentType.Image)
-                .ToList();
+            // Only process binary attachments (images, documents) for user messages.
+            var imageAttachments = msg.Role == ChatRole.User
+                ? msg.Attachments.Where(a => a.Type == AttachmentType.Image).ToList()
+                : [];
             var textAttachments = msg.Attachments
                 .Where(a => a.Type == AttachmentType.TextFile)
                 .ToList();
-            var documentAttachments = msg.Attachments
-                .Where(a => a.Type == AttachmentType.Document)
-                .ToList();
+            var documentAttachments = msg.Role == ChatRole.User
+                ? msg.Attachments.Where(a => a.Type == AttachmentType.Document).ToList()
+                : [];
 
             // Add image parts (inlineData)
             foreach (var att in imageAttachments)

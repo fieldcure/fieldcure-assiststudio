@@ -346,15 +346,16 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
                 _ => "user"
             };
 
-            var imageAttachments = msg.Attachments
-                .Where(a => a.Type == AttachmentType.Image)
-                .ToList();
+            // Only process binary attachments (images, documents) for user messages.
+            var imageAttachments = msg.Role == ChatRole.User
+                ? msg.Attachments.Where(a => a.Type == AttachmentType.Image).ToList()
+                : [];
             var textAttachments = msg.Attachments
                 .Where(a => a.Type == AttachmentType.TextFile)
                 .ToList();
-            var documentAttachments = msg.Attachments
-                .Where(a => a.Type == AttachmentType.Document)
-                .ToList();
+            var documentAttachments = msg.Role == ChatRole.User
+                ? msg.Attachments.Where(a => a.Type == AttachmentType.Document).ToList()
+                : [];
 
             if (imageAttachments.Count > 0 || documentAttachments.Count > 0)
             {

@@ -36,6 +36,7 @@
 
   <ItemGroup>
     <PackageReference Include="FieldCure.DocumentParsers" Version="1.*" />
+    <PackageReference Include="SkiaSharp" Version="3.119.2" />
   </ItemGroup>
 
 </Project>

@@ -1,4 +1,6 @@
 ﻿using FieldCure.AssistStudio.Controls.Helpers;
+using FieldCure.AssistStudio.Helpers;
+using FieldCure.Ai.Providers.Helpers;
 using FieldCure.DocumentParsers;
 using FieldCure.AssistStudio.Models;
 using FieldCure.Ai.Providers.Models;
@@ -1096,12 +1098,27 @@ public sealed partial class ComposeBar : Control
             }
         }
 
+        if (isImage)
+        {
+            var originalSize = data.Length;
+            var (compressedData, compressedMime) = ImageCompressor.CompressForApi(data);
+            if (compressedData.Length < originalSize)
+                DiagnosticLogger.LogInfo($"[Image] Compressed {originalSize:N0} → {compressedData.Length:N0} bytes ({GetImageMimeType(ext)} → {compressedMime})");
+            return new ChatAttachment
+            {
+                FileName = file.Name,
+                Type = AttachmentType.Image,
+                Data = compressedData,
+                MimeType = compressedMime
+            };
+        }
+
         return new ChatAttachment
         {
             FileName = file.Name,
-            Type = isImage ? AttachmentType.Image : AttachmentType.TextFile,
+            Type = AttachmentType.TextFile,
             Data = data,
-            MimeType = isImage ? GetImageMimeType(ext) : "text/plain"
+            MimeType = "text/plain"
         };
     }
 

@@ -173,6 +173,11 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     public bool HasBeenSaved { get; set; }
 
     /// <summary>
+    /// Stable unique identifier for this conversation, used as the media storage folder key.
+    /// </summary>
+    public string? ConversationId { get; set; }
+
+    /// <summary>
     /// Gets the currently active provider preset for this tab.
     /// </summary>
     public ProviderPreset? CurrentPreset { get; private set; }
@@ -209,7 +214,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Messages queued before the ChatPanel is available (during conversation loading).
     /// </summary>
-    private readonly List<(ChatRole Role, string Content, string? ProviderName, string? ModelId, string? Id, string? ParentId, IReadOnlyList<ToolCall>? ToolCalls, string? ToolCallId, string? ActiveChildId)> _pendingMessages = [];
+    private readonly List<(ChatRole Role, string Content, string? ProviderName, string? ModelId, string? Id, string? ParentId, IReadOnlyList<ToolCall>? ToolCalls, string? ToolCallId, string? ActiveChildId, IReadOnlyList<ChatAttachment>? Attachments, IReadOnlyList<MediaContent>? ToolMedia)> _pendingMessages = [];
 
     /// <summary>
     /// Branch-only messages queued before the ChatPanel is available.
@@ -352,9 +357,9 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         _pendingBranchMessages.Clear();
 
         // Flush active path messages
-        foreach (var (role, content, providerName, modelId, id, parentId, toolCalls, toolCallId, activeChildId) in _pendingMessages)
+        foreach (var (role, content, providerName, modelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia) in _pendingMessages)
         {
-            panel.AddRestoredMessage(role, content, providerName, modelId, id, parentId, toolCalls, toolCallId, activeChildId);
+            panel.AddRestoredMessage(role, content, providerName, modelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia);
         }
         var hadPending = _pendingMessages.Count > 0;
         _pendingMessages.Clear();
@@ -397,12 +402,14 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     public void AddRestoredMessage(ChatRole role, string content, string? providerName, string? providerModelId,
         string? id = null, string? parentId = null,
         IReadOnlyList<ToolCall>? toolCalls = null, string? toolCallId = null,
-        string? activeChildId = null)
+        string? activeChildId = null,
+        IReadOnlyList<ChatAttachment>? attachments = null,
+        IReadOnlyList<MediaContent>? toolMedia = null)
     {
         if (Panel is not null)
-            Panel.AddRestoredMessage(role, content, providerName, providerModelId, id, parentId, toolCalls, toolCallId, activeChildId);
+            Panel.AddRestoredMessage(role, content, providerName, providerModelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia);
         else
-            _pendingMessages.Add((role, content, providerName, providerModelId, id, parentId, toolCalls, toolCallId, activeChildId));
+            _pendingMessages.Add((role, content, providerName, providerModelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia));
     }
 
     /// <summary>

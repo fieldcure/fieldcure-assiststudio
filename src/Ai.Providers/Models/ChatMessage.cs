@@ -117,6 +117,12 @@ public partial class ChatMessage : INotifyPropertyChanged
     public string? ToolCallId { get; init; }
 
     /// <summary>
+    /// Media content from tool execution results (images, audio, video).
+    /// Set when a tool returns multimedia alongside text. Used for persistence in .astd files.
+    /// </summary>
+    public IReadOnlyList<MediaContent>? ToolMedia { get; init; }
+
+    /// <summary>
     /// Thinking/reasoning content from the AI model (e.g., Claude extended thinking).
     /// Raises <see cref="PropertyChanged"/> when updated.
     /// </summary>

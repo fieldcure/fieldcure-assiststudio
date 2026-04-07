@@ -102,7 +102,7 @@ public partial class MainViewModel : ObservableObject
     /// unused), reuses it instead of creating a new one.
     /// </summary>
     /// <returns>The tab view model containing the loaded conversation.</returns>
-    public ChatTabViewModel LoadConversation(ConversationData data, string? filePath = null)
+    public async Task<ChatTabViewModel> LoadConversation(ConversationData data, string? filePath = null)
     {
         // If this file is already open in a tab, just switch to it
         if (filePath is not null)
@@ -131,6 +131,53 @@ public partial class MainViewModel : ObservableObject
             }
         }
         preset ??= GetDefaultPreset();
+
+        // Pre-load media from disk if conversation has media references
+        var loadedAttachments = new Dictionary<string, IReadOnlyList<ChatAttachment>>();
+        var loadedToolMedia = new Dictionary<string, IReadOnlyList<MediaContent>>();
+        if (data.ConversationId is not null)
+        {
+            foreach (var msg in data.Messages)
+            {
+                // Ensure legacy messages get an ID
+                msg.Id ??= Guid.NewGuid().ToString("N");
+
+                if (msg.Media is not { Count: > 0 }) continue;
+
+                var attachments = new List<ChatAttachment>();
+                var toolMedia = new List<MediaContent>();
+
+                foreach (var mediaRef in msg.Media)
+                {
+                    var bytes = await MediaStore.LoadAsync(data.ConversationId, mediaRef.FileName);
+                    if (bytes is null) continue;
+
+                    if (mediaRef.Source == "user_upload")
+                    {
+                        attachments.Add(new ChatAttachment(
+                            mediaRef.FileName, AttachmentType.Image, bytes, mediaRef.MimeType));
+                    }
+                    else
+                    {
+                        var dataUri = $"data:{mediaRef.MimeType};base64,{Convert.ToBase64String(bytes)}";
+                        var kind = mediaRef.MimeType.StartsWith("image/") ? MediaContentKind.Image
+                            : mediaRef.MimeType.StartsWith("audio/") ? MediaContentKind.Audio
+                            : mediaRef.MimeType.StartsWith("video/") ? MediaContentKind.Video
+                            : MediaContentKind.Download;
+                        toolMedia.Add(new MediaContent(dataUri, mediaRef.MimeType, kind));
+                    }
+                }
+
+                if (attachments.Count > 0) loadedAttachments[msg.Id] = attachments;
+                if (toolMedia.Count > 0) loadedToolMedia[msg.Id] = toolMedia;
+            }
+        }
+        else
+        {
+            // Ensure legacy messages get IDs even without media
+            foreach (var msg in data.Messages)
+                msg.Id ??= Guid.NewGuid().ToString("N");
+        }
 
         // Reuse the current tab if it is empty (no messages, not dirty, never saved)
         var reuseTab = SelectedTab is not null && IsTabEmpty(SelectedTab);
@@ -168,7 +215,7 @@ public partial class MainViewModel : ObservableObject
         }
 
         // Restore messages with tree reconstruction
-        RestoreConversationTree(vm, data.Messages, data.ActiveRootChildId);
+        RestoreConversationTree(vm, data.Messages, data.ActiveRootChildId, loadedAttachments, loadedToolMedia);
 
         // Restore built-in server configs (workspace folders, knowledge archive)
         vm.SetBuiltInServers(data.BuiltInServers);
@@ -176,6 +223,7 @@ public partial class MainViewModel : ObservableObject
         vm.Title = data.TabName;
         vm.HasBeenSaved = true;
         vm.FilePath = filePath;
+        vm.ConversationId = data.ConversationId;
 
         SelectedTab = vm;
         LoggingService.LogInfo($"[Tab] Loaded conversation: {data.TabName}, messages={data.Messages.Count}, reused={reuseTab}");
@@ -199,10 +247,12 @@ public partial class MainViewModel : ObservableObject
         {
             var rootChildId = tab.GetActiveRootChildId();
             var builtInServers = tab.GetBuiltInServers();
+            // Generate conversation ID if not yet assigned
+            tab.ConversationId ??= Guid.NewGuid().ToString("N");
             if (tab.FilePath is not null)
-                await ConversationManager.SaveToFileAsync(tab.FilePath, tabName, presetName, messages, rootChildId, builtInServers);
+                await ConversationManager.SaveToFileAsync(tab.FilePath, tabName, presetName, messages, rootChildId, builtInServers, tab.ConversationId);
             else
-                await ConversationManager.SaveConversationAsync(tabName, presetName, messages, rootChildId, builtInServers);
+                await ConversationManager.SaveConversationAsync(tabName, presetName, messages, rootChildId, builtInServers, tab.ConversationId);
             tab.IsDirty = false;
         }
         catch (Exception ex) { LoggingService.LogException(ex); }
@@ -288,9 +338,21 @@ public partial class MainViewModel : ObservableObject
     /// Restores a conversation tree from saved messages.
     /// Determines the active path (root → last leaf) and registers branch messages in the tree only.
     /// </summary>
-    private static void RestoreConversationTree(ChatTabViewModel vm, List<SavedMessage> messages, string? activeRootChildId = null)
+    private static void RestoreConversationTree(
+        ChatTabViewModel vm,
+        List<SavedMessage> messages,
+        string? activeRootChildId = null,
+        Dictionary<string, IReadOnlyList<ChatAttachment>>? loadedAttachments = null,
+        Dictionary<string, IReadOnlyList<MediaContent>>? loadedToolMedia = null)
     {
         if (messages.Count == 0) return;
+
+        // Helper to pass loaded media when adding a restored message
+        void AddMsg(SavedMessage msg) =>
+            vm.AddRestoredMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId,
+                msg.Id, msg.ParentId, msg.ToolCalls, msg.ToolCallId, msg.ActiveChildId,
+                msg.Id is not null && loadedAttachments?.TryGetValue(msg.Id, out var atts) == true ? atts : null,
+                msg.Id is not null && loadedToolMedia?.TryGetValue(msg.Id, out var tm) == true ? tm : null);
 
         // Build parent→children map
         var childrenMap = new Dictionary<string, List<SavedMessage>>();
@@ -321,7 +383,7 @@ public partial class MainViewModel : ObservableObject
         {
             // Linear conversation — add all as active path in file order
             foreach (var msg in messages)
-                vm.AddRestoredMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId, msg.Id, msg.ParentId, msg.ToolCalls, msg.ToolCallId, msg.ActiveChildId);
+                AddMsg(msg);
             return;
         }
 
@@ -371,7 +433,7 @@ public partial class MainViewModel : ObservableObject
         }
 
         foreach (var msg in ordered)
-            vm.AddRestoredMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId, msg.Id, msg.ParentId, msg.ToolCalls, msg.ToolCallId, msg.ActiveChildId);
+            AddMsg(msg);
     }
 
     /// <summary>
