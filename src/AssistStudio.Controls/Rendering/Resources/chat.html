@@ -265,10 +265,11 @@
         border-radius: 12px;
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
         padding: 12px;
-        max-width: 85%;
-        max-height: 85%;
+        max-width: 85vw;
+        max-height: 85vh;
         display: flex;
         flex-direction: column;
+        overflow: hidden;
     }
     .image-popover-header {
         display: flex;
@@ -279,6 +280,7 @@
     .image-popover-card img {
         max-width: 100%;
         max-height: calc(85vh - 80px);
+        min-height: 0;
         object-fit: contain;
         border-radius: 8px;
     }
