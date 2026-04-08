@@ -83,7 +83,7 @@ public static class BuiltInServerHelper
         "list_directory", "directory_tree",
         "search_files", "search_within_files", "get_file_info",
         // RAG
-        "search_documents", "get_document_chunk",
+        "search_documents", "get_document_chunk", "get_index_info", "check_changes",
         // Outbox — add_channel opens a subprocess console for credential input
         "list_channels", "add_channel",
         // Runner

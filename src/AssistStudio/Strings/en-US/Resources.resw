@@ -607,6 +607,9 @@
   <data name="KB_StatusNoIndex" xml:space="preserve">
     <value>No index</value>
   </data>
+  <data name="KB_StatusStale" xml:space="preserve">
+    <value>Prompt stale</value>
+  </data>
   <data name="KB_Reindex.Content" xml:space="preserve">
     <value>Re-index</value>
   </data>

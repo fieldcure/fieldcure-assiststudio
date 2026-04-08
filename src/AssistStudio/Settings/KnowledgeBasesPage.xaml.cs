@@ -7,6 +7,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using Microsoft.UI.Xaml.Shapes;
+using System.Text.Json;
 using IOPath = System.IO.Path;
 using Windows.ApplicationModel.Resources;
 
@@ -44,10 +45,10 @@ public sealed partial class KnowledgeBasesPage : Page
     #region Navigation
 
     /// <inheritdoc/>
-    protected override void OnNavigatedTo(NavigationEventArgs e)
+    protected override async void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        RefreshList();
+        await RefreshListAsync();
     }
 
     /// <inheritdoc/>
@@ -175,7 +176,7 @@ public sealed partial class KnowledgeBasesPage : Page
         var archiveService = new KnowledgeArchiveService(App.McpRegistry);
         await archiveService.EnsureConnectedAsync();
 
-        RefreshList();
+        await RefreshListAsync();
         _pollTimer.Start();
     }
 
@@ -209,7 +210,7 @@ public sealed partial class KnowledgeBasesPage : Page
         KnowledgeBaseStore.Delete(kbId);
         LoggingService.LogInfo($"[KB] Deleted: {kbId}");
 
-        RefreshList();
+        await RefreshListAsync();
     }
 
     /// <summary>
@@ -372,7 +373,7 @@ public sealed partial class KnowledgeBasesPage : Page
             _pollTimer.Start();
         }
 
-        RefreshList();
+        await RefreshListAsync();
     }
 
     /// <summary>
@@ -413,20 +414,73 @@ public sealed partial class KnowledgeBasesPage : Page
     /// <summary>
     /// Polls indexing status and updates the list.
     /// </summary>
-    private void OnPollTick(object? sender, object e)
+    private async void OnPollTick(object? sender, object e)
     {
-        var anyIndexing = false;
-
         foreach (var item in _allItems)
+            await UpdateItemStatusAsync(item);
+
+        ApplyFilter();
+
+        if (!_allItems.Any(i => i.IsIndexing == Visibility.Visible))
+            _pollTimer.Stop();
+    }
+
+    /// <summary>
+    /// Updates a single KB item's status via MCP <c>get_index_info</c>, falling back to SQLite.
+    /// </summary>
+    private async Task UpdateItemStatusAsync(KbViewModel item)
+    {
+        var info = await GetIndexInfoAsync(item.Id);
+
+        if (info is not null)
         {
+            // MCP data available
+            item.StatsText = $"{info.TotalFiles} files, {info.TotalChunks} chunks";
+            item.IsPromptStale = info.IsPromptStale;
+
+            if (info.IsIndexing)
+            {
+                item.IsIndexing = Visibility.Visible;
+                item.Progress = info is { Current: not null, Total: > 0 }
+                    ? (double)info.Current.Value / info.Total.Value * 100 : 0;
+                var indexingLabel = _loader.GetString("KB_StatusIndexing") ?? "Indexing";
+                item.StatusText = info.Current is not null
+                    ? $"{indexingLabel} ({info.Current}/{info.Total})"
+                    : indexingLabel;
+                item.StatusBrush = new SolidColorBrush(Colors.DodgerBlue);
+            }
+            else if (info.IsPromptStale)
+            {
+                item.IsIndexing = Visibility.Collapsed;
+                item.Progress = 0;
+                item.StatusText = _loader.GetString("KB_StatusStale") ?? "Prompt stale";
+                item.StatusBrush = new SolidColorBrush(Colors.Orange);
+            }
+            else if (info.TotalFiles > 0)
+            {
+                item.IsIndexing = Visibility.Collapsed;
+                item.Progress = 0;
+                item.StatusText = _loader.GetString("KB_StatusReady") ?? "Ready";
+                item.StatusBrush = new SolidColorBrush(Colors.Gray);
+            }
+            else
+            {
+                item.IsIndexing = Visibility.Collapsed;
+                item.Progress = 0;
+                item.StatusText = _loader.GetString("KB_StatusNoIndex") ?? "No index";
+                item.StatusBrush = new SolidColorBrush(Colors.Gray);
+                item.StatsText = "";
+            }
+        }
+        else
+        {
+            // Fallback: direct SQLite read
             var status = KnowledgeBaseStore.GetIndexingStatus(item.Id);
             if (status is not null)
             {
-                anyIndexing = true;
                 item.IsIndexing = Visibility.Visible;
                 item.Progress = status.Total > 0
-                    ? (double)status.Current / status.Total * 100
-                    : 0;
+                    ? (double)status.Current / status.Total * 100 : 0;
                 var indexingLabel = _loader.GetString("KB_StatusIndexing") ?? "Indexing";
                 item.StatusText = $"{indexingLabel} ({status.Current}/{status.Total})";
                 item.StatusBrush = new SolidColorBrush(Colors.DodgerBlue);
@@ -451,11 +505,6 @@ public sealed partial class KnowledgeBasesPage : Page
                 }
             }
         }
-
-        ApplyFilter();
-
-        if (!anyIndexing)
-            _pollTimer.Stop();
     }
 
     #endregion
@@ -463,44 +512,30 @@ public sealed partial class KnowledgeBasesPage : Page
     #region Private Methods
 
     /// <summary>
-    /// Refreshes the full KB list from disk.
+    /// Refreshes the full KB list from disk, enriched with MCP index info when available.
     /// </summary>
-    private void RefreshList()
+    private async Task RefreshListAsync()
     {
         var kbs = KnowledgeBaseStore.ListAll();
         _allItems.Clear();
 
         foreach (var kb in kbs)
         {
-            var status = KnowledgeBaseStore.GetIndexingStatus(kb.Id);
-            var stats = KnowledgeBaseStore.GetStats(kb.Id);
-
             // Model info line: "embedding-model · contextualizer-model" or just "embedding-model"
             var modelInfo = kb.Embedding.Model;
             if (!string.IsNullOrEmpty(kb.Contextualizer.Model))
                 modelInfo += $" \u00b7 {kb.Contextualizer.Model}";
 
-            _allItems.Add(new KbViewModel
+            var item = new KbViewModel
             {
                 Id = kb.Id,
                 Name = kb.Name,
                 SourcePathsText = string.Join(", ", kb.SourcePaths),
                 ModelInfoText = modelInfo,
-                IsIndexing = status is not null ? Visibility.Visible : Visibility.Collapsed,
-                Progress = status is not null && status.Total > 0
-                    ? (double)status.Current / status.Total * 100 : 0,
-                StatusText = status is not null
-                    ? $"{_loader.GetString("KB_StatusIndexing") ?? "Indexing"} ({status.Current}/{status.Total})"
-                    : stats is not null
-                        ? _loader.GetString("KB_StatusReady") ?? "Ready"
-                        : _loader.GetString("KB_StatusNoIndex") ?? "No index",
-                StatusBrush = status is not null
-                    ? new SolidColorBrush(Colors.DodgerBlue)
-                    : new SolidColorBrush(Colors.Gray),
-                StatsText = stats is not null
-                    ? $"{stats.TotalFiles} files, {stats.TotalChunks} chunks"
-                    : "",
-            });
+            };
+
+            await UpdateItemStatusAsync(item);
+            _allItems.Add(item);
         }
 
         // Start polling if any KB is indexing
@@ -787,6 +822,56 @@ public sealed partial class KnowledgeBasesPage : Page
         return name;
     }
 
+    /// <summary>
+    /// Calls the <c>get_index_info</c> MCP tool on the RAG server for the given KB.
+    /// Returns <c>null</c> when the RAG server is not connected (caller should fall back to SQLite).
+    /// </summary>
+    private static async Task<IndexInfoResult?> GetIndexInfoAsync(string kbId)
+    {
+        var connection = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.RagKey);
+        if (connection?.IsConnected != true)
+            return null;
+
+        try
+        {
+            var argsJson = JsonSerializer.Serialize(new { kb_id = kbId });
+            var args = JsonDocument.Parse(argsJson).RootElement;
+            var result = await connection.CallToolWithProgressAsync("get_index_info", args, null);
+
+            using var doc = JsonDocument.Parse(result);
+            var root = doc.RootElement;
+
+            var totalFiles = root.GetProperty("total_files").GetInt32();
+            var totalChunks = root.GetProperty("total_chunks").GetInt32();
+            var isIndexing = root.GetProperty("is_indexing").GetBoolean();
+
+            int? current = null, total = null;
+            if (isIndexing && root.TryGetProperty("indexing_progress", out var prog) && prog.ValueKind == JsonValueKind.Object)
+            {
+                current = prog.GetProperty("current").GetInt32();
+                total = prog.GetProperty("total").GetInt32();
+            }
+
+            var isPromptStale = root.TryGetProperty("is_prompt_stale", out var stale) && stale.GetBoolean();
+
+            return new IndexInfoResult(totalFiles, totalChunks, isIndexing, current, total, isPromptStale);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Parsed result from the <c>get_index_info</c> MCP tool.</summary>
+    private sealed record IndexInfoResult(
+        int TotalFiles, int TotalChunks,
+        bool IsIndexing, int? Current, int? Total,
+        bool IsPromptStale, string? LastIndexedAt);
+
+    /// <summary>Parsed result from the <c>check_changes</c> MCP tool.</summary>
+    private sealed record ChangeCheckResult(
+        int Added, int Modified, int Deleted, bool IsClean);
+
     #endregion
 }
 
@@ -804,4 +889,5 @@ internal class KbViewModel
     public string StatsText { get; set; } = "";
     public Visibility IsIndexing { get; set; } = Visibility.Collapsed;
     public double Progress { get; set; }
+    public bool IsPromptStale { get; set; }
 }

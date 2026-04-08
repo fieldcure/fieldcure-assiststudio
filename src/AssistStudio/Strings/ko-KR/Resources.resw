@@ -607,6 +607,9 @@
   <data name="KB_StatusNoIndex" xml:space="preserve">
     <value>인덱스 없음</value>
   </data>
+  <data name="KB_StatusStale" xml:space="preserve">
+    <value>재인덱싱 필요</value>
+  </data>
   <data name="KB_Reindex.Content" xml:space="preserve">
     <value>재인덱싱</value>
   </data>
