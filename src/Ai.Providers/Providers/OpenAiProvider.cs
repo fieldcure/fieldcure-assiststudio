@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using FieldCure.Ai.Providers.Helpers;
 using FieldCure.Ai.Providers.Models;
 
 namespace FieldCure.Ai.Providers;
@@ -148,6 +149,26 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
             ? contentEl.GetString()
             : null;
 
+        // Parse reasoning_details (MiniMax-style structured thinking)
+        string? thinkingContent = null;
+        if (message.TryGetProperty("reasoning_details", out var reasoningEl) &&
+            reasoningEl.ValueKind == JsonValueKind.Array)
+        {
+            var sb = new StringBuilder();
+            foreach (var detail in reasoningEl.EnumerateArray())
+            {
+                if (detail.TryGetProperty("text", out var textEl) &&
+                    textEl.ValueKind == JsonValueKind.String)
+                    sb.Append(textEl.GetString());
+            }
+            if (sb.Length > 0)
+                thinkingContent = sb.ToString();
+        }
+
+        // Strip <think>...</think> tags from content (fallback for providers not using reasoning_details)
+        if (thinkingContent is null && content is not null)
+            (content, thinkingContent) = StripThinkTags(content);
+
         // Parse tool calls from the response
         var toolCalls = new List<ToolCall>();
         if (message.TryGetProperty("tool_calls", out var toolCallsEl))
@@ -167,6 +188,7 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
         return new AiResponse
         {
             Content = content,
+            ThinkingContent = thinkingContent,
             ToolCalls = toolCalls,
             Usage = tokenUsage,
             IsTruncated = IsTruncated
@@ -184,6 +206,7 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
         IsTruncated = false;
         var responseSb = new StringBuilder();
         var toolCallIds = new Dictionary<int, string>();
+        var thinkTagParser = new ThinkTagParser();
 
         await foreach (var sse in SseReader.ReadEventsAsync(stream, ct))
         {
@@ -223,12 +246,33 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
             }
 
             var delta = choice.GetProperty("delta");
+
+            // Parse reasoning_details (MiniMax-style structured thinking)
+            if (delta.TryGetProperty("reasoning_details", out var reasoningEl) &&
+                reasoningEl.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var detail in reasoningEl.EnumerateArray())
+                {
+                    if (detail.TryGetProperty("text", out var textEl) &&
+                        textEl.ValueKind == JsonValueKind.String)
+                    {
+                        var text = textEl.GetString();
+                        if (!string.IsNullOrEmpty(text))
+                            yield return new StreamEvent.ThinkingDelta(text);
+                    }
+                }
+            }
+
             if (delta.TryGetProperty("content", out var contentEl) &&
                 contentEl.ValueKind == JsonValueKind.String)
             {
                 var text = contentEl.GetString();
                 if (!string.IsNullOrEmpty(text))
-                    yield return new StreamEvent.TextDelta(text);
+                {
+                    // Strip <think>...</think> tags from content, emitting ThinkingDelta for thinking text
+                    foreach (var evt in thinkTagParser.Feed(text))
+                        yield return evt;
+                }
             }
 
             // Parse tool call chunks
@@ -525,7 +569,8 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
             body["reasoning_effort"] = effort;
         }
 
-        if (stream)
+        // stream_options is only supported by OpenAI and Groq; custom providers may reject it
+        if (stream && ProviderName is "OpenAI" or "Groq")
         {
             body["stream_options"] = new JsonObject { ["include_usage"] = true };
         }
@@ -576,6 +621,32 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
         }
 
         return response;
+    }
+
+    /// <summary>
+    /// Extracts and removes &lt;think&gt;...&lt;/think&gt; blocks from content,
+    /// returning the cleaned content and the extracted thinking text.
+    /// </summary>
+    private static (string? content, string? thinking) StripThinkTags(string text)
+    {
+        const string open = "<think>";
+        const string close = "</think>";
+
+        var openIdx = text.IndexOf(open, StringComparison.Ordinal);
+        if (openIdx < 0) return (text, null);
+
+        var closeIdx = text.IndexOf(close, openIdx, StringComparison.Ordinal);
+        if (closeIdx < 0) return (text, null);
+
+        var thinking = text[(openIdx + open.Length)..closeIdx].Trim();
+        var before = text[..openIdx];
+        var after = text[(closeIdx + close.Length)..].TrimStart('\n', '\r');
+        var content = (before + after).Trim();
+
+        return (
+            string.IsNullOrEmpty(content) ? null : content,
+            string.IsNullOrEmpty(thinking) ? null : thinking
+        );
     }
 
     #endregion

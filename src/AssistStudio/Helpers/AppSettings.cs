@@ -544,6 +544,25 @@ public static class AppSettings
         }
     }
 
+    /// <summary>
+    /// Records that the /models endpoint is unavailable for the specified provider.
+    /// Prevents repeated 404 requests for custom providers without a models listing API.
+    /// </summary>
+    public static void SetModelsEndpointFailed(string provider)
+        => Settings.Values[$"ModelsEndpointFailed_{provider}"] = true;
+
+    /// <summary>
+    /// Returns whether the /models endpoint has previously failed for the specified provider.
+    /// </summary>
+    public static bool GetModelsEndpointFailed(string provider)
+        => Settings.Values[$"ModelsEndpointFailed_{provider}"] is true;
+
+    /// <summary>
+    /// Clears the /models failure flag, allowing a fresh retry (e.g. after re-adding an API key).
+    /// </summary>
+    public static void ClearModelsEndpointFailed(string provider)
+        => Settings.Values.Remove($"ModelsEndpointFailed_{provider}");
+
     #endregion
 
     #region Provider Preset Methods
@@ -643,6 +662,7 @@ public static class AppSettings
                 Name = config.DisplayName,
                 ProviderType = providerType,
                 BaseUrl = config.BaseUrl,
+                ModelId = GetDefaultModel(providerType) ?? "",
                 ApiKey = PasswordVaultHelper.LoadApiKey(providerType),
             });
         }

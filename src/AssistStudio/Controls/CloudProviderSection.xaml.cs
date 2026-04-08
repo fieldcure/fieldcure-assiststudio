@@ -129,7 +129,13 @@ public sealed partial class CloudProviderSection : UserControl
         // Background model refresh if key exists
         var preset = FindPreset();
         if (!string.IsNullOrEmpty(preset?.ApiKey))
-            _ = FetchAndCacheModelsAsync(preset.ApiKey);
+        {
+            // Skip fetch for custom providers whose /models endpoint previously failed
+            if (ProviderType.StartsWith("Custom_") && AppSettings.GetModelsEndpointFailed(ProviderType))
+                EnableEditableModelCombo();
+            else
+                _ = FetchAndCacheModelsAsync(preset.ApiKey);
+        }
     }
 
     #endregion
@@ -194,6 +200,7 @@ public sealed partial class CloudProviderSection : UserControl
         UpdateSubHeader();
         PersistPresets();
 
+        AppSettings.ClearModelsEndpointFailed(ProviderType);
         _ = FetchAndCacheModelsAsync(key);
     }
 
@@ -323,21 +330,8 @@ public sealed partial class CloudProviderSection : UserControl
             // Custom providers: enable manual model ID input when /models endpoint is unavailable
             if (ProviderType.StartsWith("Custom_"))
             {
-                DispatcherQueue.TryEnqueue(() =>
-                {
-                    ModelCombo.IsEditable = true;
-                    ModelCombo.IsEnabled = true;
-                    ModelCombo.PlaceholderText = L("Models_TypeModelId");
-
-                    // Restore saved model if any
-                    var saved = AppSettings.GetDefaultModel(ProviderType);
-                    if (!string.IsNullOrEmpty(saved))
-                    {
-                        _isPopulating = true;
-                        ModelCombo.Text = saved;
-                        _isPopulating = false;
-                    }
-                });
+                AppSettings.SetModelsEndpointFailed(ProviderType);
+                DispatcherQueue.TryEnqueue(EnableEditableModelCombo);
             }
         }
     }
@@ -570,6 +564,25 @@ public sealed partial class CloudProviderSection : UserControl
     {
         var idx = ThinkingOverrideCombo.SelectedIndex;
         return idx >= 0 && idx < ThinkingOverrideOptions.Length ? ThinkingOverrideOptions[idx].Value : ThinkingOverride.Auto;
+    }
+
+    /// <summary>
+    /// Switches the model ComboBox to editable mode for manual model ID input.
+    /// Used when a custom provider's /models endpoint is unavailable.
+    /// </summary>
+    private void EnableEditableModelCombo()
+    {
+        ModelCombo.IsEditable = true;
+        ModelCombo.IsEnabled = true;
+        ModelCombo.PlaceholderText = L("Models_TypeModelId");
+
+        var saved = AppSettings.GetDefaultModel(ProviderType);
+        if (!string.IsNullOrEmpty(saved))
+        {
+            _isPopulating = true;
+            ModelCombo.Text = saved;
+            _isPopulating = false;
+        }
     }
 
     private static string ProviderToDisplayName(string provider) => provider switch

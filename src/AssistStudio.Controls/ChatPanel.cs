@@ -3232,6 +3232,14 @@ public sealed partial class ChatPanel : Control
                 await _renderer.BeginAssistantMessageAsync(
                     msg.Id, msg.ProviderName, msg.ProviderModelId);
 
+                // Restore thinking block from saved ThinkingContent
+                if (!string.IsNullOrEmpty(msg.ThinkingContent))
+                {
+                    await _renderer.BeginThinkingBlockAsync(msg.Id);
+                    await _renderer.AppendThinkingTokenAsync(msg.Id, msg.ThinkingContent);
+                    await _renderer.EndThinkingBlockAsync(msg.Id);
+                }
+
                 var toolMarkers = ToolMarkerRegex().Matches(msg.Content ?? "");
                 foreach (Match m in toolMarkers)
                 {

@@ -45,9 +45,13 @@ public static class ProviderFactory
         if (preset.ProviderType.StartsWith("Custom_")
             && _customConfigs.TryGetValue(preset.ProviderType, out var config))
         {
+            if (string.IsNullOrEmpty(model))
+                throw new InvalidOperationException(
+                    $"No model configured for custom provider '{config.DisplayName}'. Please set a model ID in Settings → Models.");
+
             return new OpenAiProvider(
                 apiKey,
-                string.IsNullOrEmpty(model) ? "gpt-4o" : model,
+                model,
                 config.BaseUrl,
                 config.DisplayName,
                 pdfCap);
