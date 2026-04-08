@@ -38,6 +38,7 @@ public sealed partial class ConnectPage : Page
 
     #region Navigation
 
+    /// <inheritdoc/>
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);

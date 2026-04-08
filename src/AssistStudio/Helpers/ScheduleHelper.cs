@@ -202,6 +202,7 @@ public static class ScheduleHelper
     /// </summary>
     private static Func<string, string?>? s_cronResolver;
 
+    /// <summary>Returns a localized human-readable description of a cron expression, or an empty string if invalid.</summary>
     public static string DescribeCron(string? cron)
     {
         if (string.IsNullOrWhiteSpace(cron))

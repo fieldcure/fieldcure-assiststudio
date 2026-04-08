@@ -172,9 +172,11 @@ public class ExpressionDescriptor
 
     #region Static API
 
+    /// <summary>Returns a human-readable description of the specified cron expression using default options.</summary>
     public static string GetDescription(string expression)
         => GetDescription(expression, new Options());
 
+    /// <summary>Returns a human-readable description of the specified cron expression.</summary>
     public static string GetDescription(string expression, Options options)
     {
         ExpressionDescriptor descriptor = new(expression, options);

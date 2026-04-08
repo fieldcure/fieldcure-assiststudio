@@ -2471,8 +2471,10 @@ public sealed partial class ChatPanel : Control
             : [.. RegisteredTools.Where(t => enabledNames.Contains(t.Name))];
     }
 
+    /// <summary>Aggregated result returned after consuming a streaming response.</summary>
     private record StreamResult(TokenUsage? Usage, bool IsTruncated, IReadOnlyList<ToolCall>? ToolCalls = null)
     {
+        /// <summary>Gets whether the stream produced any tool calls.</summary>
         public bool HasToolCalls => ToolCalls is { Count: > 0 };
     }
 
@@ -2599,6 +2601,7 @@ public sealed partial class ChatPanel : Control
     private string? GetSpecialistDisplayName(string specialistName)
         => SpecialistDisplayNameResolver?.Invoke(specialistName);
 
+    /// <summary>Formats a display label for a specialist tool call, including prompt snippet and status icon.</summary>
     private string FormatSpecialistLabel(string argumentsJson, string resultJson)
     {
         var specialistName = GetSpecialistName(argumentsJson);
@@ -2642,6 +2645,7 @@ public sealed partial class ChatPanel : Control
         return $"{promptSnippet} {statusIcon}";
     }
 
+    /// <summary>Formats a display label for a sub-agent tool call, including prompt snippet and status icon.</summary>
     private static string FormatSubAgentLabel(string argumentsJson, string resultJson)
     {
         // Extract prompt (truncated) and status from sub-agent call
