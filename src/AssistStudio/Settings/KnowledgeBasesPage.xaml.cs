@@ -103,7 +103,7 @@ public sealed partial class KnowledgeBasesPage : Page
         var folderWarning = new TextBlock
         {
             Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-            Foreground = new SolidColorBrush(Microsoft.UI.Colors.Orange),
+            Foreground = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"],
             TextWrapping = TextWrapping.Wrap,
             Visibility = Visibility.Collapsed,
         };
@@ -220,6 +220,16 @@ public sealed partial class KnowledgeBasesPage : Page
     {
         if (sender is not Button btn || btn.Tag is not string kbId) return;
 
+        // Clear cached change-check results — they become stale after re-indexing
+        var item = _allItems.FirstOrDefault(i => i.Id == kbId);
+        if (item is not null)
+        {
+            item.ChangesChecked = null;
+            item.ChangesAdded = 0;
+            item.ChangesModified = 0;
+            item.ChangesDeleted = 0;
+        }
+
         RagProcessManager.StartExec(kbId);
         LoggingService.LogInfo($"[KB] Quick re-index started: {kbId}");
 
@@ -260,7 +270,7 @@ public sealed partial class KnowledgeBasesPage : Page
         var folderWarning = new TextBlock
         {
             Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-            Foreground = new SolidColorBrush(Microsoft.UI.Colors.Orange),
+            Foreground = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"],
             TextWrapping = TextWrapping.Wrap,
             Visibility = Visibility.Collapsed,
         };
@@ -413,11 +423,38 @@ public sealed partial class KnowledgeBasesPage : Page
 
     /// <summary>
     /// Polls indexing status and updates the list.
+    /// Auto-runs change check when indexing completes.
     /// </summary>
     private async void OnPollTick(object? sender, object e)
     {
+        var justFinished = new List<KbViewModel>();
+
         foreach (var item in _allItems)
+        {
+            var wasIndexing = item.IsIndexing == Visibility.Visible;
             await UpdateItemStatusAsync(item);
+            if (wasIndexing && item.IsIndexing == Visibility.Collapsed)
+                justFinished.Add(item);
+        }
+
+        // Auto-check changes for KBs that just finished indexing
+        foreach (var item in justFinished)
+        {
+            var result = await CheckChangesAsync(item.Id);
+            if (result is not null)
+            {
+                item.ChangesChecked = true;
+                item.ChangesAdded = result.Added;
+                item.ChangesModified = result.Modified;
+                item.ChangesDeleted = result.Deleted;
+
+                if (!result.IsClean)
+                {
+                    item.StatusText = _loader.GetString("KB_StatusStale") ?? "Prompt stale";
+                    item.StatusBrush = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"];
+                }
+            }
+        }
 
         ApplyFilter();
 
@@ -434,12 +471,25 @@ public sealed partial class KnowledgeBasesPage : Page
 
         if (info is not null)
         {
-            // MCP data available
-            item.StatsText = $"{info.TotalFiles} files, {info.TotalChunks} chunks";
+            // MCP data available — build stats with optional date (skip date while indexing)
+            var statsBase = $"{info.TotalFiles} files, {info.TotalChunks} chunks";
+            if (!info.IsIndexing
+                && info.LastIndexedAt is not null
+                && DateTime.TryParse(info.LastIndexedAt, null, System.Globalization.DateTimeStyles.RoundtripKind, out var dt))
+            {
+                statsBase += $" \u00b7 {dt.ToLocalTime():yyyy-MM-dd HH:mm}";
+            }
+            item.StatsText = statsBase;
             item.IsPromptStale = info.IsPromptStale;
 
             if (info.IsIndexing)
             {
+                // Clear change-check cache while indexing — results will be stale
+                item.ChangesChecked = null;
+                item.ChangesAdded = 0;
+                item.ChangesModified = 0;
+                item.ChangesDeleted = 0;
+
                 item.IsIndexing = Visibility.Visible;
                 item.Progress = info is { Current: not null, Total: > 0 }
                     ? (double)info.Current.Value / info.Total.Value * 100 : 0;
@@ -454,14 +504,25 @@ public sealed partial class KnowledgeBasesPage : Page
                 item.IsIndexing = Visibility.Collapsed;
                 item.Progress = 0;
                 item.StatusText = _loader.GetString("KB_StatusStale") ?? "Prompt stale";
-                item.StatusBrush = new SolidColorBrush(Colors.Orange);
+                item.StatusBrush = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"];
             }
             else if (info.TotalFiles > 0)
             {
                 item.IsIndexing = Visibility.Collapsed;
                 item.Progress = 0;
-                item.StatusText = _loader.GetString("KB_StatusReady") ?? "Ready";
-                item.StatusBrush = new SolidColorBrush(Colors.Gray);
+
+                // If cached change-check found dirty files, show stale status
+                if (item.ChangesChecked == true
+                    && (item.ChangesAdded > 0 || item.ChangesModified > 0 || item.ChangesDeleted > 0))
+                {
+                    item.StatusText = _loader.GetString("KB_StatusStale") ?? "Prompt stale";
+                    item.StatusBrush = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"];
+                }
+                else
+                {
+                    item.StatusText = _loader.GetString("KB_StatusReady") ?? "Ready";
+                    item.StatusBrush = new SolidColorBrush(Colors.Gray);
+                }
             }
             else
             {
@@ -516,6 +577,10 @@ public sealed partial class KnowledgeBasesPage : Page
     /// </summary>
     private async Task RefreshListAsync()
     {
+        // Preserve cached change-check results across refreshes
+        var cachedChanges = _allItems.Where(i => i.ChangesChecked == true)
+            .ToDictionary(i => i.Id, i => (i.ChangesAdded, i.ChangesModified, i.ChangesDeleted, i.ChangesChecked));
+
         var kbs = KnowledgeBaseStore.ListAll();
         _allItems.Clear();
 
@@ -533,6 +598,15 @@ public sealed partial class KnowledgeBasesPage : Page
                 SourcePathsText = string.Join(", ", kb.SourcePaths),
                 ModelInfoText = modelInfo,
             };
+
+            // Restore cached change-check results
+            if (cachedChanges.TryGetValue(kb.Id, out var cached))
+            {
+                item.ChangesAdded = cached.ChangesAdded;
+                item.ChangesModified = cached.ChangesModified;
+                item.ChangesDeleted = cached.ChangesDeleted;
+                item.ChangesChecked = cached.ChangesChecked;
+            }
 
             await UpdateItemStatusAsync(item);
             _allItems.Add(item);
@@ -673,12 +747,61 @@ public sealed partial class KnowledgeBasesPage : Page
             }
             else
             {
+                // Change summary bar (shown after check_changes)
+                if (item.ChangesChecked == true)
+                {
+                    if (item.ChangesAdded == 0 && item.ChangesModified == 0 && item.ChangesDeleted == 0)
+                    {
+                        row.Children.Add(new TextBlock
+                        {
+                            Text = _loader.GetString("KB_NoChanges") ?? "No changes",
+                            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                            Opacity = 0.5,
+                            Margin = new Thickness(0, 4, 0, 0),
+                        });
+                    }
+                    else
+                    {
+                        var changeParts = new List<string>();
+                        if (item.ChangesAdded > 0)
+                            changeParts.Add($"+ {(_loader.GetString("KB_ChangesAdded") ?? "Added")} {item.ChangesAdded}");
+                        if (item.ChangesModified > 0)
+                            changeParts.Add($"~ {(_loader.GetString("KB_ChangesModified") ?? "Modified")} {item.ChangesModified}");
+                        if (item.ChangesDeleted > 0)
+                            changeParts.Add($"- {(_loader.GetString("KB_ChangesDeleted") ?? "Deleted")} {item.ChangesDeleted}");
+
+                        row.Children.Add(new TextBlock
+                        {
+                            Text = string.Join("    ", changeParts),
+                            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                            Foreground = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"],
+                            Margin = new Thickness(0, 4, 0, 0),
+                        });
+                    }
+                }
+
+                // Action buttons row: [Check changes] ... [Settings] [Re-index] [Delete]
+                var actionRow = new Grid { Margin = new Thickness(0, 6, 0, 0) };
+                actionRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                actionRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                actionRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                var checkBtn = new Button
+                {
+                    Tag = item.Id,
+                    Content = _loader.GetString("KB_CheckChanges") ?? "Check changes",
+                    Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
+                    Padding = new Thickness(8, 4, 8, 4),
+                    FontSize = 12,
+                };
+                checkBtn.Click += OnCheckChangesClicked;
+                Grid.SetColumn(checkBtn, 0);
+                actionRow.Children.Add(checkBtn);
+
                 var buttons = new StackPanel
                 {
                     Orientation = Orientation.Horizontal,
                     Spacing = 8,
-                    Margin = new Thickness(0, 6, 0, 0),
-                    HorizontalAlignment = HorizontalAlignment.Right,
                 };
 
                 var settingsBtn = new Button
@@ -726,7 +849,10 @@ public sealed partial class KnowledgeBasesPage : Page
                 deleteBtn.Click += OnDeleteClicked;
                 buttons.Children.Add(deleteBtn);
 
-                row.Children.Add(buttons);
+                Grid.SetColumn(buttons, 2);
+                actionRow.Children.Add(buttons);
+
+                row.Children.Add(actionRow);
             }
 
             panel.Children.Add(row);
@@ -853,8 +979,9 @@ public sealed partial class KnowledgeBasesPage : Page
             }
 
             var isPromptStale = root.TryGetProperty("is_prompt_stale", out var stale) && stale.GetBoolean();
+            var lastIndexedAt = root.TryGetProperty("last_indexed_at", out var lai) ? lai.GetString() : null;
 
-            return new IndexInfoResult(totalFiles, totalChunks, isIndexing, current, total, isPromptStale);
+            return new IndexInfoResult(totalFiles, totalChunks, isIndexing, current, total, isPromptStale, lastIndexedAt);
         }
         catch
         {
@@ -871,6 +998,82 @@ public sealed partial class KnowledgeBasesPage : Page
     /// <summary>Parsed result from the <c>check_changes</c> MCP tool.</summary>
     private sealed record ChangeCheckResult(
         int Added, int Modified, int Deleted, bool IsClean);
+
+    /// <summary>
+    /// Calls the <c>check_changes</c> MCP tool to compare filesystem against the index.
+    /// Returns <c>null</c> when the RAG server is not connected.
+    /// </summary>
+    private static async Task<ChangeCheckResult?> CheckChangesAsync(string kbId)
+    {
+        var connection = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.RagKey);
+        if (connection?.IsConnected != true)
+            return null;
+
+        try
+        {
+            var argsJson = JsonSerializer.Serialize(new { kb_id = kbId });
+            var args = JsonDocument.Parse(argsJson).RootElement;
+            var result = await connection.CallToolWithProgressAsync("check_changes", args, null);
+
+            using var doc = JsonDocument.Parse(result);
+            var root = doc.RootElement;
+
+            return new ChangeCheckResult(
+                root.GetProperty("added").GetInt32(),
+                root.GetProperty("modified").GetInt32(),
+                root.GetProperty("deleted").GetInt32(),
+                root.TryGetProperty("is_clean", out var clean) && clean.GetBoolean());
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Handles the "Check changes" button click — calls check_changes and updates the KB card.
+    /// </summary>
+    private async void OnCheckChangesClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn || btn.Tag is not string kbId) return;
+
+        var item = _allItems.FirstOrDefault(i => i.Id == kbId);
+        if (item is null) return;
+
+        // Show loading state
+        var originalContent = btn.Content;
+        btn.IsEnabled = false;
+        btn.Content = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 6,
+            Children =
+            {
+                new ProgressRing { IsActive = true, Width = 12, Height = 12 },
+                new TextBlock { Text = _loader.GetString("KB_Checking") ?? "Checking...", FontSize = 12 },
+            },
+        };
+
+        var result = await CheckChangesAsync(kbId);
+        if (result is not null)
+        {
+            item.ChangesChecked = true;
+            item.ChangesAdded = result.Added;
+            item.ChangesModified = result.Modified;
+            item.ChangesDeleted = result.Deleted;
+
+            if (!result.IsClean)
+            {
+                item.StatusText = _loader.GetString("KB_StatusStale") ?? "Prompt stale";
+                item.StatusBrush = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"];
+            }
+        }
+
+        // Restore button
+        btn.Content = originalContent;
+        btn.IsEnabled = true;
+        ApplyFilter();
+    }
 
     #endregion
 }
@@ -890,4 +1093,10 @@ internal class KbViewModel
     public Visibility IsIndexing { get; set; } = Visibility.Collapsed;
     public double Progress { get; set; }
     public bool IsPromptStale { get; set; }
+
+    /// <summary>Change detection results (populated after "Check changes" button click).</summary>
+    public int ChangesAdded { get; set; }
+    public int ChangesModified { get; set; }
+    public int ChangesDeleted { get; set; }
+    public bool? ChangesChecked { get; set; }
 }

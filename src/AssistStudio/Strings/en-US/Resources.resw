@@ -610,6 +610,24 @@
   <data name="KB_StatusStale" xml:space="preserve">
     <value>Prompt stale</value>
   </data>
+  <data name="KB_CheckChanges" xml:space="preserve">
+    <value>Check changes</value>
+  </data>
+  <data name="KB_NoChanges" xml:space="preserve">
+    <value>No changes</value>
+  </data>
+  <data name="KB_ChangesAdded" xml:space="preserve">
+    <value>Added</value>
+  </data>
+  <data name="KB_ChangesModified" xml:space="preserve">
+    <value>Modified</value>
+  </data>
+  <data name="KB_ChangesDeleted" xml:space="preserve">
+    <value>Deleted</value>
+  </data>
+  <data name="KB_Checking" xml:space="preserve">
+    <value>Checking...</value>
+  </data>
   <data name="KB_Reindex.Content" xml:space="preserve">
     <value>Re-index</value>
   </data>

@@ -610,6 +610,24 @@
   <data name="KB_StatusStale" xml:space="preserve">
     <value>재인덱싱 필요</value>
   </data>
+  <data name="KB_CheckChanges" xml:space="preserve">
+    <value>변경 확인</value>
+  </data>
+  <data name="KB_NoChanges" xml:space="preserve">
+    <value>변경 없음</value>
+  </data>
+  <data name="KB_ChangesAdded" xml:space="preserve">
+    <value>추가</value>
+  </data>
+  <data name="KB_ChangesModified" xml:space="preserve">
+    <value>수정</value>
+  </data>
+  <data name="KB_ChangesDeleted" xml:space="preserve">
+    <value>삭제</value>
+  </data>
+  <data name="KB_Checking" xml:space="preserve">
+    <value>확인 중...</value>
+  </data>
   <data name="KB_Reindex.Content" xml:space="preserve">
     <value>재인덱싱</value>
   </data>
