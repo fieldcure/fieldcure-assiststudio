@@ -329,7 +329,7 @@ var profile = new Profile
 
 ---
 
-## Ecosystem
+## Packages
 
 ### MCP Servers
 
