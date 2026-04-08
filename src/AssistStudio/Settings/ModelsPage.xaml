@@ -86,6 +86,36 @@
                 </controls:CollapsibleSection>
 
                 <!-- ============================== -->
+                <!-- Custom Providers (OpenAI-compatible) -->
+                <!-- ============================== -->
+                <Rectangle Height="2" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="0,8" />
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Uid="Models_CustomSection" Text="Custom providers"
+                               Style="{StaticResource SubtitleTextBlockStyle}"
+                               VerticalAlignment="Center" />
+                    <Button Grid.Column="1"
+                            x:Uid="Models_AddCustomProvider"
+                            Click="OnAddCustomProvider"
+                            ToolTipService.ToolTip="Add provider" ToolTipService.Placement="Mouse"
+                            Padding="6,4"
+                            VerticalAlignment="Center">
+                        <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
+                                  Glyph="&#xE710;" FontSize="14" />
+                    </Button>
+                </Grid>
+                <TextBlock x:Uid="Models_CustomSectionDesc"
+                           Text="Register OpenAI-compatible API endpoints (e.g., Together AI, OpenRouter)."
+                           FontSize="12" Opacity="0.6"
+                           TextWrapping="Wrap" Margin="0,-16,0,0" />
+
+                <StackPanel x:Name="CustomProvidersPanel" Spacing="8" />
+
+                <!-- ============================== -->
                 <!-- Local Inference (On-Device)    -->
                 <!-- ============================== -->
                 <Rectangle Height="2" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="0,8" />

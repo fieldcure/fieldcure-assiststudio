@@ -1283,4 +1283,58 @@
   <data name="Schedule_DisableTooltip" xml:space="preserve">
     <value>Disable</value>
   </data>
+  <data name="Models_CustomSection.Text" xml:space="preserve">
+    <value>Custom providers</value>
+  </data>
+  <data name="Models_CustomSectionDesc.Text" xml:space="preserve">
+    <value>Register OpenAI-compatible API endpoints (e.g., Together AI, OpenRouter).</value>
+  </data>
+  <data name="Models_AddCustomProvider.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Add provider</value>
+  </data>
+  <data name="Models_DeleteCustomProvider" xml:space="preserve">
+    <value>Delete provider</value>
+  </data>
+  <data name="Models_DeleteCustomProviderConfirmTitle" xml:space="preserve">
+    <value>Delete provider</value>
+  </data>
+  <data name="Models_DeleteCustomProviderConfirmMessage" xml:space="preserve">
+    <value>This will remove the provider and its API key. Are you sure?</value>
+  </data>
+  <data name="Models_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Models_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Models_TypeModelId" xml:space="preserve">
+    <value>Type model ID (e.g., MiniMax-M1)</value>
+  </data>
+  <data name="CustomProviderDialog.Title" xml:space="preserve">
+    <value>Add custom provider</value>
+  </data>
+  <data name="CustomProviderDialog.PrimaryButtonText" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="CustomProviderDialog.CloseButtonText" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="CustomProviderDialog_EditTitle" xml:space="preserve">
+    <value>Edit provider</value>
+  </data>
+  <data name="CustomProviderDialog_DisplayName.Header" xml:space="preserve">
+    <value>Display name</value>
+  </data>
+  <data name="CustomProviderDialog_DisplayName.PlaceholderText" xml:space="preserve">
+    <value>e.g., Together AI</value>
+  </data>
+  <data name="CustomProviderDialog_BaseUrl.Header" xml:space="preserve">
+    <value>Base URL</value>
+  </data>
+  <data name="CustomProviderDialog_BaseUrl.PlaceholderText" xml:space="preserve">
+    <value>https://api.example.com/v1</value>
+  </data>
+  <data name="CustomProviderDialog_BaseUrlHint.Text" xml:space="preserve">
+    <value>Do not include /chat/completions path.</value>
+  </data>
 </root>

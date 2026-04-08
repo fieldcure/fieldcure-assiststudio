@@ -1,7 +1,10 @@
 using AssistStudio.Controls;
+using AssistStudio.Dialogs;
 using AssistStudio.Helpers;
+using FieldCure.Ai.Providers;
 using FieldCure.Ai.Providers.Models;
 using Microsoft.UI.Dispatching;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using Microsoft.Windows.ApplicationModel.Resources;
@@ -44,6 +47,9 @@ public sealed partial class ModelsPage : Page
         // Individual sections are initialized via OnSectionExpanded when first expanded.
         UpdateAllSubHeaders();
         UpdateExpandedState();
+
+        // Build dynamic sections for custom providers
+        BuildCustomProviderSections();
 
         // Lazy-check Ollama status to avoid blocking page entry
         _ = DelayedCheckOllamaAsync();
@@ -226,6 +232,161 @@ public sealed partial class ModelsPage : Page
         if (OllamaSection is null) return;
         OllamaSection.SubHeaderChanged += (_, text) => OllamaHeader.SubHeader = text;
         OllamaSection.Initialize(_presets);
+    }
+
+    #endregion
+
+    #region Custom Providers
+
+    /// <summary>
+    /// Builds CollapsibleSection + CloudProviderSection for each registered custom provider.
+    /// </summary>
+    private void BuildCustomProviderSections()
+    {
+        CustomProvidersPanel.Children.Clear();
+
+        var customs = AppSettings.LoadCustomProviders();
+        foreach (var config in customs)
+        {
+            AddCustomProviderSection(config);
+        }
+    }
+
+    /// <summary>
+    /// Creates and adds a CollapsibleSection with a CloudProviderSection for a custom provider.
+    /// </summary>
+    private void AddCustomProviderSection(CustomProviderConfig config)
+    {
+        var providerType = $"Custom_{config.Id}";
+        var initialized = false;
+
+        var section = new CloudProviderSection
+        {
+            ProviderType = providerType,
+            FallbackModelsString = "",
+        };
+
+        // Delete button below the provider section
+        var deleteBtn = new Button
+        {
+            Content = L("Models_DeleteCustomProvider"),
+            Tag = config.Id,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(0, 8, 0, 0),
+        };
+        deleteBtn.Click += OnDeleteCustomProvider;
+
+        var body = new StackPanel { Spacing = 0 };
+        body.Children.Add(section);
+        body.Children.Add(deleteBtn);
+
+        var header = new CollapsibleSection
+        {
+            Header = config.DisplayName,
+            IsExpanded = false,
+            Body = body,
+        };
+
+        section.SubHeaderChanged += (_, text) => header.SubHeader = text;
+
+        header.Expanded += (_, _) =>
+        {
+            if (initialized) return;
+            initialized = true;
+            section.Initialize(_presets);
+        };
+
+        CustomProvidersPanel.Children.Add(header);
+
+        // Update sub-header from preset data
+        var preset = _presets.FirstOrDefault(p => p.ProviderType == providerType);
+        if (preset is not null)
+        {
+            var model = preset.ModelId ?? "";
+            var status = !string.IsNullOrEmpty(preset.ApiKey) ? "\u2713" : L("Models_NoKey");
+            header.SubHeader = BuildSubHeader(
+                string.IsNullOrEmpty(model) ? null : model, status);
+        }
+    }
+
+    /// <summary>
+    /// Opens the Add Custom Provider dialog.
+    /// </summary>
+    private async void OnAddCustomProvider(object sender, RoutedEventArgs e)
+    {
+        var dialog = new AddCustomProviderDialog
+        {
+            XamlRoot = XamlRoot,
+        };
+
+        var result = await dialog.ShowAsync();
+        if (result != ContentDialogResult.Primary || dialog.Result is null) return;
+
+        var config = dialog.Result;
+
+        // Save config
+        var customs = AppSettings.LoadCustomProviders();
+        customs.Add(config);
+        AppSettings.SaveCustomProviders(customs);
+
+        // Register with factory
+        ProviderFactory.RegisterCustomProvider(config);
+
+        // Reload presets (includes new synthetic preset)
+        _presets = AppSettings.LoadPresets();
+
+        // Add UI section
+        AddCustomProviderSection(config);
+    }
+
+    /// <summary>
+    /// Deletes a custom provider after confirmation.
+    /// </summary>
+    private async void OnDeleteCustomProvider(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string configId }) return;
+
+        var dialog = new ContentDialog
+        {
+            Title = L("Models_DeleteCustomProviderConfirmTitle"),
+            Content = L("Models_DeleteCustomProviderConfirmMessage"),
+            PrimaryButtonText = L("Models_Delete"),
+            CloseButtonText = L("Models_Cancel"),
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = XamlRoot,
+        };
+
+        var result = await dialog.ShowAsync();
+        if (result != ContentDialogResult.Primary) return;
+
+        var providerType = $"Custom_{configId}";
+
+        // Remove from storage
+        var customs = AppSettings.LoadCustomProviders();
+        customs.RemoveAll(c => c.Id == configId);
+        AppSettings.SaveCustomProviders(customs);
+
+        // Remove from factory
+        ProviderFactory.UnregisterCustomProvider(configId);
+
+        // Remove preset and API key
+        var preset = _presets.FirstOrDefault(p => p.ProviderType == providerType);
+        if (preset is not null) _presets.Remove(preset);
+        PasswordVaultHelper.DeleteApiKey(providerType);
+        AppSettings.SavePresets(_presets.ToList());
+
+        // Remove UI section
+        for (int i = CustomProvidersPanel.Children.Count - 1; i >= 0; i--)
+        {
+            if (CustomProvidersPanel.Children[i] is CollapsibleSection cs
+                && cs.Body is StackPanel sp
+                && sp.Children.FirstOrDefault() is CloudProviderSection cps
+                && cps.ProviderType == providerType)
+            {
+                CustomProvidersPanel.Children.RemoveAt(i);
+                break;
+            }
+        }
     }
 
     #endregion

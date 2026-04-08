@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.Windows.AppLifecycle;
 using Windows.ApplicationModel.Activation;
 using Windows.Storage;
+using FieldCure.Ai.Providers;
 using FieldCure.AssistStudio.Controls;
 using FieldCure.DocumentParsers.Pdf;
 using WindowHelper = FieldCure.AssistStudio.Controls.Helpers.WindowHelper;
@@ -70,6 +71,10 @@ public partial class App : Application
         DiagnosticLogger.OnException = ex => LoggingService.LogException(ex);
         DiagnosticLogger.OnWarning = msg => LoggingService.LogWarning(msg);
         DiagnosticLogger.OnInfo = msg => LoggingService.LogInfo(msg);
+
+        // Load custom provider configs and register with factory
+        foreach (var config in AppSettings.LoadCustomProviders())
+            ProviderFactory.RegisterCustomProvider(config);
 
         LoggingService.LogInfo("[App] Startup — services initialized");
 

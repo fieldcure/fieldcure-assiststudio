@@ -50,7 +50,8 @@
                           HorizontalAlignment="Stretch"
                           IsEnabled="False"
                           PlaceholderText="Not available"
-                          SelectionChanged="OnModelChanged" />
+                          SelectionChanged="OnModelChanged"
+                          TextSubmitted="OnModelTextSubmitted" />
             </StackPanel>
             <NumberBox x:Name="MaxTokensBox"
                        x:Uid="Models_MaxTokens"

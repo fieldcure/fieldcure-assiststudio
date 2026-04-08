@@ -7,6 +7,29 @@ namespace FieldCure.Ai.Providers;
 /// </summary>
 public static class ProviderFactory
 {
+    #region Fields
+
+    /// <summary>Registry of custom provider configurations keyed by "Custom_{id}".</summary>
+    private static readonly Dictionary<string, CustomProviderConfig> _customConfigs = new();
+
+    #endregion
+
+    #region Custom Provider Registration
+
+    /// <summary>Registers a custom provider configuration for use in <see cref="Create"/>.</summary>
+    public static void RegisterCustomProvider(CustomProviderConfig config)
+        => _customConfigs[$"Custom_{config.Id}"] = config;
+
+    /// <summary>Removes a custom provider configuration.</summary>
+    public static void UnregisterCustomProvider(string id)
+        => _customConfigs.Remove($"Custom_{id}");
+
+    /// <summary>Removes all custom provider configurations.</summary>
+    public static void ClearCustomProviders()
+        => _customConfigs.Clear();
+
+    #endregion
+
     #region Public Methods
 
     /// <summary>
@@ -17,6 +40,18 @@ public static class ProviderFactory
         var apiKey = preset.ApiKey;
         var model = preset.ModelId;
         var pdfCap = ResolvePdfCapability(preset);
+
+        // Custom providers: always OpenAI-compatible
+        if (preset.ProviderType.StartsWith("Custom_")
+            && _customConfigs.TryGetValue(preset.ProviderType, out var config))
+        {
+            return new OpenAiProvider(
+                apiKey,
+                string.IsNullOrEmpty(model) ? "gpt-4o" : model,
+                config.BaseUrl,
+                config.DisplayName,
+                pdfCap);
+        }
 
         return preset.ProviderType switch
         {
@@ -50,6 +85,9 @@ public static class ProviderFactory
     {
         if (preset.PdfCapability != PdfCapability.Auto)
             return preset.PdfCapability;
+
+        if (preset.ProviderType.StartsWith("Custom_"))
+            return PdfCapability.TextExtraction;
 
         return preset.ProviderType switch
         {

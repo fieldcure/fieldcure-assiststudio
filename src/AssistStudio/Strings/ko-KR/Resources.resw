@@ -1283,4 +1283,58 @@
   <data name="Schedule_DisableTooltip" xml:space="preserve">
     <value>비활성화</value>
   </data>
+  <data name="Models_CustomSection.Text" xml:space="preserve">
+    <value>커스텀 프로바이더</value>
+  </data>
+  <data name="Models_CustomSectionDesc.Text" xml:space="preserve">
+    <value>OpenAI 호환 API 엔드포인트를 등록합니다 (예: Together AI, OpenRouter).</value>
+  </data>
+  <data name="Models_AddCustomProvider.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>프로바이더 추가</value>
+  </data>
+  <data name="Models_DeleteCustomProvider" xml:space="preserve">
+    <value>프로바이더 삭제</value>
+  </data>
+  <data name="Models_DeleteCustomProviderConfirmTitle" xml:space="preserve">
+    <value>프로바이더 삭제</value>
+  </data>
+  <data name="Models_DeleteCustomProviderConfirmMessage" xml:space="preserve">
+    <value>프로바이더와 API 키가 삭제됩니다. 계속하시겠습니까?</value>
+  </data>
+  <data name="Models_Delete" xml:space="preserve">
+    <value>삭제</value>
+  </data>
+  <data name="Models_Cancel" xml:space="preserve">
+    <value>취소</value>
+  </data>
+  <data name="Models_TypeModelId" xml:space="preserve">
+    <value>모델 ID 입력 (예: MiniMax-M1)</value>
+  </data>
+  <data name="CustomProviderDialog.Title" xml:space="preserve">
+    <value>커스텀 프로바이더 추가</value>
+  </data>
+  <data name="CustomProviderDialog.PrimaryButtonText" xml:space="preserve">
+    <value>저장</value>
+  </data>
+  <data name="CustomProviderDialog.CloseButtonText" xml:space="preserve">
+    <value>취소</value>
+  </data>
+  <data name="CustomProviderDialog_EditTitle" xml:space="preserve">
+    <value>프로바이더 편집</value>
+  </data>
+  <data name="CustomProviderDialog_DisplayName.Header" xml:space="preserve">
+    <value>표시 이름</value>
+  </data>
+  <data name="CustomProviderDialog_DisplayName.PlaceholderText" xml:space="preserve">
+    <value>예: Together AI</value>
+  </data>
+  <data name="CustomProviderDialog_BaseUrl.Header" xml:space="preserve">
+    <value>기본 URL</value>
+  </data>
+  <data name="CustomProviderDialog_BaseUrl.PlaceholderText" xml:space="preserve">
+    <value>https://api.example.com/v1</value>
+  </data>
+  <data name="CustomProviderDialog_BaseUrlHint.Text" xml:space="preserve">
+    <value>/chat/completions 경로를 포함하지 마세요.</value>
+  </data>
 </root>

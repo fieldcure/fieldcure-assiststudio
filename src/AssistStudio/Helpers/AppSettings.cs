@@ -591,6 +591,8 @@ public static class AppSettings
             return new ObservableCollection<ProviderPreset>(_presetsCache);
 
         var json = Settings.Values["ProviderPresets"] as string;
+        ObservableCollection<ProviderPreset>? result = null;
+
         if (!string.IsNullOrEmpty(json))
         {
             try
@@ -606,17 +608,44 @@ public static class AppSettings
                         }
                     }
 
-                    _presetsCache = new ObservableCollection<ProviderPreset>(list);
-                    return new ObservableCollection<ProviderPreset>(_presetsCache);
+                    result = new ObservableCollection<ProviderPreset>(list);
                 }
             }
             catch { /* fall through to rebuild */ }
         }
 
         // No saved presets — build from PasswordVault API keys
-        var built = BuildPresetsFromVault();
-        _presetsCache = built;
-        return new ObservableCollection<ProviderPreset>(built);
+        result ??= BuildPresetsFromVault();
+
+        // Append synthetic presets for custom providers
+        AppendCustomProviderPresets(result);
+
+        _presetsCache = result;
+        return new ObservableCollection<ProviderPreset>(result);
+    }
+
+    /// <summary>
+    /// Appends synthetic <see cref="ProviderPreset"/> entries for each registered custom provider.
+    /// </summary>
+    private static void AppendCustomProviderPresets(ObservableCollection<ProviderPreset> presets)
+    {
+        var customs = LoadCustomProviders();
+        foreach (var config in customs)
+        {
+            var providerType = $"Custom_{config.Id}";
+
+            // Skip if already present (e.g., from serialized presets)
+            if (presets.Any(p => p.ProviderType == providerType))
+                continue;
+
+            presets.Add(new ProviderPreset
+            {
+                Name = config.DisplayName,
+                ProviderType = providerType,
+                BaseUrl = config.BaseUrl,
+                ApiKey = PasswordVaultHelper.LoadApiKey(providerType),
+            });
+        }
     }
 
     #endregion
@@ -735,6 +764,61 @@ public static class AppSettings
         await File.WriteAllTextAsync(McpServersFilePath, json);
 
         McpServersChanged?.Invoke(null, EventArgs.Empty);
+    }
+
+    #endregion
+
+    #region Custom Provider Methods
+
+    /// <summary>Raised when custom provider configurations change.</summary>
+    public static event EventHandler? CustomProvidersChanged;
+
+    /// <summary>In-memory cache of custom provider configs.</summary>
+    private static List<CustomProviderConfig>? _customProviderCache;
+
+    /// <summary>Gets the path to the custom providers configuration file.</summary>
+    private static string CustomProvidersFilePath
+        => Path.Combine(ApplicationData.Current.LocalFolder.Path, "custom-providers.json");
+
+    /// <summary>
+    /// Loads custom provider configurations from the JSON file.
+    /// Must be called at app startup before <see cref="LoadPresets"/>.
+    /// </summary>
+    public static List<CustomProviderConfig> LoadCustomProviders()
+    {
+        if (_customProviderCache is not null)
+            return _customProviderCache;
+
+        try
+        {
+            if (!File.Exists(CustomProvidersFilePath))
+            {
+                _customProviderCache = [];
+                return _customProviderCache;
+            }
+
+            var json = File.ReadAllText(CustomProvidersFilePath);
+            _customProviderCache = JsonSerializer.Deserialize(json, AppJsonContext.Default.ListCustomProviderConfig) ?? [];
+            return _customProviderCache;
+        }
+        catch
+        {
+            _customProviderCache = [];
+            return _customProviderCache;
+        }
+    }
+
+    /// <summary>
+    /// Saves custom provider configurations to the JSON file.
+    /// </summary>
+    public static void SaveCustomProviders(List<CustomProviderConfig> configs)
+    {
+        var json = JsonSerializer.Serialize(configs, AppJsonContext.Default.ListCustomProviderConfig);
+        File.WriteAllText(CustomProvidersFilePath, json);
+
+        _customProviderCache = configs;
+        _presetsCache = null; // Invalidate preset cache so synthetic presets are regenerated
+        CustomProvidersChanged?.Invoke(null, EventArgs.Empty);
     }
 
     #endregion

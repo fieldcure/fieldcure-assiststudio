@@ -169,11 +169,7 @@ public sealed partial class CloudProviderSection : UserControl
         PasswordVaultHelper.SaveApiKey(ProviderType, key);
         ApiKeyBox.Password = "";
 
-        SetKeyState(key);
-        UpdateSubHeader();
-
-        _ = FetchAndCacheModelsAsync(key);
-
+        // Update preset FIRST so SubHeader and FetchModels see the key
         var preset = FindPreset();
         if (preset is not null)
         {
@@ -193,7 +189,12 @@ public sealed partial class CloudProviderSection : UserControl
             var ollamaIdx = _presets.ToList().FindIndex(p => p.ProviderType == "Ollama");
             _presets.Insert(ollamaIdx >= 0 ? ollamaIdx : _presets.Count, newPreset);
         }
+
+        SetKeyState(key);
+        UpdateSubHeader();
         PersistPresets();
+
+        _ = FetchAndCacheModelsAsync(key);
     }
 
     private void OnRemoveKey(object sender, RoutedEventArgs e)
@@ -241,6 +242,31 @@ public sealed partial class CloudProviderSection : UserControl
         if (_isPopulating) return;
         if (ModelCombo.SelectedItem is not string model || string.IsNullOrEmpty(model)) return;
 
+        ApplyModelSelection(model);
+    }
+
+    /// <summary>
+    /// Handles manual model ID input in editable ComboBox (custom providers with no /models endpoint).
+    /// </summary>
+    private void OnModelTextSubmitted(ComboBox sender, ComboBoxTextSubmittedEventArgs args)
+    {
+        if (_isPopulating) return;
+        var model = args.Text?.Trim();
+        if (string.IsNullOrEmpty(model)) return;
+
+        // Accept the custom text as a valid value
+        args.Handled = true;
+
+        // Add to items if not already present
+        if (!ModelCombo.Items.Contains(model))
+            ModelCombo.Items.Add(model);
+        ModelCombo.SelectedItem = model;
+
+        ApplyModelSelection(model);
+    }
+
+    private void ApplyModelSelection(string model)
+    {
         _isPopulating = true;
         UpdateThinkingState();
         _isPopulating = false;
@@ -293,18 +319,49 @@ public sealed partial class CloudProviderSection : UserControl
         catch (Exception ex)
         {
             LoggingService.LogException(ex);
+
+            // Custom providers: enable manual model ID input when /models endpoint is unavailable
+            if (ProviderType.StartsWith("Custom_"))
+            {
+                DispatcherQueue.TryEnqueue(() =>
+                {
+                    ModelCombo.IsEditable = true;
+                    ModelCombo.IsEnabled = true;
+                    ModelCombo.PlaceholderText = L("Models_TypeModelId");
+
+                    // Restore saved model if any
+                    var saved = AppSettings.GetDefaultModel(ProviderType);
+                    if (!string.IsNullOrEmpty(saved))
+                    {
+                        _isPopulating = true;
+                        ModelCombo.Text = saved;
+                        _isPopulating = false;
+                    }
+                });
+            }
         }
     }
 
-    private IAiProvider CreateProviderForListing(string apiKey) => ProviderType switch
+    private IAiProvider CreateProviderForListing(string apiKey)
     {
-        "Claude" => new ClaudeProvider(apiKey, "dummy"),
-        "OpenAI" => new OpenAiProvider(apiKey, "dummy"),
-        "Gemini" => new GeminiProvider(apiKey, "dummy"),
-        "Groq" => new OpenAiProvider(apiKey, "dummy",
-            baseUrl: "https://api.groq.com/openai/v1", providerName: "Groq"),
-        _ => throw new ArgumentException($"Unknown provider: {ProviderType}")
-    };
+        // Custom providers: construct OpenAiProvider directly with the passed apiKey
+        if (ProviderType.StartsWith("Custom_"))
+        {
+            var preset = FindPreset();
+            if (preset?.BaseUrl is not null)
+                return new OpenAiProvider(apiKey, "dummy", preset.BaseUrl, preset.Name);
+        }
+
+        return ProviderType switch
+        {
+            "Claude" => new ClaudeProvider(apiKey, "dummy"),
+            "OpenAI" => new OpenAiProvider(apiKey, "dummy"),
+            "Gemini" => new GeminiProvider(apiKey, "dummy"),
+            "Groq" => new OpenAiProvider(apiKey, "dummy",
+                baseUrl: "https://api.groq.com/openai/v1", providerName: "Groq"),
+            _ => throw new ArgumentException($"Unknown provider: {ProviderType}")
+        };
+    }
 
     private List<string> FilterChatModels(IReadOnlyList<AiModel> models) => ProviderType switch
     {

@@ -111,7 +111,8 @@ public partial class ProviderPreset : INotifyPropertyChanged
     /// Whether this provider type requires an API key.
     /// </summary>
     [JsonIgnore]
-    public bool RequiresApiKey => ProviderType is "Claude" or "OpenAI" or "Gemini" or "Groq";
+    public bool RequiresApiKey => ProviderType is "Claude" or "OpenAI" or "Gemini" or "Groq"
+        || ProviderType.StartsWith("Custom_");
 
     #endregion
 

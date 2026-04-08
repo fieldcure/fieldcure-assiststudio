@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<local:ThemedContentDialog
+    x:Class="AssistStudio.Dialogs.AddCustomProviderDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:AssistStudio.Dialogs"
+    x:Uid="CustomProviderDialog"
+    Title="Add custom provider"
+    PrimaryButtonText="Save"
+    CloseButtonText="Cancel"
+    DefaultButton="Primary"
+    IsPrimaryButtonEnabled="False"
+    PrimaryButtonClick="OnPrimaryButtonClick"
+    Loaded="OnLoaded">
+
+    <StackPanel Spacing="16" MinWidth="400">
+        <!-- Display Name -->
+        <TextBox x:Name="DisplayNameBox"
+                 x:Uid="CustomProviderDialog_DisplayName"
+                 Header="Display name"
+                 PlaceholderText="e.g., Together AI"
+                 TextChanged="OnInputChanged" />
+
+        <!-- Base URL -->
+        <TextBox x:Name="BaseUrlBox"
+                 x:Uid="CustomProviderDialog_BaseUrl"
+                 Header="Base URL"
+                 PlaceholderText="https://api.example.com/v1"
+                 TextChanged="OnInputChanged" />
+        <TextBlock x:Uid="CustomProviderDialog_BaseUrlHint"
+                   Text="Do not include /chat/completions path."
+                   FontSize="12" Opacity="0.6" Margin="0,-12,0,0" />
+    </StackPanel>
+</local:ThemedContentDialog>
