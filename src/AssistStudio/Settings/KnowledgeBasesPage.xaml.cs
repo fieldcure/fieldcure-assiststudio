@@ -36,8 +36,6 @@ public sealed partial class KnowledgeBasesPage : Page
 
         _pollTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
         _pollTimer.Tick += OnPollTick;
-
-        SearchBox.PlaceholderText = _loader.GetString("KB_SearchPlaceholder");
     }
 
     #endregion

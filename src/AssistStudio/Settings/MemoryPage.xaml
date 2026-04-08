@@ -42,8 +42,8 @@
 
         <!-- Search box -->
         <AutoSuggestBox x:Name="SearchBox" Grid.Row="1"
+                        x:Uid="Memory_SearchBox"
                         Margin="20,12,20,0"
-                        PlaceholderText="Search memories..."
                         QueryIcon="Find"
                         QuerySubmitted="OnSearchQuerySubmitted"
                         TextChanged="OnSearchTextChanged" />

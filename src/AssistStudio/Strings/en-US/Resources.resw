@@ -1337,4 +1337,13 @@
   <data name="CustomProviderDialog_BaseUrlHint.Text" xml:space="preserve">
     <value>Do not include /chat/completions path.</value>
   </data>
+  <data name="Memory_SearchBox.PlaceholderText" xml:space="preserve">
+    <value>Search memories...</value>
+  </data>
+  <data name="Schedule_SearchBox.PlaceholderText" xml:space="preserve">
+    <value>Search schedules...</value>
+  </data>
+  <data name="KB_SearchBox.PlaceholderText" xml:space="preserve">
+    <value>Search knowledge bases...</value>
+  </data>
 </root>

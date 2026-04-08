@@ -19,7 +19,6 @@ public sealed partial class SchedulePage : Page
     private string _deleteTooltip = "Delete";
     private string _enableTooltip = "Enable";
     private string _disableTooltip = "Disable";
-    private string _searchPlaceholder = "Search schedules...";
     private string _loadingText = "Loading schedules...";
     private string _deleteConfirmTitle = "Delete Schedule";
     private string _deleteConfirmContent = "Are you sure you want to delete \"{0}\"?";
@@ -59,8 +58,7 @@ public sealed partial class SchedulePage : Page
             _deleteTooltip = loader.GetString("Schedule_DeleteTooltip") is { Length: > 0 } s1 ? s1 : _deleteTooltip;
             _enableTooltip = loader.GetString("Schedule_EnableTooltip") is { Length: > 0 } s2 ? s2 : _enableTooltip;
             _disableTooltip = loader.GetString("Schedule_DisableTooltip") is { Length: > 0 } s3 ? s3 : _disableTooltip;
-            _searchPlaceholder = loader.GetString("Schedule_SearchPlaceholder") is { Length: > 0 } s4 ? s4 : _searchPlaceholder;
-            _loadingText = loader.GetString("Schedule_Loading") is { Length: > 0 } s5 ? s5 : _loadingText;
+            _loadingText = loader.GetString("Schedule_Loading") is { Length: > 0 } s4 ? s4 : _loadingText;
             _deleteConfirmTitle = loader.GetString("Schedule_DeleteConfirmTitle") is { Length: > 0 } s6 ? s6 : _deleteConfirmTitle;
             _deleteConfirmContent = loader.GetString("Schedule_DeleteConfirmContent") is { Length: > 0 } s7 ? s7 : _deleteConfirmContent;
             _cancelText = loader.GetString("Common_Cancel") is { Length: > 0 } s8 ? s8 : _cancelText;
@@ -70,7 +68,6 @@ public sealed partial class SchedulePage : Page
         catch { /* fallback defaults */ }
 
         LoadingText.Text = _loadingText;
-        SearchBox.PlaceholderText = _searchPlaceholder;
     }
 
     private async Task LoadSchedulesAsync()

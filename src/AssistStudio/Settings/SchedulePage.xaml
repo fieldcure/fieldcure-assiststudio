@@ -45,8 +45,8 @@
 
         <!-- Search box -->
         <AutoSuggestBox x:Name="SearchBox" Grid.Row="1"
+                        x:Uid="Schedule_SearchBox"
                         Margin="20,12,20,0"
-                        PlaceholderText="Search schedules..."
                         QueryIcon="Find"
                         QuerySubmitted="OnSearchQuerySubmitted"
                         TextChanged="OnSearchTextChanged" />

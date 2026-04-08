@@ -1337,4 +1337,13 @@
   <data name="CustomProviderDialog_BaseUrlHint.Text" xml:space="preserve">
     <value>/chat/completions 경로를 포함하지 마세요.</value>
   </data>
+  <data name="Memory_SearchBox.PlaceholderText" xml:space="preserve">
+    <value>메모리 검색...</value>
+  </data>
+  <data name="Schedule_SearchBox.PlaceholderText" xml:space="preserve">
+    <value>스케줄 검색...</value>
+  </data>
+  <data name="KB_SearchBox.PlaceholderText" xml:space="preserve">
+    <value>지식 저장소 검색...</value>
+  </data>
 </root>

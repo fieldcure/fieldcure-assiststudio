@@ -14,7 +14,6 @@ public sealed partial class MemoryPage : Page
 {
     private string _deleteTooltip = "Delete";
     private string _connectingText = "Connecting to Essentials server...";
-    private string _searchPlaceholder = "Search memories...";
 
     public MemoryPage()
     {
@@ -35,12 +34,10 @@ public sealed partial class MemoryPage : Page
             var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
             _deleteTooltip = loader.GetString("Memory_DeleteTooltip") is { Length: > 0 } s ? s : "Delete";
             _connectingText = loader.GetString("Memory_Connecting") is { Length: > 0 } s2 ? s2 : _connectingText;
-            _searchPlaceholder = loader.GetString("Memory_SearchPlaceholder") is { Length: > 0 } s3 ? s3 : _searchPlaceholder;
         }
         catch { /* fallback defaults */ }
 
         ConnectingText.Text = _connectingText;
-        SearchBox.PlaceholderText = _searchPlaceholder;
     }
 
     private async Task LoadMemoriesAsync(string? query = null)
