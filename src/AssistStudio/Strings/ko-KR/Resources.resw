@@ -625,6 +625,9 @@
   <data name="KB_ChangesDeleted" xml:space="preserve">
     <value>삭제</value>
   </data>
+  <data name="KB_ChangesFailed" xml:space="preserve">
+    <value>실패</value>
+  </data>
   <data name="KB_Checking" xml:space="preserve">
     <value>확인 중...</value>
   </data>

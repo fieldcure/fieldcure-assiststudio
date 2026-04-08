@@ -228,6 +228,7 @@ public sealed partial class KnowledgeBasesPage : Page
             item.ChangesAdded = 0;
             item.ChangesModified = 0;
             item.ChangesDeleted = 0;
+            item.ChangesFailed = 0;
         }
 
         RagProcessManager.StartExec(kbId);
@@ -447,6 +448,7 @@ public sealed partial class KnowledgeBasesPage : Page
                 item.ChangesAdded = result.Added;
                 item.ChangesModified = result.Modified;
                 item.ChangesDeleted = result.Deleted;
+                item.ChangesFailed = result.Failed;
 
                 if (!result.IsClean)
                 {
@@ -471,8 +473,10 @@ public sealed partial class KnowledgeBasesPage : Page
 
         if (info is not null)
         {
-            // MCP data available — build stats with optional date (skip date while indexing)
+            // MCP data available — build stats with optional failed count and date (skip date while indexing)
             var statsBase = $"{info.TotalFiles} files, {info.TotalChunks} chunks";
+            if (info.FailedCount > 0)
+                statsBase += $" \u00b7 {info.FailedCount} failed";
             if (!info.IsIndexing
                 && info.LastIndexedAt is not null
                 && DateTime.TryParse(info.LastIndexedAt, null, System.Globalization.DateTimeStyles.RoundtripKind, out var dt))
@@ -489,6 +493,7 @@ public sealed partial class KnowledgeBasesPage : Page
                 item.ChangesAdded = 0;
                 item.ChangesModified = 0;
                 item.ChangesDeleted = 0;
+                item.ChangesFailed = 0;
 
                 item.IsIndexing = Visibility.Visible;
                 item.Progress = info is { Current: not null, Total: > 0 }
@@ -579,7 +584,7 @@ public sealed partial class KnowledgeBasesPage : Page
     {
         // Preserve cached change-check results across refreshes
         var cachedChanges = _allItems.Where(i => i.ChangesChecked == true)
-            .ToDictionary(i => i.Id, i => (i.ChangesAdded, i.ChangesModified, i.ChangesDeleted, i.ChangesChecked));
+            .ToDictionary(i => i.Id, i => (i.ChangesAdded, i.ChangesModified, i.ChangesDeleted, i.ChangesFailed, i.ChangesChecked));
 
         var kbs = KnowledgeBaseStore.ListAll();
         _allItems.Clear();
@@ -605,6 +610,7 @@ public sealed partial class KnowledgeBasesPage : Page
                 item.ChangesAdded = cached.ChangesAdded;
                 item.ChangesModified = cached.ChangesModified;
                 item.ChangesDeleted = cached.ChangesDeleted;
+                item.ChangesFailed = cached.ChangesFailed;
                 item.ChangesChecked = cached.ChangesChecked;
             }
 
@@ -750,7 +756,7 @@ public sealed partial class KnowledgeBasesPage : Page
                 // Change summary bar (shown after check_changes)
                 if (item.ChangesChecked == true)
                 {
-                    if (item.ChangesAdded == 0 && item.ChangesModified == 0 && item.ChangesDeleted == 0)
+                    if (item.ChangesAdded == 0 && item.ChangesModified == 0 && item.ChangesDeleted == 0 && item.ChangesFailed == 0)
                     {
                         row.Children.Add(new TextBlock
                         {
@@ -769,6 +775,8 @@ public sealed partial class KnowledgeBasesPage : Page
                             changeParts.Add($"~ {(_loader.GetString("KB_ChangesModified") ?? "Modified")} {item.ChangesModified}");
                         if (item.ChangesDeleted > 0)
                             changeParts.Add($"- {(_loader.GetString("KB_ChangesDeleted") ?? "Deleted")} {item.ChangesDeleted}");
+                        if (item.ChangesFailed > 0)
+                            changeParts.Add($"! {(_loader.GetString("KB_ChangesFailed") ?? "Failed")} {item.ChangesFailed}");
 
                         row.Children.Add(new TextBlock
                         {
@@ -980,8 +988,9 @@ public sealed partial class KnowledgeBasesPage : Page
 
             var isPromptStale = root.TryGetProperty("is_prompt_stale", out var stale) && stale.GetBoolean();
             var lastIndexedAt = root.TryGetProperty("last_indexed_at", out var lai) ? lai.GetString() : null;
+            var failedCount = root.TryGetProperty("last_failed_count", out var fc) ? fc.GetInt32() : 0;
 
-            return new IndexInfoResult(totalFiles, totalChunks, isIndexing, current, total, isPromptStale, lastIndexedAt);
+            return new IndexInfoResult(totalFiles, totalChunks, isIndexing, current, total, isPromptStale, lastIndexedAt, failedCount);
         }
         catch
         {
@@ -993,11 +1002,12 @@ public sealed partial class KnowledgeBasesPage : Page
     private sealed record IndexInfoResult(
         int TotalFiles, int TotalChunks,
         bool IsIndexing, int? Current, int? Total,
-        bool IsPromptStale, string? LastIndexedAt);
+        bool IsPromptStale, string? LastIndexedAt,
+        int FailedCount);
 
     /// <summary>Parsed result from the <c>check_changes</c> MCP tool.</summary>
     private sealed record ChangeCheckResult(
-        int Added, int Modified, int Deleted, bool IsClean);
+        int Added, int Modified, int Deleted, int Failed, bool IsClean);
 
     /// <summary>
     /// Calls the <c>check_changes</c> MCP tool to compare filesystem against the index.
@@ -1022,6 +1032,7 @@ public sealed partial class KnowledgeBasesPage : Page
                 root.GetProperty("added").GetInt32(),
                 root.GetProperty("modified").GetInt32(),
                 root.GetProperty("deleted").GetInt32(),
+                root.TryGetProperty("failed", out var fail) ? fail.GetInt32() : 0,
                 root.TryGetProperty("is_clean", out var clean) && clean.GetBoolean());
         }
         catch
@@ -1098,5 +1109,6 @@ internal class KbViewModel
     public int ChangesAdded { get; set; }
     public int ChangesModified { get; set; }
     public int ChangesDeleted { get; set; }
+    public int ChangesFailed { get; set; }
     public bool? ChangesChecked { get; set; }
 }
