@@ -16,7 +16,7 @@ AssistStudio is two things:
 
 ![Chat conversation with Markdown and syntax highlighting](docs/chat-conversation.png)
 
-### Ecosystem
+### Architecture Overview
 
 ![AssistStudio Ecosystem](docs/ecosystem.png)
 
@@ -24,25 +24,32 @@ AssistStudio is two things:
 
 ## Features
 
+### Providers & Streaming
 - **BYOK (Bring Your Own Key)** — Users supply their own API keys. No proxy, no middleman.
 - **Multi-Provider** — Claude, OpenAI, Gemini, Ollama, and Groq out of the box. Implement `IAiProvider` to add your own.
-- **Streaming** — Real-time structured event streaming via `IAsyncEnumerable<StreamEvent>` — a discriminated union covering text, thinking, tool calls, usage, and completion. Elapsed time display during streaming.
-- **Extended Thinking** — Per-provider thinking/reasoning support (Claude extended thinking, OpenAI o-series reasoning, Ollama native thinking field). Configurable via `ThinkingOverride` and `ThinkingBudget`.
-- **Conversation Branching** — Tree-based message editing with branch navigator (◀ 1/2 ▶). Edit any message to explore alternatives without losing history.
-- **MCP Integration** — Connect to MCP servers (Stdio / HTTP) to aggregate tools from any Model Context Protocol source. `McpToolAdapter` bridges MCP tools to the `IAssistTool` pipeline.
-- **Built-in MCP Servers** — Essentials, Filesystem, Knowledge Archive (RAG), and Outbox servers ship as built-ins, auto-installed and auto-updated via `dotnet tool`. Per-tab or shared instances with MCP Roots protocol support.
-- **Vision & Documents** — Attach images (PNG, JPG, WebP, GIF), PDFs, DOCX, HWPX, XLSX, and PPTX files. Automatic image compression via `ImageCompressor`. Document text extraction via [FieldCure.DocumentParsers](https://github.com/fieldcure/fieldcure-document-parsers). Per-provider `PdfCapability` (Auto / TextExtraction / NativePdf / PageAsImage).
-- **Multimedia Tool Results** — MCP tools returning image, audio, and video content are rendered inline with native controls. Image hover toolbar with zoom (popover viewer), save, and copy.
-- **Sub-Agent Delegation** — `delegate_task` tool for autonomous sub-agent execution with parallel dispatch. `ISpecialist` interface for domain-specific routing (e.g., Web Search Specialist).
-- **Tool / Function Calling** — Define tools with `IAssistTool`. `ToolCallExecutor` orchestrates execution with confirmation flow and parallel execution. `ToolApprovalPanel` shows inline approval UI with user instruction input.
+- **Streaming** — Real-time structured event streaming via `IAsyncEnumerable<StreamEvent>` with elapsed time display.
+- **Extended Thinking** — Per-provider thinking/reasoning support (Claude, OpenAI o-series, Ollama native thinking). Configurable via `ThinkingOverride` and `ThinkingBudget`.
 - **Token Tracking** — Input/output token counts exposed after every request.
-- **Re-templatable WinUI 3 Controls** — `ChatPanel`, `ComposeBar`, `AttachmentPreviewBar`, and `ToolApprovalPanel` are `TemplatedControl`s. Override `Generic.xaml` to fully customize the UI.
-- **Profiles & Presets** — Save provider configurations as presets; switch system prompts and tool selections with profiles.
-- **Workspace Context** — `IWorkspaceContext` for dynamic system prompt injection based on app state.
-- **Conversation Persistence** — Save and load conversations in `.astd` (JSON) format with full branching tree and media persistence.
-- **Knowledge Archive** — Multi-KB management with create/delete/settings UI, embedding model selection, and per-conversation KB selector.
-- **Schedule** — Cron schedule management with bilingual (en/ko) human-readable cron descriptions.
+
+### Tools & Agents
+- **Tool / Function Calling** — Define tools with `IAssistTool`. `ToolCallExecutor` orchestrates execution with confirmation flow and parallel execution.
+- **MCP Integration** — Connect to MCP servers (Stdio / HTTP) to aggregate tools. `McpToolAdapter` bridges MCP tools to `IAssistTool`.
+- **Built-in MCP Servers** — Essentials (12–16 tools), Filesystem, Knowledge Archive (RAG), and Outbox — auto-installed and auto-updated via `dotnet tool`.
+- **Sub-Agent Delegation** — `delegate_task` tool for autonomous sub-agent execution with parallel dispatch. `ISpecialist` interface for domain-specific routing (e.g., Web Search Specialist).
+
+### UI & Media
+- **Re-templatable WinUI 3 Controls** — `ChatPanel`, `ComposeBar`, `AttachmentPreviewBar`, `ToolApprovalPanel` — all `TemplatedControl`s with `Generic.xaml` override.
+- **Conversation Branching** — Tree-based message editing with branch navigator (◀ 1/2 ▶). Edit any message to explore alternatives without losing history.
+- **Vision & Documents** — Attach images, PDFs, DOCX, HWPX, XLSX, PPTX. Automatic image compression. Per-provider `PdfCapability`.
+- **Multimedia Tool Results** — MCP image, audio, and video content rendered inline. Image hover toolbar with zoom, save, and copy.
 - **Localization** — Built-in en-US and ko-KR resource strings.
+
+### Data & Persistence
+- **Conversation Persistence** — Save and load conversations in `.astd` (JSON) format with full branching tree and media persistence.
+- **Profiles & Presets** — Save provider configurations as presets; switch system prompts and tool selections with profiles.
+- **Knowledge Archive** — Multi-KB management with embedding model selection and per-conversation KB selector.
+- **Schedule** — Cron schedule management with bilingual (en/ko) human-readable descriptions.
+- **Workspace Context** — `IWorkspaceContext` for dynamic system prompt injection based on app state.
 - **Structured Logging** — `DiagnosticLogger` with pluggable `OnException`, `OnWarning`, `OnInfo` callbacks.
 
 ---
@@ -64,38 +71,12 @@ AssistStudio is two things:
 
 ## Architecture
 
-```
-                        ┌──────────────────────┐
-                        │   MCP Servers        │
-                        │  (Stdio / HTTP)      │
-                        └──────────┬───────────┘
-                                   │ McpToolAdapter
-┌──────────────────────────────────┼──────────────────┐
-│  AssistStudio (Workspace App)                       │
-│  WinUI 3 — MCP · SubAgent · Schedule · KB · Media  │
-├─────────────────────────────────────────────────────┤
-│  AssistStudio.Controls            ← NuGet package   │
-│  ChatPanel · Multimedia · Branching · ThinkingBlock │
-│  WebView2 rendering · Themes · Localization         │
-├─────────────────────────────────────────────────────┤
-│  AssistStudio.Core                ← NuGet package   │
-│  ISpecialist · ToolCallExecutor · ToolResolver      │
-├─────────────────────────────────────────────────────┤
-│  Ai.Execution                     ← NuGet package   │
-│  AgentLoop · SubAgentExecutor                       │
-├─────────────────────────────────────────────────────┤
-│  Ai.Providers                     ← NuGet package   │
-│  IAiProvider · StreamEvent · IAssistTool · Models   │
-│  Claude │ OpenAI │ Gemini │ Ollama │ Groq           │
-└─────────────────────────────────────────────────────┘
-```
-
 | Project | NuGet Package | TFM | Key Types |
 |---------|--------------|-----|-----------|
-| **AssistStudio.Core** | `FieldCure.AssistStudio.Core` | `net8.0` | `ISpecialist`, `KnowledgeBase`, `ToolCallExecutor`, `ToolResolver`, `McpToolAdapter`, `IWorkspaceContext`, `BuiltInServerConfig`, `Profile` — depends on [`FieldCure.Ai.Providers`](https://www.nuget.org/packages/FieldCure.Ai.Providers) |
-| **AssistStudio.Controls** | `FieldCure.AssistStudio.Controls.WinUI` | `net8.0-windows10.0.19041.0`<br>`net9.0-windows10.0.19041.0` | `ChatPanel`, `ComposeBar`, `AttachmentPreviewBar`, `ToolApprovalPanel`, `ChatTheme` |
-| **Ai.Providers** | `FieldCure.Ai.Providers` | `net8.0` | `IAiProvider`, `StreamEvent`, `IAssistTool`, `AiRequest`, `AiResponse`, `ChatMessage`, `ProviderPreset`, `ImageCompressor`, `IMultiContentTool`, `MediaContent` |
+| **Ai.Providers** | `FieldCure.Ai.Providers` | `net8.0` | `IAiProvider`, `StreamEvent`, `IAssistTool`, `AiRequest`, `AiResponse`, `ChatMessage`, `ProviderPreset`, `McpToolAdapter`, `ImageCompressor`, `IMultiContentTool`, `MediaContent` |
 | **Ai.Execution** | `FieldCure.Ai.Execution` | `net8.0` | `IAgentLoop`, `AgentLoop`, `ISubAgentExecutor`, `SubAgentExecutor`, `AgentLoopContext`, `AgentLoopResult` |
+| **AssistStudio.Core** | `FieldCure.AssistStudio.Core` | `net8.0` | `ISpecialist`, `KnowledgeBase`, `ToolCallExecutor`, `ToolResolver`, `IWorkspaceContext`, `BuiltInServerConfig`, `Profile` |
+| **AssistStudio.Controls** | `FieldCure.AssistStudio.Controls.WinUI` | `net8.0-windows10.0.19041.0`<br>`net9.0-windows10.0.19041.0` | `ChatPanel`, `ComposeBar`, `AttachmentPreviewBar`, `ToolApprovalPanel`, `ChatTheme` |
 | **AssistStudio** | *(workspace app)* | `net9.0-windows10.0.19041.0` | Reference implementation with settings, MCP server management, sub-agent delegation, schedule, and `PasswordVaultHelper` |
 
 > **Core is platform-agnostic** (`net8.0`). It has no Windows-specific dependencies — you can reference it from a console app, a server, or any .NET project.
@@ -114,7 +95,7 @@ dotnet add package FieldCure.AssistStudio.Controls.WinUI
 ### 2. Create a provider and wire up the control
 
 ```csharp
-using FieldCure.AssistStudio.Providers;
+using FieldCure.Ai.Providers;
 
 // Pick a provider — API key comes from the user
 var provider = new ClaudeProvider(apiKey: "sk-ant-...", modelId: "claude-sonnet-4-20250514");
@@ -183,8 +164,8 @@ await foreach (var evt in provider.StreamAsync(request))
 Implement `IAiProvider` to integrate any AI service:
 
 ```csharp
-using FieldCure.AssistStudio.Models;
-using FieldCure.AssistStudio.Providers;
+using FieldCure.Ai.Providers.Models;
+using FieldCure.Ai.Providers;
 
 public class MyCustomProvider : IAiProvider
 {
