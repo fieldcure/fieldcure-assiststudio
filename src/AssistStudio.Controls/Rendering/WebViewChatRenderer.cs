@@ -1,13 +1,12 @@
-﻿using System.Diagnostics;
+﻿using FieldCure.Ai.Providers.Models;
+using FieldCure.AssistStudio.Helpers;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.Web.WebView2.Core;
+using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
-using FieldCure.AssistStudio.Helpers;
-using FieldCure.AssistStudio.Models;
-using FieldCure.Ai.Providers.Models;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.Web.WebView2.Core;
 using Windows.ApplicationModel.DataTransfer;
 
 namespace FieldCure.AssistStudio.Controls.Rendering;
