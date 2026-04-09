@@ -91,6 +91,10 @@ public class SavedMessage
     /// <summary>The ID of the active child at this branch point. Null if linear or last child is active.</summary>
     public string? ActiveChildId { get; set; }
 
+    /// <summary>Thinking/reasoning content from the AI model (e.g., Claude extended thinking).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ThinkingContent { get; set; }
+
     /// <summary>Media files associated with this message (images, audio, video).</summary>
     public List<MediaReference>? Media { get; set; }
 

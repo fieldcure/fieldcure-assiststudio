@@ -92,6 +92,7 @@ public static class ConversationManager
                 ToolCallId = m.ToolCallId,
                 ParentId = m.ParentId,
                 ActiveChildId = m.ActiveChildId,
+                ThinkingContent = m.ThinkingContent,
             };
 
             // Persist user image attachments

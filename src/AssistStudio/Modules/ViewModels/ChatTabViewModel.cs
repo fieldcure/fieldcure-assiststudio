@@ -214,7 +214,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Messages queued before the ChatPanel is available (during conversation loading).
     /// </summary>
-    private readonly List<(ChatRole Role, string Content, string? ProviderName, string? ModelId, string? Id, string? ParentId, IReadOnlyList<ToolCall>? ToolCalls, string? ToolCallId, string? ActiveChildId, IReadOnlyList<ChatAttachment>? Attachments, IReadOnlyList<MediaContent>? ToolMedia)> _pendingMessages = [];
+    private readonly List<(ChatRole Role, string Content, string? ProviderName, string? ModelId, string? Id, string? ParentId, IReadOnlyList<ToolCall>? ToolCalls, string? ToolCallId, string? ActiveChildId, IReadOnlyList<ChatAttachment>? Attachments, IReadOnlyList<MediaContent>? ToolMedia, string? ThinkingContent)> _pendingMessages = [];
 
     /// <summary>
     /// Branch-only messages queued before the ChatPanel is available.
@@ -390,9 +390,9 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         _pendingBranchMessages.Clear();
 
         // Flush active path messages
-        foreach (var (role, content, providerName, modelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia) in _pendingMessages)
+        foreach (var (role, content, providerName, modelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia, thinkingContent) in _pendingMessages)
         {
-            panel.AddRestoredMessage(role, content, providerName, modelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia);
+            panel.AddRestoredMessage(role, content, providerName, modelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia, thinkingContent);
         }
         var hadPending = _pendingMessages.Count > 0;
         _pendingMessages.Clear();
@@ -437,12 +437,13 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         IReadOnlyList<ToolCall>? toolCalls = null, string? toolCallId = null,
         string? activeChildId = null,
         IReadOnlyList<ChatAttachment>? attachments = null,
-        IReadOnlyList<MediaContent>? toolMedia = null)
+        IReadOnlyList<MediaContent>? toolMedia = null,
+        string? thinkingContent = null)
     {
         if (Panel is not null)
-            Panel.AddRestoredMessage(role, content, providerName, providerModelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia);
+            Panel.AddRestoredMessage(role, content, providerName, providerModelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia, thinkingContent);
         else
-            _pendingMessages.Add((role, content, providerName, providerModelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia));
+            _pendingMessages.Add((role, content, providerName, providerModelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia, thinkingContent));
     }
 
     /// <summary>

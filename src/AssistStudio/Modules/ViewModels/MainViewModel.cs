@@ -352,7 +352,8 @@ public partial class MainViewModel : ObservableObject
             vm.AddRestoredMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId,
                 msg.Id, msg.ParentId, msg.ToolCalls, msg.ToolCallId, msg.ActiveChildId,
                 msg.Id is not null && loadedAttachments?.TryGetValue(msg.Id, out var atts) == true ? atts : null,
-                msg.Id is not null && loadedToolMedia?.TryGetValue(msg.Id, out var tm) == true ? tm : null);
+                msg.Id is not null && loadedToolMedia?.TryGetValue(msg.Id, out var tm) == true ? tm : null,
+                msg.ThinkingContent);
 
         // Build parent→children map
         var childrenMap = new Dictionary<string, List<SavedMessage>>();
