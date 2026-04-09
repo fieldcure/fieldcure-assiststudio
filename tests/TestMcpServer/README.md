@@ -1,6 +1,6 @@
 # TestMcpServer
 
-A stdio MCP server for testing AssistStudio's multimedia tool result rendering pipeline. Returns various content block types (image, audio, video, embedded resource) using real sample media files.
+A stdio MCP server for testing AssistStudio's multimedia rendering and MCP elicitation pipelines. Returns various content block types (image, audio, video, embedded resource) and exercises all elicitation field types (enum, boolean, string, multi-field).
 
 ## Purpose
 
@@ -9,6 +9,7 @@ A stdio MCP server for testing AssistStudio's multimedia tool result rendering p
 - Test large media temp file conversion (>10MB data URI to `file://` URI)
 - Test `search_tools` dynamic promotion (tools discovered at runtime)
 - Test WebView2 link policy (`file://`, `https://` navigation)
+- Test MCP elicitation (`ElicitAsync`) — enum/boolean/string/multi-field input
 
 ## Tools
 
@@ -19,6 +20,15 @@ A stdio MCP server for testing AssistStudio's multimedia tool result rendering p
 | `test_video` | `EmbeddedResourceBlock` (MP4 blob) | `<video controls>` inline player |
 | `test_download` | `EmbeddedResourceBlock` (PDF blob) | Download link with FileSavePicker |
 | `test_large_media` | `AudioContentBlock` (14MB MP3) | Temp file conversion, virtual host playback |
+
+### Elicitation Tools
+
+| Tool | Field Type | What It Tests |
+|---|---|---|
+| `test_elicit_enum` | Single-select enum | Option buttons, click = immediate submit |
+| `test_elicit_bool` | Boolean (Yes/No) | Two-option buttons, click = immediate submit |
+| `test_elicit_string` | Free-text string | TextBox + Submit button |
+| `test_elicit_multi` | Enum + Boolean + String | Multi-field layout, field labels, batch submit |
 
 ## Sample Files
 
@@ -43,7 +53,7 @@ dotnet build tests/TestMcpServer/TestMcpServer.csproj
 1. Open AssistStudio Settings > MCP Servers > Add Server
 2. Fill in:
    - **Server Name**: `TestMcpServer`
-   - **Description**: `Test media content blocks (image, audio, video, download)`
+   - **Description**: `Test media content blocks and MCP elicitation`
    - **Transport**: `Stdio`
    - **Command**: `dotnet`
    - **Arguments**: `run --project D:\Codes\fieldcure-assiststudio\tests\TestMcpServer`
@@ -71,6 +81,15 @@ Call the following tools one by one in order. Check each result before calling t
 5. test_large_media
 
 After all tool calls are done, include a markdown link at the end: [Google](https://www.google.com)
+```
+
+### Elicitation Test Prompts
+
+```
+Use test_elicit_enum to send hello
+Use test_elicit_bool to clean up C:\Temp
+Use test_elicit_string to search for AI
+Use test_elicit_multi to create a report task
 ```
 
 ### Expected Results
