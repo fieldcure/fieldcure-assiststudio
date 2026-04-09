@@ -138,12 +138,30 @@
     }
 
     .message-timestamp {
+        position: relative;
         font-size: 11px;
         color: var(--timestamp-color);
         margin-top: 4px;
         padding: 0 4px;
     }
     .message.user .message-timestamp { text-align: right; }
+    [data-tooltip] { position: relative; }
+    [data-tooltip]:hover::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        top: 100%;
+        left: 100%;
+        margin-top: 4px;
+        padding: 4px 8px;
+        font-size: 11px;
+        white-space: nowrap;
+        background: var(--bg-assistant);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        pointer-events: none;
+        z-index: 10;
+    }
 
     .cursor {
         display: inline;
@@ -1104,7 +1122,7 @@
         // Copy button
         var copyBtn = document.createElement('button');
         copyBtn.className = 'msg-action-btn';
-        copyBtn.title = _L.imageCopy || 'Copy to clipboard';
+        copyBtn.setAttribute('data-tooltip', _L.imageCopy || 'Copy to clipboard');
         copyBtn.textContent = '\uE8C8';
         copyBtn.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -1115,7 +1133,7 @@
         // Save button
         var saveBtn = document.createElement('button');
         saveBtn.className = 'msg-action-btn';
-        saveBtn.title = _L.imageSave || 'Save image';
+        saveBtn.setAttribute('data-tooltip', _L.imageSave || 'Save image');
         saveBtn.textContent = '\uE74E';
         saveBtn.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -1126,7 +1144,7 @@
         // Expand button
         var expandBtn = document.createElement('button');
         expandBtn.className = 'msg-action-btn';
-        expandBtn.title = _L.imageExpand || 'View full size';
+        expandBtn.setAttribute('data-tooltip', _L.imageExpand || 'View full size');
         expandBtn.textContent = '\uE740';
         expandBtn.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -1217,7 +1235,7 @@
 
         var saveBtn = document.createElement('button');
         saveBtn.className = 'msg-action-btn';
-        saveBtn.title = _L.imageSave || 'Save image';
+        saveBtn.setAttribute('data-tooltip', _L.imageSave || 'Save image');
         saveBtn.textContent = '\uE74E';
         saveBtn.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -1228,7 +1246,7 @@
 
         var copyBtn = document.createElement('button');
         copyBtn.className = 'msg-action-btn';
-        copyBtn.title = _L.imageCopy || 'Copy to clipboard';
+        copyBtn.setAttribute('data-tooltip', _L.imageCopy || 'Copy to clipboard');
         copyBtn.textContent = '\uE8C8';
         copyBtn.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -1240,7 +1258,7 @@
 
         var closeBtn = document.createElement('button');
         closeBtn.className = 'msg-action-btn';
-        closeBtn.title = _L.imageClose || 'Close';
+        closeBtn.setAttribute('data-tooltip', _L.imageClose || 'Close');
         closeBtn.textContent = '\uE711';
         closeBtn.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -1302,7 +1320,7 @@
             if (att.type === 'image') {
                 html += '<img class="attachment-image" src="data:' +
                     escapeHtml(att.mimeType || 'image/png') + ';base64,' + att.base64 +
-                    '" alt="' + escapeHtml(att.fileName) + '" title="' + escapeHtml(att.fileName) + '" />';
+                    '" alt="' + escapeHtml(att.fileName) + '" data-tooltip="' + escapeHtml(att.fileName) + '" />';
             } else {
                 html += '<span class="attachment-file">' +
                     '<span class="attachment-file-icon">&#128196;</span>' +
@@ -1476,7 +1494,7 @@
     function createActionBtn(icon, title, onClick) {
         var btn = document.createElement('button');
         btn.className = 'msg-action-btn';
-        btn.title = title;
+        btn.setAttribute('data-tooltip', title);
         btn.textContent = icon;
         btn.addEventListener('click', onClick);
         return btn;
@@ -1696,7 +1714,7 @@
             var ts = document.createElement('span');
             ts.className = 'message-timestamp';
             ts.textContent = formatTimestamp(timestamp);
-            ts.title = formatFullTimestamp(timestamp);
+            ts.setAttribute('data-tooltip', formatFullTimestamp(timestamp));
             footer.appendChild(ts);
             msg.appendChild(footer);
 
@@ -2103,7 +2121,7 @@
 
                 parts.push(timeStr);
                 ts.textContent = parts.join(' \u00b7 ');
-                ts.title = formatFullTimestamp(new Date().toISOString());
+                ts.setAttribute('data-tooltip', formatFullTimestamp(new Date().toISOString()));
             }
             doScroll('smooth');
         },
