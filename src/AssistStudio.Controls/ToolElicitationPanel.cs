@@ -306,9 +306,8 @@ public sealed partial class ToolElicitationPanel : Control
                 _fieldsPanel.Children.Add(new TextBlock
                 {
                     Text = labelText,
-                    Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-                    Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
-                    Margin = new Thickness(0, 0, 0, 2),
+                    FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                    Margin = new Thickness(0, 0, 0, 4),
                 });
             }
 
