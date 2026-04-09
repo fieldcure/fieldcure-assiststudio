@@ -992,6 +992,15 @@
         } catch { return ''; }
     }
 
+    function formatFullTimestamp(isoString) {
+        try {
+            const d = new Date(isoString);
+            var date = d.toLocaleDateString([], { year: 'numeric', month: '2-digit', day: '2-digit' });
+            var time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            return date + ' ' + time;
+        } catch { return ''; }
+    }
+
     /**
      * Formats elapsed seconds into a localized duration string.
      * @param {number} totalSeconds - Total elapsed seconds
@@ -1687,6 +1696,7 @@
             var ts = document.createElement('span');
             ts.className = 'message-timestamp';
             ts.textContent = formatTimestamp(timestamp);
+            ts.title = formatFullTimestamp(timestamp);
             footer.appendChild(ts);
             msg.appendChild(footer);
 
@@ -2093,6 +2103,7 @@
 
                 parts.push(timeStr);
                 ts.textContent = parts.join(' \u00b7 ');
+                ts.title = formatFullTimestamp(new Date().toISOString());
             }
             doScroll('smooth');
         },
