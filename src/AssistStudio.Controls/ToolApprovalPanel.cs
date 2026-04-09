@@ -26,6 +26,11 @@ public sealed partial class ToolApprovalPanel : Control
         DependencyProperty.Register(nameof(Arguments), typeof(string), typeof(ToolApprovalPanel),
             new PropertyMetadata(string.Empty, OnArgumentsChanged));
 
+    /// <summary>Identifies the <see cref="ServerName"/> dependency property.</summary>
+    public static readonly DependencyProperty ServerNameProperty =
+        DependencyProperty.Register(nameof(ServerName), typeof(string), typeof(ToolApprovalPanel),
+            new PropertyMetadata(string.Empty, OnServerNameChanged));
+
     /// <summary>Identifies the <see cref="IsExpanded"/> dependency property.</summary>
     public static readonly DependencyProperty IsExpandedProperty =
         DependencyProperty.Register(nameof(IsExpanded), typeof(bool), typeof(ToolApprovalPanel),
@@ -50,6 +55,13 @@ public sealed partial class ToolApprovalPanel : Control
     {
         get => (string)GetValue(ArgumentsProperty);
         set => SetValue(ArgumentsProperty, value);
+    }
+
+    /// <summary>Gets or sets the MCP server name for the badge display. Empty hides the badge.</summary>
+    public string ServerName
+    {
+        get => (string)GetValue(ServerNameProperty);
+        set => SetValue(ServerNameProperty, value);
     }
 
     /// <summary>Gets or sets whether the arguments preview is expanded.</summary>
@@ -81,6 +93,8 @@ public sealed partial class ToolApprovalPanel : Control
     private ScrollViewer? _argumentsContainer;
     private FontIcon? _expandIcon;
     private TextBox? _userNoteBox;
+    private Border? _serverBadge;
+    private TextBlock? _serverBadgeText;
     private string _approveLabel = "Allow";
     private string _rejectLabel = "Reject";
     private string _promptTemplate = "Allow {0} to execute?";
@@ -118,6 +132,8 @@ public sealed partial class ToolApprovalPanel : Control
         _argumentsContainer = GetTemplateChild("PART_ArgumentsContainer") as ScrollViewer;
         _expandIcon = GetTemplateChild("PART_ExpandIcon") as FontIcon;
         _userNoteBox = GetTemplateChild("PART_UserNoteBox") as TextBox;
+        _serverBadge = GetTemplateChild("PART_ServerBadge") as Border;
+        _serverBadgeText = GetTemplateChild("PART_ServerBadgeText") as TextBlock;
 
         // Attach handlers
         if (_approveButton is not null) _approveButton.Click += OnApproveClick;
@@ -144,6 +160,7 @@ public sealed partial class ToolApprovalPanel : Control
         UpdatePromptText();
         UpdateArgumentsVisibility();
         UpdateArgumentsText();
+        UpdateServerBadge();
     }
 
     #endregion
@@ -252,6 +269,23 @@ public sealed partial class ToolApprovalPanel : Control
     {
         if (d is ToolApprovalPanel panel)
             panel.UpdateArgumentsVisibility();
+    }
+
+    /// <summary>Callback when <see cref="ServerName"/> property changes.</summary>
+    private static void OnServerNameChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ToolApprovalPanel panel)
+            panel.UpdateServerBadge();
+    }
+
+    /// <summary>Shows or hides the server badge and updates its text.</summary>
+    private void UpdateServerBadge()
+    {
+        var hasServer = !string.IsNullOrEmpty(ServerName);
+        if (_serverBadge is not null)
+            _serverBadge.Visibility = hasServer ? Visibility.Visible : Visibility.Collapsed;
+        if (_serverBadgeText is not null)
+            _serverBadgeText.Text = ServerName;
     }
 
     #endregion

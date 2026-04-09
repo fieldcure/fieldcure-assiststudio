@@ -335,6 +335,20 @@
                                                Style="{StaticResource BodyStrongTextBlockStyle}"
                                                VerticalAlignment="Center" />
                                 </StackPanel>
+                                <Border x:Name="PART_ServerBadge"
+                                        Grid.Column="1"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Center"
+                                        Visibility="Collapsed"
+                                        Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        Padding="8,2">
+                                    <TextBlock x:Name="PART_ServerBadgeText"
+                                               FontSize="12"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                </Border>
                                 <Button x:Name="PART_ExpandButton"
                                         x:Uid="ToolApproval_Expand"
                                         Grid.Column="2"

@@ -3054,8 +3054,11 @@ public sealed partial class ChatPanel : Control, IDisposable
                     }
 
                     DiagnosticLogger.LogInfo($"[Tool] Approval requested: {toolName}");
+                    var matchedTool = RegisteredTools.FirstOrDefault(t => t.Name == toolName)
+                        ?? McpTools.FirstOrDefault(t => t.Name == toolName);
                     _approvalPanel.ToolName = toolName;
                     _approvalPanel.ToolDisplayName = GetLocalizedToolName(toolName);
+                    _approvalPanel.ServerName = (matchedTool as McpToolAdapter)?.ServerName ?? "";
                     _approvalPanel.Arguments = arguments;
                     _approvalPanel.IsExpanded = false;
                     _inputArea.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
@@ -3787,12 +3790,29 @@ public sealed partial class ChatPanel : Control, IDisposable
         {
             var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
             var localized = loader.GetString($"Tool_{toolName}");
-            return string.IsNullOrEmpty(localized) ? tool.DisplayName : localized;
+            if (!string.IsNullOrEmpty(localized)) return localized;
         }
-        catch
+        catch { /* Fall through to default */ }
+
+        // For MCP tools, use Name instead of DisplayName to avoid
+        // duplicating the server name (shown separately in the badge).
+        return tool is McpToolAdapter ? FormatToolName(tool.Name) : tool.DisplayName;
+    }
+
+    /// <summary>
+    /// Converts a snake_case tool name to a Title Case display name.
+    /// Example: "write_file" → "Write File".
+    /// </summary>
+    private static string FormatToolName(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return name;
+        var parts = name.Split('_');
+        for (var i = 0; i < parts.Length; i++)
         {
-            return tool.DisplayName;
+            if (parts[i].Length > 0)
+                parts[i] = char.ToUpper(parts[i][0]) + parts[i][1..];
         }
+        return string.Join(' ', parts);
     }
 
     /// <summary>
