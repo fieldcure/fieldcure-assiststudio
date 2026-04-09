@@ -103,6 +103,13 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
     public bool IsConnected => State == McpConnectionState.Connected;
 
     /// <summary>
+    /// Gets or sets the name of the tool currently being executed on this connection.
+    /// Set automatically during tool invocation so that the elicitation handler
+    /// can display the tool name in the UI. <c>null</c> when idle.
+    /// </summary>
+    public string? CurrentToolName { get; set; }
+
+    /// <summary>
     /// Gets or sets the handler invoked when the MCP server requests user input (elicitation).
     /// The handler receives the connection, request params, and cancellation token,
     /// and returns an <see cref="ElicitResult"/>.
@@ -193,7 +200,12 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
                     name: t.Name,
                     description: t.Description ?? string.Empty,
                     parameterSchema: t.JsonSchema.GetRawText(),
-                    executeFunc: (args, token) => InvokeMcpToolAsync(t, args, token))
+                    executeFunc: async (args, token) =>
+                    {
+                        CurrentToolName = t.Name;
+                        try { return await InvokeMcpToolAsync(t, args, token); }
+                        finally { CurrentToolName = null; }
+                    })
                 {
                     ServerName = Config.Name,
                     OverrideRequiresConfirmation = Config.IsBuiltIn
