@@ -202,6 +202,15 @@
   <data name="ToolApproval_CollapseTooltip" xml:space="preserve">
     <value>상세 숨기기</value>
   </data>
+  <data name="ToolElicitation_Prompt" xml:space="preserve">
+    <value>{0} 입력이 필요합니다</value>
+  </data>
+  <data name="ToolElicitation_Skip" xml:space="preserve">
+    <value>건너뛰기</value>
+  </data>
+  <data name="ToolElicitation_Submit" xml:space="preserve">
+    <value>제출</value>
+  </data>
   <data name="Chat_SearchTextBox.PlaceholderText" xml:space="preserve">
     <value>검색...</value>
   </data>

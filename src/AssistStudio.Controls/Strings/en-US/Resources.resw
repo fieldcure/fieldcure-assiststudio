@@ -202,6 +202,15 @@ Add them in Profile settings.</value>
   <data name="ToolApproval_CollapseTooltip" xml:space="preserve">
     <value>Hide details</value>
   </data>
+  <data name="ToolElicitation_Prompt" xml:space="preserve">
+    <value>{0} requires input</value>
+  </data>
+  <data name="ToolElicitation_Skip" xml:space="preserve">
+    <value>Skip</value>
+  </data>
+  <data name="ToolElicitation_Submit" xml:space="preserve">
+    <value>Submit</value>
+  </data>
   <data name="Chat_SearchTextBox.PlaceholderText" xml:space="preserve">
     <value>Search...</value>
   </data>

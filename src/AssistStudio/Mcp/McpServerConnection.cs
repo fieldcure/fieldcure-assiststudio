@@ -103,6 +103,13 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
     public bool IsConnected => State == McpConnectionState.Connected;
 
     /// <summary>
+    /// Gets or sets the handler invoked when the MCP server requests user input (elicitation).
+    /// The handler receives the connection, request params, and cancellation token,
+    /// and returns an <see cref="ElicitResult"/>.
+    /// </summary>
+    public Func<McpServerConnection, ElicitRequestParams, CancellationToken, ValueTask<ElicitResult>>? ElicitationHandler { get; set; }
+
+    /// <summary>
     /// Gets whether this connection uses MCP roots protocol for dynamic folder updates.
     /// When <see langword="true"/>, the client declares roots capability and registers
     /// a handler that returns the current folder list on demand.
@@ -126,7 +133,10 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
         {
             var transport = CreateTransport();
 
-            McpClientOptions? options = null;
+            var capabilities = new ClientCapabilities();
+            var handlers = new McpClientHandlers();
+
+            // Roots capability
             if (SupportsRoots)
             {
                 lock (_rootsLock)
@@ -134,32 +144,37 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
                     _currentFolders = [.. Config.Arguments ?? []];
                 }
 
-                options = new McpClientOptions
+                capabilities.Roots = new() { ListChanged = true };
+                handlers.RootsHandler = (_, _) =>
                 {
-                    Capabilities = new ClientCapabilities
+                    lock (_rootsLock)
                     {
-                        Roots = new() { ListChanged = true }
-                    },
-                    Handlers = new McpClientHandlers
-                    {
-                        RootsHandler = (_, _) =>
-                        {
-                            lock (_rootsLock)
+                        var roots = _currentFolders
+                            .Select(f => new Root
                             {
-                                var roots = _currentFolders
-                                    .Select(f => new Root
-                                    {
-                                        Uri = new Uri(f).AbsoluteUri,
-                                        Name = Path.GetFileName(f)
-                                    })
-                                    .ToList();
-                                return new ValueTask<ListRootsResult>(
-                                    new ListRootsResult { Roots = roots });
-                            }
-                        }
+                                Uri = new Uri(f).AbsoluteUri,
+                                Name = Path.GetFileName(f)
+                            })
+                            .ToList();
+                        return new ValueTask<ListRootsResult>(
+                            new ListRootsResult { Roots = roots });
                     }
                 };
             }
+
+            // Elicitation capability
+            if (ElicitationHandler is not null)
+            {
+                capabilities.Elicitation = new();
+                handlers.ElicitationHandler = (request, ct) =>
+                    ElicitationHandler(this, request!, ct);
+            }
+
+            var options = new McpClientOptions
+            {
+                Capabilities = capabilities,
+                Handlers = handlers
+            };
 
             _client = await McpClient.CreateAsync(transport, options, cancellationToken: ct);
 

@@ -573,6 +573,17 @@ public sealed partial class ChatPanel : Control, IDisposable
     /// </summary>
     private TaskCompletionSource<(bool Approved, string? UserNote)>? _approvalTcs;
 
+    /// <summary>
+    /// The panel shown in place of ComposeBar when an MCP server requests user input.
+    /// </summary>
+    private ToolElicitationPanel? _elicitationPanel;
+
+    /// <summary>
+    /// Completion source for awaiting user elicitation response.
+    /// Action: "accept", "decline", or "cancel".
+    /// </summary>
+    private TaskCompletionSource<(string Action, IDictionary<string, object?>? Content)>? _elicitationTcs;
+
     private FrameworkElement? _searchBar;
     private TextBox? _searchTextBox;
     private TextBlock? _searchCount;
@@ -1061,6 +1072,12 @@ public sealed partial class ChatPanel : Control, IDisposable
             _approvalPanel.Approved -= OnToolApproved;
             _approvalPanel.Rejected -= OnToolRejected;
         }
+        if (_elicitationPanel is not null)
+        {
+            _elicitationPanel.Submitted -= OnElicitationSubmitted;
+            _elicitationPanel.Declined -= OnElicitationDeclined;
+            _elicitationPanel.Cancelled -= OnElicitationCancelled;
+        }
         if (_rootGrid is not null)
         {
             _rootGrid.DragOver -= OnDragOver;
@@ -1093,6 +1110,7 @@ public sealed partial class ChatPanel : Control, IDisposable
 
         _chatWebView = GetTemplateChild("PART_ChatWebView") as WebView2;
         _approvalPanel = GetTemplateChild("PART_ToolApprovalPanel") as ToolApprovalPanel;
+        _elicitationPanel = GetTemplateChild("PART_ToolElicitationPanel") as ToolElicitationPanel;
 
         // Wire search bar
         _searchBar = GetTemplateChild("PART_SearchBar") as FrameworkElement;
@@ -1138,6 +1156,14 @@ public sealed partial class ChatPanel : Control, IDisposable
         {
             _approvalPanel.Approved += OnToolApproved;
             _approvalPanel.Rejected += OnToolRejected;
+        }
+
+        // Wire elicitation panel events
+        if (_elicitationPanel is not null)
+        {
+            _elicitationPanel.Submitted += OnElicitationSubmitted;
+            _elicitationPanel.Declined += OnElicitationDeclined;
+            _elicitationPanel.Cancelled += OnElicitationCancelled;
         }
 
         // Set initial background to match CSS --bg-primary (before WebView2 loads)
@@ -3776,6 +3802,56 @@ public sealed partial class ChatPanel : Control, IDisposable
     /// Handles the Rejected event from the ToolApprovalPanel.
     /// </summary>
     private void OnToolRejected(object? sender, string? userNote) => _approvalTcs?.TrySetResult((false, userNote));
+
+    /// <summary>Handles the Submitted event from the ToolElicitationPanel.</summary>
+    private void OnElicitationSubmitted(object? sender, IDictionary<string, object?> content) =>
+        _elicitationTcs?.TrySetResult(("accept", content));
+
+    /// <summary>Handles the Declined (Skip) event from the ToolElicitationPanel.</summary>
+    private void OnElicitationDeclined(object? sender, EventArgs e) =>
+        _elicitationTcs?.TrySetResult(("decline", null));
+
+    /// <summary>Handles the Cancelled (ESC) event from the ToolElicitationPanel.</summary>
+    private void OnElicitationCancelled(object? sender, EventArgs e) =>
+        _elicitationTcs?.TrySetResult(("cancel", null));
+
+    /// <summary>
+    /// Shows the elicitation panel and awaits user input.
+    /// Called by the MCP elicitation handler callback.
+    /// </summary>
+    /// <param name="toolName">The tool or operation name for the header.</param>
+    /// <param name="serverName">The MCP server name for the badge.</param>
+    /// <param name="message">Descriptive message shown below the header.</param>
+    /// <param name="fields">The fields to render.</param>
+    /// <returns>A tuple of (action, content) where action is "accept", "decline", or "cancel".</returns>
+    public async Task<(string Action, IDictionary<string, object?>? Content)> RequestElicitationAsync(
+        string toolName,
+        string serverName,
+        string message,
+        IReadOnlyList<Models.ElicitationFieldInfo> fields)
+    {
+        if (_elicitationPanel is null || _inputArea is null)
+            return ("cancel", null);
+
+        DiagnosticLogger.LogInfo($"[Elicitation] Requested: {toolName} (server={serverName})");
+
+        _elicitationPanel.ToolName = GetLocalizedToolName(toolName);
+        _elicitationPanel.ServerName = serverName;
+        _elicitationPanel.Message = message;
+        _elicitationPanel.Fields = fields;
+        _inputArea.Visibility = Visibility.Collapsed;
+        _elicitationPanel.Visibility = Visibility.Visible;
+        _elicitationPanel.Focus(FocusState.Programmatic);
+
+        _elicitationTcs = new TaskCompletionSource<(string, IDictionary<string, object?>?)>();
+        var (action, content) = await _elicitationTcs.Task;
+        DiagnosticLogger.LogInfo($"[Elicitation] Result: {toolName} → {action}");
+
+        _elicitationPanel.Visibility = Visibility.Collapsed;
+        _inputArea.Visibility = Visibility.Visible;
+
+        return (action, content);
+    }
 
     /// <summary>
     /// Returns a localized display name for a tool, falling back to the tool name.

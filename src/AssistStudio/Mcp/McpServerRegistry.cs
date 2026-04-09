@@ -28,6 +28,13 @@ public class McpServerRegistry : IAsyncDisposable
     /// </summary>
     public event EventHandler? ToolsChanged;
 
+    /// <summary>
+    /// Gets or sets the elicitation handler that is propagated to all new connections.
+    /// Set this before calling <see cref="ConnectAllAsync"/> or <see cref="ConnectServerAsync"/>.
+    /// </summary>
+    public Func<McpServerConnection, ModelContextProtocol.Protocol.ElicitRequestParams, CancellationToken,
+        ValueTask<ModelContextProtocol.Protocol.ElicitResult>>? ElicitationHandler { get; set; }
+
     #endregion
 
     #region Properties
@@ -55,6 +62,17 @@ public class McpServerRegistry : IAsyncDisposable
         Connections = new ReadOnlyObservableCollection<McpServerConnection>(_connections);
     }
 
+    /// <summary>Creates a new connection and propagates the elicitation handler.</summary>
+    private McpServerConnection CreateConnection(McpServerConfig config, bool supportsRoots = false)
+    {
+        var connection = new McpServerConnection(config)
+        {
+            SupportsRoots = supportsRoots,
+            ElicitationHandler = ElicitationHandler
+        };
+        return connection;
+    }
+
     #endregion
 
     #region Methods
@@ -80,7 +98,7 @@ public class McpServerRegistry : IAsyncDisposable
         {
             foreach (var config in configList)
             {
-                var connection = new McpServerConnection(config);
+                var connection = CreateConnection(config);
                 _connections.Add(connection);
                 connections.Add((config, connection));
             }
@@ -154,7 +172,7 @@ public class McpServerRegistry : IAsyncDisposable
         await _lock.WaitAsync(ct);
         try
         {
-            connection = new McpServerConnection(config) { SupportsRoots = supportsRoots };
+            connection = CreateConnection(config, supportsRoots);
             _connections.Add(connection);
         }
         finally
@@ -182,7 +200,7 @@ public class McpServerRegistry : IAsyncDisposable
     /// </summary>
     public McpServerConnection AddWithoutConnect(McpServerConfig config)
     {
-        var connection = new McpServerConnection(config);
+        var connection = CreateConnection(config);
         _connections.Add(connection);
         return connection;
     }
@@ -294,7 +312,7 @@ public class McpServerRegistry : IAsyncDisposable
                 return;
             }
 
-            connection = new McpServerConnection(mcpConfig);
+            connection = CreateConnection(mcpConfig);
             _connections.Add(connection);
         }
         finally
