@@ -294,6 +294,31 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 
     #region Panel Attachment
 
+    // ── WebView2 Lifecycle ──────────────────────────────────────────────
+    //
+    // WinUI 3 TabView internally recycles XAML containers (ChatTabView + ChatPanel)
+    // when tabs are closed and new ones are created. This means a single ChatPanel
+    // instance — and its WebView2 — can outlive the ViewModel it was originally
+    // bound to, causing "visual ghosting" where stale DOM from a previous
+    // conversation appears in a new tab.
+    //
+    // Current solution (Dispose + Reinitialize):
+    //   1. ChatTabViewModel.Dispose() calls ChatPanel.Dispose()
+    //      → navigates to about:blank, calls WebView2.Close(),
+    //        removes the control from the visual tree, resets layout.
+    //   2. When TabView recycles the container for a new ViewModel,
+    //      AttachPanel() detects IsInitialized == false and calls
+    //      ChatPanel.ReinitializeWebViewAsync()
+    //      → creates a brand-new WebView2 instance, inserts it into the
+    //        Grid, and runs the full renderer initialization.
+    //
+    // This "never reuse, always recreate" strategy is simple and effective.
+    // If ghosting ever resurfaces (e.g. due to TabView behavior changes),
+    // consider escalating to WebView2 Multi-Profile API
+    // (CoreWebView2ControllerOptions.ProfileName + IsInPrivateModeEnabled)
+    // which provides browser-level session isolation per tab.
+    // ────────────────────────────────────────────────────────────────────
+
     /// <summary>
     /// Called by <c>ChatTabView</c> after the ChatPanel is created and added to the visual tree.
     /// Flushes any pending restored messages and wires the keyboard shortcut relay.
