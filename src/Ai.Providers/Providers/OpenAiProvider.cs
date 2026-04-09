@@ -167,7 +167,7 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
 
         // Strip <think>...</think> tags from content (fallback for providers not using reasoning_details)
         if (thinkingContent is null && content is not null)
-            (content, thinkingContent) = StripThinkTags(content);
+            (content, thinkingContent) = StripThinkTags(content!);
 
         // Parse tool calls from the response
         var toolCalls = new List<ToolCall>();
