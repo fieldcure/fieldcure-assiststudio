@@ -3294,7 +3294,8 @@ public sealed partial class ChatPanel : Control, IDisposable
 
         var renderedCount = 0;
         string? pendingBubbleId = null;
-        string? pendingContent = null;
+        string? fullContent = null;
+        int consumedLength = 0;
 
         foreach (var msg in _messages)
         {
@@ -3303,7 +3304,10 @@ public sealed partial class ChatPanel : Control, IDisposable
                 // Finalize any pending assistant bubble before rendering next user message
                 if (pendingBubbleId is not null)
                 {
-                    await _renderer.FinalizeMessageAsync(pendingBubbleId, pendingContent ?? "");
+                    var finalSegment = (fullContent?.Length > consumedLength)
+                        ? fullContent[consumedLength..]
+                        : "";
+                    await _renderer.FinalizeMessageAsync(pendingBubbleId, finalSegment);
                     pendingBubbleId = null;
                     renderedCount++;
                 }
@@ -3315,9 +3319,15 @@ public sealed partial class ChatPanel : Control, IDisposable
             }
             else if (msg.Role == ChatRole.Assistant && msg.ToolCalls is { Count: > 0 })
             {
-                // Intermediate tool-call message — render tool blocks into the pending bubble.
-                // Uses direct ToolCallId matching — no queue, no marker parsing.
+                // Intermediate tool-call message — render delta text segment + tool blocks.
                 if (pendingBubbleId is null) continue;
+
+                // Delta text from this round → rendered segment before tool blocks
+                if (!string.IsNullOrEmpty(msg.Content))
+                {
+                    await _renderer.AppendRenderedSegmentAsync(pendingBubbleId, msg.Content);
+                    consumedLength += msg.Content.Length;
+                }
 
                 foreach (var tc in msg.ToolCalls)
                 {
@@ -3350,7 +3360,10 @@ public sealed partial class ChatPanel : Control, IDisposable
                 // Finalize any previous pending assistant bubble
                 if (pendingBubbleId is not null)
                 {
-                    await _renderer.FinalizeMessageAsync(pendingBubbleId, pendingContent ?? "");
+                    var finalSegment = (fullContent?.Length > consumedLength)
+                        ? fullContent[consumedLength..]
+                        : "";
+                    await _renderer.FinalizeMessageAsync(pendingBubbleId, finalSegment);
                     renderedCount++;
                 }
 
@@ -3366,7 +3379,8 @@ public sealed partial class ChatPanel : Control, IDisposable
                 }
 
                 pendingBubbleId = msg.Id;
-                pendingContent = msg.Content;
+                fullContent = msg.Content;
+                consumedLength = 0;
             }
             // Tool role — consumed via ToolCallId matching above, skip rendering.
         }
@@ -3374,7 +3388,10 @@ public sealed partial class ChatPanel : Control, IDisposable
         // Finalize last pending assistant bubble
         if (pendingBubbleId is not null)
         {
-            await _renderer.FinalizeMessageAsync(pendingBubbleId, pendingContent ?? "");
+            var finalSegment = (fullContent?.Length > consumedLength)
+                ? fullContent[consumedLength..]
+                : "";
+            await _renderer.FinalizeMessageAsync(pendingBubbleId, finalSegment);
             renderedCount++;
         }
 

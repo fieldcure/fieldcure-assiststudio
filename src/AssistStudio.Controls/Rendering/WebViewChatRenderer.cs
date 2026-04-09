@@ -262,6 +262,16 @@ internal partial class WebViewChatRenderer
     }
 
     /// <summary>
+    /// Appends a markdown-rendered text segment to the assistant message bubble.
+    /// Used during restore to interleave text between tool blocks.
+    /// </summary>
+    public Task AppendRenderedSegmentAsync(string id, string markdownText)
+    {
+        var script = $"window.assistChat.appendRenderedSegment({Js(id)}, {Js(markdownText)})";
+        return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
+    /// <summary>
     /// Pauses all playing audio and video elements in the chat.
     /// Called when the tab is switched or hidden.
     /// </summary>

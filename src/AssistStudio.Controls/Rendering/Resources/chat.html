@@ -1449,6 +1449,13 @@
         catch(e) { return str; }
     }
 
+    function getContentRawText(id, contentSpan) {
+        var ps = _progressiveState[id];
+        if (ps && ps.fullText) return ps.fullText;
+        var text = contentSpan.textContent || '';
+        return text.replace(/\u2588$/, '').replace(/\u258C$/, '');
+    }
+
     function renderMarkdown(fullText) {
         if (typeof marked !== 'undefined' && typeof hljs !== 'undefined') {
             return fixCjkEmphasis(marked.parse(fullText));
@@ -1801,6 +1808,28 @@
 
             if (typeof info === 'string') info = { name: info };
 
+            // ── Split: freeze current .content into .content-segment ──
+            var contentSpan = bubble.querySelector('.content');
+            if (contentSpan) {
+                var rawText = getContentRawText(id, contentSpan);
+                if (rawText.trim()) {
+                    var segment = document.createElement('div');
+                    segment.className = 'content-segment rendered';
+                    segment.setAttribute('data-raw-length', rawText.length);
+                    segment.innerHTML = renderMarkdown(rawText);
+                    addCopyButtons(segment);
+                    wrapAllImages(segment);
+                    bubble.insertBefore(segment, contentSpan);
+                }
+                contentSpan.remove();
+                var ps = _progressiveState[id];
+                if (ps) {
+                    clearTimeout(ps.timer);
+                    delete _progressiveState[id];
+                }
+            }
+
+            // ── Insert tool block ──
             var block = document.createElement('div');
             block.className = 'tool-block';
 
@@ -1831,13 +1860,14 @@
                 header.innerHTML = buildSummaryHTML(info);
                 block.appendChild(header);
             }
+            bubble.appendChild(block);
 
-            var contentSpan = bubble.querySelector('.content');
-            if (contentSpan) {
-                bubble.insertBefore(block, contentSpan);
-            } else {
-                bubble.appendChild(block);
-            }
+            // ── Create new .content for next round ──
+            var newContent = document.createElement('div');
+            newContent.className = 'content';
+            newContent.innerHTML = '<div class="rendered-zone"></div><span class="tail-zone"></span><span class="cursor">&#9612;</span>';
+            bubble.appendChild(newContent);
+
             doScroll('instant');
         },
 
@@ -1901,13 +1931,9 @@
                 element = link;
             }
 
-            // Tag media with its owning tool-block index for re-insertion after finalize
+            // Insert right after the last tool-block (before .content)
             var toolBlocks = bubble.querySelectorAll('.tool-block');
-            var ownerIndex = toolBlocks.length > 0 ? toolBlocks.length - 1 : -1;
-            element.setAttribute('data-tool-index', ownerIndex);
-
-            // Insert right after its owning tool-block
-            var lastToolBlock = ownerIndex >= 0 ? toolBlocks[ownerIndex] : null;
+            var lastToolBlock = toolBlocks.length > 0 ? toolBlocks[toolBlocks.length - 1] : null;
             if (lastToolBlock && lastToolBlock.nextSibling) {
                 bubble.insertBefore(element, lastToolBlock.nextSibling);
             } else {
@@ -1979,6 +2005,27 @@
             doScroll('instant');
         },
 
+        appendRenderedSegment: function(id, markdownText) {
+            var msg = document.getElementById('msg-' + id);
+            if (!msg) return;
+            var bubble = msg.querySelector('.message-bubble');
+            if (!bubble) return;
+
+            var segment = document.createElement('div');
+            segment.className = 'content-segment rendered';
+            var cleanText = markdownText.replace(/\[source\]\(([^)]+)\)/gi, '(Source: $1)');
+            segment.innerHTML = renderMarkdown(cleanText);
+            addCopyButtons(segment);
+            wrapAllImages(segment);
+
+            var contentSpan = bubble.querySelector('.content');
+            if (contentSpan) {
+                bubble.insertBefore(segment, contentSpan);
+            } else {
+                bubble.appendChild(segment);
+            }
+        },
+
         finalizeMessage: function(id, fullText, truncated, tokenCount) {
             // Clean up progressive state
             var ps = _progressiveState[id];
@@ -1989,54 +2036,28 @@
             var bubble = msg.querySelector('.message-bubble');
             if (bubble) {
                 // Stop any remaining tool pulse animation
-                var runningTools = bubble.querySelectorAll('.tool-header.tool-running');
-                runningTools.forEach(function(h) { h.classList.remove('tool-running'); });
+                bubble.querySelectorAll('.tool-header.tool-running')
+                    .forEach(function(h) { h.classList.remove('tool-running'); });
 
                 bubble.classList.remove('streaming');
                 bubble.classList.add('rendered');
-                // Preserve thinking, tool blocks, and media elements before markdown re-render
-                var thinkingBlock = bubble.querySelector('.thinking-block');
-                var toolBlocks = Array.from(bubble.querySelectorAll('.tool-block'));
-                // Collect media elements with their owning tool-block index
-                var mediaElements = Array.from(bubble.querySelectorAll(
-                    '[data-tool-index]'
-                )).map(function(el) {
-                    return { element: el, toolIndex: parseInt(el.getAttribute('data-tool-index'), 10) };
+
+                // Calculate how much text was already rendered in prior segments
+                var consumed = 0;
+                bubble.querySelectorAll('.content-segment').forEach(function(seg) {
+                    consumed += (parseInt(seg.getAttribute('data-raw-length')) || 0);
                 });
-                var cleanText = fullText.replace(/\[source\]\(([^)]+)\)/gi, '(Source: $1)');
-                bubble.innerHTML = renderMarkdown(cleanText);
-                // Re-insert tool blocks at the top (in original order)
-                toolBlocks.reverse().forEach(function(tb) {
-                    bubble.insertBefore(tb, bubble.firstChild);
-                });
-                // Re-insert each media element right after its owning tool-block
-                mediaElements.forEach(function(item) {
-                    var reinsertedBlocks = bubble.querySelectorAll('.tool-block');
-                    var owner = item.toolIndex >= 0 && item.toolIndex < reinsertedBlocks.length
-                        ? reinsertedBlocks[item.toolIndex] : null;
-                    if (owner) {
-                        // Find the insertion point: after the owner and any previously inserted media
-                        var insertAfter = owner;
-                        while (insertAfter.nextSibling && insertAfter.nextSibling.hasAttribute
-                            && insertAfter.nextSibling.hasAttribute('data-tool-index')) {
-                            insertAfter = insertAfter.nextSibling;
-                        }
-                        if (insertAfter.nextSibling) {
-                            bubble.insertBefore(item.element, insertAfter.nextSibling);
-                        } else {
-                            bubble.appendChild(item.element);
-                        }
-                    } else {
-                        // Fallback: insert at the top
-                        bubble.insertBefore(item.element, bubble.firstChild);
-                    }
-                });
-                if (thinkingBlock) {
-                    bubble.insertBefore(thinkingBlock, bubble.firstChild);
+                var finalText = fullText.substring(consumed);
+                var cleanText = finalText.replace(/\[source\]\(([^)]+)\)/gi, '(Source: $1)');
+
+                // Re-render ONLY the last .content span — everything else stays in place
+                var contentSpan = bubble.querySelector('.content');
+                if (contentSpan) {
+                    contentSpan.className = 'content-segment rendered';
+                    contentSpan.innerHTML = renderMarkdown(cleanText);
+                    addCopyButtons(contentSpan);
+                    wrapAllImages(contentSpan);
                 }
-                addCopyButtons(bubble);
-                // Wrap any markdown images with toolbar (skip already-wrapped)
-                wrapAllImages(bubble);
 
                 if (truncated) {
                     var btn = document.createElement('button');
