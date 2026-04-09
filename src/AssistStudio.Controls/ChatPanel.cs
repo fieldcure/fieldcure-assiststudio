@@ -1740,20 +1740,44 @@ public sealed partial class ChatPanel : Control, IDisposable
         else
             await _renderer.ClearMessagesAsync();
 
+        var pendingChain = new List<ChatMessage>();
+
         foreach (var msg in path)
         {
             if (msg.Role == ChatRole.User)
             {
+                if (pendingChain.Count > 0)
+                {
+                    await RenderAssistantBubbleAsync(pendingChain);
+                    pendingChain.Clear();
+                }
+
                 await _renderer.AppendUserMessageAsync(
                     msg.Id, msg.Content, msg.Timestamp.ToString("O"),
                     msg.Attachments, msg.SiblingIndex, msg.SiblingCount);
             }
+            else if (msg.Role == ChatRole.Assistant && msg.ToolCalls is { Count: > 0 })
+            {
+                pendingChain.Add(msg);
+            }
+            else if (msg.Role == ChatRole.Tool)
+            {
+                pendingChain.Add(msg);
+            }
             else if (msg.Role == ChatRole.Assistant)
             {
-                await _renderer.BeginAssistantMessageAsync(msg.Id, msg.ProviderName, msg.ProviderModelId);
-                await _renderer.FinalizeMessageAsync(msg.Id, msg.Content);
+                if (pendingChain.Count > 0)
+                {
+                    await RenderAssistantBubbleAsync(pendingChain);
+                    pendingChain.Clear();
+                }
+
+                pendingChain.Add(msg);
             }
         }
+
+        if (pendingChain.Count > 0)
+            await RenderAssistantBubbleAsync(pendingChain);
     }
 
     /// <summary>
@@ -3293,22 +3317,17 @@ public sealed partial class ChatPanel : Control, IDisposable
         SwitchToChatLayout();
 
         var renderedCount = 0;
-        string? pendingBubbleId = null;
-        string? fullContent = null;
-        int consumedLength = 0;
+        var pendingChain = new List<ChatMessage>();
 
         foreach (var msg in _messages)
         {
             if (msg.Role == ChatRole.User)
             {
-                // Finalize any pending assistant bubble before rendering next user message
-                if (pendingBubbleId is not null)
+                // Finalize any pending assistant chain before rendering next user message
+                if (pendingChain.Count > 0)
                 {
-                    var finalSegment = (fullContent?.Length > consumedLength)
-                        ? fullContent[consumedLength..]
-                        : "";
-                    await _renderer.FinalizeMessageAsync(pendingBubbleId, finalSegment);
-                    pendingBubbleId = null;
+                    await RenderAssistantBubbleAsync(pendingChain);
+                    pendingChain.Clear();
                     renderedCount++;
                 }
 
@@ -3319,83 +3338,109 @@ public sealed partial class ChatPanel : Control, IDisposable
             }
             else if (msg.Role == ChatRole.Assistant && msg.ToolCalls is { Count: > 0 })
             {
-                // Intermediate tool-call message — render delta text segment + tool blocks.
-                if (pendingBubbleId is null) continue;
+                // Intermediate tool-call message — collect into pending chain
+                pendingChain.Add(msg);
+            }
+            else if (msg.Role == ChatRole.Tool)
+            {
+                // Tool result — collect into pending chain (consumed by ToolCallId matching)
+                pendingChain.Add(msg);
+            }
+            else if (msg.Role == ChatRole.Assistant)
+            {
+                // New root assistant message — finalize previous chain if any
+                if (pendingChain.Count > 0)
+                {
+                    await RenderAssistantBubbleAsync(pendingChain);
+                    pendingChain.Clear();
+                    renderedCount++;
+                }
 
-                // Delta text from this round → rendered segment before tool blocks
+                pendingChain.Add(msg);
+            }
+        }
+
+        // Finalize last pending assistant chain
+        if (pendingChain.Count > 0)
+        {
+            await RenderAssistantBubbleAsync(pendingChain);
+            renderedCount++;
+        }
+
+        DiagnosticLogger.LogInfo($"[Chat] RenderRestoredMessages: rendered {renderedCount}/{_messages.Count}");
+    }
+
+    /// <summary>
+    /// Renders a chain of assistant messages (root + intermediate tool-calling rounds)
+    /// into a single bubble with interleaved text segments and tool blocks.
+    /// The <paramref name="chain"/> must contain the root assistant message first,
+    /// followed by alternating tool-call assistant / tool-result messages.
+    /// </summary>
+    private async Task RenderAssistantBubbleAsync(IReadOnlyList<ChatMessage> chain)
+    {
+        if (chain.Count == 0) return;
+
+        var root = chain[0];
+        await _renderer.BeginAssistantMessageAsync(root.Id, root.ProviderName, root.ProviderModelId);
+
+        // Restore thinking block
+        if (!string.IsNullOrEmpty(root.ThinkingContent))
+        {
+            await _renderer.BeginThinkingBlockAsync(root.Id);
+            await _renderer.AppendThinkingTokenAsync(root.Id, root.ThinkingContent);
+            await _renderer.EndThinkingBlockAsync(root.Id);
+        }
+
+        var consumedLength = 0;
+
+        // Process intermediate tool-calling rounds
+        for (var i = 1; i < chain.Count; i++)
+        {
+            var msg = chain[i];
+
+            if (msg.Role == ChatRole.Assistant && msg.ToolCalls is { Count: > 0 })
+            {
+                // Delta text segment
                 if (!string.IsNullOrEmpty(msg.Content))
                 {
-                    await _renderer.AppendRenderedSegmentAsync(pendingBubbleId, msg.Content);
+                    await _renderer.AppendRenderedSegmentAsync(root.Id, msg.Content);
                     consumedLength += msg.Content.Length;
                 }
 
+                // Tool blocks with results
                 foreach (var tc in msg.ToolCalls)
                 {
-                    var resultMsg = _messages.FirstOrDefault(r =>
+                    var resultMsg = chain.FirstOrDefault(r =>
                         r.Role == ChatRole.Tool && r.ToolCallId == tc.Id);
 
                     if (tc.FunctionName == "search_documents" && resultMsg?.Content is not null)
                     {
                         await _renderer.AppendSearchResultBlockAsync(
-                            pendingBubbleId, resultMsg.Content, tc.FunctionName);
+                            root.Id, resultMsg.Content, tc.FunctionName);
                     }
                     else
                     {
                         await _renderer.AppendToolBlockAsync(
-                            pendingBubbleId, tc.FunctionName, tc.Arguments,
+                            root.Id, tc.FunctionName, tc.Arguments,
                             resultMsg?.Content, null,
                             resultMsg?.Content?.Contains("\"error\"") == true);
                     }
 
-                    // Render media inline right after its owning tool block
                     if (resultMsg?.ToolMedia is { Count: > 0 } mediaItems)
                     {
                         foreach (var media in mediaItems)
-                            await _renderer.AppendToolMediaAsync(pendingBubbleId, media);
+                            await _renderer.AppendToolMediaAsync(root.Id, media);
                     }
                 }
             }
-            else if (msg.Role == ChatRole.Assistant)
-            {
-                // Finalize any previous pending assistant bubble
-                if (pendingBubbleId is not null)
-                {
-                    var finalSegment = (fullContent?.Length > consumedLength)
-                        ? fullContent[consumedLength..]
-                        : "";
-                    await _renderer.FinalizeMessageAsync(pendingBubbleId, finalSegment);
-                    renderedCount++;
-                }
-
-                await _renderer.BeginAssistantMessageAsync(
-                    msg.Id, msg.ProviderName, msg.ProviderModelId);
-
-                // Restore thinking block from saved ThinkingContent
-                if (!string.IsNullOrEmpty(msg.ThinkingContent))
-                {
-                    await _renderer.BeginThinkingBlockAsync(msg.Id);
-                    await _renderer.AppendThinkingTokenAsync(msg.Id, msg.ThinkingContent);
-                    await _renderer.EndThinkingBlockAsync(msg.Id);
-                }
-
-                pendingBubbleId = msg.Id;
-                fullContent = msg.Content;
-                consumedLength = 0;
-            }
-            // Tool role — consumed via ToolCallId matching above, skip rendering.
+            // Tool messages are consumed above via ToolCallId matching — skip.
         }
 
-        // Finalize last pending assistant bubble
-        if (pendingBubbleId is not null)
-        {
-            var finalSegment = (fullContent?.Length > consumedLength)
-                ? fullContent[consumedLength..]
-                : "";
-            await _renderer.FinalizeMessageAsync(pendingBubbleId, finalSegment);
-            renderedCount++;
-        }
-
-        DiagnosticLogger.LogInfo($"[Chat] RenderRestoredMessages: rendered {renderedCount}/{_messages.Count}");
+        // Finalize with remaining text
+        var finalSegment = (root.Content?.Length > consumedLength)
+            ? root.Content[consumedLength..]
+            : "";
+        await _renderer.FinalizeMessageAsync(root.Id, finalSegment);
     }
 
     /// <summary>
