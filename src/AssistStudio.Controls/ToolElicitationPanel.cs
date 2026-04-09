@@ -98,6 +98,12 @@ public sealed partial class ToolElicitationPanel : Control
     /// <summary>Tracks the current text input value for string fields.</summary>
     private readonly Dictionary<string, TextBox> _textInputs = [];
 
+    /// <summary>Tracks the selected option value for enum/boolean fields (multi-field mode).</summary>
+    private readonly Dictionary<string, string> _selectedOptions = [];
+
+    /// <summary>Whether the panel has multiple fields (disables immediate submit on option click).</summary>
+    private bool _isMultiField;
+
     #endregion
 
     #region Constructor
@@ -175,24 +181,65 @@ public sealed partial class ToolElicitationPanel : Control
         Declined?.Invoke(this, EventArgs.Empty);
 
     private void OnSubmitClick(object sender, RoutedEventArgs e) =>
-        SubmitStringFields();
+        SubmitAllFields();
 
-    /// <summary>Collects all string field values and submits.</summary>
-    private void SubmitStringFields()
+    /// <summary>Collects all field values (selected options + text inputs) and submits.</summary>
+    private void SubmitAllFields()
     {
         var content = new Dictionary<string, object?>();
+        foreach (var (name, value) in _selectedOptions)
+            content[name] = value;
         foreach (var (name, textBox) in _textInputs)
-        {
             content[name] = textBox.Text;
-        }
         Submitted?.Invoke(this, content);
     }
 
-    /// <summary>Submits a single option selection immediately.</summary>
-    private void SubmitOption(string fieldName, string value)
+    /// <summary>
+    /// Handles an option button click. In single-field mode, submits immediately.
+    /// In multi-field mode, records the selection and highlights the button.
+    /// </summary>
+    private void OnOptionSelected(string fieldName, string value, Button clickedButton)
     {
-        var content = new Dictionary<string, object?> { [fieldName] = value };
-        Submitted?.Invoke(this, content);
+        if (!_isMultiField)
+        {
+            // Single field — immediate submit
+            var content = new Dictionary<string, object?> { [fieldName] = value };
+            Submitted?.Invoke(this, content);
+            return;
+        }
+
+        // Multi-field — record selection, update visual state
+        _selectedOptions[fieldName] = value;
+
+        // Find the parent container and update all sibling button visuals
+        if (clickedButton.Parent is StackPanel container)
+        {
+            foreach (var child in container.Children)
+            {
+                if (child is not Button sibling) continue;
+                var isSelected = sibling == clickedButton;
+                UpdateOptionButtonVisual(sibling, isSelected);
+            }
+        }
+    }
+
+    /// <summary>Updates an option button's visual to selected or unselected state.</summary>
+    private static void UpdateOptionButtonVisual(Button button, bool isSelected)
+    {
+        if (button.Content is not StackPanel panel || panel.Children.Count < 2) return;
+        if (panel.Children[0] is not Border badge) return;
+        if (badge.Child is not TextBlock badgeText) return;
+        if (panel.Children[1] is not TextBlock label) return;
+
+        badge.Background = isSelected
+            ? (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"]
+            : (Brush)Application.Current.Resources["SubtleFillColorSecondaryBrush"];
+        badgeText.Foreground = isSelected
+            ? (Brush)Application.Current.Resources["TextOnAccentFillColorPrimaryBrush"]
+            : (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
+        label.FontWeight = isSelected
+            ? Microsoft.UI.Text.FontWeights.SemiBold
+            : Microsoft.UI.Text.FontWeights.Normal;
     }
 
     /// <summary>Updates the prompt text.</summary>
@@ -230,18 +277,41 @@ public sealed partial class ToolElicitationPanel : Control
         if (_fieldsPanel is null) return;
         _fieldsPanel.Children.Clear();
         _textInputs.Clear();
+        _selectedOptions.Clear();
 
         var fields = Fields;
         if (fields is null || fields.Count == 0)
         {
+            _isMultiField = false;
             UpdateSubmitVisibility(false);
             return;
         }
 
-        var hasStringField = false;
+        _isMultiField = fields.Count > 1;
 
-        foreach (var field in fields)
+        for (var fi = 0; fi < fields.Count; fi++)
         {
+            var field = fields[fi];
+
+            // Add spacing between fields in multi-field mode
+            if (_isMultiField && fi > 0)
+            {
+                _fieldsPanel.Children.Add(new Border { Height = 12 });
+            }
+
+            // Add field label in multi-field mode
+            if (_isMultiField)
+            {
+                var labelText = field.Description ?? field.Title ?? field.Name;
+                _fieldsPanel.Children.Add(new TextBlock
+                {
+                    Text = labelText,
+                    Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                    Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
+                    Margin = new Thickness(0, 0, 0, 2),
+                });
+            }
+
             switch (field.Type)
             {
                 case ElicitationFieldType.Enum:
@@ -250,12 +320,12 @@ public sealed partial class ToolElicitationPanel : Control
                     break;
                 case ElicitationFieldType.String:
                     RenderStringField(field);
-                    hasStringField = true;
                     break;
             }
         }
 
-        UpdateSubmitVisibility(hasStringField);
+        // Show Submit button if multi-field OR has string fields
+        UpdateSubmitVisibility(_isMultiField || _textInputs.Count > 0);
     }
 
     /// <summary>Renders an enum or boolean field as clickable option buttons.</summary>
@@ -332,7 +402,7 @@ public sealed partial class ToolElicitationPanel : Control
         // Use Subtle style for non-default, mimic a list item feel
         button.Style = (Style)Application.Current.Resources["SubtleButtonStyle"];
 
-        button.Click += (_, _) => SubmitOption(fieldName, value);
+        button.Click += (_, _) => OnOptionSelected(fieldName, value, button);
 
         return button;
     }
