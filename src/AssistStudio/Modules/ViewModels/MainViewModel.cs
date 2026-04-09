@@ -121,9 +121,9 @@ public partial class MainViewModel : ObservableObject
         var presets = GetPresets();
         if (data.ProviderPresetName is not null)
         {
-            foreach (ProviderPreset p in presets)
+            foreach (var obj in presets)
             {
-                if (p.Name == data.ProviderPresetName)
+                if (obj is ProviderPreset p && p.Name == data.ProviderPresetName)
                 {
                     preset = p;
                     break;
@@ -477,13 +477,13 @@ public partial class MainViewModel : ObservableObject
         var preferredType = GetActiveProfile()?.PreferredProviderType;
         if (preferredType is not null)
         {
-            foreach (ProviderPreset p in presets)
+            foreach (var obj in presets)
             {
-                if (p.ProviderType == preferredType) return p;
+                if (obj is ProviderPreset p && p.ProviderType == preferredType) return p;
             }
         }
 
-        return (ProviderPreset)presets[0]!;
+        return presets.OfType<ProviderPreset>().First();
     }
 
     /// <summary>

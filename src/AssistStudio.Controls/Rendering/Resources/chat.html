@@ -283,11 +283,23 @@
 
     /* ===== Tool Running Animation ===== */
     .tool-header.tool-running {
-        animation: tool-pulse 1.5s ease-in-out infinite;
+        background: linear-gradient(
+            90deg,
+            var(--timestamp-color) 0%,
+            var(--timestamp-color) 40%,
+            var(--text-primary) 50%,
+            var(--timestamp-color) 60%,
+            var(--timestamp-color) 100%
+        );
+        background-size: 250% 100%;
+        background-clip: text;
+        -webkit-background-clip: text;
+        color: transparent;
+        animation: tool-shimmer 2s ease-in-out infinite;
     }
-    @keyframes tool-pulse {
-        0%, 100% { color: var(--timestamp-color); }
-        50% { color: var(--text-primary); }
+    @keyframes tool-shimmer {
+        0% { background-position: 100% 0; }
+        100% { background-position: -100% 0; }
     }
 
     /* ===== Tool Result Image ===== */
@@ -1799,15 +1811,16 @@
             content.className = 'thinking-content';
             block.appendChild(header);
             block.appendChild(content);
-            // Insert at the top of the bubble, before any text content
-            bubble.insertBefore(block, bubble.firstChild);
+            bubble.appendChild(block);
             doScroll('instant');
         },
 
         appendThinkingToken: function(id, token) {
             var msg = document.getElementById('msg-' + id);
             if (!msg) return;
-            var content = msg.querySelector('.thinking-content');
+            var block = msg.querySelector('.thinking-block.streaming');
+            if (!block) return;
+            var content = block.querySelector('.thinking-content');
             if (content) {
                 content.textContent += token;
             }
@@ -1817,7 +1830,7 @@
         endThinkingBlock: function(id) {
             var msg = document.getElementById('msg-' + id);
             if (!msg) return;
-            var block = msg.querySelector('.thinking-block');
+            var block = msg.querySelector('.thinking-block.streaming');
             if (block) {
                 block.classList.remove('streaming');
                 block.classList.add('collapsed');

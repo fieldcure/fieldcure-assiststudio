@@ -537,8 +537,9 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         var found = false;
         if (currentName is not null)
         {
-            foreach (ProviderPreset p in presets)
+            foreach (var obj in presets)
             {
+                if (obj is not ProviderPreset p) continue;
                 if (p.Name == currentName)
                 {
                     found = true;
@@ -559,9 +560,8 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         // Fallback: current preset was deleted — select the first available or clear
         if (!found)
         {
-            if (presets.Count > 0)
+            if (presets.OfType<ProviderPreset>().FirstOrDefault() is { } first)
             {
-                var first = (ProviderPreset)presets[0]!;
                 SelectedPreset = first;
                 OnPresetChanged(this, first);
             }
@@ -1415,9 +1415,9 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     {
         if (AvailablePresets is not null)
         {
-            foreach (ProviderPreset p in AvailablePresets)
+            foreach (var obj in AvailablePresets)
             {
-                if (p.Name == presetName)
+                if (obj is ProviderPreset p && p.Name == presetName)
                     return ProviderFactory.Create(p);
             }
         }
@@ -1440,9 +1440,9 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         var presetName = AppSettings.AppTasksPreset;
         if (string.IsNullOrEmpty(presetName)) return null;
 
-        foreach (ProviderPreset p in availablePresets)
+        foreach (var obj in availablePresets)
         {
-            if (p.Name == presetName)
+            if (obj is ProviderPreset p && p.Name == presetName)
                 return ProviderFactory.Create(p);
         }
         return null;
