@@ -1,5 +1,6 @@
 ﻿using FieldCure.AssistStudio.Models;
 using FieldCure.Ai.Providers.Models;
+using System.Collections;
 using System.Collections.ObjectModel;
 using System.Text.Json;
 using Windows.Storage;
@@ -667,6 +668,41 @@ public static class AppSettings
             });
         }
     }
+
+    /// <summary>
+    /// Builds an ordered list of preset items grouped by category (Cloud → Custom → Local → Demo)
+    /// with separator markers ("-") between non-empty groups.
+    /// </summary>
+    /// <returns>A list containing <see cref="ProviderPreset"/> objects and separator strings.</returns>
+    public static ArrayList BuildOrderedPresetItems()
+    {
+        var presets = LoadPresets();
+
+        var cloud = presets.Where(p => IsCloudProvider(p.ProviderType)).ToList();
+        var custom = presets.Where(p => p.ProviderType.StartsWith("Custom_")).ToList();
+        var local = presets.Where(p => p.ProviderType == "Ollama").ToList();
+        var demo = presets.Where(p => p.ProviderType == "Mock").ToList();
+
+        var result = new ArrayList();
+        AddGroup(result, cloud);
+        AddGroup(result, custom);
+        AddGroup(result, local);
+        AddGroup(result, demo);
+        return result;
+
+        static void AddGroup(ArrayList list, List<ProviderPreset> group)
+        {
+            if (group.Count == 0) return;
+            if (list.Count > 0) list.Add("-");
+            list.AddRange(group);
+        }
+    }
+
+    /// <summary>
+    /// Determines whether the given provider type is a known cloud provider.
+    /// </summary>
+    private static bool IsCloudProvider(string type)
+        => type is "Claude" or "OpenAI" or "Gemini" or "Groq";
 
     #endregion
 

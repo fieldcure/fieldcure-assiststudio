@@ -12,6 +12,7 @@ using System.Collections;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text;
 using Windows.ApplicationModel.DataTransfer;
+using Microsoft.UI.Xaml.Markup;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.Storage.Streams;
@@ -983,6 +984,8 @@ public sealed partial class ComposeBar : Control
 
     /// <summary>
     /// Populates the provider preset ComboBox with items from the given list.
+    /// The list may contain <see cref="ProviderPreset"/> objects and <c>"-"</c> string
+    /// separators to visually group providers by category (e.g., Cloud / Custom / Local / Demo).
     /// </summary>
     private void PopulatePresetCombo(IList presets)
     {
@@ -994,8 +997,13 @@ public sealed partial class ComposeBar : Control
         {
             if (obj is ProviderPreset preset)
             {
-                var item = new ComboBoxItem { Content = preset.Name, Tag = preset };
+                var displayName = preset.ProviderType == "Mock" ? "Demo" : preset.Name;
+                var item = new ComboBoxItem { Content = displayName, Tag = preset };
                 _presetComboBox.Items.Add(item);
+            }
+            else if (obj is "-")
+            {
+                _presetComboBox.Items.Add(CreateSeparatorItem());
             }
         }
 
@@ -1004,6 +1012,28 @@ public sealed partial class ComposeBar : Control
             SelectPresetInCombo(SelectedPreset);
         }
         _suppressPresetChanged = false;
+    }
+
+    /// <summary>
+    /// Creates a disabled ComboBoxItem containing a themed horizontal divider line.
+    /// </summary>
+    private static ComboBoxItem CreateSeparatorItem()
+    {
+        var border = (Border)XamlReader.Load(
+            """
+            <Border xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    Height="1" HorizontalAlignment="Stretch"
+                    Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+            """);
+        return new ComboBoxItem
+        {
+            IsEnabled = false,
+            IsHitTestVisible = false,
+            MinHeight = 0,
+            Height = 9,
+            Padding = new Thickness(0),
+            Content = border,
+        };
     }
 
     /// <summary>

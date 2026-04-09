@@ -1,10 +1,12 @@
 ﻿using AssistStudio.Dialogs;
 using AssistStudio.Helpers;
 using AssistStudio.Mcp;
+using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Data;
+using Microsoft.UI.Xaml.Markup;
 using Microsoft.UI.Xaml.Navigation;
 
 namespace AssistStudio.Settings;
@@ -181,9 +183,9 @@ public sealed partial class ProfilesPage : Page
         if (_suppressEvents) return;
         if (ProfileCombo.SelectedItem is not Profile profile) return;
 
-        var providerType = ProviderCombo.SelectedIndex <= 0
-            ? null
-            : ProviderDisplayNames[ProviderCombo.SelectedIndex].Key;
+        var providerType = ProviderCombo.SelectedItem is ComboBoxItem selected
+            ? selected.Tag as string
+            : null;
 
         profile.PreferredProviderType = providerType;
 
@@ -357,21 +359,6 @@ public sealed partial class ProfilesPage : Page
     }
 
     /// <summary>
-    /// Provider type key to display name mappings.
-    /// Index 0 is the "Any provider" entry with null key.
-    /// </summary>
-    private static readonly KeyValuePair<string?, string>[] ProviderDisplayNames =
-    [
-        new(null, "Any provider"),
-        new("Claude", "Anthropic Claude"),
-        new("OpenAI", "OpenAI"),
-        new("Gemini", "Google Gemini"),
-        new("Groq", "Groq"),
-        new("Ollama", "Ollama"),
-        new("Mock", "Mock"),
-    ];
-
-    /// <summary>
     /// Populates the provider combo box with available provider types.
     /// The first item uses a localized "Any provider" label from resources.
     /// </summary>
@@ -381,12 +368,44 @@ public sealed partial class ProfilesPage : Page
         var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
         var anyProviderLabel = loader.GetString("Profiles_AnyProvider");
 
-        for (var i = 0; i < ProviderDisplayNames.Length; i++)
+        // "Any provider" item
+        ProviderCombo.Items.Add(new ComboBoxItem
         {
-            var label = i == 0 && !string.IsNullOrEmpty(anyProviderLabel)
-                ? anyProviderLabel
-                : ProviderDisplayNames[i].Value;
-            ProviderCombo.Items.Add(label);
+            Content = string.IsNullOrEmpty(anyProviderLabel) ? "Any provider" : anyProviderLabel,
+            Tag = (string?)null,
+        });
+
+        // Ordered provider items with separators
+        var items = AppSettings.BuildOrderedPresetItems();
+        foreach (var obj in items)
+        {
+            if (obj is ProviderPreset preset)
+            {
+                var displayName = preset.ProviderType == "Mock" ? "Demo" : preset.Name;
+                ProviderCombo.Items.Add(new ComboBoxItem
+                {
+                    Content = displayName,
+                    Tag = preset.ProviderType,
+                });
+            }
+            else if (obj is "-")
+            {
+                var border = (Border)XamlReader.Load(
+                    """
+                    <Border xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                            Height="1" HorizontalAlignment="Stretch"
+                            Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                    """);
+                ProviderCombo.Items.Add(new ComboBoxItem
+                {
+                    IsEnabled = false,
+                    IsHitTestVisible = false,
+                    MinHeight = 0,
+                    Height = 9,
+                    Padding = new Thickness(0),
+                    Content = border,
+                });
+            }
         }
     }
 
@@ -395,15 +414,9 @@ public sealed partial class ProfilesPage : Page
     /// </summary>
     private void SelectProviderItem(string? providerType)
     {
-        if (providerType is null)
+        for (var i = 0; i < ProviderCombo.Items.Count; i++)
         {
-            ProviderCombo.SelectedIndex = 0;
-            return;
-        }
-
-        for (var i = 0; i < ProviderDisplayNames.Length; i++)
-        {
-            if (ProviderDisplayNames[i].Key == providerType)
+            if (ProviderCombo.Items[i] is ComboBoxItem item && item.Tag as string == providerType)
             {
                 ProviderCombo.SelectedIndex = i;
                 return;

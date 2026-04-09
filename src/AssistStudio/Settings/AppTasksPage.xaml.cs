@@ -1,6 +1,8 @@
 ﻿using AssistStudio.Helpers;
+using FieldCure.Ai.Providers.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Markup;
 using Microsoft.UI.Xaml.Navigation;
 using Windows.ApplicationModel.Resources;
 
@@ -79,17 +81,38 @@ public sealed partial class AppTasksPage : Page
     {
         PresetCombo.Items.Clear();
 
-        var presets = AppSettings.LoadPresets();
+        var items = AppSettings.BuildOrderedPresetItems();
         var selectedName = AppSettings.AppTasksPreset;
         var selectedIndex = -1;
 
-        for (var i = 0; i < presets.Count; i++)
+        foreach (var obj in items)
         {
-            var preset = presets[i];
-            PresetCombo.Items.Add(preset.Name);
-            if (preset.Name == selectedName)
+            if (obj is ProviderPreset preset)
             {
-                selectedIndex = i;
+                var displayName = preset.ProviderType == "Mock" ? "Demo" : preset.Name;
+                PresetCombo.Items.Add(displayName);
+                if (preset.Name == selectedName)
+                {
+                    selectedIndex = PresetCombo.Items.Count - 1;
+                }
+            }
+            else if (obj is "-")
+            {
+                var border = (Border)XamlReader.Load(
+                    """
+                    <Border xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                            Height="1" HorizontalAlignment="Stretch"
+                            Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                    """);
+                PresetCombo.Items.Add(new ComboBoxItem
+                {
+                    IsEnabled = false,
+                    IsHitTestVisible = false,
+                    MinHeight = 0,
+                    Height = 9,
+                    Padding = new Thickness(0),
+                    Content = border,
+                });
             }
         }
 

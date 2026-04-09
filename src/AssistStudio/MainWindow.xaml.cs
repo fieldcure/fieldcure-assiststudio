@@ -66,7 +66,7 @@ public sealed partial class MainWindow : Window
         // Create ViewModel
         ViewModel = new MainViewModel
         {
-            GetPresets = AppSettings.LoadPresets,
+            GetPresets = AppSettings.BuildOrderedPresetItems,
         };
 
         // Wire settings events → ViewModel
