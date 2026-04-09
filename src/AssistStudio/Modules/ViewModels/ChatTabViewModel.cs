@@ -298,10 +298,18 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// Called by <c>ChatTabView</c> after the ChatPanel is created and added to the visual tree.
     /// Flushes any pending restored messages and wires the keyboard shortcut relay.
     /// </summary>
-    public void AttachPanel(ChatPanel panel)
+    public async void AttachPanel(ChatPanel panel)
     {
         Panel = panel;
-        LoggingService.LogInfo($"[Tab] Panel attached: {Title}, pending={_pendingMessages.Count}");
+        LoggingService.LogInfo($"[Tab] Panel attached: {Title}, pending={_pendingMessages.Count}, initialized={panel.IsInitialized}");
+
+        // If the panel was previously disposed (WebView2 closed), create a new WebView2.
+        // This happens when TabView recycles a container after the old tab was closed.
+        if (!panel.IsInitialized)
+        {
+            LoggingService.LogInfo("[Tab] Panel needs WebView2 reinitialization (recycled container)");
+            await panel.ReinitializeWebViewAsync();
+        }
 
         // Initialize workspace folders from per-conversation data (folders belong to conversation, not profile)
         if (_builtInServers is not null
@@ -581,6 +589,10 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         {
             disposable.Dispose();
         }
+
+        // Close WebView2 to prevent ghosting on container recycling
+        Panel?.Dispose();
+        Panel = null;
     }
 
     #endregion

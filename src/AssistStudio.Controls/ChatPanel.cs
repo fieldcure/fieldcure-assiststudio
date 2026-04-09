@@ -34,7 +34,7 @@ public enum ChatTheme
 /// A templated control that provides a complete chat experience with message streaming,
 /// attachments, preset selection, and conversation management. Default style is defined in Generic.xaml.
 /// </summary>
-public sealed partial class ChatPanel : Control
+public sealed partial class ChatPanel : Control, IDisposable
 {
     private static readonly Windows.ApplicationModel.Resources.ResourceLoader Res =
         new("AssistStudio.Controls/Resources");
@@ -456,8 +456,11 @@ public sealed partial class ChatPanel : Control
     private CancellationTokenSource? _streamingCts;
 
     /// <summary>
-    /// Whether the WebView2 renderer has been initialized.
+    /// Gets whether the WebView2 renderer has been initialized.
+    /// Returns <c>false</c> after <see cref="Dispose"/> so callers can detect a recycled container.
     /// </summary>
+    public bool IsInitialized => _isInitialized;
+
     private bool _isInitialized;
 
     /// <summary>
@@ -1278,6 +1281,97 @@ public sealed partial class ChatPanel : Control
     public void PauseAllMedia() => _ = _renderer.PauseAllMediaAsync();
 
     /// <summary>
+    /// Releases WebView2 resources and removes the control from the visual tree.
+    /// When TabView recycles this container for a new tab, <see cref="ReinitializeWebViewAsync"/>
+    /// creates a fresh WebView2 instance — we never reuse a closed one.
+    /// </summary>
+    public void Dispose()
+    {
+        _streamingCts?.Cancel();
+        _messages.Clear();
+        _childrenMap.Clear();
+
+        if (_chatWebView is not null)
+        {
+            try
+            {
+                // Remove from visual tree so the dead control doesn't occupy layout space
+                if (_chatLayout is not null && _chatLayout.Children.Contains(_chatWebView))
+                    _chatLayout.Children.Remove(_chatWebView);
+
+                _chatWebView.CoreWebView2?.Navigate("about:blank");
+                _chatWebView.Close();
+            }
+            catch (ObjectDisposedException) { }
+
+            _chatWebView = null;
+        }
+
+        _isInitialized = false;
+        _hasRenderedRestored = false;
+        _titleGenerated = false;
+
+        // Reset layout to empty state so recycled container starts clean
+        if (_chatLayout?.Visibility == Visibility.Visible)
+        {
+            _chatLayout.Children.Remove(_inputArea);
+            if (_inputArea is not null)
+                _inputArea.HorizontalAlignment = HorizontalAlignment.Stretch;
+            if (_inputArea is not null)
+                _emptyStateContent?.Children.Add(_inputArea);
+            _chatLayout.Visibility = Visibility.Collapsed;
+            if (_emptyStatePanel is not null)
+                _emptyStatePanel.Visibility = Visibility.Visible;
+        }
+
+        DiagnosticLogger.LogInfo("[Chat] Disposed: WebView2 closed and removed from visual tree");
+    }
+
+    /// <summary>
+    /// Creates a new WebView2 instance and inserts it into the chat layout grid.
+    /// Called when a disposed ChatPanel is recycled by TabView for a new conversation tab.
+    /// </summary>
+    public async Task ReinitializeWebViewAsync()
+    {
+        if (_isInitialized)
+        {
+            DiagnosticLogger.LogInfo("[Chat] ReinitializeWebView skipped: already initialized");
+            return;
+        }
+
+        if (_chatLayout is null)
+        {
+            DiagnosticLogger.LogInfo("[Chat] ReinitializeWebView failed: _chatLayout is null");
+            return;
+        }
+
+        DiagnosticLogger.LogInfo("[Chat] ReinitializeWebView: creating new WebView2 instance");
+
+        // Create a fresh WebView2 and insert at Row 0 of the chat layout grid
+        _chatWebView = new WebView2
+        {
+            DefaultBackgroundColor = Windows.UI.Color.FromArgb(0, 0, 0, 0),
+            IsTabStop = false
+        };
+        Grid.SetRow(_chatWebView, 0);
+        _chatLayout.Children.Insert(0, _chatWebView);
+
+        // Run the same initialization as OnLoaded
+        await _renderer.InitializeAsync(_chatWebView);
+        _isInitialized = true;
+        await ApplyThemeAsync();
+        await ApplyLocaleStringsAsync();
+        ApplyChatZoom();
+        if (IsDebugMode)
+            await _renderer.SetDebugModeAsync(true);
+
+        // Render any messages that were already restored before we got here
+        await RenderRestoredMessagesAsync();
+
+        DiagnosticLogger.LogInfo("[Chat] ReinitializeWebView: complete");
+    }
+
+    /// <summary>
     /// Clears all messages and resets the chat panel to its empty state.
     /// </summary>
     public async void ClearConversation()
@@ -1323,11 +1417,16 @@ public sealed partial class ChatPanel : Control
     /// </summary>
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
+        DiagnosticLogger.LogInfo($"[Chat] OnLoaded: initialized={_isInitialized}, webView={_chatWebView is not null}");
         if (_isInitialized) return;
 
         try
         {
-            if (_chatWebView is null) return;
+            if (_chatWebView is null)
+            {
+                DiagnosticLogger.LogInfo("[Chat] OnLoaded: _chatWebView is null, skipping init (disposed panel?)");
+                return;
+            }
 
             await _renderer.InitializeAsync(_chatWebView);
             _isInitialized = true;
