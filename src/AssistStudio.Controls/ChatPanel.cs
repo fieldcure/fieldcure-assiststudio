@@ -7,7 +7,6 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using System.Collections;
 using System.Collections.ObjectModel;
-using System.Text.RegularExpressions;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Channels;
 using FieldCure.AssistStudio.Controls.Helpers;
@@ -3054,6 +3053,7 @@ public sealed partial class ChatPanel : Control, IDisposable
         StreamResult result;
         var round = 0;
         string? pendingUserNote = null;
+        var roundStartIndex = assistantMessage.Content?.Length ?? 0;
 
         do
         {
@@ -3082,12 +3082,15 @@ public sealed partial class ChatPanel : Control, IDisposable
                 break;
             }
 
-            // Add the assistant's tool call message to history
+            // Add the assistant's tool call message to history (delta content only)
             var toolCallParentId = _messages.Count > 0 ? _messages[^1].Id : null;
+            var deltaContent = (assistantMessage.Content?.Length > roundStartIndex)
+                ? assistantMessage.Content[roundStartIndex..]
+                : "";
             var toolCallMsg = new ChatMessage(ChatRole.Assistant)
             {
                 ToolCalls = result.ToolCalls,
-                Content = assistantMessage.Content,
+                Content = deltaContent,
                 ProviderName = Provider.ProviderName,
                 ProviderModelId = Provider.ModelId,
                 ParentId = toolCallParentId
@@ -3130,8 +3133,6 @@ public sealed partial class ChatPanel : Control, IDisposable
                 };
                 RegisterInTree(toolResultMsg);
                 _messages.Add(toolResultMsg);
-
-                assistantMessage.Content += $"[Tool: {call.FunctionName}]\n";
 
                 if (call.FunctionName == "search_documents")
                     await _renderer.AppendSearchResultBlockAsync(assistantMessage.Id, toolResult, call.FunctionName);
@@ -3233,7 +3234,6 @@ public sealed partial class ChatPanel : Control, IDisposable
                     RegisterInTree(toolResultMsg);
                     _messages.Add(toolResultMsg);
 
-                    assistantMessage.Content += $"[Tool: {call.FunctionName}]\n";
                     var subAgentLabel = GetSpecialistName(call.Arguments) is not null
                         ? FormatSpecialistLabel(call.Arguments, toolResult)
                         : FormatSubAgentLabel(call.Arguments, toolResult);
@@ -3246,6 +3246,7 @@ public sealed partial class ChatPanel : Control, IDisposable
                     }
                 }
             }
+            roundStartIndex = assistantMessage.Content?.Length ?? 0;
         } while (true);
 
         return result;
@@ -3285,39 +3286,22 @@ public sealed partial class ChatPanel : Control, IDisposable
         DiagnosticLogger.LogInfo($"[Chat] RenderRestoredMessages: {_messages.Count} messages");
         SwitchToChatLayout();
 
-        // Pre-index tool results for rich UI restoration.
-        // Uses linear _messages scan + explicit ToolCallId matching — no tree traversal.
-        var searchResultQueue = new Queue<string>();
-        var fetchUrlLabelQueue = new Queue<string>();
-        var subAgentLabelQueue = new Queue<string>();
-        var toolMediaQueue = new Queue<IReadOnlyList<MediaContent>>();
-        foreach (var m in _messages)
-        {
-            if (m.Role != ChatRole.Assistant || m.ToolCalls is not { Count: > 0 })
-                continue;
-            foreach (var tc in m.ToolCalls)
-            {
-                var resultMsg = _messages.FirstOrDefault(r =>
-                    r.Role == ChatRole.Tool && r.ToolCallId == tc.Id);
-
-                if (tc.FunctionName == "search_documents" && resultMsg?.Content is not null)
-                    searchResultQueue.Enqueue(resultMsg.Content);
-                else if (tc.FunctionName == "fetch_url")
-                    fetchUrlLabelQueue.Enqueue(FormatFetchUrlLabel(tc.Arguments, resultMsg?.Content?.Length ?? 0));
-                else if (tc.FunctionName == "delegate_task")
-                    subAgentLabelQueue.Enqueue(FormatSubAgentLabel(tc.Arguments, resultMsg?.Content ?? ""));
-
-                // Queue tool result media for rendering after the corresponding tool block
-                if (resultMsg?.ToolMedia is { Count: > 0 } media)
-                    toolMediaQueue.Enqueue(media);
-            }
-        }
-
         var renderedCount = 0;
+        string? pendingBubbleId = null;
+        string? pendingContent = null;
+
         foreach (var msg in _messages)
         {
             if (msg.Role == ChatRole.User)
             {
+                // Finalize any pending assistant bubble before rendering next user message
+                if (pendingBubbleId is not null)
+                {
+                    await _renderer.FinalizeMessageAsync(pendingBubbleId, pendingContent ?? "");
+                    pendingBubbleId = null;
+                    renderedCount++;
+                }
+
                 await _renderer.AppendUserMessageAsync(
                     msg.Id, msg.Content ?? "", msg.Timestamp.ToString("O"), msg.Attachments,
                     msg.SiblingIndex, msg.SiblingCount);
@@ -3325,10 +3309,54 @@ public sealed partial class ChatPanel : Control, IDisposable
             }
             else if (msg.Role == ChatRole.Assistant && msg.ToolCalls is { Count: > 0 })
             {
-                // Intermediate tool-call message — exists for API re-submission only, skip rendering.
+                // Intermediate tool-call message — render tool blocks into the pending bubble.
+                // Uses direct ToolCallId matching — no queue, no marker parsing.
+                if (pendingBubbleId is null) continue;
+
+                foreach (var tc in msg.ToolCalls)
+                {
+                    var resultMsg = _messages.FirstOrDefault(r =>
+                        r.Role == ChatRole.Tool && r.ToolCallId == tc.Id);
+
+                    if (tc.FunctionName == "search_documents" && resultMsg?.Content is not null)
+                    {
+                        await _renderer.AppendSearchResultBlockAsync(
+                            pendingBubbleId, resultMsg.Content, tc.FunctionName);
+                    }
+                    else if (tc.FunctionName == "fetch_url")
+                    {
+                        await _renderer.AppendToolBlockAsync(pendingBubbleId,
+                            FormatFetchUrlLabel(tc.Arguments, resultMsg?.Content?.Length ?? 0));
+                    }
+                    else if (tc.FunctionName == "delegate_task")
+                    {
+                        var label = GetSpecialistName(tc.Arguments) is not null
+                            ? FormatSpecialistLabel(tc.Arguments, resultMsg?.Content ?? "")
+                            : FormatSubAgentLabel(tc.Arguments, resultMsg?.Content ?? "");
+                        await _renderer.AppendToolBlockAsync(pendingBubbleId, label);
+                    }
+                    else
+                    {
+                        await _renderer.AppendToolBlockAsync(pendingBubbleId, tc.FunctionName);
+                    }
+
+                    // Render media inline right after its owning tool block
+                    if (resultMsg?.ToolMedia is { Count: > 0 } mediaItems)
+                    {
+                        foreach (var media in mediaItems)
+                            await _renderer.AppendToolMediaAsync(pendingBubbleId, media);
+                    }
+                }
             }
             else if (msg.Role == ChatRole.Assistant)
             {
+                // Finalize any previous pending assistant bubble
+                if (pendingBubbleId is not null)
+                {
+                    await _renderer.FinalizeMessageAsync(pendingBubbleId, pendingContent ?? "");
+                    renderedCount++;
+                }
+
                 await _renderer.BeginAssistantMessageAsync(
                     msg.Id, msg.ProviderName, msg.ProviderModelId);
 
@@ -3340,44 +3368,19 @@ public sealed partial class ChatPanel : Control, IDisposable
                     await _renderer.EndThinkingBlockAsync(msg.Id);
                 }
 
-                var toolMarkers = ToolMarkerRegex().Matches(msg.Content ?? "");
-                foreach (Match m in toolMarkers)
-                {
-                    var toolName = m.Groups[1].Value.Trim();
-
-                    if (toolName == "search_documents" && searchResultQueue.Count > 0)
-                    {
-                        await _renderer.AppendSearchResultBlockAsync(msg.Id, searchResultQueue.Dequeue(), toolName);
-                    }
-                    else if (toolName == "fetch_url" && fetchUrlLabelQueue.Count > 0)
-                    {
-                        await _renderer.AppendToolBlockAsync(msg.Id, fetchUrlLabelQueue.Dequeue());
-                    }
-                    else if (toolName == "delegate_task")
-                    {
-                        var label = subAgentLabelQueue.Count > 0
-                            ? subAgentLabelQueue.Dequeue()
-                            : "Sub-Agent";
-                        await _renderer.AppendToolBlockAsync(msg.Id, label);
-                    }
-                    else
-                    {
-                        await _renderer.AppendToolBlockAsync(msg.Id, toolName);
-                    }
-
-                    // Render tool result media (images, audio, video) after each tool block
-                    if (toolMediaQueue.Count > 0)
-                    {
-                        foreach (var media in toolMediaQueue.Dequeue())
-                            await _renderer.AppendToolMediaAsync(msg.Id, media);
-                    }
-                }
-
-                await _renderer.FinalizeMessageAsync(msg.Id, msg.Content ?? "");
-                renderedCount++;
+                pendingBubbleId = msg.Id;
+                pendingContent = msg.Content;
             }
-            // Tool role — exists for API re-submission only, skip rendering.
+            // Tool role — consumed via ToolCallId matching above, skip rendering.
         }
+
+        // Finalize last pending assistant bubble
+        if (pendingBubbleId is not null)
+        {
+            await _renderer.FinalizeMessageAsync(pendingBubbleId, pendingContent ?? "");
+            renderedCount++;
+        }
+
         DiagnosticLogger.LogInfo($"[Chat] RenderRestoredMessages: rendered {renderedCount}/{_messages.Count}");
     }
 
@@ -3890,14 +3893,6 @@ public sealed partial class ChatPanel : Control, IDisposable
             _searchCount.Text = string.Empty;
         }
     }
-
-    #endregion
-
-    #region Generated Regex
-
-    /// <summary>Matches [Tool: ...] markers in assistant message content.</summary>
-    [GeneratedRegex(@"\[Tool:\s*([^\]]+)\]")]
-    private static partial Regex ToolMarkerRegex();
 
     #endregion
 }
