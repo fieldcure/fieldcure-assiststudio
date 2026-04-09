@@ -209,6 +209,15 @@
         color: var(--timestamp-color);
     }
 
+    /* ===== Tool Running Animation ===== */
+    .tool-header.tool-running {
+        animation: tool-pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes tool-pulse {
+        0%, 100% { color: var(--timestamp-color); }
+        50% { color: var(--text-primary); }
+    }
+
     /* ===== Tool Result Image ===== */
     .tool-result-image {
         max-width: 100%;
@@ -1643,10 +1652,15 @@
             if (!msg) return;
             var bubble = msg.querySelector('.message-bubble');
             if (!bubble) return;
+
+            // Stop pulse on previous tool header
+            var prev = bubble.querySelector('.tool-header.tool-running');
+            if (prev) prev.classList.remove('tool-running');
+
             var block = document.createElement('div');
             block.className = 'tool-block';
             var header = document.createElement('div');
-            header.className = 'tool-header';
+            header.className = 'tool-header tool-running';
             header.textContent = '\uD83D\uDD27 ' + toolName;
             block.appendChild(header);
             var contentSpan = bubble.querySelector('.content');
@@ -1802,6 +1816,10 @@
             if (!msg) return;
             var bubble = msg.querySelector('.message-bubble');
             if (bubble) {
+                // Stop any remaining tool pulse animation
+                var runningTools = bubble.querySelectorAll('.tool-header.tool-running');
+                runningTools.forEach(function(h) { h.classList.remove('tool-running'); });
+
                 bubble.classList.remove('streaming');
                 bubble.classList.add('rendered');
                 // Preserve thinking, tool blocks, and media elements before markdown re-render
