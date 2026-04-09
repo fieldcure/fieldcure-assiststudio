@@ -172,11 +172,12 @@
         color: var(--text-color);
     }
     .thinking-toggle {
-        transition: transform 0.2s;
-        font-size: 9px;
+        transition: transform 0.15s ease;
+        font-size: 13px;
+        line-height: 1;
     }
-    .thinking-block.collapsed .thinking-toggle {
-        transform: rotate(-90deg);
+    .thinking-block:not(.collapsed) .thinking-toggle {
+        transform: rotate(90deg);
     }
     .thinking-block.collapsed .thinking-content {
         display: none;
@@ -207,6 +208,59 @@
         user-select: none;
         font-size: 11px;
         color: var(--timestamp-color);
+    }
+
+    /* ===== Tool Details ===== */
+    .tool-block details > summary {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 2px 0;
+        user-select: none;
+        font-size: 11px;
+        color: var(--timestamp-color);
+        cursor: pointer;
+        list-style: none;
+    }
+    .tool-block details > summary::-webkit-details-marker { display: none; }
+    .tool-block .tool-chevron {
+        transition: transform 0.15s ease;
+        font-size: 13px;
+        line-height: 1;
+    }
+    .tool-block details[open] > summary .tool-chevron {
+        transform: rotate(90deg);
+    }
+    .tool-block .tool-arg-hint {
+        opacity: 0.7;
+    }
+    .tool-block .tool-duration {
+        opacity: 0.6;
+    }
+    .tool-block .tool-error {
+        color: var(--error-color, #e74c3c);
+    }
+    .tool-block .tool-details {
+        margin-top: 4px;
+        font-size: 11px;
+        color: var(--timestamp-color);
+    }
+    .tool-block .tool-details pre {
+        margin: 2px 0 6px 0;
+        padding: 4px 8px;
+        font-size: 10px;
+        font-family: var(--mono-font, monospace);
+        background: var(--code-bg);
+        border-radius: 4px;
+        white-space: pre-wrap;
+        word-break: break-all;
+        max-height: 150px;
+        overflow-y: auto;
+    }
+    .tool-block .tool-details-label {
+        font-size: 10px;
+        color: var(--timestamp-color);
+        margin-top: 4px;
     }
 
     /* ===== Tool Running Animation ===== */
@@ -1307,6 +1361,94 @@
         }
     }
 
+    function buildSummaryHTML(info) {
+        var html = '<span class="tool-chevron">&rsaquo;</span>';
+        html += '<span class="tool-name">' + escapeHtml(info.name.replace(/_/g, ' ')) + '</span>';
+        var argHint = extractArgHint(info.name, info.args);
+        if (argHint) {
+            html += ' <span class="tool-arg-hint">' + escapeHtml(argHint) + '</span>';
+        }
+        if (info.error && info.result) {
+            html += ' <span class="tool-error">' + escapeHtml(summarizeResult(info.result)) + '</span>';
+        } else if (!argHint && info.result && !info.error) {
+            // No arg hint — try to extract a count from result arrays
+            var countHint = extractResultCount(info.result);
+            html += ' <span class="tool-arg-hint">' + escapeHtml(countHint || summarizeResult(info.result)) + '</span>';
+        }
+        if (info.ms) {
+            html += ' <span class="tool-duration">' + formatDuration(info.ms) + '</span>';
+        }
+        return html;
+    }
+
+    function extractArgHint(name, argsStr) {
+        if (!argsStr) return null;
+        try {
+            var args = JSON.parse(argsStr);
+            if (args.query) return '"' + truncate(args.query, 40) + '"';
+            if (args.url) {
+                try {
+                    var u = new URL(args.url);
+                    var path = u.pathname.length > 1 ? u.pathname : '';
+                    return truncate(u.hostname + path, 50);
+                } catch(e) { return truncate(args.url, 50); }
+            }
+            if (args.channel_id && args.message)
+                return args.channel_id + ' \u2192 "' + truncate(args.message, 30) + '"';
+            if (args.message) return '"' + truncate(args.message, 40) + '"';
+            if (args.path) return truncate(args.path, 50);
+            if (args.command) return truncate(args.command, 50);
+            // Fallback: first string value
+            for (var k in args) {
+                if (typeof args[k] === 'string' && args[k].length > 0)
+                    return truncate(args[k], 40);
+            }
+        } catch(e) {}
+        return null;
+    }
+
+    function truncate(s, max) {
+        return s.length > max ? s.substring(0, max) + '…' : s;
+    }
+
+    function summarizeResult(text) {
+        if (!text) return '';
+        // Skip lines that are just JSON brackets/braces
+        var lines = text.split('\n');
+        var first = '';
+        for (var i = 0; i < lines.length && i < 5; i++) {
+            var trimmed = lines[i].trim();
+            if (trimmed && trimmed !== '{' && trimmed !== '[' && trimmed !== '}' && trimmed !== ']') {
+                first = trimmed;
+                break;
+            }
+        }
+        if (!first) return '';
+        return first.length > 60 ? first.substring(0, 60) + '…' : first;
+    }
+
+    function formatDuration(ms) {
+        return ms < 1000 ? ms + 'ms' : (ms / 1000).toFixed(1) + 's';
+    }
+
+    function extractResultCount(text) {
+        try {
+            var data = JSON.parse(text);
+            // Find the first array property and return its length
+            for (var k in data) {
+                if (Array.isArray(data[k])) {
+                    return data[k].length + ' ' + k;
+                }
+            }
+        } catch(e) {}
+        return null;
+    }
+
+    function formatJson(str) {
+        try { return JSON.stringify(JSON.parse(str), null, 2); }
+        catch(e) { return str; }
+    }
+
     function renderMarkdown(fullText) {
         if (typeof marked !== 'undefined' && typeof hljs !== 'undefined') {
             return fixCjkEmphasis(marked.parse(fullText));
@@ -1614,7 +1756,7 @@
             block.className = 'thinking-block streaming';
             var header = document.createElement('div');
             header.className = 'thinking-header';
-            header.innerHTML = '<span class="thinking-toggle">\u25BC</span><span>Thinking\u2026</span>';
+            header.innerHTML = '<span class="thinking-toggle">&rsaquo;</span><span>Thinking\u2026</span>';
             header.addEventListener('click', function() {
                 block.classList.toggle('collapsed');
             });
@@ -1647,7 +1789,7 @@
             }
         },
 
-        appendToolBlock: function(id, toolName) {
+        appendToolBlock: function(id, info) {
             var msg = document.getElementById('msg-' + id);
             if (!msg) return;
             var bubble = msg.querySelector('.message-bubble');
@@ -1657,12 +1799,39 @@
             var prev = bubble.querySelector('.tool-header.tool-running');
             if (prev) prev.classList.remove('tool-running');
 
+            if (typeof info === 'string') info = { name: info };
+
             var block = document.createElement('div');
             block.className = 'tool-block';
-            var header = document.createElement('div');
-            header.className = 'tool-header tool-running';
-            header.textContent = '\uD83D\uDD27 ' + toolName;
-            block.appendChild(header);
+
+            var hasDetails = info.args || info.result;
+
+            if (hasDetails) {
+                var det = document.createElement('details');
+                var sum = document.createElement('summary');
+                sum.className = 'tool-header';
+                sum.innerHTML = buildSummaryHTML(info);
+                det.appendChild(sum);
+
+                var content = document.createElement('div');
+                content.className = 'tool-details';
+                if (info.args) {
+                    content.innerHTML += '<div class="tool-details-label">Arguments</div>'
+                        + '<pre>' + escapeHtml(formatJson(info.args)) + '</pre>';
+                }
+                if (info.result) {
+                    content.innerHTML += '<div class="tool-details-label">Result</div>'
+                        + '<pre>' + escapeHtml(info.result) + '</pre>';
+                }
+                det.appendChild(content);
+                block.appendChild(det);
+            } else {
+                var header = document.createElement('div');
+                header.className = 'tool-header tool-running';
+                header.innerHTML = buildSummaryHTML(info);
+                block.appendChild(header);
+            }
+
             var contentSpan = bubble.querySelector('.content');
             if (contentSpan) {
                 bubble.insertBefore(block, contentSpan);
@@ -1771,8 +1940,11 @@
 
             var details = document.createElement('details');
             var summary = document.createElement('summary');
-            summary.textContent = '\uD83D\uDD27 ' + (displayName || 'search_documents')
-                + ' \u2014 ' + results.length + ' results \u00b7 ' + totalChunks + ' chunks';
+            summary.className = 'tool-header';
+            var hintText = results.length + ' results \u00b7 ' + totalChunks + ' chunks';
+            summary.innerHTML = '<span class="tool-chevron">&rsaquo;</span>'
+                + '<span class="tool-name">' + escapeHtml(displayName || 'search_documents') + '</span>'
+                + ' <span class="tool-arg-hint">' + escapeHtml(hintText) + '</span>';
             details.appendChild(summary);
 
             if (results.length === 0) {

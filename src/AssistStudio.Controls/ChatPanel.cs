@@ -3107,6 +3107,8 @@ public sealed partial class ChatPanel : Control, IDisposable
             {
                 DiagnosticLogger.LogInfo($"[Tool] Executing: {call.FunctionName} (id={call.Id})");
                 ToolExecutionResult execResult;
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+                bool isError = false;
                 try
                 {
                     execResult = await executor.ExecuteAsync(call, ct);
@@ -3118,7 +3120,9 @@ public sealed partial class ChatPanel : Control, IDisposable
                     DiagnosticLogger.LogWarning($"[Tool] Execution error: {call.FunctionName} — {ex.Message}");
                     DiagnosticLogger.LogException(ex);
                     execResult = new ToolExecutionResult($"{{\"error\":\"{ex.Message}\"}}");
+                    isError = true;
                 }
+                sw.Stop();
 
                 if (executor.LastUserNote is not null)
                     pendingUserNote = executor.LastUserNote;
@@ -3136,10 +3140,10 @@ public sealed partial class ChatPanel : Control, IDisposable
 
                 if (call.FunctionName == "search_documents")
                     await _renderer.AppendSearchResultBlockAsync(assistantMessage.Id, toolResult, call.FunctionName);
-                else if (call.FunctionName == "fetch_url")
-                    await _renderer.AppendToolBlockAsync(assistantMessage.Id, FormatFetchUrlLabel(call.Arguments, toolResult.Length));
                 else
-                    await _renderer.AppendToolBlockAsync(assistantMessage.Id, call.FunctionName);
+                    await _renderer.AppendToolBlockAsync(
+                        assistantMessage.Id, call.FunctionName, call.Arguments,
+                        toolResult, sw.ElapsedMilliseconds, isError);
 
                 if (execResult.MediaContents is { Count: > 0 } mediaItems)
                 {
@@ -3198,6 +3202,7 @@ public sealed partial class ChatPanel : Control, IDisposable
                 {
                     ToolExecutionResult execResult;
                     string? noteForPending = null;
+                    bool isError = false;
 
                     var approvedEntry = approved.FirstOrDefault(a => a.Call.Id == call.Id);
                     if (approvedEntry.Task is not null)
@@ -3214,12 +3219,14 @@ public sealed partial class ChatPanel : Control, IDisposable
                             DiagnosticLogger.LogWarning($"[Tool] Sub-Agent error: {call.Id} — {ex.Message}");
                             DiagnosticLogger.LogException(ex);
                             execResult = new ToolExecutionResult($"{{\"error\":\"{ex.Message}\"}}");
+                            isError = true;
                         }
                     }
                     else
                     {
                         var rejectedEntry = rejected.First(r => r.Call.Id == call.Id);
                         execResult = new ToolExecutionResult(rejectedEntry.RejectionText);
+                        isError = true;
                     }
 
                     if (noteForPending is not null)
@@ -3234,10 +3241,9 @@ public sealed partial class ChatPanel : Control, IDisposable
                     RegisterInTree(toolResultMsg);
                     _messages.Add(toolResultMsg);
 
-                    var subAgentLabel = GetSpecialistName(call.Arguments) is not null
-                        ? FormatSpecialistLabel(call.Arguments, toolResult)
-                        : FormatSubAgentLabel(call.Arguments, toolResult);
-                    await _renderer.AppendToolBlockAsync(assistantMessage.Id, subAgentLabel);
+                    await _renderer.AppendToolBlockAsync(
+                        assistantMessage.Id, call.FunctionName, call.Arguments,
+                        toolResult, null, isError);
 
                     if (execResult.MediaContents is { Count: > 0 } mediaItems)
                     {
@@ -3323,21 +3329,12 @@ public sealed partial class ChatPanel : Control, IDisposable
                         await _renderer.AppendSearchResultBlockAsync(
                             pendingBubbleId, resultMsg.Content, tc.FunctionName);
                     }
-                    else if (tc.FunctionName == "fetch_url")
-                    {
-                        await _renderer.AppendToolBlockAsync(pendingBubbleId,
-                            FormatFetchUrlLabel(tc.Arguments, resultMsg?.Content?.Length ?? 0));
-                    }
-                    else if (tc.FunctionName == "delegate_task")
-                    {
-                        var label = GetSpecialistName(tc.Arguments) is not null
-                            ? FormatSpecialistLabel(tc.Arguments, resultMsg?.Content ?? "")
-                            : FormatSubAgentLabel(tc.Arguments, resultMsg?.Content ?? "");
-                        await _renderer.AppendToolBlockAsync(pendingBubbleId, label);
-                    }
                     else
                     {
-                        await _renderer.AppendToolBlockAsync(pendingBubbleId, tc.FunctionName);
+                        await _renderer.AppendToolBlockAsync(
+                            pendingBubbleId, tc.FunctionName, tc.Arguments,
+                            resultMsg?.Content, null,
+                            resultMsg?.Content?.Contains("\"error\"") == true);
                     }
 
                     // Render media inline right after its owning tool block

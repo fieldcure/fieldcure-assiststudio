@@ -239,11 +239,25 @@ internal partial class WebViewChatRenderer
     }
 
     /// <summary>
-    /// Appends a styled tool call block to an assistant message.
+    /// Appends a tool call block with optional details to an assistant message.
     /// </summary>
-    public Task AppendToolBlockAsync(string id, string toolName)
+    public Task AppendToolBlockAsync(
+        string id,
+        string toolName,
+        string? arguments = null,
+        string? result = null,
+        long? durationMs = null,
+        bool isError = false)
     {
-        var script = $"window.assistChat.appendToolBlock({Js(id)}, {Js(toolName)})";
+        var info = new System.Text.Json.Nodes.JsonObject
+        {
+            ["name"] = toolName,
+            ["args"] = arguments,
+            ["result"] = result is { Length: > 500 } ? result[..500] + "…" : result,
+            ["ms"] = durationMs,
+            ["error"] = isError
+        };
+        var script = $"window.assistChat.appendToolBlock({Js(id)}, {info.ToJsonString()})";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 
