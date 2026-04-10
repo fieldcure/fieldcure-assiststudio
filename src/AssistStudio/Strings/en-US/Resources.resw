@@ -794,6 +794,9 @@
   <data name="Connect_FilesystemActiveCount" xml:space="preserve">
     <value>{0} active instance(s)</value>
   </data>
+  <data name="Connect_CommandHint" xml:space="preserve">
+    <value>Use a package runner (npx, uvx) or path to an executable. Build wrappers like dotnet run or cargo run add 5–10s to every startup.</value>
+  </data>
   <data name="Connect_BuiltInDuplicate" xml:space="preserve">
     <value>This server is already managed as a built-in server.</value>
   </data>
@@ -817,6 +820,18 @@
   </data>
   <data name="BuiltIn_InstallFailedMessage" xml:space="preserve">
     <value>Check your internet connection and try again.</value>
+  </data>
+  <data name="BuiltIn_UpdatingProgress" xml:space="preserve">
+    <value>Updating MCP packages ({0}/{1})</value>
+  </data>
+  <data name="BuiltIn_UpdateComplete" xml:space="preserve">
+    <value>MCP packages updated</value>
+  </data>
+  <data name="BuiltIn_UpdateAvailable_Title" xml:space="preserve">
+    <value>MCP package updates ready</value>
+  </data>
+  <data name="BuiltIn_UpdateAvailable_Body" xml:space="preserve">
+    <value>{0} {1} → {2} and {3} more</value>
   </data>
   <data name="Profiles_EssentialsLabel" xml:space="preserve">
     <value>Essentials</value>

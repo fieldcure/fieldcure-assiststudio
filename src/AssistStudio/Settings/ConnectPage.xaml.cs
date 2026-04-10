@@ -416,6 +416,7 @@ public sealed partial class ConnectPage : Page
             Header = _loader.GetString("Connect_Command"),
             PlaceholderText = "e.g., npx",
             Text = existing?.Command ?? "",
+            TextWrapping = TextWrapping.Wrap,
             Visibility = isStdio ? Visibility.Visible : Visibility.Collapsed,
         };
         var argsBox = new TextBox
@@ -500,22 +501,32 @@ public sealed partial class ConnectPage : Page
             nameBox.TextChanged += (_, _) => Validate();
             commandBox.TextChanged += (_, _) => Validate();
             urlBox.TextChanged += (_, _) => Validate();
-
-            transportCombo.SelectionChanged += (_, _) =>
-            {
-                var stdio = transportCombo.SelectedIndex == 0;
-                commandBox.Visibility = stdio ? Visibility.Visible : Visibility.Collapsed;
-                argsBox.Visibility = stdio ? Visibility.Visible : Visibility.Collapsed;
-                urlBox.Visibility = stdio ? Visibility.Collapsed : Visibility.Visible;
-                Validate();
-            };
         }
+
+        var commandHint = new TextBlock
+        {
+            Text = _loader.GetString("Connect_CommandHint"),
+            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+            Opacity = 0.6,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, -8, 0, 0),
+        };
+
+        transportCombo.SelectionChanged += (_, _) =>
+        {
+            var stdio = transportCombo.SelectedIndex == 0;
+            commandBox.Visibility = stdio ? Visibility.Visible : Visibility.Collapsed;
+            commandHint.Visibility = stdio ? Visibility.Visible : Visibility.Collapsed;
+            argsBox.Visibility = stdio ? Visibility.Visible : Visibility.Collapsed;
+            urlBox.Visibility = stdio ? Visibility.Collapsed : Visibility.Visible;
+        };
 
         var panel = new StackPanel { Spacing = 12, MinWidth = 400, MaxWidth = 500 };
         panel.Children.Add(nameBox);
         panel.Children.Add(descriptionBox);
         panel.Children.Add(transportCombo);
         panel.Children.Add(commandBox);
+        panel.Children.Add(commandHint);
         panel.Children.Add(builtInWarning);
         panel.Children.Add(argsBox);
         panel.Children.Add(urlBox);
