@@ -1,5 +1,29 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Controls.WinUI
 
+## [0.15.0] - 2026-04-10
+
+### Added
+- **MCP Elicitation** — `ToolElicitationPanel` for MCP server user-input requests with multi-field selection and batch submit
+- **MCP server badge** — server name badge on `ToolApprovalPanel` for tool origin identification
+- **Tool block details** — expandable tool blocks showing arguments, result, and duration
+- **Tool block interleave** — tool blocks rendered in correct position between text segments
+- **Tool execution pulse** — color pulse animation on tool headers during execution
+- **Categorized provider combobox** — Cloud / Custom / Local / Demo separators in provider selector
+- **Themed tooltips** — `data-tooltip` attribute-based tooltips across all WebView2 elements
+- **Timestamp tooltip** — full date+time tooltip on message timestamp hover
+
+### Changed
+- `RenderAssistantBubbleAsync` extracted for branch switch interleave rendering
+- Delta storage migration for tool call messages
+
+### Fixed
+- ThinkingContent persistence through save/load cycle
+- WebView2 ghosting on TabView container recycling
+- Thinking block targeting, shimmer animation, and preset list casting
+- Image modal constrained to viewport bounds
+
+---
+
 ## [0.14.0] - 2026-04-07
 
 ### Added

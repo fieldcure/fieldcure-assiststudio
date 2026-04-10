@@ -21,6 +21,7 @@ Chat with five AI providers from a single app. Switch providers mid-conversation
 - **Gemini** (Google) — Multimodal vision and documents
 - **Ollama** — Run local models on your own hardware
 - **Groq** — Ultra-fast inference via OpenAI-compatible API
+- **Custom** — Any OpenAI-compatible endpoint (Together AI, MiniMax, etc.)
 
 ### Streaming & Extended Thinking
 
@@ -52,7 +53,8 @@ Connect to external MCP servers to extend AI capabilities with custom tools:
 
 - **Stdio and HTTP transports** supported
 - **Tool aggregation** — Tools from all connected servers appear alongside built-in tools
-- **Tool approval** — Tools that require confirmation show an inline approval panel before execution
+- **Tool approval** — Tools that require confirmation show an inline approval panel with server badge before execution
+- **MCP Elicitation** — MCP servers can request user input via structured form fields
 - **Search tools** — Meta-tool for efficiently searching across large tool sets
 - **Sub-Agent delegation** — `delegate_task` tool for autonomous sub-agent execution with parallel dispatch and specialist routing (e.g., Web Search Specialist)
 - **Built-in servers** — Essentials, Filesystem, Knowledge Archive, and Outbox servers. Auto-installed and auto-updated via `dotnet tool` with per-tab instances and MCP Roots protocol
@@ -111,6 +113,7 @@ Connect to external MCP servers to extend AI capabilities with custom tools:
 | **Gemini** | Yes | Yes | Yes | Yes | No | [aistudio.google.com](https://aistudio.google.com/) |
 | **Ollama** | Yes | Dep. | Dep. | Dep. | think tags | Not required |
 | **Groq** | Yes | Yes | Yes | Yes | Dep. | [console.groq.com](https://console.groq.com/) |
+| **Custom** | Yes | Dep. | Dep. | Dep. | think tags | Dep. |
 
 ---
 

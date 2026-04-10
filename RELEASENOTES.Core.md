@@ -1,5 +1,13 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Core
 
+## [0.15.0] - 2026-04-10
+
+### Changed
+- Updated transitive dependency: Ai.Providers 0.2.0 → 0.3.0
+- No source changes in Core itself
+
+---
+
 ## [0.14.0] - 2026-04-07
 
 ### Added

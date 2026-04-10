@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CA1416</NoWarn>
 
@@ -22,7 +22,7 @@
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;claude;openai;gemini;ollama;llm;provider;streaming</PackageTags>
-    <PackageReleaseNotes>v0.2.0: ImageCompressor for automatic JPEG compression. IMultiContentTool and MediaContent/ToolExecutionResult models for multimedia tool results. ChatMessage.MediaItems for media persistence. Ollama native thinking field support.</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.3.0: Custom OpenAI-compatible provider registration (CustomProviderConfig, ProviderFactory.RegisterCustomProvider). ThinkTagParser for streaming think-tag extraction. OpenAI reasoning_details support (MiniMax-style structured thinking). stream_options scoped to OpenAI/Groq only for custom provider compatibility.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

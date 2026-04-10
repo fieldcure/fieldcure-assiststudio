@@ -1,5 +1,20 @@
 ﻿# Release Notes — FieldCure.Ai.Providers
 
+## v0.3.0
+
+### Added
+- `CustomProviderConfig` model — configuration for user-registered OpenAI-compatible custom providers (Id, DisplayName, BaseUrl)
+- `ProviderFactory.RegisterCustomProvider` / `UnregisterCustomProvider` / `ClearCustomProviders` — runtime custom provider registration
+- `ThinkTagParser` — streaming parser that separates `<think>...</think>` blocks from regular content across chunk boundaries
+
+### Changed
+- `OpenAiProvider` — `reasoning_details` array parsing for MiniMax-style structured thinking; `StripThinkTags` fallback for providers without structured reasoning
+- `OpenAiProvider` — `stream_options` (`include_usage`) scoped to OpenAI/Groq only; custom providers no longer receive unsupported options
+- `ProviderPreset.RequiresApiKey` — now returns `true` for `Custom_*` provider types
+- `ProviderFactory.ResolvePdfCapability` — custom providers default to `PdfCapability.TextExtraction`
+
+---
+
 ## v0.2.0
 
 ### Added

@@ -1,5 +1,27 @@
 ﻿# Release Notes — AssistStudio App
 
+## [0.15.0] - 2026-04-10
+
+### Added
+- **Custom OpenAI-compatible providers** — Register any OpenAI-compatible endpoint (Together AI, MiniMax, etc.) with custom base URL and display name. Categorized provider selector (Cloud / Custom / Local / Demo)
+- **MCP Elicitation** — MCP servers can request user input via structured form fields; multi-field selection with batch submit
+- **Tool block details** — Expandable tool blocks showing arguments, result, and execution duration. Tool blocks interleaved with text in correct position
+- **Tool execution indicator** — Color pulse animation on tool headers during execution
+- **Themed tooltips** — Hover tooltips across all chat elements (timestamps show full date+time)
+- **MCP server badge** — Server name badge on tool approval panel for tool origin identification
+
+### Changed
+- Custom provider thinking support — `reasoning_details` parsing and `<think>` tag streaming extraction for MiniMax and similar providers
+- Delta storage migration for tool call messages
+
+### Fixed
+- ThinkingContent persisted through save/load cycle
+- WebView2 ghosting on tab container recycling
+- Image modal constrained to viewport bounds
+- Thinking block targeting and shimmer animation
+
+---
+
 ## [0.14.0] - 2026-04-07
 
 ### Added

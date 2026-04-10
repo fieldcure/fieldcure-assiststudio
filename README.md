@@ -26,7 +26,7 @@ AssistStudio is two things:
 
 ### Providers & Streaming
 - **BYOK (Bring Your Own Key)** — Users supply their own API keys. No proxy, no middleman.
-- **Multi-Provider** — Claude, OpenAI, Gemini, Ollama, and Groq out of the box. Implement `IAiProvider` to add your own.
+- **Multi-Provider** — Claude, OpenAI, Gemini, Ollama, Groq, and any OpenAI-compatible endpoint out of the box. Implement `IAiProvider` to add your own.
 - **Streaming** — Real-time structured event streaming via `IAsyncEnumerable<StreamEvent>` with elapsed time display.
 - **Extended Thinking** — Per-provider thinking/reasoning support (Claude, OpenAI o-series, Ollama native thinking). Configurable via `ThinkingOverride` and `ThinkingBudget`.
 - **Token Tracking** — Input/output token counts exposed after every request.
@@ -73,10 +73,10 @@ AssistStudio is two things:
 
 | Project | NuGet Package | TFM | Key Types |
 |---------|--------------|-----|-----------|
-| **Ai.Providers** | `FieldCure.Ai.Providers` | `net8.0` | `IAiProvider`, `StreamEvent`, `IAssistTool`, `AiRequest`, `AiResponse`, `ChatMessage`, `ProviderPreset`, `McpToolAdapter`, `ImageCompressor`, `IMultiContentTool`, `MediaContent` |
+| **Ai.Providers** | `FieldCure.Ai.Providers` | `net8.0` | `IAiProvider`, `StreamEvent`, `IAssistTool`, `AiRequest`, `AiResponse`, `ChatMessage`, `ProviderPreset`, `CustomProviderConfig`, `McpToolAdapter`, `ImageCompressor`, `IMultiContentTool`, `MediaContent` |
 | **Ai.Execution** | `FieldCure.Ai.Execution` | `net8.0` | `IAgentLoop`, `AgentLoop`, `ISubAgentExecutor`, `SubAgentExecutor`, `AgentLoopContext`, `AgentLoopResult` |
 | **AssistStudio.Core** | `FieldCure.AssistStudio.Core` | `net8.0` | `ISpecialist`, `KnowledgeBase`, `ToolCallExecutor`, `ToolResolver`, `IWorkspaceContext`, `BuiltInServerConfig`, `Profile` |
-| **AssistStudio.Controls** | `FieldCure.AssistStudio.Controls.WinUI` | `net8.0-windows10.0.19041.0`<br>`net9.0-windows10.0.19041.0` | `ChatPanel`, `ComposeBar`, `AttachmentPreviewBar`, `ToolApprovalPanel`, `ChatTheme` |
+| **AssistStudio.Controls** | `FieldCure.AssistStudio.Controls.WinUI` | `net8.0-windows10.0.19041.0`<br>`net9.0-windows10.0.19041.0` | `ChatPanel`, `ComposeBar`, `AttachmentPreviewBar`, `ToolApprovalPanel`, `ToolElicitationPanel`, `ChatTheme` |
 | **AssistStudio** | *(workspace app)* | `net9.0-windows10.0.19041.0` | Reference implementation with settings, MCP server management, sub-agent delegation, schedule, and `PasswordVaultHelper` |
 
 > **Core is platform-agnostic** (`net8.0`). It has no Windows-specific dependencies — you can reference it from a console app, a server, or any .NET project.
@@ -158,8 +158,9 @@ await foreach (var evt in provider.StreamAsync(request))
 | **Gemini** (Google) | Yes | Yes | Yes | Yes | No | Yes |
 | **Ollama** (local) | Yes | Dep. | Dep. | Dep. | think tags | No |
 | **Groq** | Yes | Yes | Yes | Yes | Dep. | Yes |
+| **Custom** (OpenAI-compatible) | Yes | Dep. | Dep. | Dep. | think tags | Dep. |
 
-> OpenAI provider works with any OpenAI-compatible API (Groq, Azure OpenAI, etc.) by setting a custom `baseUrl`.
+> Register any OpenAI-compatible endpoint via `ProviderFactory.RegisterCustomProvider` with a `CustomProviderConfig` (BaseUrl, DisplayName).
 
 ### Implementing a custom provider
 

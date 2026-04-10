@@ -16,7 +16,9 @@
 - **Multimedia Rendering** — MCP image, audio, and video content blocks rendered inline with native controls.
 - **Image Hover Toolbar** — Zoom (popover viewer), save (`FileSavePicker`), and copy buttons on hover over inline images.
 - **Knowledge Archive Selector** — `ComposeBar` flyout for per-conversation KB selection with `kb_id` system prompt hint injection.
-- **Tool Approval** — Inline `ToolApprovalPanel` for user confirmation before tool execution, with expandable JSON arguments preview and user instruction input field.
+- **Tool Approval** — Inline `ToolApprovalPanel` for user confirmation before tool execution, with expandable JSON arguments preview, user instruction input field, and MCP server name badge.
+- **MCP Elicitation** — `ToolElicitationPanel` for MCP server user-input requests with multi-field selection and batch submit.
+- **Tool Block Details** — Expandable tool blocks showing arguments, result, and execution duration with interleave rendering.
 - **Streaming Elapsed Time** — Real-time elapsed timer displayed in `ComposeBar` during streaming responses.
 - **TemplatedControls** — All controls are `TemplatedControl`s with `PART_` conventions. Override `Generic.xaml` to fully customize.
 - **Theming** — Light, Dark, and System themes. Set `Theme="System"` to follow the app theme.

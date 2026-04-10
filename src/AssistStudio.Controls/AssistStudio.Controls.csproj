@@ -9,7 +9,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
-    <Version>0.14.0</Version>
+    <Version>0.15.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
@@ -25,7 +25,7 @@
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;chat;winui;winui3;controls;claude;openai;gemini;ollama;webview2</PackageTags>
-    <PackageReleaseNotes>v0.14.0: MCP multimedia rendering (image/audio/video), image hover toolbar with popover viewer, Knowledge Base selector flyout, tool approval user instruction input, streaming elapsed time, off-UI-thread streaming via Channel.</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.15.0: MCP elicitation UI (ToolElicitationPanel), tool block expandable details (args/result/duration), tool block interleave rendering, custom OpenAI provider UI with categorized combobox, themed data-tooltip system, delta storage migration, WebView2 ghosting fix.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
