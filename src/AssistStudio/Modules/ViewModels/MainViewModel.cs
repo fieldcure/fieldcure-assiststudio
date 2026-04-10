@@ -2,10 +2,9 @@
 using AssistStudio.Models;
 using AssistStudio.Tools;
 using CommunityToolkit.Mvvm.ComponentModel;
+using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Controls;
 using FieldCure.AssistStudio.Models;
-using FieldCure.Ai.Providers.Models;
-using FieldCure.AssistStudio.Tools;
 using System.Collections;
 using System.Collections.ObjectModel;
 
