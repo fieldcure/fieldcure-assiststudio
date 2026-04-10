@@ -91,7 +91,7 @@ public partial class ChatMessage : INotifyPropertyChanged
     }
 
     /// <summary>The UTC timestamp when this message was created.</summary>
-    public DateTime Timestamp { get; }
+    public DateTime Timestamp { get; init; }
 
     /// <summary>File attachments included with this message.</summary>
     public IReadOnlyList<ChatAttachment> Attachments { get; init; }

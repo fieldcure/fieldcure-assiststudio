@@ -346,7 +346,8 @@ public partial class MainViewModel : ObservableObject
                 msg.Id, msg.ParentId, msg.ToolCalls, msg.ToolCallId, msg.ActiveChildId,
                 msg.Id is not null && loadedAttachments?.TryGetValue(msg.Id, out var atts) == true ? atts : null,
                 msg.Id is not null && loadedToolMedia?.TryGetValue(msg.Id, out var tm) == true ? tm : null,
-                msg.ThinkingContent);
+                msg.ThinkingContent,
+                msg.Timestamp);
 
         // Build parent→children map
         var childrenMap = new Dictionary<string, List<SavedMessage>>();
@@ -407,7 +408,7 @@ public partial class MainViewModel : ObservableObject
 
         // First pass: register branch-only messages in the tree (not on the active path)
         foreach (var msg in messages.Where(m => !activePath.Contains(m.Id)))
-            vm.RegisterBranchMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId, msg.Id, msg.ParentId, msg.ToolCalls, msg.ToolCallId, msg.ActiveChildId);
+            vm.RegisterBranchMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId, msg.Id, msg.ParentId, msg.ToolCalls, msg.ToolCallId, msg.ActiveChildId, msg.Timestamp);
 
         // Second pass: add active path messages in tree-walk order (parent→child chain)
         // File order may differ from active path order when branches are interleaved.

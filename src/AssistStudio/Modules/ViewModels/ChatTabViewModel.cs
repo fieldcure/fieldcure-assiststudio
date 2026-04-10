@@ -214,13 +214,13 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Messages queued before the ChatPanel is available (during conversation loading).
     /// </summary>
-    private readonly List<(ChatRole Role, string Content, string? ProviderName, string? ModelId, string? Id, string? ParentId, IReadOnlyList<ToolCall>? ToolCalls, string? ToolCallId, string? ActiveChildId, IReadOnlyList<ChatAttachment>? Attachments, IReadOnlyList<MediaContent>? ToolMedia, string? ThinkingContent)> _pendingMessages = [];
+    private readonly List<(ChatRole Role, string Content, string? ProviderName, string? ModelId, string? Id, string? ParentId, IReadOnlyList<ToolCall>? ToolCalls, string? ToolCallId, string? ActiveChildId, IReadOnlyList<ChatAttachment>? Attachments, IReadOnlyList<MediaContent>? ToolMedia, string? ThinkingContent, DateTime? Timestamp)> _pendingMessages = [];
 
     /// <summary>
     /// Branch-only messages queued before the ChatPanel is available.
     /// These are registered in the tree but not added to the active path.
     /// </summary>
-    private readonly List<(ChatRole Role, string Content, string? ProviderName, string? ModelId, string? Id, string? ParentId, IReadOnlyList<ToolCall>? ToolCalls, string? ToolCallId, string? ActiveChildId)> _pendingBranchMessages = [];
+    private readonly List<(ChatRole Role, string Content, string? ProviderName, string? ModelId, string? Id, string? ParentId, IReadOnlyList<ToolCall>? ToolCalls, string? ToolCallId, string? ActiveChildId, DateTime? Timestamp)> _pendingBranchMessages = [];
 
     #endregion
 
@@ -393,19 +393,19 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             Specialists.SpecialistRegistry.Instance.TryGet(name, out var s) ? s.DisplayName : null;
 
         // Flush branch messages first (tree-only, not active path)
-        foreach (var (role, content, providerName, modelId, id, parentId, toolCalls, toolCallId, activeChildId) in _pendingBranchMessages)
+        foreach (var (role, content, providerName, modelId, id, parentId, toolCalls, toolCallId, activeChildId, timestamp) in _pendingBranchMessages)
         {
             var msg = id is not null
-                ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = modelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId }
-                : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = modelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId };
+                ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = modelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Timestamp = timestamp ?? DateTime.UtcNow }
+                : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = modelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Timestamp = timestamp ?? DateTime.UtcNow };
             panel.RegisterBranchMessage(msg);
         }
         _pendingBranchMessages.Clear();
 
         // Flush active path messages
-        foreach (var (role, content, providerName, modelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia, thinkingContent) in _pendingMessages)
+        foreach (var (role, content, providerName, modelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia, thinkingContent, timestamp) in _pendingMessages)
         {
-            panel.AddRestoredMessage(role, content, providerName, modelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia, thinkingContent);
+            panel.AddRestoredMessage(role, content, providerName, modelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia, thinkingContent, timestamp);
         }
         var hadPending = _pendingMessages.Count > 0;
         _pendingMessages.Clear();
@@ -451,12 +451,13 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         string? activeChildId = null,
         IReadOnlyList<ChatAttachment>? attachments = null,
         IReadOnlyList<MediaContent>? toolMedia = null,
-        string? thinkingContent = null)
+        string? thinkingContent = null,
+        DateTime? timestamp = null)
     {
         if (Panel is not null)
-            Panel.AddRestoredMessage(role, content, providerName, providerModelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia, thinkingContent);
+            Panel.AddRestoredMessage(role, content, providerName, providerModelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia, thinkingContent, timestamp);
         else
-            _pendingMessages.Add((role, content, providerName, providerModelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia, thinkingContent));
+            _pendingMessages.Add((role, content, providerName, providerModelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia, thinkingContent, timestamp));
     }
 
     /// <summary>
@@ -466,18 +467,19 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     public void RegisterBranchMessage(ChatRole role, string content, string? providerName, string? providerModelId,
         string? id = null, string? parentId = null,
         IReadOnlyList<ToolCall>? toolCalls = null, string? toolCallId = null,
-        string? activeChildId = null)
+        string? activeChildId = null,
+        DateTime? timestamp = null)
     {
         if (Panel is not null)
         {
             var msg = id is not null
-                ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId }
-                : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId };
+                ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Timestamp = timestamp ?? DateTime.UtcNow }
+                : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Timestamp = timestamp ?? DateTime.UtcNow };
             Panel.RegisterBranchMessage(msg);
         }
         else
         {
-            _pendingBranchMessages.Add((role, content, providerName, providerModelId, id, parentId, toolCalls, toolCallId, activeChildId));
+            _pendingBranchMessages.Add((role, content, providerName, providerModelId, id, parentId, toolCalls, toolCallId, activeChildId, timestamp));
         }
     }
 

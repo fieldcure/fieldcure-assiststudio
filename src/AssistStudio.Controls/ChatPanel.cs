@@ -1277,11 +1277,12 @@ public sealed partial class ChatPanel : Control, IDisposable
         string? activeChildId = null,
         IReadOnlyList<ChatAttachment>? attachments = null,
         IReadOnlyList<MediaContent>? toolMedia = null,
-        string? thinkingContent = null)
+        string? thinkingContent = null,
+        DateTime? timestamp = null)
     {
         var msg = id is not null
-            ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, ThinkingContent = thinkingContent }
-            : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, ThinkingContent = thinkingContent };
+            ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, ThinkingContent = thinkingContent, Timestamp = timestamp ?? DateTime.UtcNow }
+            : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, ThinkingContent = thinkingContent, Timestamp = timestamp ?? DateTime.UtcNow };
         RegisterInTree(msg);
         _messages.Add(msg);
     }
