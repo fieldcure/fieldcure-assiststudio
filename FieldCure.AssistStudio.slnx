@@ -5,6 +5,7 @@
   <Configuration Solution="Release|x64" />
   <Configuration Solution="Release|arm64" />
   <Folder Name="/docs/">
+    <File Path="docs/dependencies.md" />
     <File Path="README.md" />
     <File Path="RELEASENOTES.App.md" />
     <File Path="RELEASENOTES.Controls.md" />

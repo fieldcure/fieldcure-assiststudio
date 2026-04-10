@@ -81,6 +81,8 @@ AssistStudio is two things:
 
 > **Core is platform-agnostic** (`net8.0`). It has no Windows-specific dependencies — you can reference it from a console app, a server, or any .NET project.
 
+See [Dependency Graph](docs/dependencies.md) for the full cross-repository package dependency map.
+
 ---
 
 ## Quick Start
