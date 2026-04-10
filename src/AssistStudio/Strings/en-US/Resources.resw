@@ -851,6 +851,9 @@
   <data name="Profiles_WorkspaceSuppressHint" xml:space="preserve">
     <value>Essentials file tools are replaced by Workspace when enabled.</value>
   </data>
+  <data name="Mcp_ServersConnecting" xml:space="preserve">
+    <value>Connecting to {0} MCP server(s)…</value>
+  </data>
   <data name="Mcp_ServersConnected" xml:space="preserve">
     <value>{0} MCP server(s) connected</value>
   </data>

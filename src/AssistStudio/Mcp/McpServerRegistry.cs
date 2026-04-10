@@ -105,6 +105,12 @@ public class McpServerRegistry : IAsyncDisposable
         }
         finally { _lock.Release(); }
 
+        // Show "connecting" notification while servers start (first launch may be slow)
+        var connectingToken = NotificationCenter.Instance.PostPersistent(
+            InfoBarSeverity.Informational,
+            string.Format(_loader.GetString("Mcp_ServersConnecting"), configList.Count),
+            string.Empty);
+
         // Phase 2: Connect all in parallel (no lock — I/O bound)
         var tasks = connections.Select(async x =>
         {
@@ -127,6 +133,8 @@ public class McpServerRegistry : IAsyncDisposable
 
         var results = await Task.WhenAll(tasks);
         ToolsChanged?.Invoke(this, EventArgs.Empty);
+
+        NotificationCenter.Instance.Dismiss(connectingToken);
 
         var errors = results.Where(r => r.Error is not null).Select(r => $"{r.Name}: {r.Error}").ToList();
 

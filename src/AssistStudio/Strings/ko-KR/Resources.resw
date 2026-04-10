@@ -851,6 +851,9 @@
   <data name="Profiles_WorkspaceSuppressHint" xml:space="preserve">
     <value>Workspace 활성 시 기본 도구의 파일 기능은 워크스페이스로 대체됩니다.</value>
   </data>
+  <data name="Mcp_ServersConnecting" xml:space="preserve">
+    <value>MCP 서버 {0}개 연결 중…</value>
+  </data>
   <data name="Mcp_ServersConnected" xml:space="preserve">
     <value>MCP 서버 {0}개 연결됨</value>
   </data>
