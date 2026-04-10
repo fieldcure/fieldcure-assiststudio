@@ -220,7 +220,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// Branch-only messages queued before the ChatPanel is available.
     /// These are registered in the tree but not added to the active path.
     /// </summary>
-    private readonly List<(ChatRole Role, string Content, string? ProviderName, string? ModelId, string? Id, string? ParentId, IReadOnlyList<ToolCall>? ToolCalls, string? ToolCallId)> _pendingBranchMessages = [];
+    private readonly List<(ChatRole Role, string Content, string? ProviderName, string? ModelId, string? Id, string? ParentId, IReadOnlyList<ToolCall>? ToolCalls, string? ToolCallId, string? ActiveChildId)> _pendingBranchMessages = [];
 
     #endregion
 
@@ -393,11 +393,11 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             Specialists.SpecialistRegistry.Instance.TryGet(name, out var s) ? s.DisplayName : null;
 
         // Flush branch messages first (tree-only, not active path)
-        foreach (var (role, content, providerName, modelId, id, parentId, toolCalls, toolCallId) in _pendingBranchMessages)
+        foreach (var (role, content, providerName, modelId, id, parentId, toolCalls, toolCallId, activeChildId) in _pendingBranchMessages)
         {
             var msg = id is not null
-                ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = modelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId }
-                : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = modelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId };
+                ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = modelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId }
+                : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = modelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId };
             panel.RegisterBranchMessage(msg);
         }
         _pendingBranchMessages.Clear();
@@ -465,18 +465,19 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// </summary>
     public void RegisterBranchMessage(ChatRole role, string content, string? providerName, string? providerModelId,
         string? id = null, string? parentId = null,
-        IReadOnlyList<ToolCall>? toolCalls = null, string? toolCallId = null)
+        IReadOnlyList<ToolCall>? toolCalls = null, string? toolCallId = null,
+        string? activeChildId = null)
     {
         if (Panel is not null)
         {
             var msg = id is not null
-                ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId }
-                : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId };
+                ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId }
+                : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId };
             Panel.RegisterBranchMessage(msg);
         }
         else
         {
-            _pendingBranchMessages.Add((role, content, providerName, providerModelId, id, parentId, toolCalls, toolCallId));
+            _pendingBranchMessages.Add((role, content, providerName, providerModelId, id, parentId, toolCalls, toolCallId, activeChildId));
         }
     }
 
