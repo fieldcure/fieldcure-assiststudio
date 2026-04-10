@@ -311,9 +311,12 @@ internal partial class WebViewChatRenderer
     /// <summary>
     /// Finalizes an assistant message with the full markdown content, truncation status, and token count.
     /// </summary>
-    public Task FinalizeMessageAsync(string id, string fullMarkdown, bool truncated = false, int tokenCount = 0)
+    public Task FinalizeMessageAsync(string id, string fullMarkdown, bool truncated = false, int tokenCount = 0,
+        string? timestamp = null, double? elapsedSeconds = null)
     {
-        var script = $"window.assistChat.finalizeMessage({Js(id)}, {Js(fullMarkdown)}, {(truncated ? "true" : "false")}, {tokenCount})";
+        var tsArg = timestamp is not null ? Js(timestamp) : "null";
+        var elapsedArg = elapsedSeconds.HasValue ? elapsedSeconds.Value.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) : "null";
+        var script = $"window.assistChat.finalizeMessage({Js(id)}, {Js(fullMarkdown)}, {(truncated ? "true" : "false")}, {tokenCount}, {tsArg}, {elapsedArg})";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 

@@ -1278,11 +1278,13 @@ public sealed partial class ChatPanel : Control, IDisposable
         IReadOnlyList<ChatAttachment>? attachments = null,
         IReadOnlyList<MediaContent>? toolMedia = null,
         string? thinkingContent = null,
-        DateTime? timestamp = null)
+        DateTime? timestamp = null,
+        double? elapsedSeconds = null,
+        int? tokenCount = null)
     {
         var msg = id is not null
-            ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, ThinkingContent = thinkingContent, Timestamp = timestamp ?? DateTime.UtcNow }
-            : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, ThinkingContent = thinkingContent, Timestamp = timestamp ?? DateTime.UtcNow };
+            ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, ThinkingContent = thinkingContent, Timestamp = timestamp ?? DateTime.UtcNow, ElapsedSeconds = elapsedSeconds, TokenCount = tokenCount }
+            : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, ThinkingContent = thinkingContent, Timestamp = timestamp ?? DateTime.UtcNow, ElapsedSeconds = elapsedSeconds, TokenCount = tokenCount };
         RegisterInTree(msg);
         _messages.Add(msg);
     }
@@ -1531,10 +1533,12 @@ public sealed partial class ChatPanel : Control, IDisposable
         _streamingCts = new CancellationTokenSource();
         var ct = _streamingCts.Token;
 
+        var elapsedSw = System.Diagnostics.Stopwatch.StartNew();
         try
         {
             {
                 var result = await StreamAndExecuteAsync(assistantMessage, ct);
+                assistantMessage.TokenCount = result.Usage?.TotalTokens;
                 await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content,
                     result.IsTruncated, result.Usage?.TotalTokens ?? 0);
                 DiagnosticLogger.LogInfo($"[Chat] Response complete — tokens={result.Usage?.TotalTokens ?? 0}, truncated={result.IsTruncated}");
@@ -1565,6 +1569,8 @@ public sealed partial class ChatPanel : Control, IDisposable
         }
         finally
         {
+            elapsedSw.Stop();
+            assistantMessage.ElapsedSeconds = elapsedSw.Elapsed.TotalSeconds;
             assistantMessage.IsStreaming = false;
             if (_inputArea is not null)
             {
@@ -3505,11 +3511,14 @@ public sealed partial class ChatPanel : Control, IDisposable
             // Tool messages are consumed above via ToolCallId matching — skip.
         }
 
-        // Finalize with remaining text
+        // Finalize with remaining text, passing saved timestamp, elapsed time, and token count
         var finalSegment = (root.Content?.Length > consumedLength)
             ? root.Content[consumedLength..]
             : "";
-        await _renderer.FinalizeMessageAsync(root.Id, finalSegment);
+        await _renderer.FinalizeMessageAsync(root.Id, finalSegment,
+            tokenCount: root.TokenCount ?? 0,
+            timestamp: root.Timestamp.ToString("O"),
+            elapsedSeconds: root.ElapsedSeconds);
     }
 
     /// <summary>
@@ -3607,9 +3616,11 @@ public sealed partial class ChatPanel : Control, IDisposable
         _streamingCts = new CancellationTokenSource();
         var ct = _streamingCts.Token;
 
+        var elapsedSw = System.Diagnostics.Stopwatch.StartNew();
         try
         {
             var result = await StreamAndExecuteAsync(assistantMessage, ct);
+            assistantMessage.TokenCount = result.Usage?.TotalTokens;
 
             await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content, result.IsTruncated, result.Usage?.TotalTokens ?? 0);
 
@@ -3635,6 +3646,8 @@ public sealed partial class ChatPanel : Control, IDisposable
         }
         finally
         {
+            elapsedSw.Stop();
+            assistantMessage.ElapsedSeconds = elapsedSw.Elapsed.TotalSeconds;
             assistantMessage.IsStreaming = false;
             if (_inputArea is not null)
             {

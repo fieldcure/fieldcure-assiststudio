@@ -2067,7 +2067,7 @@
             }
         },
 
-        finalizeMessage: function(id, fullText, truncated, tokenCount) {
+        finalizeMessage: function(id, fullText, truncated, tokenCount, timestamp, elapsedSeconds) {
             // Clean up progressive state
             var ps = _progressiveState[id];
             if (ps) clearTimeout(ps.timer);
@@ -2116,7 +2116,9 @@
 
             var ts = msg.querySelector('.message-timestamp');
             if (ts) {
-                var timeStr = formatTimestamp(new Date().toISOString());
+                // Use provided timestamp (restored conversation) or current time (live streaming)
+                var isoTime = timestamp || new Date().toISOString();
+                var timeStr = formatTimestamp(isoTime);
                 var parts = [];
 
                 if (tokenCount && tokenCount > 0) {
@@ -2126,7 +2128,11 @@
                     parts.push(formatted + ' ' + _L.tokens);
                 }
 
-                if (msg.dataset.streamStart) {
+                if (elapsedSeconds != null && elapsedSeconds > 0) {
+                    // Restored conversation — use provided elapsed time
+                    parts.push(formatElapsed(elapsedSeconds, true));
+                } else if (msg.dataset.streamStart) {
+                    // Live streaming — calculate from stream start
                     var sec = (Date.now() - parseInt(msg.dataset.streamStart)) / 1000;
                     parts.push(formatElapsed(sec, true));
                     delete msg.dataset.streamStart;
@@ -2134,7 +2140,7 @@
 
                 parts.push(timeStr);
                 ts.textContent = parts.join(' \u00b7 ');
-                ts.setAttribute('data-tooltip', formatFullTimestamp(new Date().toISOString()));
+                ts.setAttribute('data-tooltip', formatFullTimestamp(isoTime));
             }
             doScroll('smooth');
         },

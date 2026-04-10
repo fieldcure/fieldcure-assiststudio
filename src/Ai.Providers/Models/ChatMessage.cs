@@ -132,6 +132,18 @@ public partial class ChatMessage : INotifyPropertyChanged
         set => SetField(ref _thinkingContent, value);
     }
 
+    /// <summary>
+    /// Elapsed time in seconds for generating this assistant response.
+    /// Measured from streaming start to completion. Null when not measured.
+    /// </summary>
+    public double? ElapsedSeconds { get; set; }
+
+    /// <summary>
+    /// Total token count for this assistant response (input + output).
+    /// Null for non-assistant messages or when not reported by the provider.
+    /// </summary>
+    public int? TokenCount { get; set; }
+
     #endregion
 
     #region Tree Properties

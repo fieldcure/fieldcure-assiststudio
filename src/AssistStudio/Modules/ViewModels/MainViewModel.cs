@@ -347,7 +347,9 @@ public partial class MainViewModel : ObservableObject
                 msg.Id is not null && loadedAttachments?.TryGetValue(msg.Id, out var atts) == true ? atts : null,
                 msg.Id is not null && loadedToolMedia?.TryGetValue(msg.Id, out var tm) == true ? tm : null,
                 msg.ThinkingContent,
-                msg.Timestamp);
+                msg.Timestamp,
+                msg.ElapsedSeconds,
+                msg.TokenCount);
 
         // Build parent→children map
         var childrenMap = new Dictionary<string, List<SavedMessage>>();

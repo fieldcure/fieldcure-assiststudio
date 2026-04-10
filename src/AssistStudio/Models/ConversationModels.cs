@@ -98,6 +98,20 @@ public class SavedMessage
     /// <summary>Media files associated with this message (images, audio, video).</summary>
     public List<MediaReference>? Media { get; set; }
 
+    /// <summary>
+    /// Elapsed time in seconds for generating this assistant response.
+    /// Null for non-assistant messages or when not measured.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? ElapsedSeconds { get; set; }
+
+    /// <summary>
+    /// Total token count for this assistant response (input + output).
+    /// Null for non-assistant messages or when not reported by the provider.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? TokenCount { get; set; }
+
     #endregion
 }
 

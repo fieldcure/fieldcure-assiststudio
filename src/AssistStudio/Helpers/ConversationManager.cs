@@ -124,6 +124,8 @@ public static class ConversationManager
                 ParentId = m.ParentId,
                 ActiveChildId = m.ActiveChildId,
                 ThinkingContent = m.ThinkingContent,
+                ElapsedSeconds = m.ElapsedSeconds,
+                TokenCount = m.TokenCount,
             };
 
             // Persist user image attachments
