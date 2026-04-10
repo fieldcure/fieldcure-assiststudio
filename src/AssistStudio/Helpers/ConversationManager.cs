@@ -376,7 +376,9 @@ public static class ConversationManager
         _debounceCts = new CancellationTokenSource();
         var ct = _debounceCts.Token;
 
-        // Capture message snapshot on the UI thread
+        // Capture message list reference (not a snapshot of field values).
+        // ChatMessage objects are shared references — SaveToFileAsync reads
+        // ActiveChildId etc. at serialization time, picking up the latest values.
         var messagesCopy = messages.ToList();
 
         _pendingAutoSave = Task.Run(async () =>
@@ -407,6 +409,15 @@ public static class ConversationManager
                 _saveLock.Release();
             }
         });
+    }
+
+    /// <summary>
+    /// Cancels any pending auto-save. Call after an explicit Save/SaveAs
+    /// to prevent a stale auto-save from overwriting the just-saved file.
+    /// </summary>
+    public static void CancelPendingAutoSave()
+    {
+        _debounceCts?.Cancel();
     }
 
     /// <summary>

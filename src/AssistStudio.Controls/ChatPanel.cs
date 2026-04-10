@@ -1703,6 +1703,19 @@ public sealed partial class ChatPanel : Control, IDisposable
         };
         RegisterInTree(edited);
 
+        // Explicitly point the parent's active child to the new branch.
+        // RegisterInTree does this via _messages lookup, but the parent may be
+        // a tool-internal message deep in a tool loop chain. By searching the tree
+        // directly we ensure the pointer is set regardless of _messages state.
+        if (edited.ParentId is not null)
+        {
+            var parentInTree = _childrenMap.Values
+                .SelectMany(v => v)
+                .FirstOrDefault(m => m.Id == edited.ParentId);
+            if (parentInTree is not null)
+                parentInTree.ActiveChildId = edited.Id;
+        }
+
         // Switch active path: remove from original's position onward
         var idx = _messages.IndexOf(original);
         if (idx < 0) return;
@@ -1710,8 +1723,11 @@ public sealed partial class ChatPanel : Control, IDisposable
             _messages.RemoveAt(_messages.Count - 1);
         _messages.Add(edited);
 
-        // Update renderer: remove old messages, render new branch with navigator
-        var removeAfterId = idx > 0 ? _messages[idx - 1].Id : null;
+        // Update renderer: remove old messages, render new branch with navigator.
+        // Tool loop messages (Assistant+ToolCalls, Tool results) are rendered inline
+        // within a single Assistant bubble — they don't have their own DOM element.
+        // Walk backwards to find the root Assistant bubble that actually exists in DOM.
+        var removeAfterId = FindRenderedMessageBefore(idx);
         if (removeAfterId is not null)
             await _renderer.RemoveMessagesAfterAsync(removeAfterId);
         else
@@ -1720,9 +1736,6 @@ public sealed partial class ChatPanel : Control, IDisposable
         await _renderer.AppendUserMessageAsync(
             edited.Id, edited.Content, edited.Timestamp.ToString("O"),
             edited.Attachments, edited.SiblingIndex, edited.SiblingCount);
-
-        // Also update the branch nav on the original message's siblings (if they're visible in other views)
-        // Not needed here since we re-rendered from the branch point
 
         // Stream new response
         await StreamAssistantResponseAsync(edited);
@@ -1759,8 +1772,10 @@ public sealed partial class ChatPanel : Control, IDisposable
         foreach (var msg in path)
             _messages.Add(msg);
 
-        // Re-render from the branch point
-        var removeAfterId = idx > 0 ? _messages[idx - 1].Id : null;
+        // Re-render from the branch point.
+        // Tool loop messages don't have their own DOM element — walk back to the
+        // root Assistant bubble that is actually rendered.
+        var removeAfterId = FindRenderedMessageBefore(idx);
         if (removeAfterId is not null)
             await _renderer.RemoveMessagesAfterAsync(removeAfterId);
         else
@@ -2481,6 +2496,30 @@ public sealed partial class ChatPanel : Control, IDisposable
             var parent = _messages.FirstOrDefault(m => m.Id == msg.ParentId);
             if (parent is not null) parent.ActiveChildId = msg.Id;
         }
+    }
+
+    /// <summary>
+    /// Finds the ID of the last message before <paramref name="idx"/> in <see cref="_messages"/>
+    /// that has its own DOM element. Tool-internal messages (tool results, assistant tool-call
+    /// requests) are rendered inline within the root assistant bubble and have no independent
+    /// DOM node. This walks backwards to find a User or root Assistant message whose
+    /// <c>msg-{id}</c> element actually exists in the WebView2 DOM.
+    /// Returns <c>null</c> if no rendered message precedes the given index (clear entire chat).
+    /// </summary>
+    private string? FindRenderedMessageBefore(int idx)
+    {
+        for (var i = idx - 1; i >= 0; i--)
+        {
+            var m = _messages[i];
+            // User messages always have their own DOM element
+            if (m.Role == ChatRole.User) return m.Id;
+            // Root assistant messages (no ToolCalls, or the initial streaming message) have DOM elements.
+            // Tool-internal assistant messages (with ToolCalls) and Tool result messages
+            // are rendered inline within the root assistant bubble above them.
+            if (m.Role == ChatRole.Assistant && m.ToolCalls is not { Count: > 0 })
+                return m.Id;
+        }
+        return null;
     }
 
     /// <summary>
