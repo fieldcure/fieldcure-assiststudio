@@ -48,6 +48,25 @@ public sealed class NotificationCenter
     public void Post(string title, string message = "", int durationMs = 3000)
         => _delegate?.PostNotification(InfoBarSeverity.Informational, title, message, durationMs);
 
+    /// <summary>
+    /// Posts a persistent notification that can be updated or dismissed by token.
+    /// Returns a token used to update or dismiss the notification.
+    /// </summary>
+    public Guid PostPersistent(InfoBarSeverity severity, string title, string message)
+        => _delegate?.PostPersistentNotification(severity, title, message) ?? Guid.Empty;
+
+    /// <summary>
+    /// Updates an existing persistent notification.
+    /// </summary>
+    public void Update(Guid token, string? title = null, string? message = null, InfoBarSeverity? severity = null)
+        => _delegate?.UpdateNotification(token, title, message, severity);
+
+    /// <summary>
+    /// Dismisses a persistent notification.
+    /// </summary>
+    public void Dismiss(Guid token)
+        => _delegate?.DismissNotification(token);
+
     #endregion
 }
 
@@ -60,4 +79,19 @@ public interface INotificationDelegate
     /// Displays a notification with the specified parameters.
     /// </summary>
     void PostNotification(InfoBarSeverity severity, string title, string message, int durationMs);
+
+    /// <summary>
+    /// Posts a persistent notification that stays until dismissed. Returns a tracking token.
+    /// </summary>
+    Guid PostPersistentNotification(InfoBarSeverity severity, string title, string message);
+
+    /// <summary>
+    /// Updates an existing persistent notification identified by token.
+    /// </summary>
+    void UpdateNotification(Guid token, string? title, string? message, InfoBarSeverity? severity);
+
+    /// <summary>
+    /// Dismisses a persistent notification identified by token.
+    /// </summary>
+    void DismissNotification(Guid token);
 }

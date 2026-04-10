@@ -20,6 +20,7 @@ public sealed partial class MainWindow : INotificationDelegate
     private DispatcherTimer? _notificationTimer;
     private Storyboard? _slideIn;
     private Storyboard? _slideOut;
+    private Guid _activeToken;
 
     #endregion
 
@@ -71,6 +72,19 @@ public sealed partial class MainWindow : INotificationDelegate
         _slideOut.Begin();
     }
 
+    private void ShowNotification(InfoBarSeverity severity, string title, string message)
+    {
+        _slideOut?.Stop();
+        _notificationTimer?.Stop();
+
+        StatusNotification.Severity = severity;
+        StatusNotification.Title = title;
+        StatusNotification.Message = message;
+        StatusNotification.IsOpen = true;
+
+        _slideIn?.Begin();
+    }
+
     #endregion
 
     #region Event Handlers
@@ -78,12 +92,14 @@ public sealed partial class MainWindow : INotificationDelegate
     private void NotificationTimer_Tick(object? sender, object e)
     {
         _notificationTimer?.Stop();
+        _activeToken = Guid.Empty;
         DismissNotification();
     }
 
     private void StatusNotification_Closed(InfoBar sender, InfoBarClosedEventArgs args)
     {
         _notificationTimer?.Stop();
+        _activeToken = Guid.Empty;
     }
 
     private void OnSlideOutCompleted(object? sender, object e)
@@ -98,22 +114,43 @@ public sealed partial class MainWindow : INotificationDelegate
     /// <inheritdoc />
     public void PostNotification(InfoBarSeverity severity, string title, string message, int durationMs)
     {
-        // Stop any in-progress animation/timer
-        _slideOut?.Stop();
-        _notificationTimer?.Stop();
-
-        StatusNotification.Severity = severity;
-        StatusNotification.Title = title;
-        StatusNotification.Message = message;
-        StatusNotification.IsOpen = true;
-
-        // Slide in from bottom
-        _slideIn?.Begin();
+        _activeToken = Guid.Empty;
+        ShowNotification(severity, title, message);
 
         if (_notificationTimer is null) return;
 
         _notificationTimer.Interval = TimeSpan.FromMilliseconds(durationMs);
         _notificationTimer.Start();
+    }
+
+    /// <inheritdoc />
+    public Guid PostPersistentNotification(InfoBarSeverity severity, string title, string message)
+    {
+        _activeToken = Guid.NewGuid();
+        ShowNotification(severity, title, message);
+        return _activeToken;
+    }
+
+    /// <inheritdoc />
+    public void UpdateNotification(Guid token, string? title, string? message, InfoBarSeverity? severity)
+    {
+        if (token == Guid.Empty || token != _activeToken) return;
+
+        if (title is not null)
+            StatusNotification.Title = title;
+        if (message is not null)
+            StatusNotification.Message = message;
+        if (severity is not null)
+            StatusNotification.Severity = severity.Value;
+    }
+
+    /// <inheritdoc />
+    public void DismissNotification(Guid token)
+    {
+        if (token == Guid.Empty || token != _activeToken) return;
+
+        _activeToken = Guid.Empty;
+        DismissNotification();
     }
 
     #endregion

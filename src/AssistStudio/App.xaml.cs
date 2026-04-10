@@ -236,13 +236,11 @@ public partial class App : Application
                 ? McpRegistry.ConnectAllAsync(configs)
                 : Task.FromResult<IReadOnlyList<string>>([]);
 
-            // Ensure built-in servers are installed/updated BEFORE starting them.
-            // This prevents "Access Denied" errors when dotnet tool update tries
-            // to remove exe files that are locked by running server processes.
-            try { await BuiltInServerHelper.EnsureInstalledAsync(); }
-            catch (Exception ex) { LoggingService.LogWarning($"[BuiltIn] Update check failed: {ex.Message}"); }
+            // Install missing tools + apply pending updates (fast path: typically 0ms)
+            try { await BuiltInServerHelper.InitializeToolsAsync(); }
+            catch (Exception ex) { LoggingService.LogWarning($"[BuiltIn] Initialization failed: {ex.Message}"); }
 
-            // Now start built-in servers (filesystem is per-tab, skip here)
+            // Start built-in servers (filesystem is per-tab, skip here)
             var builtInConfigs = AppSettings.BuiltInServers;
             var builtInTasks = builtInConfigs
                 .Where(kv => kv.Key != BuiltInServerHelper.FilesystemKey
@@ -250,6 +248,9 @@ public partial class App : Application
                              && (BuiltInServerHelper.IsSharedServer(kv.Key) || kv.Value.Folders.Count > 0))
                 .Select(kv => McpRegistry.ConnectBuiltInAsync(kv.Key, kv.Value));
             await Task.WhenAll(builtInTasks);
+
+            // Background: check NuGet for newer versions (fire-and-forget)
+            _ = Task.Run(BuiltInServerHelper.CheckForUpdatesInBackgroundAsync);
 
             // Report external server connection errors
             var errors = await externalTask;
