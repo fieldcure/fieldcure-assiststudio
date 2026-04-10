@@ -58,12 +58,6 @@ public partial class App : Application
         DocumentParserFactoryExtensions.AddPdfSupport();
         ConversationManager.Initialize(ApplicationData.Current.LocalFolder.Path);
 
-        // Initialize media storage for conversation images
-        var appDataPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "FieldCure", "AssistStudio");
-        MediaStore.Initialize(appDataPath);
-
         // Clean up leftover temp media from previous sessions (e.g. abnormal shutdown)
         ChatPanel.CleanupTempMedia();
         await LoggingService.InitializeAsync(ApplicationData.Current.LocalFolder.Path);

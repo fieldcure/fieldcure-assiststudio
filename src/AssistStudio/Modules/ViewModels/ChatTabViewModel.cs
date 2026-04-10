@@ -228,10 +228,23 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// Notifies the UI that the tab icon source may have changed when dirty state changes.
+    /// Triggers debounced auto-save when the conversation becomes dirty.
     /// </summary>
     partial void OnIsDirtyChanged(bool value)
     {
         OnPropertyChanged(nameof(TabIconSource));
+
+        if (value)
+        {
+            var messages = GetAllMessages();
+            if (messages.Count > 0)
+            {
+                ConversationId ??= Guid.NewGuid().ToString("N");
+                ConversationManager.ScheduleAutoSave(
+                    FilePath, Title, CurrentPreset?.Name, messages,
+                    GetActiveRootChildId(), GetBuiltInServers(), ConversationId);
+            }
+        }
     }
 
     /// <summary>
@@ -487,12 +500,12 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// Gets the built-in server configurations for this conversation (workspace folders, archive folder).
-    /// Used when saving the conversation to .astd file.
+    /// Used when saving the conversation to .astx file.
     /// </summary>
     public Dictionary<string, BuiltInServerConfig>? GetBuiltInServers() => _builtInServers;
 
     /// <summary>
-    /// Sets the built-in server configurations (used when loading from .astd file).
+    /// Sets the built-in server configurations (used when loading from .astx file).
     /// </summary>
     public void SetBuiltInServers(Dictionary<string, BuiltInServerConfig>? servers) => _builtInServers = servers;
 

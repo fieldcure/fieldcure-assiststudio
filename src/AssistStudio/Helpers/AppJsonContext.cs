@@ -21,6 +21,7 @@ namespace AssistStudio.Helpers;
 [JsonSerializable(typeof(List<McpServerConfig>))]
 [JsonSerializable(typeof(List<CustomProviderConfig>))]
 [JsonSerializable(typeof(Dictionary<string, BuiltInServerConfig>))]
+[JsonSerializable(typeof(ManifestData))]
 public partial class AppJsonContext : JsonSerializerContext
 {
 }
@@ -33,6 +34,7 @@ public partial class AppJsonContext : JsonSerializerContext
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     Converters = [typeof(JsonStringEnumConverter<ChatRole>)])]
 [JsonSerializable(typeof(ConversationData))]
+[JsonSerializable(typeof(ManifestData))]
 public partial class IndentedJsonContext : JsonSerializerContext
 {
 }

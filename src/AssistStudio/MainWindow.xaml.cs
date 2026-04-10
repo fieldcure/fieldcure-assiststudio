@@ -430,11 +430,11 @@ public sealed partial class MainWindow : Window
         var file = await picker.PickSingleFileAsync();
         if (file is null) return;
 
-        var data = await ConversationManager.LoadConversationAsync(file.Path);
-        if (data is not null)
+        var result = await ConversationManager.LoadConversationAsync(file.Path);
+        if (result is not null)
         {
-            LoggingService.LogInfo($"[File] Load: {Path.GetFileName(file.Path)}, messages={data.Messages.Count}");
-            await ViewModel.LoadConversation(data, file.Path);
+            LoggingService.LogInfo($"[File] Load: {Path.GetFileName(file.Path)}, messages={result.Conversation.Messages.Count}");
+            await ViewModel.LoadConversation(result, file.Path);
             AppSettings.AddRecentFile(file.Path);
         }
     }
@@ -480,10 +480,10 @@ public sealed partial class MainWindow : Window
             var path = filePath; // capture for lambda
             item.Click += async (_, _) =>
             {
-                var data = await ConversationManager.LoadConversationAsync(path);
-                if (data is not null)
+                var result = await ConversationManager.LoadConversationAsync(path);
+                if (result is not null)
                 {
-                    await ViewModel.LoadConversation(data, path);
+                    await ViewModel.LoadConversation(result, path);
                     AppSettings.AddRecentFile(path);
                 }
             };
@@ -579,6 +579,7 @@ public sealed partial class MainWindow : Window
     private async Task CloseAppAsync()
     {
         _appWindow!.Hide();
+        await ConversationManager.FlushAutoSaveAsync();
         await ShutdownMcpServersAsync();
         LoggingService.LogInfo("[App] Exiting process...");
         ExitProcess(0);
@@ -660,11 +661,11 @@ public sealed partial class MainWindow : Window
         if (dirtyTabs.Count == 0)
         {
             _appWindow!.Hide();
+            await ConversationManager.FlushAutoSaveAsync();
             await ShutdownMcpServersAsync();
             ChatPanel.CleanupTempMedia();
-            LoggingService.LogInfo("[App] Calling Environment.Exit(0)...");
             LoggingService.LogInfo("[App] Exiting process...");
-        ExitProcess(0);
+            ExitProcess(0);
             return;
         }
 
@@ -700,6 +701,7 @@ public sealed partial class MainWindow : Window
         }
 
         _appWindow!.Hide();
+        await ConversationManager.FlushAutoSaveAsync();
         await ShutdownMcpServersAsync();
         ChatPanel.CleanupTempMedia();
         LoggingService.LogInfo("[App] Exiting process...");
@@ -744,15 +746,15 @@ public sealed partial class MainWindow : Window
     #region File Activation
 
     /// <summary>
-    /// Opens a conversation file from a file-activation path (e.g., double-clicking an .astd file).
+    /// Opens a conversation file from a file-activation path (e.g., double-clicking an .astx file).
     /// </summary>
     public async void OpenFileFromActivation(string filePath)
     {
-        var data = await ConversationManager.LoadConversationAsync(filePath);
-        if (data is not null)
+        var result = await ConversationManager.LoadConversationAsync(filePath);
+        if (result is not null)
         {
-            LoggingService.LogInfo($"[File] Activation load: {Path.GetFileName(filePath)}, messages={data.Messages.Count}");
-            await ViewModel.LoadConversation(data, filePath);
+            LoggingService.LogInfo($"[File] Activation load: {Path.GetFileName(filePath)}, messages={result.Conversation.Messages.Count}");
+            await ViewModel.LoadConversation(result, filePath);
             AppSettings.AddRecentFile(filePath);
         }
     }

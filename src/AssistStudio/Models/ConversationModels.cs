@@ -140,3 +140,49 @@ public class ConversationFileInfo
 
     #endregion
 }
+
+/// <summary>
+/// Metadata stored in manifest.json inside an .astx archive.
+/// Used to identify the format version and provide summary info without
+/// parsing the full conversation data.
+/// </summary>
+public class ManifestData
+{
+    /// <summary>Format version number. Current version is 2.</summary>
+    public int FormatVersion { get; set; } = 2;
+
+    /// <summary>The application version that created this archive.</summary>
+    public string AppVersion { get; set; } = "";
+
+    /// <summary>UTC timestamp when the conversation was first created.</summary>
+    public DateTime CreatedAt { get; set; }
+
+    /// <summary>UTC timestamp when the archive was last modified.</summary>
+    public DateTime ModifiedAt { get; set; }
+
+    /// <summary>Number of media entries in the archive.</summary>
+    public int MediaCount { get; set; }
+
+    /// <summary>Number of messages in the conversation.</summary>
+    public int MessageCount { get; set; }
+}
+
+/// <summary>
+/// Result of loading an .astx conversation archive, containing the
+/// conversation data and all media bytes resolved from the archive's
+/// media/ directory.
+/// </summary>
+public sealed class LoadConversationResult
+{
+    /// <summary>The deserialized conversation data.</summary>
+    public ConversationData Conversation { get; init; } = null!;
+
+    /// <summary>
+    /// Media bytes keyed by zip entry path (e.g., "media/a1b2c3d4e5f67890.png").
+    /// Empty if the conversation has no media.
+    /// </summary>
+    public Dictionary<string, byte[]> Media { get; init; } = new();
+
+    /// <summary>The archive manifest metadata.</summary>
+    public ManifestData Manifest { get; init; } = null!;
+}

@@ -1,3 +1,6 @@
+using System.IO.Compression;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using AssistStudio.Models;
@@ -7,14 +10,23 @@ using FieldCure.Ai.Providers.Models;
 namespace AssistStudio.Helpers;
 
 /// <summary>
-/// Provides methods for saving, loading, and managing chat conversation files.
+/// Provides methods for saving, loading, and managing chat conversation archives.
+/// Files are stored as ZIP-based .astx archives containing manifest.json,
+/// conversation.json, and an optional media/ directory for binary attachments.
 /// </summary>
 public static class ConversationManager
 {
     #region Constants
 
-    /// <summary>The file extension used for conversation files.</summary>
-    public const string FileExtension = ".astd";
+    /// <summary>The file extension used for conversation archives.</summary>
+    public const string FileExtension = ".astx";
+
+    /// <summary>The current format version for .astx archives.</summary>
+    private const int CurrentFormatVersion = 2;
+
+    private const string ManifestEntryName = "manifest.json";
+    private const string ConversationEntryName = "conversation.json";
+    private const string MediaDirPrefix = "media/";
 
     #endregion
 
@@ -26,6 +38,23 @@ public static class ConversationManager
     /// <summary>Shared JSON type info for indented conversation serialization.</summary>
     private static readonly JsonTypeInfo<ConversationData> ConversationTypeInfo =
         IndentedJsonContext.Default.ConversationData;
+
+    /// <summary>Shared JSON type info for indented manifest serialization.</summary>
+    private static readonly JsonTypeInfo<ManifestData> ManifestTypeInfo =
+        IndentedJsonContext.Default.ManifestData;
+
+    /// <summary>Semaphore to ensure only one save runs at a time.</summary>
+    private static readonly SemaphoreSlim _saveLock = new(1, 1);
+
+    /// <summary>Cancellation source for the debounce timer. Replaced on each new trigger.</summary>
+    private static CancellationTokenSource? _debounceCts;
+
+    /// <summary>Tracks the currently running auto-save task for flush support.</summary>
+    private static Task? _pendingAutoSave;
+
+    /// <summary>Debounce interval for auto-save. Short enough to feel instant,
+    /// long enough to coalesce rapid-fire triggers (Send + immediate response).</summary>
+    private static readonly TimeSpan DebounceInterval = TimeSpan.FromMilliseconds(300);
 
     #endregion
 
@@ -61,7 +90,7 @@ public static class ConversationManager
     }
 
     /// <summary>
-    /// Save conversation to an arbitrary file path.
+    /// Save conversation to an arbitrary file path as a ZIP-based .astx archive.
     /// </summary>
     public static async Task SaveToFileAsync(
         string filePath,
@@ -74,10 +103,12 @@ public static class ConversationManager
     {
         if (messages.Count == 0) return;
 
-        // Ensure a stable conversation ID for media storage
         conversationId ??= Guid.NewGuid().ToString("N");
 
+        // Collect media and build saved messages
         var savedMessages = new List<SavedMessage>(messages.Count);
+        var mediaEntries = new Dictionary<string, byte[]>(); // entryName -> bytes
+
         foreach (var m in messages)
         {
             var saved = new SavedMessage
@@ -100,13 +131,12 @@ public static class ConversationManager
             {
                 foreach (var att in m.Attachments.Where(a => a.Type == AttachmentType.Image))
                 {
-                    var fileName = await MediaStore.SaveAsync(
-                        conversationId, att.FileName, att.Data);
+                    var entryName = AddMediaEntry(mediaEntries, att.Data, att.MimeType ?? "image/png");
                     saved.Media ??= [];
                     saved.Media.Add(new MediaReference
                     {
                         Id = $"upload_{saved.Media.Count}",
-                        FileName = fileName,
+                        FileName = entryName,
                         MimeType = att.MimeType ?? "image/png",
                         Source = "user_upload"
                     });
@@ -121,14 +151,12 @@ public static class ConversationManager
                     var bytes = DecodeMediaUri(media.MediaUri);
                     if (bytes is null) continue;
 
-                    var ext = MimeToExtension(media.MimeType);
-                    var fileName = await MediaStore.SaveAsync(
-                        conversationId, $"tool_{m.ToolCallId}{ext}", bytes);
+                    var entryName = AddMediaEntry(mediaEntries, bytes, media.MimeType);
                     saved.Media ??= [];
                     saved.Media.Add(new MediaReference
                     {
                         Id = $"tool_{saved.Media.Count}",
-                        FileName = fileName,
+                        FileName = entryName,
                         MimeType = media.MimeType,
                         Source = "mcp_tool",
                         ToolCallId = m.ToolCallId
@@ -150,15 +178,66 @@ public static class ConversationManager
             Messages = savedMessages,
         };
 
-        var json = JsonSerializer.Serialize(data, ConversationTypeInfo);
-        await AtomicWriteAsync(filePath, json);
-        LoggingService.LogInfo($"[File] Saved: {Path.GetFileName(filePath)}, messages={messages.Count}, conversationId={conversationId}");
+        var manifest = new ManifestData
+        {
+            FormatVersion = CurrentFormatVersion,
+            AppVersion = GetAppVersion(),
+            CreatedAt = data.SavedAt,
+            ModifiedAt = data.SavedAt,
+            MediaCount = mediaEntries.Count,
+            MessageCount = savedMessages.Count,
+        };
+
+        // Atomic write: create zip in temp file, then rename
+        var dir = Path.GetDirectoryName(filePath) ?? ".";
+        Directory.CreateDirectory(dir);
+        var tempPath = filePath + ".tmp";
+        try
+        {
+            await using (var fs = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None))
+            using (var archive = new ZipArchive(fs, ZipArchiveMode.Create))
+            {
+                // Write manifest.json
+                var manifestEntry = archive.CreateEntry(ManifestEntryName, CompressionLevel.Optimal);
+                await using (var stream = manifestEntry.Open())
+                {
+                    await JsonSerializer.SerializeAsync(stream, manifest, ManifestTypeInfo);
+                }
+
+                // Write conversation.json
+                var conversationEntry = archive.CreateEntry(ConversationEntryName, CompressionLevel.Optimal);
+                await using (var stream = conversationEntry.Open())
+                {
+                    await JsonSerializer.SerializeAsync(stream, data, ConversationTypeInfo);
+                }
+
+                // Write media entries
+                foreach (var (entryName, bytes) in mediaEntries)
+                {
+                    // Media files are typically already compressed (PNG, JPEG, etc.)
+                    var mediaEntry = archive.CreateEntry(entryName, CompressionLevel.NoCompression);
+                    await using var stream = mediaEntry.Open();
+                    await stream.WriteAsync(bytes);
+                }
+            }
+
+            File.Move(tempPath, filePath, overwrite: true);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.LogException(ex);
+            try { File.Delete(tempPath); } catch { }
+            throw;
+        }
+
+        LoggingService.LogInfo($"[File] Saved: {Path.GetFileName(filePath)}, messages={messages.Count}, media={mediaEntries.Count}, conversationId={conversationId}");
     }
 
     /// <summary>
-    /// Loads a conversation from the specified file path.
+    /// Loads a conversation from an .astx archive file.
+    /// Returns the conversation data, all media bytes, and the manifest metadata.
     /// </summary>
-    public static async Task<ConversationData?> LoadConversationAsync(string filePath)
+    public static async Task<LoadConversationResult?> LoadConversationAsync(string filePath)
     {
         if (!File.Exists(filePath))
         {
@@ -166,10 +245,75 @@ public static class ConversationManager
             return null;
         }
 
-        var json = await File.ReadAllTextAsync(filePath);
-        var data = JsonSerializer.Deserialize(json, ConversationTypeInfo);
-        LoggingService.LogInfo($"[File] Loaded: {Path.GetFileName(filePath)}, messages={data?.Messages.Count ?? 0}");
-        return data;
+        try
+        {
+            await using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var archive = new ZipArchive(fs, ZipArchiveMode.Read);
+
+            // Read and validate manifest
+            var manifestEntry = archive.GetEntry(ManifestEntryName)
+                ?? throw new InvalidOperationException("Invalid .astx file: missing manifest.json.");
+
+            ManifestData? manifest;
+            using (var stream = manifestEntry.Open())
+            {
+                manifest = await JsonSerializer.DeserializeAsync(stream, ManifestTypeInfo);
+            }
+
+            if (manifest is null)
+                throw new InvalidOperationException("Failed to deserialize manifest.json.");
+
+            if (manifest.FormatVersion != CurrentFormatVersion)
+                throw new InvalidOperationException(
+                    $"Unsupported .astx format version: {manifest.FormatVersion} (expected {CurrentFormatVersion}).");
+
+            // Read conversation data
+            var conversationEntry = archive.GetEntry(ConversationEntryName)
+                ?? throw new InvalidOperationException("Invalid .astx file: missing conversation.json.");
+
+            ConversationData? data;
+            using (var stream = conversationEntry.Open())
+            {
+                data = await JsonSerializer.DeserializeAsync(stream, ConversationTypeInfo);
+            }
+
+            if (data is null)
+                throw new InvalidOperationException("Failed to deserialize conversation.json.");
+
+            // Read all media entries
+            var media = new Dictionary<string, byte[]>();
+            foreach (var entry in archive.Entries)
+            {
+                if (!entry.FullName.StartsWith(MediaDirPrefix, StringComparison.Ordinal))
+                    continue;
+
+                // Path traversal defense
+                if (entry.FullName.Contains("..", StringComparison.Ordinal))
+                {
+                    LoggingService.LogWarning($"[File] Skipping suspicious zip entry: {entry.FullName}");
+                    continue;
+                }
+
+                using var stream = entry.Open();
+                using var ms = new MemoryStream();
+                await stream.CopyToAsync(ms);
+                media[entry.FullName] = ms.ToArray();
+            }
+
+            LoggingService.LogInfo($"[File] Loaded: {Path.GetFileName(filePath)}, messages={data.Messages.Count}, media={media.Count}");
+
+            return new LoadConversationResult
+            {
+                Conversation = data,
+                Media = media,
+                Manifest = manifest,
+            };
+        }
+        catch (InvalidDataException ex)
+        {
+            LoggingService.LogError($"[File] Corrupted .astx file: {ex.Message}");
+            throw new InvalidOperationException($"The file '{Path.GetFileName(filePath)}' is corrupted or not a valid .astx archive.", ex);
+        }
     }
 
     /// <summary>
@@ -194,14 +338,11 @@ public static class ConversationManager
     }
 
     /// <summary>
-    /// Deletes all saved conversation files and associated media from the conversations folder.
+    /// Deletes all saved conversation files from the conversations folder.
     /// </summary>
     public static void ClearAll()
     {
         EnsureInitialized();
-
-        // Delete all media files
-        MediaStore.ClearAll();
 
         if (!Directory.Exists(_conversationsFolder)) return;
 
@@ -214,30 +355,123 @@ public static class ConversationManager
         }
     }
 
+    /// <summary>
+    /// Schedules a debounced auto-save for the given conversation.
+    /// Rapid-fire calls within <see cref="DebounceInterval"/> are coalesced.
+    /// The actual save runs on a background thread to avoid blocking the UI.
+    /// At most one save runs concurrently; one additional save is queued.
+    /// </summary>
+    public static void ScheduleAutoSave(
+        string? filePath,
+        string tabName,
+        string? providerPresetName,
+        IReadOnlyList<ChatMessage> messages,
+        string? activeRootChildId,
+        Dictionary<string, BuiltInServerConfig>? builtInServers,
+        string? conversationId)
+    {
+        // Cancel any pending debounce timer
+        _debounceCts?.Cancel();
+        _debounceCts?.Dispose();
+        _debounceCts = new CancellationTokenSource();
+        var ct = _debounceCts.Token;
+
+        // Capture message snapshot on the UI thread
+        var messagesCopy = messages.ToList();
+
+        _pendingAutoSave = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(DebounceInterval, ct);
+            }
+            catch (OperationCanceledException)
+            {
+                return; // Debounce reset — a newer save will take over
+            }
+
+            await _saveLock.WaitAsync(CancellationToken.None);
+            try
+            {
+                if (filePath is not null)
+                    await SaveToFileAsync(filePath, tabName, providerPresetName, messagesCopy, activeRootChildId, builtInServers, conversationId);
+                else
+                    await SaveConversationAsync(tabName, providerPresetName, messagesCopy, activeRootChildId, builtInServers, conversationId);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogException(ex);
+            }
+            finally
+            {
+                _saveLock.Release();
+            }
+        });
+    }
+
+    /// <summary>
+    /// Waits for any in-progress or pending auto-save to complete.
+    /// Call this on app shutdown to ensure data is flushed before exit.
+    /// </summary>
+    public static async Task FlushAutoSaveAsync()
+    {
+        // Cancel debounce timer so the pending save fires immediately
+        _debounceCts?.Cancel();
+
+        if (_pendingAutoSave is not null)
+        {
+            try { await _pendingAutoSave; }
+            catch { /* already logged */ }
+        }
+    }
+
     #endregion
 
     #region Private Methods
 
     /// <summary>
-    /// Write to a temp file first, then atomically replace the target.
-    /// Prevents data loss if the process crashes or the write is interrupted
-    /// (e.g. enterprise document-centralization agents locking files).
+    /// Adds a media byte array to the entries dictionary with content-addressed naming.
+    /// Returns the zip entry name (e.g., "media/a1b2c3d4e5f67890.png").
+    /// Deduplicates identical content automatically.
     /// </summary>
-    private static async Task AtomicWriteAsync(string filePath, string content)
+    private static string AddMediaEntry(Dictionary<string, byte[]> entries, byte[] data, string mimeType)
     {
-        var dir = Path.GetDirectoryName(filePath) ?? ".";
-        var tempPath = Path.Combine(dir, Path.GetRandomFileName());
-        try
+        var entryName = ComputeMediaEntryName(data, mimeType);
+
+        if (entries.TryGetValue(entryName, out var existing))
         {
-            await File.WriteAllTextAsync(tempPath, content);
-            File.Move(tempPath, filePath, overwrite: true);
+            // Hash collision check: same short hash but different content
+            if (!existing.AsSpan().SequenceEqual(data))
+            {
+                // Fallback to full SHA-256 hash
+                var fullHash = SHA256.HashData(data);
+                var fullHashHex = Convert.ToHexStringLower(fullHash);
+                var ext = MimeToExtension(mimeType);
+                entryName = $"{MediaDirPrefix}{fullHashHex}{ext}";
+
+                // If still collides (practically impossible), just use it
+                entries.TryAdd(entryName, data);
+            }
+            // else: same content, deduplication — no need to add again
         }
-        catch (Exception ex)
+        else
         {
-            LoggingService.LogException(ex);
-            try { File.Delete(tempPath); } catch { }
-            throw;
+            entries[entryName] = data;
         }
+
+        return entryName;
+    }
+
+    /// <summary>
+    /// Computes a short content-addressed zip entry name for a media binary.
+    /// Uses the first 16 hex chars (64 bits) of SHA-256.
+    /// </summary>
+    private static string ComputeMediaEntryName(byte[] data, string mimeType)
+    {
+        var hash = SHA256.HashData(data);
+        var hashHex = Convert.ToHexStringLower(hash.AsSpan(0, 8));
+        var ext = MimeToExtension(mimeType);
+        return $"{MediaDirPrefix}{hashHex}{ext}";
     }
 
     /// <summary>
@@ -277,6 +511,22 @@ public static class ConversationManager
         "video/webm" => ".webm",
         _ => ".bin"
     };
+
+    /// <summary>
+    /// Gets the application version string from the package identity.
+    /// </summary>
+    private static string GetAppVersion()
+    {
+        try
+        {
+            var ver = Windows.ApplicationModel.Package.Current.Id.Version;
+            return $"{ver.Major}.{ver.Minor}.{ver.Build}";
+        }
+        catch
+        {
+            return "0.0.0";
+        }
+    }
 
     /// <summary>Sanitizes a file name by replacing invalid characters with underscores.</summary>
     private static string SanitizeFileName(string name)

@@ -32,7 +32,7 @@ Chat with five AI providers from a single app. Switch providers mid-conversation
 ### Conversation Management
 
 - **Multi-tab interface** — Work on multiple conversations simultaneously
-- **Save & Load** — Persist conversations as `.astd` files (JSON format)
+- **Save & Load** — Persist conversations as `.astx` archives (ZIP-based, self-contained)
 - **Conversation Branching** — Edit any message to explore alternatives. The original path is preserved, and you can switch between branches with the ◀ 1/2 ▶ navigator
 - **Auto-titling** — AI-generated conversation titles
 
@@ -45,7 +45,7 @@ Attach files to any message via drag-and-drop, paste, or file picker:
 - Text files: TXT, CSV, LOG, MD, JSON, XML
 - Multimedia tool results: inline image, audio, and video rendering from MCP tools
 - Image hover toolbar: zoom (popover viewer), save, and copy
-- Media persistence: images and media saved in `.astd` files
+- Media persistence: images and media bundled in `.astx` archives
 
 ### MCP Integration (Model Context Protocol)
 
@@ -129,7 +129,7 @@ Connect to external MCP servers to extend AI capabilities with custom tools:
 
 ## File Association
 
-AssistStudio registers the `.astd` file extension (AssistStudio Document). Double-click any `.astd` file to open it directly in the app.
+AssistStudio registers the `.astx` file extension (AssistStudio Document). Double-click any `.astx` file to open it directly in the app.
 
 ---
 

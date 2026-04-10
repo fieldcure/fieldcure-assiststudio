@@ -45,9 +45,9 @@
       </uap:VisualElements>
       <Extensions>
         <uap:Extension Category="windows.fileTypeAssociation">
-          <uap:FileTypeAssociation Name="astd">
+          <uap:FileTypeAssociation Name="astx">
             <uap:SupportedFileTypes>
-              <uap:FileType ContentType="application/json">.astd</uap:FileType>
+              <uap:FileType ContentType="application/zip">.astx</uap:FileType>
             </uap:SupportedFileTypes>
             <uap:DisplayName>AssistStudio Document</uap:DisplayName>
             <uap:Logo>Assets\Square44x44Logo.png</uap:Logo>
