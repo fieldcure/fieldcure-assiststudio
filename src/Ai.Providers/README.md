@@ -42,7 +42,7 @@ Console.WriteLine(response.Content);
 - **Custom Providers** — Register any OpenAI-compatible endpoint via `ProviderFactory.RegisterCustomProvider` with `CustomProviderConfig` (BaseUrl, DisplayName).
 - **Image Compression** — `ImageCompressor` automatically compresses and resizes large images (JPEG, via SkiaSharp) before sending to providers, reducing token usage and API costs.
 - **Multimedia Tool Results** — `IMultiContentTool` interface for tools returning structured multimedia content (images, audio, video) alongside text via `ToolExecutionResult`.
-- **Media Persistence** — `ChatMessage.MediaItems` stores media attachments with conversation messages for save/load in `.astd` files.
+- **Media Persistence** — `ChatMessage.MediaItems` stores media attachments with conversation messages for save/load in `.astx` files.
 - **Thinking / Reasoning** — Structured `reasoning_details` parsing, `<think>` tag streaming extraction via `ThinkTagParser`, and Ollama native `thinking` field support.
 
 ## Models

@@ -45,7 +45,7 @@ AssistStudio is two things:
 - **Localization** — Built-in en-US and ko-KR resource strings.
 
 ### Data & Persistence
-- **Conversation Persistence** — Save and load conversations in `.astd` (JSON) format with full branching tree and media persistence.
+- **Conversation Persistence** — Save and load conversations in `.astx` (ZIP archive) format with full branching tree and media persistence.
 - **Profiles & Presets** — Save provider configurations as presets; switch system prompts and tool selections with profiles.
 - **Knowledge Archive** — Multi-KB management with embedding model selection and per-conversation KB selector.
 - **Schedule** — Cron schedule management with bilingual (en/ko) human-readable descriptions.

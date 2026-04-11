@@ -118,7 +118,7 @@ public partial class ChatMessage : INotifyPropertyChanged
 
     /// <summary>
     /// Media content from tool execution results (images, audio, video).
-    /// Set when a tool returns multimedia alongside text. Used for persistence in .astd files.
+    /// Set when a tool returns multimedia alongside text. Used for persistence in .astx files.
     /// </summary>
     public IReadOnlyList<MediaContent>? ToolMedia { get; init; }
 

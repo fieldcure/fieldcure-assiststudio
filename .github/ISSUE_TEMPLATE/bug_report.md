@@ -35,7 +35,7 @@ Debug logs can be enabled via Settings → Advanced → Debug Mode.
 - [ ] Sub-Agent / Specialist
 - [ ] MCP server (Essentials / Filesystem / Rag / Outbox / External)
 - [ ] Knowledge Base / RAG
-- [ ] Conversation branching / .astd file
+- [ ] Conversation branching / .astx file
 - [ ] Attachments / Media rendering
 - [ ] Profiles / Presets
 - [ ] Schedule / Runner

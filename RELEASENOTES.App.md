@@ -11,6 +11,7 @@
 - **MCP server badge** — Server name badge on tool approval panel for tool origin identification
 
 ### Changed
+- **Conversation format migration** — `.astd` (JSON) replaced by `.astx` (ZIP archive) with manifest, conversation, and media bundled in a single file
 - Custom provider thinking support — `reasoning_details` parsing and `<think>` tag streaming extraction for MiniMax and similar providers
 - Delta storage migration for tool call messages
 

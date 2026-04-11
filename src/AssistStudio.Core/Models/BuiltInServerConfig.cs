@@ -2,7 +2,7 @@ namespace FieldCure.AssistStudio.Models;
 
 /// <summary>
 /// Configuration for a built-in MCP server (e.g., Filesystem, RAG).
-/// Serialized into .astd files and App Settings.
+/// Serialized into .astx files and App Settings.
 /// </summary>
 /// <remarks>
 /// Not sealed — future server types (e.g., RAG) may subclass to add

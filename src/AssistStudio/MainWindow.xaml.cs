@@ -449,7 +449,8 @@ public sealed partial class MainWindow : Window
         RecentConversationsSubMenu.Items.Clear();
 
         var recentPaths = AppSettings.RecentFilePaths
-            .Where(File.Exists)
+            .Where(p => File.Exists(p)
+                     && Path.GetExtension(p).Equals(ConversationManager.FileExtension, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         if (recentPaths.Count == 0)
