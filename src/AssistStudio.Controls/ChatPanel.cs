@@ -3455,6 +3455,7 @@ public sealed partial class ChatPanel : Control, IDisposable
         _messages.Add(summaryMessage);
         await _renderer.BeginAssistantMessageAsync(summaryMessage.Id, Provider.ProviderName, Provider.ModelId, isSummary: true);
 
+        var elapsedSw = System.Diagnostics.Stopwatch.StartNew();
         try
         {
             var result = await ConsumeStreamAsync(Provider.StreamAsync(summaryRequest, ct), summaryMessage, ct);
@@ -3484,6 +3485,8 @@ public sealed partial class ChatPanel : Control, IDisposable
         }
         finally
         {
+            elapsedSw.Stop();
+            summaryMessage.ElapsedSeconds = elapsedSw.Elapsed.TotalSeconds;
             summaryMessage.IsStreaming = false;
         }
     }
