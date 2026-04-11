@@ -3794,6 +3794,39 @@ public sealed partial class ChatPanel : Control, IDisposable
     }
 
     /// <summary>
+    /// Returns a view of <paramref name="messages"/> trimmed to start from the most recent
+    /// summary node (inclusive). If no summary exists, returns the full list unchanged.
+    /// The summary node's <see cref="ChatMessage.Content"/> is wrapped with a
+    /// "[Previous conversation summary]" prefix at build time only — the stored content is unchanged.
+    /// </summary>
+    private static IReadOnlyList<ChatMessage> ApplySummaryTruncation(IReadOnlyList<ChatMessage> messages)
+    {
+        // Walk backwards to find the most recent summary node
+        for (var i = messages.Count - 1; i >= 0; i--)
+        {
+            if (messages[i].Summary is not null)
+            {
+                // Build truncated list: summary node (with wrapped content) + everything after
+                var truncated = new List<ChatMessage>(messages.Count - i);
+                var summary = messages[i];
+                truncated.Add(new ChatMessage(summary.Id, ChatRole.Assistant,
+                    $"[Previous conversation summary]\n{summary.Content}")
+                {
+                    ProviderName = summary.ProviderName,
+                    ProviderModelId = summary.ProviderModelId,
+                    ParentId = summary.ParentId,
+                    Summary = summary.Summary
+                });
+                for (var j = i + 1; j < messages.Count; j++)
+                    truncated.Add(messages[j]);
+                return truncated;
+            }
+        }
+
+        return messages;
+    }
+
+    /// <summary>
     /// Builds an <see cref="AiRequest"/> from the current messages, selected preset settings,
     /// and optional workspace/RAG context.
     /// </summary>
@@ -3855,7 +3888,7 @@ public sealed partial class ChatPanel : Control, IDisposable
         var preset = SelectedPreset;
         return new AiRequest
         {
-            Messages = messages,
+            Messages = ApplySummaryTruncation(messages),
             SystemPrompt = systemPrompt ?? SystemPrompt,
             MemoryText = MemoryText,
             WorkspaceText = workspaceText,
