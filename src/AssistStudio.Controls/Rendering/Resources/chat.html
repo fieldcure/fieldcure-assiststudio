@@ -2157,15 +2157,15 @@
             // Wrap summary messages in a collapsible block
             if (msg.dataset.isSummary && bubble) {
                 var headerText = _L.summaryHeader;
-                if (coveredTokenCount > 0 && tokenCount > 0) {
+                if (coveredTokenCount > 0 && tokenCount > 0 && tokenCount < coveredTokenCount) {
                     var fmtBefore = coveredTokenCount >= 1000
                         ? '~' + (coveredTokenCount / 1000).toFixed(1) + 'k'
                         : coveredTokenCount.toString();
                     var fmtAfter = tokenCount >= 1000
                         ? '~' + (tokenCount / 1000).toFixed(1) + 'k'
                         : tokenCount.toString();
-                    var pct = Math.round((1 - tokenCount / coveredTokenCount) * 100);
-                    headerText += ' \u00b7 ' + fmtBefore + ' \u2192 ' + fmtAfter + ' ' + _L.tokens + ' (-' + pct + '%)';
+                    var pct = Math.round((tokenCount / coveredTokenCount - 1) * 100);
+                    headerText += ' \u00b7 ' + fmtBefore + ' \u2192 ' + fmtAfter + ' ' + _L.tokens + ' (' + pct + '%)';
                 }
                 var wrapper = document.createElement('div');
                 wrapper.className = 'summary-block';
