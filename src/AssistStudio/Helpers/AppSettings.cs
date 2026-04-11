@@ -21,9 +21,9 @@ public static class AppSettings
     public static event EventHandler<string>? ThemeChanged;
 
     /// <summary>
-    /// Raised when auto-summary or max input tokens settings change.
+    /// Raised when app task settings change (auto-title, auto-summary, max input tokens).
     /// </summary>
-    public static event EventHandler? SummarySettingsChanged;
+    public static event EventHandler? TaskSettingsChanged;
 
     /// <summary>
     /// Raised when provider presets are saved.
@@ -98,7 +98,7 @@ public static class AppSettings
     public static bool AppAutoTitle
     {
         get => Settings.Values["AppAutoTitle"] is not false;
-        set => Settings.Values["AppAutoTitle"] = value;
+        set { Settings.Values["AppAutoTitle"] = value; TaskSettingsChanged?.Invoke(null, EventArgs.Empty); }
     }
 
     /// <summary>
@@ -107,7 +107,7 @@ public static class AppSettings
     public static bool AppAutoSummary
     {
         get => Settings.Values["AppAutoSummary"] is true;
-        set { Settings.Values["AppAutoSummary"] = value; SummarySettingsChanged?.Invoke(null, EventArgs.Empty); }
+        set { Settings.Values["AppAutoSummary"] = value; TaskSettingsChanged?.Invoke(null, EventArgs.Empty); }
     }
 
     /// <summary>
@@ -118,7 +118,7 @@ public static class AppSettings
     public static int AppMaxInputTokens
     {
         get => Settings.Values["AppMaxInputTokens"] is int v ? v : 100000;
-        set { Settings.Values["AppMaxInputTokens"] = value; SummarySettingsChanged?.Invoke(null, EventArgs.Empty); }
+        set { Settings.Values["AppMaxInputTokens"] = value; TaskSettingsChanged?.Invoke(null, EventArgs.Empty); }
     }
 
     /// <summary>

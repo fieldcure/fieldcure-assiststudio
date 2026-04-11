@@ -301,9 +301,10 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         _isDebugMode = true;
 #endif
 
-        // Subscribe to summary settings changes from Settings page
-        AppSettings.SummarySettingsChanged += (_, _) =>
+        // Subscribe to task settings changes from Settings page
+        AppSettings.TaskSettingsChanged += (_, _) =>
         {
+            AutoTitle = AppSettings.AppAutoTitle;
             AutoSummarize = AppSettings.AppAutoSummary;
             MaxInputTokens = AppSettings.AppMaxInputTokens;
         };
