@@ -3307,7 +3307,8 @@ public sealed partial class ChatPanel : Control, IDisposable
         if (chain.Count == 0) return;
 
         var root = chain[0];
-        await _renderer.BeginAssistantMessageAsync(root.Id, root.ProviderName, root.ProviderModelId);
+        var summaryTurns = root.Summary?.CoveredMessageIds.Count / 2 ?? 0;
+        await _renderer.BeginAssistantMessageAsync(root.Id, root.ProviderName, root.ProviderModelId, summaryTurns);
 
         // Restore thinking block
         if (!string.IsNullOrEmpty(root.ThinkingContent))
@@ -3451,7 +3452,8 @@ public sealed partial class ChatPanel : Control, IDisposable
         };
         RegisterInTree(summaryMessage);
         _messages.Add(summaryMessage);
-        await _renderer.BeginAssistantMessageAsync(summaryMessage.Id, Provider.ProviderName, Provider.ModelId);
+        var summaryTurns = coveredMessages.Count / 2;
+        await _renderer.BeginAssistantMessageAsync(summaryMessage.Id, Provider.ProviderName, Provider.ModelId, summaryTurns);
 
         try
         {
@@ -3708,7 +3710,9 @@ public sealed partial class ChatPanel : Control, IDisposable
                 ["imageCopied"] = loader.GetString("Chat_ImageCopied"),
                 ["seconds"] = loader.GetString("Chat_Seconds"),
                 ["minutes"] = loader.GetString("Chat_Minutes"),
-                ["hours"] = loader.GetString("Chat_Hours")
+                ["hours"] = loader.GetString("Chat_Hours"),
+                ["summaryHeader"] = loader.GetString("Chat_SummaryHeader"),
+                ["summaryTurns"] = loader.GetString("Chat_SummaryTurns")
             };
 
             // Filter out empty strings (key not found returns empty)

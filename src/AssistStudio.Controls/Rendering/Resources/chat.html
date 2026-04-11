@@ -281,6 +281,43 @@
         margin-top: 4px;
     }
 
+    /* ===== Summary Block ===== */
+    .summary-divider {
+        border: none;
+        border-top: 1px solid var(--border-color);
+        margin: 12px 0 8px 0;
+    }
+    .summary-block {
+        border-left: 3px solid var(--border-color);
+        padding-left: 10px;
+        margin-bottom: 4px;
+    }
+    .summary-block details > summary {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 2px 0;
+        user-select: none;
+        font-size: 11px;
+        color: var(--timestamp-color);
+        cursor: pointer;
+        list-style: none;
+    }
+    .summary-block details > summary::-webkit-details-marker { display: none; }
+    .summary-block .tool-chevron {
+        transition: transform 0.15s ease;
+        font-size: 13px;
+        line-height: 1;
+    }
+    .summary-block details[open] > summary .tool-chevron {
+        transform: rotate(90deg);
+    }
+    .summary-block .summary-body {
+        margin-top: 6px;
+        font-size: 13px;
+        line-height: 1.55;
+    }
+
     /* ===== Tool Running Animation ===== */
     .tool-header.tool-running {
         background: linear-gradient(
@@ -991,7 +1028,9 @@
         tokens: 'tokens',
         editBranchHint: 'Editing this message will create a new conversation branch. Use the arrow navigation buttons to switch between branches.',
         editCancel: 'Cancel',
-        editSave: 'Save'
+        editSave: 'Save',
+        summaryHeader: 'Summary',
+        summaryTurns: '{0} turns'
     };
 
     var _debugMode = false;
@@ -1729,10 +1768,18 @@
             doScroll('instant');
         },
 
-        beginAssistantMessage: function(id, providerName, modelId) {
+        beginAssistantMessage: function(id, providerName, modelId, summaryTurns) {
             var msg = document.createElement('div');
             msg.className = 'message assistant';
             msg.id = 'msg-' + id;
+
+            // Summary divider
+            if (summaryTurns > 0) {
+                msg.dataset.summaryTurns = summaryTurns;
+                var hr = document.createElement('hr');
+                hr.className = 'summary-divider';
+                msg.appendChild(hr);
+            }
 
             var badgeHtml = '';
             if (providerName) {
@@ -1740,8 +1787,8 @@
                 badgeHtml = '<div class="provider-badge">' + escapeHtml(label) + '</div>';
             }
 
-            msg.innerHTML = badgeHtml +
-                '<div class="message-bubble streaming"><div class="content"><div class="rendered-zone"></div><span class="tail-zone"></span><span class="cursor">&#9612;</span></div></div>';
+            msg.insertAdjacentHTML('beforeend', badgeHtml +
+                '<div class="message-bubble streaming"><div class="content"><div class="rendered-zone"></div><span class="tail-zone"></span><span class="cursor">&#9612;</span></div></div>');
 
             // Footer: [actions ... timestamp]
             var footer = document.createElement('div');
@@ -2107,6 +2154,28 @@
             }
             // Clear streaming timer
             if (msg._streamTimer) { clearInterval(msg._streamTimer); msg._streamTimer = null; }
+
+            // Wrap summary messages in a collapsible block
+            if (msg.dataset.summaryTurns && bubble) {
+                var turns = parseInt(msg.dataset.summaryTurns) || 0;
+                var headerText = _L.summaryHeader + ' \u00b7 ' + _L.summaryTurns.replace('{0}', turns);
+                var wrapper = document.createElement('div');
+                wrapper.className = 'summary-block';
+                var details = document.createElement('details');
+                var summary = document.createElement('summary');
+                summary.innerHTML = '<span class="tool-chevron">\u203A</span> ' + escapeHtml(headerText);
+                details.appendChild(summary);
+                var body = document.createElement('div');
+                body.className = 'summary-body';
+                // Move all rendered content segments into the collapsible body
+                var segments = bubble.querySelectorAll('.content-segment');
+                segments.forEach(function(seg) { body.appendChild(seg); });
+                details.appendChild(body);
+                wrapper.appendChild(details);
+                // Replace bubble content with the collapsible wrapper
+                bubble.innerHTML = '';
+                bubble.appendChild(wrapper);
+            }
 
             var ts = msg.querySelector('.message-timestamp');
             if (ts) {

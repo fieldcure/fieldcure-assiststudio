@@ -114,6 +114,12 @@
   <data name="Chat_Hours" xml:space="preserve">
     <value>h</value>
   </data>
+  <data name="Chat_SummaryHeader" xml:space="preserve">
+    <value>Summary</value>
+  </data>
+  <data name="Chat_SummaryTurns" xml:space="preserve">
+    <value>{0} turns</value>
+  </data>
   <data name="ComposeBar_Placeholder" xml:space="preserve">
     <value>Type a message...</value>
   </data>

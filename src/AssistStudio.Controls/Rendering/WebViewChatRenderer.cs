@@ -182,9 +182,10 @@ internal partial class WebViewChatRenderer
     /// <summary>
     /// Begins a new assistant message bubble in the chat UI with provider and model information.
     /// </summary>
-    public Task BeginAssistantMessageAsync(string id, string? providerName = null, string? modelId = null)
+    public Task BeginAssistantMessageAsync(string id, string? providerName = null, string? modelId = null,
+        int summaryTurns = 0)
     {
-        var script = $"window.assistChat.beginAssistantMessage({Js(id)}, {Js(providerName ?? "")}, {Js(modelId ?? "")})";
+        var script = $"window.assistChat.beginAssistantMessage({Js(id)}, {Js(providerName ?? "")}, {Js(modelId ?? "")}, {summaryTurns})";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 
