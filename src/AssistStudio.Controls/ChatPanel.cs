@@ -463,6 +463,13 @@ public sealed partial class ChatPanel : Control, IDisposable
     private bool _isInitialized;
 
     /// <summary>
+    /// Guards against concurrent initialization from <see cref="OnLoaded"/> and
+    /// <see cref="ReinitializeWebViewAsync"/>. Set before the first await in each path,
+    /// so a second entry on the UI thread (after the await yields) sees the flag and returns.
+    /// </summary>
+    private bool _initializing;
+
+    /// <summary>
     /// Whether restored messages have already been rendered (prevents duplicate rendering).
     /// </summary>
     private bool _hasRenderedRestored;
@@ -1325,6 +1332,7 @@ public sealed partial class ChatPanel : Control, IDisposable
         }
 
         _isInitialized = false;
+        _initializing = false;
         _hasRenderedRestored = false;
         _titleGenerated = false;
 
@@ -1350,9 +1358,9 @@ public sealed partial class ChatPanel : Control, IDisposable
     /// </summary>
     public async Task ReinitializeWebViewAsync()
     {
-        if (_isInitialized)
+        if (_isInitialized || _initializing)
         {
-            DiagnosticLogger.LogInfo("[Chat] ReinitializeWebView skipped: already initialized");
+            DiagnosticLogger.LogInfo("[Chat] ReinitializeWebView skipped: already initialized or in progress");
             return;
         }
 
@@ -1363,6 +1371,7 @@ public sealed partial class ChatPanel : Control, IDisposable
         }
 
         DiagnosticLogger.LogInfo("[Chat] ReinitializeWebView: creating new WebView2 instance");
+        _initializing = true;
 
         // Create a fresh WebView2 and insert at Row 0 of the chat layout grid
         _chatWebView = new WebView2
@@ -1433,8 +1442,8 @@ public sealed partial class ChatPanel : Control, IDisposable
     /// </summary>
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
-        DiagnosticLogger.LogInfo($"[Chat] OnLoaded: initialized={_isInitialized}, webView={_chatWebView is not null}");
-        if (_isInitialized) return;
+        DiagnosticLogger.LogInfo($"[Chat] OnLoaded: initialized={_isInitialized}, initializing={_initializing}, webView={_chatWebView is not null}");
+        if (_isInitialized || _initializing) return;
 
         try
         {
@@ -1444,6 +1453,7 @@ public sealed partial class ChatPanel : Control, IDisposable
                 return;
             }
 
+            _initializing = true;
             await _renderer.InitializeAsync(_chatWebView);
             _isInitialized = true;
             await ApplyThemeAsync();
@@ -1465,6 +1475,7 @@ public sealed partial class ChatPanel : Control, IDisposable
         }
         catch (Exception ex)
         {
+            _initializing = false;
             DiagnosticLogger.LogException(ex);
         }
     }
