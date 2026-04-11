@@ -467,11 +467,6 @@ public sealed partial class ChatPanel : Control, IDisposable
     /// </summary>
     private bool _hasRenderedRestored;
 
-    /// <summary>
-    /// Set when <see cref="ReinitializeWebViewAsync"/> is called before <see cref="OnApplyTemplate"/>.
-    /// <see cref="OnApplyTemplate"/> will retry reinitialization when this flag is true.
-    /// </summary>
-    private bool _needsReinitialize;
 
     /// <summary>
     /// Whether a conversation title has already been auto-generated.
@@ -1239,13 +1234,6 @@ public sealed partial class ChatPanel : Control, IDisposable
 
         // Subscribe to Loaded for WebView2 initialization
         Loaded += OnLoaded;
-
-        // Retry deferred WebView2 reinitialization (AttachPanel called before OnApplyTemplate)
-        if (_needsReinitialize)
-        {
-            _needsReinitialize = false;
-            _ = ReinitializeWebViewAsync();
-        }
     }
 
     #endregion
@@ -1370,8 +1358,7 @@ public sealed partial class ChatPanel : Control, IDisposable
 
         if (_chatLayout is null)
         {
-            DiagnosticLogger.LogInfo("[Chat] ReinitializeWebView deferred: _chatLayout is null (will retry in OnApplyTemplate)");
-            _needsReinitialize = true;
+            DiagnosticLogger.LogInfo("[Chat] ReinitializeWebView failed: _chatLayout is null");
             return;
         }
 
@@ -3294,7 +3281,7 @@ public sealed partial class ChatPanel : Control, IDisposable
             renderedCount++;
         }
 
-        DiagnosticLogger.LogInfo($"[Chat] RenderRestoredMessages: rendered {renderedCount}/{_messages.Count}");
+        DiagnosticLogger.LogInfo($"[Chat] RenderRestoredMessages: {renderedCount} bubbles from {_messages.Count} messages");
     }
 
     /// <summary>
