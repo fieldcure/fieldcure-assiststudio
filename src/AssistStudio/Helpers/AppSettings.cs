@@ -118,7 +118,7 @@ public static class AppSettings
     public static int AppMaxInputTokens
     {
         get => Settings.Values["AppMaxInputTokens"] is int v ? v : 100000;
-        set { Settings.Values["AppMaxInputTokens"] = value; TaskSettingsChanged?.Invoke(null, EventArgs.Empty); }
+        set { Settings.Values["AppMaxInputTokens"] = Math.Max(1000, value); TaskSettingsChanged?.Invoke(null, EventArgs.Empty); }
     }
 
     /// <summary>

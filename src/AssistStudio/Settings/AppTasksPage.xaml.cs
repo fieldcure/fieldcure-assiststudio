@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Markup;
 using Microsoft.UI.Xaml.Navigation;
 using Windows.ApplicationModel.Resources;
+using Windows.Globalization.NumberFormatting;
 
 namespace AssistStudio.Settings;
 
@@ -34,6 +35,12 @@ public sealed partial class AppTasksPage : Page
     public AppTasksPage()
     {
         InitializeComponent();
+        MaxInputTokensBox.NumberFormatter = new DecimalFormatter
+        {
+            IntegerDigits = 1,
+            FractionDigits = 0,
+            IsGrouped = true
+        };
     }
 
     #endregion
