@@ -20,4 +20,11 @@ public class SummaryMeta
     /// everything before it.
     /// </summary>
     public IReadOnlyList<string> CoveredMessageIds { get; init; } = [];
+
+    /// <summary>
+    /// Approximate token count of covered content (from the summarization request's input tokens).
+    /// Used with the summary message's <see cref="ChatMessage.TokenCount"/> (output tokens)
+    /// to display compression ratio in the UI. Zero when unavailable.
+    /// </summary>
+    public int CoveredTokenCount { get; set; }
 }

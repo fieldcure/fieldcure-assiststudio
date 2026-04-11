@@ -183,9 +183,9 @@ internal partial class WebViewChatRenderer
     /// Begins a new assistant message bubble in the chat UI with provider and model information.
     /// </summary>
     public Task BeginAssistantMessageAsync(string id, string? providerName = null, string? modelId = null,
-        int summaryTurns = 0)
+        bool isSummary = false)
     {
-        var script = $"window.assistChat.beginAssistantMessage({Js(id)}, {Js(providerName ?? "")}, {Js(modelId ?? "")}, {summaryTurns})";
+        var script = $"window.assistChat.beginAssistantMessage({Js(id)}, {Js(providerName ?? "")}, {Js(modelId ?? "")}, {(isSummary ? "true" : "false")})";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 
@@ -308,11 +308,11 @@ internal partial class WebViewChatRenderer
     /// Finalizes an assistant message with the full markdown content, truncation status, and token count.
     /// </summary>
     public Task FinalizeMessageAsync(string id, string fullMarkdown, bool truncated = false, int tokenCount = 0,
-        string? timestamp = null, double? elapsedSeconds = null)
+        string? timestamp = null, double? elapsedSeconds = null, int coveredTokenCount = 0)
     {
         var tsArg = timestamp is not null ? Js(timestamp) : "null";
         var elapsedArg = elapsedSeconds.HasValue ? elapsedSeconds.Value.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) : "null";
-        var script = $"window.assistChat.finalizeMessage({Js(id)}, {Js(fullMarkdown)}, {(truncated ? "true" : "false")}, {tokenCount}, {tsArg}, {elapsedArg})";
+        var script = $"window.assistChat.finalizeMessage({Js(id)}, {Js(fullMarkdown)}, {(truncated ? "true" : "false")}, {tokenCount}, {tsArg}, {elapsedArg}, {coveredTokenCount})";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 

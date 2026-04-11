@@ -115,10 +115,7 @@
     <value>시간</value>
   </data>
   <data name="Chat_SummaryHeader" xml:space="preserve">
-    <value>요약</value>
-  </data>
-  <data name="Chat_SummaryTurns" xml:space="preserve">
-    <value>{0}턴</value>
+    <value>이전 대화 요약</value>
   </data>
   <data name="ComposeBar_Placeholder" xml:space="preserve">
     <value>메시지를 입력하세요...</value>

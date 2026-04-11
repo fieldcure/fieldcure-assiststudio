@@ -3307,8 +3307,8 @@ public sealed partial class ChatPanel : Control, IDisposable
         if (chain.Count == 0) return;
 
         var root = chain[0];
-        var summaryTurns = root.Summary?.CoveredMessageIds.Count / 2 ?? 0;
-        await _renderer.BeginAssistantMessageAsync(root.Id, root.ProviderName, root.ProviderModelId, summaryTurns);
+        var isSummary = root.Summary is not null;
+        await _renderer.BeginAssistantMessageAsync(root.Id, root.ProviderName, root.ProviderModelId, isSummary);
 
         // Restore thinking block
         if (!string.IsNullOrEmpty(root.ThinkingContent))
@@ -3370,7 +3370,8 @@ public sealed partial class ChatPanel : Control, IDisposable
         await _renderer.FinalizeMessageAsync(root.Id, finalSegment,
             tokenCount: root.TokenCount ?? 0,
             timestamp: root.Timestamp.ToString("O"),
-            elapsedSeconds: root.ElapsedSeconds);
+            elapsedSeconds: root.ElapsedSeconds,
+            coveredTokenCount: root.Summary?.CoveredTokenCount ?? 0);
     }
 
     /// <summary>
@@ -3452,14 +3453,24 @@ public sealed partial class ChatPanel : Control, IDisposable
         };
         RegisterInTree(summaryMessage);
         _messages.Add(summaryMessage);
-        var summaryTurns = coveredMessages.Count / 2;
-        await _renderer.BeginAssistantMessageAsync(summaryMessage.Id, Provider.ProviderName, Provider.ModelId, summaryTurns);
+        await _renderer.BeginAssistantMessageAsync(summaryMessage.Id, Provider.ProviderName, Provider.ModelId, isSummary: true);
 
         try
         {
             var result = await ConsumeStreamAsync(Provider.StreamAsync(summaryRequest, ct), summaryMessage, ct);
-            await _renderer.FinalizeMessageAsync(summaryMessage.Id, summaryMessage.Content, result.IsTruncated);
-            DiagnosticLogger.LogInfo($"[Chat] StreamSummary complete — covered {coveredMessages.Count} messages");
+
+            // Store token counts for compression ratio display
+            if (result.Usage is { } u)
+            {
+                summaryMessage.Summary!.CoveredTokenCount = u.InputTokens;
+                summaryMessage.TokenCount = u.OutputTokens;
+            }
+
+            var coveredTokens = result.Usage?.InputTokens ?? 0;
+            var summaryTokens = result.Usage?.OutputTokens ?? 0;
+            await _renderer.FinalizeMessageAsync(summaryMessage.Id, summaryMessage.Content, result.IsTruncated,
+                tokenCount: summaryTokens, coveredTokenCount: coveredTokens);
+            DiagnosticLogger.LogInfo($"[Chat] StreamSummary complete — covered {coveredMessages.Count} messages, tokens {coveredTokens} → {summaryTokens}");
         }
         catch (OperationCanceledException)
         {
@@ -3711,8 +3722,7 @@ public sealed partial class ChatPanel : Control, IDisposable
                 ["seconds"] = loader.GetString("Chat_Seconds"),
                 ["minutes"] = loader.GetString("Chat_Minutes"),
                 ["hours"] = loader.GetString("Chat_Hours"),
-                ["summaryHeader"] = loader.GetString("Chat_SummaryHeader"),
-                ["summaryTurns"] = loader.GetString("Chat_SummaryTurns")
+                ["summaryHeader"] = loader.GetString("Chat_SummaryHeader")
             };
 
             // Filter out empty strings (key not found returns empty)

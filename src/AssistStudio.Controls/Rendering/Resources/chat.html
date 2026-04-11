@@ -1029,8 +1029,7 @@
         editBranchHint: 'Editing this message will create a new conversation branch. Use the arrow navigation buttons to switch between branches.',
         editCancel: 'Cancel',
         editSave: 'Save',
-        summaryHeader: 'Summary',
-        summaryTurns: '{0} turns'
+        summaryHeader: 'Conversation summary'
     };
 
     var _debugMode = false;
@@ -1768,14 +1767,14 @@
             doScroll('instant');
         },
 
-        beginAssistantMessage: function(id, providerName, modelId, summaryTurns) {
+        beginAssistantMessage: function(id, providerName, modelId, isSummary) {
             var msg = document.createElement('div');
             msg.className = 'message assistant';
             msg.id = 'msg-' + id;
 
             // Summary divider
-            if (summaryTurns > 0) {
-                msg.dataset.summaryTurns = summaryTurns;
+            if (isSummary) {
+                msg.dataset.isSummary = '1';
                 var hr = document.createElement('hr');
                 hr.className = 'summary-divider';
                 msg.appendChild(hr);
@@ -2108,7 +2107,7 @@
             }
         },
 
-        finalizeMessage: function(id, fullText, truncated, tokenCount, timestamp, elapsedSeconds) {
+        finalizeMessage: function(id, fullText, truncated, tokenCount, timestamp, elapsedSeconds, coveredTokenCount) {
             // Clean up progressive state
             var ps = _progressiveState[id];
             if (ps) clearTimeout(ps.timer);
@@ -2156,9 +2155,18 @@
             if (msg._streamTimer) { clearInterval(msg._streamTimer); msg._streamTimer = null; }
 
             // Wrap summary messages in a collapsible block
-            if (msg.dataset.summaryTurns && bubble) {
-                var turns = parseInt(msg.dataset.summaryTurns) || 0;
-                var headerText = _L.summaryHeader + ' \u00b7 ' + _L.summaryTurns.replace('{0}', turns);
+            if (msg.dataset.isSummary && bubble) {
+                var headerText = _L.summaryHeader;
+                if (coveredTokenCount > 0 && tokenCount > 0) {
+                    var fmtBefore = coveredTokenCount >= 1000
+                        ? '~' + (coveredTokenCount / 1000).toFixed(1) + 'k'
+                        : coveredTokenCount.toString();
+                    var fmtAfter = tokenCount >= 1000
+                        ? '~' + (tokenCount / 1000).toFixed(1) + 'k'
+                        : tokenCount.toString();
+                    var pct = Math.round((1 - tokenCount / coveredTokenCount) * 100);
+                    headerText += ' \u00b7 ' + fmtBefore + ' \u2192 ' + fmtAfter + ' ' + _L.tokens + ' (-' + pct + '%)';
+                }
                 var wrapper = document.createElement('div');
                 wrapper.className = 'summary-block';
                 var details = document.createElement('details');
