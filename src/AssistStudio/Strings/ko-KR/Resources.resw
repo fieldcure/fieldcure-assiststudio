@@ -284,6 +284,12 @@
   <data name="AppTasks_AutoSummary.Header" xml:space="preserve">
     <value>긴 대화 자동 요약</value>
   </data>
+  <data name="AppTasks_MaxInputTokens.Header" xml:space="preserve">
+    <value>요약 임계값 (토큰)</value>
+  </data>
+  <data name="AppTasks_MaxInputTokensHint.Text" xml:space="preserve">
+    <value>입력 토큰이 이 값을 넘으면 이전 대화를 자동으로 요약합니다. 사용 중인 모델의 컨텍스트 한도보다 작게 설정하세요.</value>
+  </data>
   <!-- Advanced Page -->
   <data name="Advanced_Title.Text" xml:space="preserve">
     <value>&#xACE0;&#xAE09; &#xC124;&#xC815;</value>

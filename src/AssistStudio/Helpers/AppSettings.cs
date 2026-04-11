@@ -21,6 +21,11 @@ public static class AppSettings
     public static event EventHandler<string>? ThemeChanged;
 
     /// <summary>
+    /// Raised when auto-summary or max input tokens settings change.
+    /// </summary>
+    public static event EventHandler? SummarySettingsChanged;
+
+    /// <summary>
     /// Raised when provider presets are saved.
     /// </summary>
     public static event EventHandler? PresetsChanged;
@@ -101,8 +106,19 @@ public static class AppSettings
     /// </summary>
     public static bool AppAutoSummary
     {
-        get => Settings.Values["AppAutoSummary"] is not false;
-        set => Settings.Values["AppAutoSummary"] = value;
+        get => Settings.Values["AppAutoSummary"] is true;
+        set { Settings.Values["AppAutoSummary"] = value; SummarySettingsChanged?.Invoke(null, EventArgs.Empty); }
+    }
+
+    /// <summary>
+    /// Gets or sets the input token threshold for automatic summarization.
+    /// When input tokens exceed this value, the conversation is summarized.
+    /// Default is 100000. Set to 0 to disable threshold-based triggering.
+    /// </summary>
+    public static int AppMaxInputTokens
+    {
+        get => Settings.Values["AppMaxInputTokens"] is int v ? v : 100000;
+        set { Settings.Values["AppMaxInputTokens"] = value; SummarySettingsChanged?.Invoke(null, EventArgs.Empty); }
     }
 
     /// <summary>

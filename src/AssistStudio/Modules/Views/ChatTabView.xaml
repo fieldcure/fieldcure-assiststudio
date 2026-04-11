@@ -27,7 +27,7 @@
         SelectedProfile="{x:Bind ViewModel.SelectedProfile, Mode=OneWay}"
         AutoTitle="{x:Bind ViewModel.AutoTitle, Mode=OneWay}"
         AutoSummarize="{x:Bind ViewModel.AutoSummarize, Mode=OneWay}"
-        MaxInputTokens="1000"
+        MaxInputTokens="{x:Bind ViewModel.MaxInputTokens, Mode=OneWay}"
         IsDebugMode="{x:Bind ViewModel.IsDebugMode, Mode=OneWay}"
         RegisteredTools="{x:Bind ViewModel.RegisteredTools, Mode=OneWay}" />
 

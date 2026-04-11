@@ -66,6 +66,8 @@ public sealed partial class AppTasksPage : Page
         // Load toggles
         AutoTitleToggle.IsOn = AppSettings.AppAutoTitle;
         AutoSummaryToggle.IsOn = AppSettings.AppAutoSummary;
+        MaxInputTokensBox.Value = AppSettings.AppMaxInputTokens;
+        SummaryThresholdPanel.Visibility = AutoSummaryToggle.IsOn ? Visibility.Visible : Visibility.Collapsed;
 
         _suppressEvents = false;
     }
@@ -173,6 +175,16 @@ public sealed partial class AppTasksPage : Page
     {
         if (_suppressEvents) return;
         AppSettings.AppAutoSummary = AutoSummaryToggle.IsOn;
+        SummaryThresholdPanel.Visibility = AutoSummaryToggle.IsOn ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>
+    /// Handles the max input tokens number box value change to persist the setting.
+    /// </summary>
+    private void OnMaxInputTokensChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+    {
+        if (_suppressEvents || double.IsNaN(args.NewValue)) return;
+        AppSettings.AppMaxInputTokens = (int)args.NewValue;
     }
 
     #endregion

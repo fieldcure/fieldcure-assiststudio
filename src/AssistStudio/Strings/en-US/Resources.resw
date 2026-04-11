@@ -284,6 +284,12 @@
   <data name="AppTasks_AutoSummary.Header" xml:space="preserve">
     <value>Summarize long conversations automatically</value>
   </data>
+  <data name="AppTasks_MaxInputTokens.Header" xml:space="preserve">
+    <value>Summary threshold (tokens)</value>
+  </data>
+  <data name="AppTasks_MaxInputTokensHint.Text" xml:space="preserve">
+    <value>When input tokens exceed this value, prior conversation is summarized automatically. Set below your model's context limit.</value>
+  </data>
   <!-- Advanced Page -->
   <data name="Advanced_Title.Text" xml:space="preserve">
     <value>Advanced</value>

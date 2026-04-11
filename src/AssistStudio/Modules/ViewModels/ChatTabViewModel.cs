@@ -136,6 +136,11 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool _autoSummarize;
 
     /// <summary>
+    /// Input token threshold for automatic summarization.
+    /// </summary>
+    [ObservableProperty] private int _maxInputTokens;
+
+    /// <summary>
     /// Whether debug mode is enabled (shows debug UI in WebView2).
     /// </summary>
     [ObservableProperty] private bool _isDebugMode;
@@ -291,9 +296,17 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         _selectedProfile = selectedProfile;
         _autoTitle = AppSettings.AppAutoTitle;
         _autoSummarize = AppSettings.AppAutoSummary;
+        _maxInputTokens = AppSettings.AppMaxInputTokens;
 #if DEBUG
         _isDebugMode = true;
 #endif
+
+        // Subscribe to summary settings changes from Settings page
+        AppSettings.SummarySettingsChanged += (_, _) =>
+        {
+            AutoSummarize = AppSettings.AppAutoSummary;
+            MaxInputTokens = AppSettings.AppMaxInputTokens;
+        };
 
         // Apply linked tools from active profile (built-in + MCP)
         ResolveTools(selectedProfile);

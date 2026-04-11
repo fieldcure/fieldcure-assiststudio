@@ -67,6 +67,23 @@
                                   Header="Summarize long conversations automatically"
                                   OnContent="On" OffContent="Off"
                                   Toggled="OnAutoSummaryToggled" />
+
+                    <StackPanel x:Name="SummaryThresholdPanel" Spacing="6" Visibility="Collapsed" Padding="0,0,0,0">
+                        <NumberBox x:Name="MaxInputTokensBox"
+                                   x:Uid="AppTasks_MaxInputTokens"
+                                   Header="Summary threshold"
+                                   Minimum="1000"
+                                   Maximum="1000000"
+                                   SpinButtonPlacementMode="Compact"
+                                   SmallChange="10000"
+                                   LargeChange="50000"
+                                   ValueChanged="OnMaxInputTokensChanged" />
+                        <TextBlock x:Uid="AppTasks_MaxInputTokensHint"
+                                   Text="When input tokens exceed this value, prior conversation is summarized automatically. Set below your model's context limit."
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   TextWrapping="Wrap"
+                                   Opacity="0.6" />
+                    </StackPanel>
                 </StackPanel>
 
                 <!-- Embedding & Contextualizer settings moved to Connect page (Knowledge Archive card) -->
