@@ -289,9 +289,10 @@ public sealed partial class ChatPanel : Control, IDisposable
         {
             if (panel._inputArea is not null)
                 panel._inputArea.SelectedPreset = preset;
+            var displayName = preset.ProviderType == "Mock" ? "Demo" : preset.Name;
             var label = string.IsNullOrEmpty(preset.ModelId)
-                ? preset.Name
-                : $"{preset.Name}/{preset.ModelId}";
+                ? displayName
+                : $"{displayName}/{preset.ModelId}";
             panel.UpdatePlaceholderWithProvider(label);
         }
         else
