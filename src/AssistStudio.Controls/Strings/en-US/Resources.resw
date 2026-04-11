@@ -63,9 +63,6 @@
   <data name="Chat_Retry" xml:space="preserve">
     <value>Retry</value>
   </data>
-  <data name="Chat_Summarize" xml:space="preserve">
-    <value>Summarize response</value>
-  </data>
   <data name="Chat_CopyRequest" xml:space="preserve">
     <value>Copy Request</value>
   </data>
@@ -129,20 +126,11 @@
   <data name="ComposeBar_Attach.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Attach file</value>
   </data>
-  <data name="ComposeBar_Summarize.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
-    <value>Summarize conversation</value>
-  </data>
   <data name="ComposeBar_Stop.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Stop generating</value>
   </data>
   <data name="ComposeBar_AttachTooltip" xml:space="preserve">
     <value>Attach file</value>
-  </data>
-  <data name="ComposeBar_SummarizeTooltip" xml:space="preserve">
-    <value>Summarize conversation</value>
-  </data>
-  <data name="ComposeBar_SummarizeDisabledTooltip" xml:space="preserve">
-    <value>Not enough conversation to summarize</value>
   </data>
   <data name="ComposeBar_StopTooltip" xml:space="preserve">
     <value>Stop generating</value>
@@ -226,9 +214,6 @@ Add them in Profile settings.</value>
   <!-- Accessibility -->
   <data name="ComposeBar_Attach.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Attach file</value>
-  </data>
-  <data name="ComposeBar_Summarize.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Summarize conversation</value>
   </data>
   <data name="ComposeBar_Tools.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Tools</value>

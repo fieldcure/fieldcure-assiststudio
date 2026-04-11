@@ -63,9 +63,6 @@
   <data name="Chat_Retry" xml:space="preserve">
     <value>다시 시도</value>
   </data>
-  <data name="Chat_Summarize" xml:space="preserve">
-    <value>답변 요약</value>
-  </data>
   <data name="Chat_CopyRequest" xml:space="preserve">
     <value>요청 복사</value>
   </data>
@@ -129,20 +126,11 @@
   <data name="ComposeBar_Attach.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>파일 첨부</value>
   </data>
-  <data name="ComposeBar_Summarize.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
-    <value>대화 요약</value>
-  </data>
   <data name="ComposeBar_Stop.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>생성 중지</value>
   </data>
   <data name="ComposeBar_AttachTooltip" xml:space="preserve">
     <value>파일 첨부</value>
-  </data>
-  <data name="ComposeBar_SummarizeTooltip" xml:space="preserve">
-    <value>대화 요약</value>
-  </data>
-  <data name="ComposeBar_SummarizeDisabledTooltip" xml:space="preserve">
-    <value>대화가 충분하지 않아 요약할 수 없습니다</value>
   </data>
   <data name="ComposeBar_StopTooltip" xml:space="preserve">
     <value>생성 중지</value>
@@ -226,9 +214,6 @@
   <!-- Accessibility -->
   <data name="ComposeBar_Attach.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>파일 첨부</value>
-  </data>
-  <data name="ComposeBar_Summarize.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>대화 요약</value>
   </data>
   <data name="ComposeBar_Tools.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>도구</value>

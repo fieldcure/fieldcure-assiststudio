@@ -61,11 +61,6 @@ public sealed partial class ComposeBar : Control
         DependencyProperty.Register(nameof(IsInputEnabled), typeof(bool), typeof(ComposeBar),
             new PropertyMetadata(true, OnIsInputEnabledChanged));
 
-    /// <summary>Identifies the <see cref="IsSummarizeEnabled"/> dependency property.</summary>
-    public static readonly DependencyProperty IsSummarizeEnabledProperty =
-        DependencyProperty.Register(nameof(IsSummarizeEnabled), typeof(bool), typeof(ComposeBar),
-            new PropertyMetadata(false, OnIsSummarizeEnabledChanged));
-
     /// <summary>Identifies the <see cref="AvailablePresets"/> dependency property.</summary>
     public static readonly DependencyProperty AvailablePresetsProperty =
         DependencyProperty.Register(nameof(AvailablePresets), typeof(IList), typeof(ComposeBar),
@@ -90,11 +85,6 @@ public sealed partial class ComposeBar : Control
     public static readonly DependencyProperty MaxLengthProperty =
         DependencyProperty.Register(nameof(MaxLength), typeof(int), typeof(ComposeBar),
             new PropertyMetadata(0, OnMaxLengthChanged));
-
-    /// <summary>Identifies the <see cref="ShowSummarizeButton"/> dependency property.</summary>
-    public static readonly DependencyProperty ShowSummarizeButtonProperty =
-        DependencyProperty.Register(nameof(ShowSummarizeButton), typeof(bool), typeof(ComposeBar),
-            new PropertyMetadata(true, OnShowSummarizeButtonChanged));
 
     /// <summary>Identifies the <see cref="ShowAttachButton"/> dependency property.</summary>
     public static readonly DependencyProperty ShowAttachButtonProperty =
@@ -166,11 +156,6 @@ public sealed partial class ComposeBar : Control
     private Button? _attachButton;
 
     /// <summary>
-    /// The button that triggers conversation summarization.
-    /// </summary>
-    private Button? _summarizeButton;
-
-    /// <summary>
     /// The button that sends the current message.
     /// </summary>
     private Button? _sendButton;
@@ -236,15 +221,6 @@ public sealed partial class ComposeBar : Control
     }
 
     /// <summary>
-    /// Gets or sets whether the summarize button is enabled.
-    /// </summary>
-    public bool IsSummarizeEnabled
-    {
-        get => (bool)GetValue(IsSummarizeEnabledProperty);
-        set => SetValue(IsSummarizeEnabledProperty, value);
-    }
-
-    /// <summary>
     /// Gets or sets the list of available provider presets for the preset selector.
     /// </summary>
     public IList? AvailablePresets
@@ -287,15 +263,6 @@ public sealed partial class ComposeBar : Control
     {
         get => (int)GetValue(MaxLengthProperty);
         set => SetValue(MaxLengthProperty, value);
-    }
-
-    /// <summary>
-    /// Gets or sets whether the summarize button is visible.
-    /// </summary>
-    public bool ShowSummarizeButton
-    {
-        get => (bool)GetValue(ShowSummarizeButtonProperty);
-        set => SetValue(ShowSummarizeButtonProperty, value);
     }
 
     /// <summary>
@@ -356,11 +323,6 @@ public sealed partial class ComposeBar : Control
     public event EventHandler<Profile>? ProfileChanged;
 
     /// <summary>
-    /// Occurs when the user clicks the summarize button.
-    /// </summary>
-    public event EventHandler? SummarizeRequested;
-
-    /// <summary>
     /// Occurs when the user clicks the stop button to cancel the current streaming response.
     /// </summary>
     public event EventHandler? StopRequested;
@@ -388,8 +350,6 @@ public sealed partial class ComposeBar : Control
         }
         if (_attachButton is not null)
             _attachButton.Click -= AttachButton_Click;
-        if (_summarizeButton is not null)
-            _summarizeButton.Click -= SummarizeButton_Click;
         if (_sendButton is not null)
             _sendButton.Click -= SendButton_Click;
         if (_stopButton is not null)
@@ -403,7 +363,6 @@ public sealed partial class ComposeBar : Control
         _previewBar = GetTemplateChild("PART_PreviewBar") as AttachmentPreviewBar;
         _messageTextBox = GetTemplateChild("PART_MessageTextBox") as TextBox;
         _attachButton = GetTemplateChild("PART_AttachButton") as Button;
-        _summarizeButton = GetTemplateChild("PART_SummarizeButton") as Button;
         _sendButton = GetTemplateChild("PART_SendButton") as Button;
         _stopButton = GetTemplateChild("PART_StopButton") as Button;
         _presetComboBox = GetTemplateChild("PART_PresetComboBox") as ComboBox;
@@ -429,8 +388,6 @@ public sealed partial class ComposeBar : Control
         }
         if (_attachButton is not null)
             _attachButton.Click += AttachButton_Click;
-        if (_summarizeButton is not null)
-            _summarizeButton.Click += SummarizeButton_Click;
         if (_sendButton is not null)
             _sendButton.Click += SendButton_Click;
         if (_stopButton is not null)
@@ -449,16 +406,8 @@ public sealed partial class ComposeBar : Control
             SetTooltip(_stopButton, loader.GetString("ComposeBar_StopTooltip"));
             SetTooltip(_sendButton, loader.GetString("ComposeBar_SendTooltip"));
             SetTooltip(_toolButton, loader.GetString("ComposeBar_ToolsTooltip"));
-            SetTooltip(_summarizeButton, loader.GetString("ComposeBar_SummarizeTooltip"));
         }
         catch { /* Resource not found — tooltips will be empty */ }
-
-        // Apply initial summarize button state and tooltip
-        if (_summarizeButton is not null)
-        {
-            ApplySummarizeVisualState(IsSummarizeEnabled && IsInputEnabled);
-            UpdateSummarizeTooltip(IsSummarizeEnabled);
-        }
 
         // Apply deferred property values
         if (_pendingMaxLength.HasValue && _messageTextBox is not null)
@@ -472,11 +421,7 @@ public sealed partial class ComposeBar : Control
             _pendingMinHeight = null;
         }
 
-        // Apply initial visibility for ShowSummarizeButton / ShowAttachButton
-        // Note: Summarize visibility is driven by ApplySummarizeVisualState (IsSummarizeEnabled);
-        // only override here if the consumer explicitly hid it via ShowSummarizeButton=false.
-        if (_summarizeButton is not null && !ShowSummarizeButton)
-            _summarizeButton.Visibility = Visibility.Collapsed;
+        // Apply initial visibility for ShowAttachButton
         if (_attachButton is not null)
             _attachButton.Visibility = ShowAttachButton ? Visibility.Visible : Visibility.Collapsed;
 
@@ -602,15 +547,6 @@ public sealed partial class ComposeBar : Control
                 _previewBar?.AddAttachment(attachment);
             }
         }
-    }
-
-    /// <summary>
-    /// Handles the summarize button click to raise the <see cref="SummarizeRequested"/> event.
-    /// </summary>
-    private void SummarizeButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (!IsSummarizeEnabled || !IsInputEnabled) return;
-        SummarizeRequested?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>
@@ -752,8 +688,6 @@ public sealed partial class ComposeBar : Control
             // Keep TextBox enabled during streaming so the user can continue typing
             if (self._attachButton is not null)
                 self._attachButton.IsEnabled = enabled;
-            if (self._summarizeButton is not null)
-                self.ApplySummarizeVisualState(enabled && self.IsSummarizeEnabled);
             // Toggle Send ↔ Stop button
             if (self._sendButton is not null)
                 self._sendButton.Visibility = enabled
@@ -766,18 +700,6 @@ public sealed partial class ComposeBar : Control
         }
     }
 
-    /// <summary>
-    /// Called when <see cref="IsSummarizeEnabled"/> changes to update button state and tooltip.
-    /// </summary>
-    private static void OnIsSummarizeEnabledChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        if (d is ComposeBar self && self._summarizeButton is not null)
-        {
-            var canSummarize = (bool)e.NewValue;
-            self.ApplySummarizeVisualState(canSummarize && self.IsInputEnabled);
-            self.UpdateSummarizeTooltip(canSummarize);
-        }
-    }
 
     /// <summary>
     /// Called when <see cref="AvailablePresets"/> changes to populate or defer ComboBox items.
@@ -849,19 +771,6 @@ public sealed partial class ComposeBar : Control
         }
     }
 
-    /// <summary>
-    /// Called when <see cref="ShowSummarizeButton"/> changes to show or hide the summarize button.
-    /// </summary>
-    private static void OnShowSummarizeButtonChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        if (d is ComposeBar self && self._summarizeButton is not null)
-        {
-            // Only show if both ShowSummarizeButton and IsSummarizeEnabled are true
-            self._summarizeButton.Visibility = (bool)e.NewValue && self.IsSummarizeEnabled
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-        }
-    }
 
     /// <summary>
     /// Called when <see cref="ShowAttachButton"/> changes to show or hide the attach button.
@@ -936,31 +845,7 @@ public sealed partial class ComposeBar : Control
         ToolTipService.SetToolTip(button, tooltip);
     }
 
-    /// <summary>
-    /// Applies a visual disabled/enabled state to the summarize button without changing IsEnabled,
-    /// so that the tooltip remains visible even when the button appears disabled.
-    /// </summary>
-    private void ApplySummarizeVisualState(bool enabled)
-    {
-        if (_summarizeButton is null) return;
-        _summarizeButton.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
-    }
 
-    /// <summary>
-    /// Updates the summarize button tooltip based on whether summarization is available.
-    /// </summary>
-    private void UpdateSummarizeTooltip(bool canSummarize)
-    {
-        if (_summarizeButton is null || !canSummarize) return;
-        try
-        {
-            var loader = new Windows.ApplicationModel.Resources.ResourceLoader(
-                "AssistStudio.Controls/Resources");
-            var text = loader.GetString("ComposeBar_SummarizeTooltip");
-            SetTooltip(_summarizeButton, text);
-        }
-        catch { /* Resource not found */ }
-    }
 
     /// <summary>
     /// Sends the current message text and attachments, then clears the input area.

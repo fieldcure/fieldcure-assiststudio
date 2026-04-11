@@ -984,7 +984,6 @@
         copyMessage: 'Copy response',
         edit: 'Edit',
         retry: 'Retry',
-        summarize: 'Summarize response',
         copyRequest: 'Copy Request',
         copyResponse: 'Copy Response',
         showMore: 'Show more',
@@ -1663,11 +1662,6 @@
         actions.appendChild(createActionBtn('\uE8C8', _L.copyMessage, function() {
             window.chrome.webview.postMessage('copyMsg:' + msgId);
             flashCopied(this);
-        }));
-
-        // Summarize
-        actions.appendChild(createActionBtn('\uEB78', _L.summarize, function() {
-            window.chrome.webview.postMessage('summarize:' + msgId);
         }));
 
         // Debug: Copy Response

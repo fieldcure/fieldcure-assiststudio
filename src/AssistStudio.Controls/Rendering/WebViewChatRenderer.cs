@@ -81,11 +81,6 @@ internal partial class WebViewChatRenderer
     public event EventHandler<(string MessageId, string NewText)>? EditRequested;
 
     /// <summary>
-    /// Occurs when the user requests to summarize a specific message.
-    /// </summary>
-    public event EventHandler<string>? SummarizeRequested;
-
-    /// <summary>
     /// Occurs when a keyboard shortcut is pressed inside the WebView2 that should be handled by the app.
     /// The string parameter is the shortcut name (e.g., "Ctrl+S", "Ctrl+Shift+S").
     /// </summary>
@@ -551,11 +546,6 @@ internal partial class WebViewChatRenderer
                     if (int.TryParse(payload[(colonIdx + 1)..], out var direction))
                         BranchSwitchRequested?.Invoke(this, (messageId, direction));
                 }
-            }
-            else if (message?.StartsWith("summarize:") == true)
-            {
-                var messageId = message["summarize:".Length..];
-                SummarizeRequested?.Invoke(this, messageId);
             }
             else if (message?.StartsWith("shortcut:") == true)
             {

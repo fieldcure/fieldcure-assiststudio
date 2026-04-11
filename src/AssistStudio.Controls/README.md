@@ -116,7 +116,7 @@ The main control. Provides message list (WebView2), input area, streaming, attac
 
 Chat input area — text box, attach button, preset/profile selectors. Used internally by `ChatPanel`, but can be placed standalone.
 
-**Dependency Properties:** `Placeholder`, `IsInputEnabled`, `IsSummarizeEnabled`, `AvailablePresets`, `SelectedPreset`, `AvailableProfiles`, `SelectedProfile`
+**Dependency Properties:** `Placeholder`, `IsInputEnabled`, `AvailablePresets`, `SelectedPreset`, `AvailableProfiles`, `SelectedProfile`
 
 ### AttachmentPreviewBar
 
