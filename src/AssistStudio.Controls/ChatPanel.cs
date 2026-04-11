@@ -1552,7 +1552,7 @@ public sealed partial class ChatPanel : Control, IDisposable
             if (AutoSummarize && MaxInputTokens > 0 && Provider.LastUsage is { } usage &&
                 usage.InputTokens > MaxInputTokens)
             {
-                await SummarizeHistoryAsync(ct);
+                await StreamSummaryAsync(ct);
             }
         }
         catch (OperationCanceledException)
@@ -3395,50 +3395,83 @@ public sealed partial class ChatPanel : Control, IDisposable
     }
 
     /// <summary>
-    /// Summarizes older conversation messages into a single system message to reduce token usage.
+    /// Streams a conversation summary as a new assistant message with <see cref="SummaryMeta"/>.
+    /// Finds the range since the last summary (or conversation start), builds a temporary
+    /// summarization request, and streams the result. Original messages are preserved —
+    /// prompt truncation is handled by <see cref="ApplySummaryTruncation"/> at build time.
     /// </summary>
-    private async Task SummarizeHistoryAsync(CancellationToken ct)
+    private async Task StreamSummaryAsync(CancellationToken ct)
     {
         if (Provider is null) return;
 
-        // Keep the most recent turns
-        var turnsToKeep = Math.Min(RecentTurnsToKeep, _messages.Count);
-        var oldMessages = _messages.Take(_messages.Count - turnsToKeep).ToList();
-        if (oldMessages.Count == 0) return;
-        DiagnosticLogger.LogInfo($"[Chat] Summarizing history — {oldMessages.Count} old messages, keeping {turnsToKeep}");
+        // Find the range to summarize: from last summary (exclusive) to end of _messages
+        var startIndex = 0;
+        for (var i = _messages.Count - 1; i >= 0; i--)
+        {
+            if (_messages[i].Summary is not null)
+            {
+                startIndex = i + 1;
+                break;
+            }
+        }
 
-        // Build summarization prompt
+        var coveredMessages = _messages.Skip(startIndex).ToList();
+        if (coveredMessages.Count == 0) return;
+
+        DiagnosticLogger.LogInfo($"[Chat] StreamSummary — covering {coveredMessages.Count} messages from index {startIndex}");
+
+        // Build summarization request (transient — not stored anywhere)
         var historyText = string.Join("\n",
-            oldMessages.Select(m => $"{m.Role}: {m.Content}"));
+            coveredMessages.Select(m => $"{m.Role}: {m.Content}"));
+
+        // If there's a previous summary, include it for cumulative context
+        var previousSummary = startIndex > 0 ? _messages[startIndex - 1] : null;
+        var prompt = previousSummary is not null
+            ? $"Previous summary:\n{previousSummary.Content}\n\nNew conversation to integrate into the summary:\n\n{historyText}"
+            : $"Summarize the following conversation concisely, preserving key context and decisions:\n\n{historyText}";
 
         var summaryRequest = new AiRequest
         {
-            Messages =
-            [
-                new ChatMessage(ChatRole.User,
-                    "Summarize the following conversation concisely, preserving key context and decisions:\n\n" +
-                    historyText)
-            ],
-            SystemPrompt = "You are a helpful assistant that creates concise conversation summaries."
+            Messages = [new ChatMessage(ChatRole.User, prompt)],
+            SystemPrompt = "You are a helpful assistant that creates concise conversation summaries.\nRespond in the same language as the conversation being summarized."
         };
+
+        // Create summary node: ParentId = last assistant message
+        var lastAssistant = _messages.LastOrDefault(m => m.Role == ChatRole.Assistant);
+        var summaryMessage = new ChatMessage(ChatRole.Assistant)
+        {
+            IsStreaming = true,
+            ProviderName = Provider.ProviderName,
+            ProviderModelId = Provider.ModelId,
+            ParentId = lastAssistant?.Id,
+            Summary = new SummaryMeta
+            {
+                CoveredMessageIds = coveredMessages.Select(m => m.Id).ToList()
+            }
+        };
+        RegisterInTree(summaryMessage);
+        _messages.Add(summaryMessage);
+        await _renderer.BeginAssistantMessageAsync(summaryMessage.Id, Provider.ProviderName, Provider.ModelId);
 
         try
         {
-            var summary = (await Provider.CompleteAsync(summaryRequest, ct)).Content ?? "";
-            DiagnosticLogger.LogInfo("[Chat] History summarized successfully");
-
-            // Replace old messages with a summary system message
-            for (var i = 0; i < oldMessages.Count; i++)
-            {
-                _messages.RemoveAt(0);
-            }
-
-            _messages.Insert(0, new ChatMessage(ChatRole.System,
-                $"[Previous conversation summary]\n{summary}"));
+            var result = await ConsumeStreamAsync(Provider.StreamAsync(summaryRequest, ct), summaryMessage, ct);
+            await _renderer.FinalizeMessageAsync(summaryMessage.Id, summaryMessage.Content, result.IsTruncated);
+            DiagnosticLogger.LogInfo($"[Chat] StreamSummary complete — covered {coveredMessages.Count} messages");
+        }
+        catch (OperationCanceledException)
+        {
+            await _renderer.FinalizeMessageAsync(summaryMessage.Id, summaryMessage.Content);
         }
         catch (Exception ex)
         {
             DiagnosticLogger.LogException(ex);
+            summaryMessage.Content += $"\n\n[Error: {ex.Message}]";
+            await _renderer.FinalizeMessageAsync(summaryMessage.Id, summaryMessage.Content);
+        }
+        finally
+        {
+            summaryMessage.IsStreaming = false;
         }
     }
 
@@ -3481,7 +3514,7 @@ public sealed partial class ChatPanel : Control, IDisposable
             if (AutoSummarize && MaxInputTokens > 0 && result.Usage is { } usage &&
                 usage.InputTokens > MaxInputTokens)
             {
-                await SummarizeHistoryAsync(ct);
+                await StreamSummaryAsync(ct);
             }
         }
         catch (OperationCanceledException)
