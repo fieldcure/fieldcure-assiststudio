@@ -144,6 +144,14 @@ public partial class ChatMessage : INotifyPropertyChanged
     /// </summary>
     public int? TokenCount { get; set; }
 
+    /// <summary>
+    /// Summary metadata. Non-null indicates this message is a conversation summary
+    /// that replaces the covered messages during prompt building.
+    /// Only meaningful for <see cref="ChatRole.Assistant"/> messages.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public SummaryMeta? Summary { get; init; }
+
     #endregion
 
     #region Tree Properties

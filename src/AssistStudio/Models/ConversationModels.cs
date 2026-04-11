@@ -112,6 +112,12 @@ public class SavedMessage
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? TokenCount { get; set; }
 
+    /// <summary>
+    /// Summary metadata. Non-null indicates this message is a conversation summary.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public SummaryMeta? Summary { get; set; }
+
     #endregion
 }
 

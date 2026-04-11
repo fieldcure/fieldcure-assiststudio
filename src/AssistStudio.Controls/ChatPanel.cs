@@ -1285,11 +1285,12 @@ public sealed partial class ChatPanel : Control, IDisposable
         string? thinkingContent = null,
         DateTime? timestamp = null,
         double? elapsedSeconds = null,
-        int? tokenCount = null)
+        int? tokenCount = null,
+        SummaryMeta? summary = null)
     {
         var msg = id is not null
-            ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, ThinkingContent = thinkingContent, Timestamp = timestamp ?? DateTime.UtcNow, ElapsedSeconds = elapsedSeconds, TokenCount = tokenCount }
-            : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, ThinkingContent = thinkingContent, Timestamp = timestamp ?? DateTime.UtcNow, ElapsedSeconds = elapsedSeconds, TokenCount = tokenCount };
+            ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, ThinkingContent = thinkingContent, Timestamp = timestamp ?? DateTime.UtcNow, ElapsedSeconds = elapsedSeconds, TokenCount = tokenCount, Summary = summary }
+            : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, ThinkingContent = thinkingContent, Timestamp = timestamp ?? DateTime.UtcNow, ElapsedSeconds = elapsedSeconds, TokenCount = tokenCount, Summary = summary };
         RegisterInTree(msg);
         _messages.Add(msg);
     }

@@ -126,6 +126,7 @@ public static class ConversationManager
                 ThinkingContent = m.ThinkingContent,
                 ElapsedSeconds = m.ElapsedSeconds,
                 TokenCount = m.TokenCount,
+                Summary = m.Summary,
             };
 
             // Persist user image attachments

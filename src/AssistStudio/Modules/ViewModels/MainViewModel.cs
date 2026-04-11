@@ -349,7 +349,8 @@ public partial class MainViewModel : ObservableObject
                 msg.ThinkingContent,
                 msg.Timestamp,
                 msg.ElapsedSeconds,
-                msg.TokenCount);
+                msg.TokenCount,
+                msg.Summary);
 
         // Build parent→children map
         var childrenMap = new Dictionary<string, List<SavedMessage>>();
