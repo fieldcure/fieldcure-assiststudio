@@ -390,100 +390,63 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
                 _ => "user"
             };
 
-            // Only process binary attachments (images, documents) for user messages.
-            var imageAttachments = msg.Role == ChatRole.User
-                ? msg.Attachments.Where(a => a.Type == AttachmentType.Image).ToList()
-                : [];
-            var textAttachments = msg.Attachments
-                .Where(a => a.Type == AttachmentType.TextFile)
-                .ToList();
-            var documentAttachments = msg.Role == ChatRole.User
-                ? msg.Attachments.Where(a => a.Type == AttachmentType.Document).ToList()
-                : [];
+            // Labeled attachment layout (active for 1+ attachments on user messages)
+            var layout = msg.Role == ChatRole.User
+                ? AttachmentLabelBuilder.Build(msg.Content, msg.Attachments)
+                : null;
 
-            if (imageAttachments.Count > 0 || documentAttachments.Count > 0)
+            if (layout is not null)
             {
-                // Use multi-part content for messages with images or documents
                 var contentParts = new JsonArray();
 
-                foreach (var att in imageAttachments)
+                foreach (var seg in layout.BinarySegments)
                 {
-                    var dataUrl = $"data:{att.MimeType ?? "image/png"};base64,{Convert.ToBase64String(att.Data)}";
-                    contentParts.Add(new JsonObject
-                    {
-                        ["type"] = "image_url",
-                        ["image_url"] = new JsonObject
-                        {
-                            ["url"] = dataUrl
-                        }
-                    });
-                }
+                    contentParts.Add(new JsonObject { ["type"] = "text", ["text"] = seg.Label });
 
-                // Document attachments: native PDF or text extraction fallback
-                var textContent = msg.Content;
-                foreach (var att in documentAttachments)
-                {
-                    if (_pdfCapability == PdfCapability.NativePdf)
+                    if (seg.Attachment.Type == AttachmentType.Image)
                     {
-                        var dataUrl = $"data:{att.MimeType ?? "application/pdf"};base64,{Convert.ToBase64String(att.Data)}";
+                        var dataUrl = $"data:{seg.Attachment.MimeType ?? "image/png"};base64,{Convert.ToBase64String(seg.Attachment.Data)}";
+                        contentParts.Add(new JsonObject
+                        {
+                            ["type"] = "image_url",
+                            ["image_url"] = new JsonObject { ["url"] = dataUrl }
+                        });
+                    }
+                    else if (_pdfCapability == PdfCapability.NativePdf)
+                    {
+                        var dataUrl = $"data:{seg.Attachment.MimeType ?? "application/pdf"};base64,{Convert.ToBase64String(seg.Attachment.Data)}";
                         contentParts.Add(new JsonObject
                         {
                             ["type"] = "file",
                             ["file"] = new JsonObject
                             {
-                                ["filename"] = att.FileName,
+                                ["filename"] = seg.Attachment.FileName,
                                 ["file_data"] = dataUrl
                             }
                         });
                     }
                     else if (_pdfCapability == PdfCapability.PageAsImage)
                     {
-                        var pages = Helpers.AttachmentProcessor.RenderPdfPages(att.Data);
+                        var pages = Helpers.AttachmentProcessor.RenderPdfPages(seg.Attachment.Data);
                         foreach (var page in pages)
                         {
                             var imgUrl = $"data:image/png;base64,{Convert.ToBase64String(page)}";
                             contentParts.Add(new JsonObject
                             {
                                 ["type"] = "image_url",
-                                ["image_url"] = new JsonObject
-                                {
-                                    ["url"] = imgUrl
-                                }
+                                ["image_url"] = new JsonObject { ["url"] = imgUrl }
                             });
                         }
                     }
-                    else
-                    {
-                        var pdfText = Helpers.AttachmentProcessor.ExtractTextFromPdf(att.Data);
-                        textContent += $"\n\n[File: {att.FileName}]\n{pdfText}";
-                    }
+                    // TextExtraction PDF: already inlined via AttachmentLabelBuilder
+                    // (Document with text extraction is handled as TextFile upstream)
                 }
 
-                // Append text file contents inline
-                foreach (var att in textAttachments)
-                {
-                    var fileText = Encoding.UTF8.GetString(att.Data);
-                    textContent += $"\n\n[File: {att.FileName}]\n{fileText}";
-                }
-
-                if (!string.IsNullOrEmpty(textContent))
-                {
-                    contentParts.Add(new JsonObject
-                    {
-                        ["type"] = "text",
-                        ["text"] = textContent
-                    });
-                }
-
-                messages.Add(new JsonObject
-                {
-                    ["role"] = role,
-                    ["content"] = contentParts
-                });
+                contentParts.Add(new JsonObject { ["type"] = "text", ["text"] = layout.UserTextBlock });
+                messages.Add(new JsonObject { ["role"] = role, ["content"] = contentParts });
             }
             else if (msg.Role == ChatRole.Tool)
             {
-                // Tool result message requires tool_call_id
                 messages.Add(new JsonObject
                 {
                     ["role"] = "tool",
@@ -493,21 +456,12 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
             }
             else
             {
-                // Text-only message (possibly with text file attachments)
-                var textContent = msg.Content;
-                foreach (var att in textAttachments)
-                {
-                    var fileText = Encoding.UTF8.GetString(att.Data);
-                    textContent += $"\n\n[File: {att.FileName}]\n{fileText}";
-                }
-
                 var msgObj = new JsonObject
                 {
                     ["role"] = role,
-                    ["content"] = textContent
+                    ["content"] = msg.Content
                 };
 
-                // Include tool_calls on assistant messages that initiated tool calls
                 if (msg.Role == ChatRole.Assistant && msg.ToolCalls is { Count: > 0 })
                 {
                     var toolCallsArr = new JsonArray();

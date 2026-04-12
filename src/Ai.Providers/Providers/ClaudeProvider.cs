@@ -2,6 +2,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using FieldCure.Ai.Providers.Helpers;
 using FieldCure.Ai.Providers.Models;
 
 namespace FieldCure.Ai.Providers;
@@ -385,84 +386,57 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
 
             var role = msg.Role == ChatRole.User ? "user" : "assistant";
 
-            // Only process binary attachments (images, documents) for user messages.
-            // Other roles should never have attachments, but guard defensively.
-            var imageAttachments = msg.Role == ChatRole.User
-                ? msg.Attachments.Where(a => a.Type == AttachmentType.Image).ToList()
-                : [];
-            var textAttachments = msg.Attachments
-                .Where(a => a.Type == AttachmentType.TextFile)
-                .ToList();
-            var documentAttachments = msg.Role == ChatRole.User
-                ? msg.Attachments.Where(a => a.Type == AttachmentType.Document).ToList()
-                : [];
+            // Labeled attachment layout (active for 1+ attachments on user messages)
+            var layout = msg.Role == ChatRole.User
+                ? AttachmentLabelBuilder.Build(msg.Content, msg.Attachments)
+                : null;
 
-            if (imageAttachments.Count > 0 || documentAttachments.Count > 0)
+            if (layout is not null)
             {
-                // Use multi-part content for messages with images or documents
                 var contentParts = new JsonArray();
 
-                foreach (var att in imageAttachments)
+                // Binary attachments with label text blocks interleaved
+                foreach (var seg in layout.BinarySegments)
                 {
-                    contentParts.Add(new JsonObject
+                    contentParts.Add(new JsonObject { ["type"] = "text", ["text"] = seg.Label });
+
+                    if (seg.Attachment.Type == AttachmentType.Image)
                     {
-                        ["type"] = "image",
-                        ["source"] = new JsonObject
+                        contentParts.Add(new JsonObject
                         {
-                            ["type"] = "base64",
-                            ["media_type"] = att.MimeType ?? "image/png",
-                            ["data"] = Convert.ToBase64String(att.Data)
-                        }
-                    });
-                }
-
-                // Native PDF documents
-                foreach (var att in documentAttachments)
-                {
-                    contentParts.Add(new JsonObject
+                            ["type"] = "image",
+                            ["source"] = new JsonObject
+                            {
+                                ["type"] = "base64",
+                                ["media_type"] = seg.Attachment.MimeType ?? "image/png",
+                                ["data"] = Convert.ToBase64String(seg.Attachment.Data)
+                            }
+                        });
+                    }
+                    else
                     {
-                        ["type"] = "document",
-                        ["source"] = new JsonObject
+                        contentParts.Add(new JsonObject
                         {
-                            ["type"] = "base64",
-                            ["media_type"] = att.MimeType ?? "application/pdf",
-                            ["data"] = Convert.ToBase64String(att.Data)
-                        }
-                    });
+                            ["type"] = "document",
+                            ["source"] = new JsonObject
+                            {
+                                ["type"] = "base64",
+                                ["media_type"] = seg.Attachment.MimeType ?? "application/pdf",
+                                ["data"] = Convert.ToBase64String(seg.Attachment.Data)
+                            }
+                        });
+                    }
                 }
 
-                // Append text file contents inline
-                var textContent = msg.Content;
-                foreach (var att in textAttachments)
-                {
-                    var fileText = System.Text.Encoding.UTF8.GetString(att.Data);
-                    textContent += $"\n\n[File: {att.FileName}]\n{fileText}";
-                }
+                // User text block (contains [User message] header + inlined text files)
+                contentParts.Add(new JsonObject { ["type"] = "text", ["text"] = layout.UserTextBlock });
 
-                if (!string.IsNullOrEmpty(textContent))
-                {
-                    contentParts.Add(new JsonObject
-                    {
-                        ["type"] = "text",
-                        ["text"] = textContent
-                    });
-                }
-
-                messages.Add(new JsonObject
-                {
-                    ["role"] = role,
-                    ["content"] = contentParts
-                });
+                messages.Add(new JsonObject { ["role"] = role, ["content"] = contentParts });
             }
             else
             {
-                // Text-only message (possibly with text file attachments)
+                // No attachments or non-user message
                 var textContent = msg.Content;
-                foreach (var att in textAttachments)
-                {
-                    var fileText = System.Text.Encoding.UTF8.GetString(att.Data);
-                    textContent += $"\n\n[File: {att.FileName}]\n{fileText}";
-                }
 
                 // Assistant messages with tool calls need content blocks
                 if (msg.Role == ChatRole.Assistant && msg.ToolCalls is { Count: > 0 })

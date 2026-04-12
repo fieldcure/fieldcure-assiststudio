@@ -2,6 +2,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using FieldCure.Ai.Providers.Helpers;
 using FieldCure.Ai.Providers.Models;
 
 namespace FieldCure.Ai.Providers;
@@ -372,54 +373,34 @@ public partial class GeminiProvider : IAiProvider, IDisposable
             var role = msg.Role == ChatRole.User ? "user" : "model";
             var parts = new JsonArray();
 
-            // Only process binary attachments (images, documents) for user messages.
-            var imageAttachments = msg.Role == ChatRole.User
-                ? msg.Attachments.Where(a => a.Type == AttachmentType.Image).ToList()
-                : [];
-            var textAttachments = msg.Attachments
-                .Where(a => a.Type == AttachmentType.TextFile)
-                .ToList();
-            var documentAttachments = msg.Role == ChatRole.User
-                ? msg.Attachments.Where(a => a.Type == AttachmentType.Document).ToList()
-                : [];
+            // Labeled attachment layout
+            var layout = msg.Role == ChatRole.User
+                ? AttachmentLabelBuilder.Build(msg.Content, msg.Attachments)
+                : null;
 
-            // Add image parts (inlineData)
-            foreach (var att in imageAttachments)
+            if (layout is not null)
             {
-                parts.Add(new JsonObject
+                foreach (var seg in layout.BinarySegments)
                 {
-                    ["inlineData"] = new JsonObject
+                    parts.Add(new JsonObject { ["text"] = seg.Label });
+
+                    parts.Add(new JsonObject
                     {
-                        ["mimeType"] = att.MimeType ?? "image/png",
-                        ["data"] = Convert.ToBase64String(att.Data)
-                    }
-                });
-            }
+                        ["inlineData"] = new JsonObject
+                        {
+                            ["mimeType"] = seg.Attachment.Type == AttachmentType.Image
+                                ? seg.Attachment.MimeType ?? "image/png"
+                                : seg.Attachment.MimeType ?? "application/pdf",
+                            ["data"] = Convert.ToBase64String(seg.Attachment.Data)
+                        }
+                    });
+                }
 
-            // Add native PDF document parts (inlineData)
-            foreach (var att in documentAttachments)
-            {
-                parts.Add(new JsonObject
-                {
-                    ["inlineData"] = new JsonObject
-                    {
-                        ["mimeType"] = att.MimeType ?? "application/pdf",
-                        ["data"] = Convert.ToBase64String(att.Data)
-                    }
-                });
+                parts.Add(new JsonObject { ["text"] = layout.UserTextBlock });
             }
-
-            // Build text content (with text file attachments appended)
-            var textContent = msg.Content;
-            foreach (var att in textAttachments)
+            else if (!string.IsNullOrEmpty(msg.Content))
             {
-                var fileText = Encoding.UTF8.GetString(att.Data);
-                textContent += $"\n\n[File: {att.FileName}]\n{fileText}";
-            }
-
-            if (!string.IsNullOrEmpty(textContent))
-            {
-                parts.Add(new JsonObject { ["text"] = textContent });
+                parts.Add(new JsonObject { ["text"] = msg.Content });
             }
 
             // Assistant messages with tool calls need functionCall parts

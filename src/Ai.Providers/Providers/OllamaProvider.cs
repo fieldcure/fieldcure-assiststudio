@@ -350,38 +350,46 @@ public partial class OllamaProvider : IAiProvider, IDisposable
                 _ => "user"
             };
 
-            var imageAttachments = msg.Attachments
-                .Where(a => a.Type == AttachmentType.Image)
-                .ToList();
-            var textAttachments = msg.Attachments
-                .Where(a => a.Type == AttachmentType.TextFile)
-                .ToList();
-            var documentAttachments = msg.Attachments
-                .Where(a => a.Type == AttachmentType.Document)
-                .ToList();
+            // Labeled attachment layout
+            var layout = msg.Role == ChatRole.User
+                ? AttachmentLabelBuilder.Build(msg.Content, msg.Attachments)
+                : null;
 
-            // Append text file contents inline
-            var textContent = msg.Content;
-            foreach (var att in textAttachments)
+            string textContent;
+            var imageDataList = new List<byte[]>();
+
+            if (layout is not null)
             {
-                var fileText = Encoding.UTF8.GetString(att.Data);
-                textContent += $"\n\n[File: {att.FileName}]\n{fileText}";
+                // Ollama fallback: all labels go into text content
+                var sb = new StringBuilder();
+
+                // Binary labels first (describing what's in the images array)
+                foreach (var seg in layout.BinarySegments)
+                {
+                    sb.AppendLine(seg.Label);
+
+                    if (seg.Attachment.Type == AttachmentType.Image)
+                    {
+                        imageDataList.Add(seg.Attachment.Data);
+                    }
+                    else if (PdfCapability == PdfCapability.PageAsImage)
+                    {
+                        var pages = Helpers.AttachmentProcessor.RenderPdfPages(seg.Attachment.Data);
+                        foreach (var page in pages)
+                            imageDataList.Add(page);
+                    }
+                    // TextExtraction PDF: already inlined via layout.UserTextBlock
+                }
+
+                if (layout.BinarySegments.Count > 0)
+                    sb.AppendLine();
+
+                sb.Append(layout.UserTextBlock);
+                textContent = sb.ToString();
             }
-
-            // Document attachments: PageAsImage renders PDF pages into vision input
-            foreach (var att in documentAttachments)
+            else
             {
-                if (PdfCapability == PdfCapability.PageAsImage)
-                {
-                    var pages = Helpers.AttachmentProcessor.RenderPdfPages(att.Data);
-                    foreach (var page in pages)
-                        imageAttachments.Add(new ChatAttachment(att.FileName, AttachmentType.Image, page, "image/png"));
-                }
-                else
-                {
-                    var pdfText = Helpers.AttachmentProcessor.ExtractTextFromPdf(att.Data);
-                    textContent += $"\n\n[File: {att.FileName}]\n{pdfText}";
-                }
+                textContent = msg.Content;
             }
 
             var msgObj = new JsonObject
@@ -409,13 +417,11 @@ public partial class OllamaProvider : IAiProvider, IDisposable
             }
 
             // Ollama uses "images" field for base64 image data
-            if (imageAttachments.Count > 0)
+            if (imageDataList.Count > 0)
             {
                 var images = new JsonArray();
-                foreach (var att in imageAttachments)
-                {
-                    images.Add(Convert.ToBase64String(att.Data));
-                }
+                foreach (var data in imageDataList)
+                    images.Add(Convert.ToBase64String(data));
                 msgObj["images"] = images;
             }
 
