@@ -2993,7 +2993,7 @@ public sealed partial class ChatPanel : Control, IDisposable
                     _approvalPanel.ToolDisplayName = GetLocalizedToolName(toolName);
                     _approvalPanel.ServerName = (matchedTool as McpToolAdapter)?.ServerName ?? "";
                     _approvalPanel.Arguments = arguments;
-                    _approvalPanel.IsExpanded = false;
+                    _approvalPanel.IsExpanded = true;
                     _inputArea.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
                     _approvalPanel.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
                     _approvalPanel.FocusUserNote();

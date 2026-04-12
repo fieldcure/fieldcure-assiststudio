@@ -369,6 +369,45 @@
         </Setter>
     </Style>
 
+    <!-- ToolApprovalPanel: Parameter templates -->
+    <DataTemplate x:Key="ShortParameterTemplate">
+        <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                  Padding="0" Margin="0,4" MinHeight="0" IsEnabled="False">
+            <Expander.Header>
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="{Binding Name}" FontSize="12"
+                               Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Display}" FontSize="12" FontFamily="Consolas"
+                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                               MaxLines="1" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                </StackPanel>
+            </Expander.Header>
+        </Expander>
+    </DataTemplate>
+
+    <DataTemplate x:Key="LongParameterTemplate">
+        <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                  Padding="0" Margin="0,4" MinHeight="0">
+            <Expander.Header>
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="{Binding Name}" FontSize="12"
+                               Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Preview}" FontSize="12" FontFamily="Consolas"
+                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                               MaxLines="1" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                </StackPanel>
+            </Expander.Header>
+            <TextBlock Text="{Binding Display}" FontSize="12" FontFamily="Consolas"
+                       Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                       TextWrapping="Wrap" IsTextSelectionEnabled="True"
+                       Margin="16,4,8,4" />
+        </Expander>
+    </DataTemplate>
+
+    <local:ToolParameterTemplateSelector x:Key="ParameterTemplateSelector"
+        ShortTemplate="{StaticResource ShortParameterTemplate}"
+        LongTemplate="{StaticResource LongParameterTemplate}" />
+
     <!-- ToolApprovalPanel -->
     <Style TargetType="local:ToolApprovalPanel">
         <Setter Property="Visibility" Value="Collapsed" />
@@ -426,18 +465,19 @@
                                         Style="{StaticResource SubtleButtonStyle}"
                                         Padding="6"
                                         VerticalAlignment="Center">
-                                    <FontIcon x:Name="PART_ExpandIcon" Glyph="&#xE70E;" FontSize="12" />
+                                    <FontIcon x:Name="PART_ExpandIcon" Glyph="&#xE70D;" FontSize="12" />
                                 </Button>
                             </Grid>
 
                             <!-- Row 1: Parameters preview (collapsed by default) -->
                             <ScrollViewer x:Name="PART_ArgumentsContainer"
                                           Grid.Row="1"
-                                          Visibility="Collapsed"
+                                          Visibility="Visible"
                                           MaxHeight="400"
                                           HorizontalScrollBarVisibility="Disabled"
                                           VerticalScrollBarVisibility="Auto">
-                                <StackPanel x:Name="PART_ParametersPanel" Spacing="4" />
+                                <ItemsControl x:Name="PART_ParametersControl"
+                                              ItemTemplateSelector="{StaticResource ParameterTemplateSelector}" />
                             </ScrollViewer>
 
                             <!-- Row 2: User instruction (always visible, borderless like ComposeBar) -->
