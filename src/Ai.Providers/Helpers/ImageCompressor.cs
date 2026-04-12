@@ -12,22 +12,56 @@ public static class ImageCompressor
     private const int DefaultMaxBytes = 4 * 1024 * 1024;
 
     /// <summary>
+    /// MIME types accepted by major AI provider APIs (Claude, OpenAI, Gemini).
+    /// Formats outside this set (BMP, TIFF, HEIC, AVIF, etc.) are re-encoded to JPEG.
+    /// </summary>
+    private static readonly HashSet<string> AcceptedMimeTypes =
+        ["image/jpeg", "image/png", "image/gif", "image/webp"];
+
+    /// <summary>
     /// Compresses an image to fit within the API size limit.
-    /// Converts large PNG/BMP/TIFF to JPEG and progressively reduces quality then resolution.
-    /// Returns the original bytes unchanged if already under the limit.
+    /// Non-accepted formats (BMP, TIFF, HEIC, etc.) are always re-encoded to JPEG
+    /// regardless of size. Accepted formats are returned unchanged if under the limit,
+    /// or progressively compressed via quality reduction then resolution scaling.
     /// </summary>
     /// <param name="imageBytes">Original image bytes.</param>
     /// <param name="maxBytes">Maximum allowed size in bytes.</param>
     /// <returns>Compressed image bytes and the resulting MIME type.</returns>
+    /// <exception cref="NotSupportedException">
+    /// Thrown when the image format is not in the accepted whitelist and cannot be decoded
+    /// by SkiaSharp (e.g., HEIC without platform codec). Callers should catch this and
+    /// notify the user via InfoBar/NotificationCenter.
+    /// </exception>
     public static (byte[] Data, string MimeType) CompressForApi(
         byte[] imageBytes, int maxBytes = DefaultMaxBytes)
     {
+        var detectedMime = DetectMimeType(imageBytes);
+
+        // Non-accepted formats (BMP, TIFF, HEIC, AVIF, etc.) — always re-encode to JPEG.
+        // SKBitmap.Decode handles most raster formats via SkiaSharp's codec support.
+        if (!AcceptedMimeTypes.Contains(detectedMime))
+        {
+            using var decoded = SKBitmap.Decode(imageBytes);
+            if (decoded is null)
+                throw new NotSupportedException(
+                    $"Unable to decode image format '{detectedMime}'. " +
+                    "Supported formats: JPEG, PNG, GIF, WebP, BMP, TIFF.");
+
+            using var flat = FlattenAlpha(decoded);
+            var jpeg = EncodeAsJpeg(flat ?? decoded, 85);
+            if (jpeg.Length <= maxBytes)
+                return (jpeg, "image/jpeg");
+            // If still over limit, fall through to progressive compression below
+            imageBytes = jpeg;
+            detectedMime = "image/jpeg";
+        }
+
         if (imageBytes.Length <= maxBytes)
-            return (imageBytes, DetectMimeType(imageBytes));
+            return (imageBytes, detectedMime);
 
         using var original = SKBitmap.Decode(imageBytes);
         if (original is null)
-            return (imageBytes, DetectMimeType(imageBytes));
+            return (imageBytes, detectedMime);
 
         // Flatten alpha channel onto white background for JPEG conversion
         using var flattened = FlattenAlpha(original);

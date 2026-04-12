@@ -101,5 +101,12 @@ public partial class ChatAttachment
     [JsonIgnore]
     public int LineCount { get; set; }
 
+    /// <summary>
+    /// Indicates the image format is unsupported and cannot be sent to the API.
+    /// Chip is shown with strikethrough; excluded from send payload.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsUnsupported { get; set; }
+
     #endregion
 }

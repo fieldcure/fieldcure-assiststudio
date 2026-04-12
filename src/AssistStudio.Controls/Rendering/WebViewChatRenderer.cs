@@ -867,12 +867,12 @@ internal partial class WebViewChatRenderer
             else if (att.Type == AttachmentType.TextFile)
             {
                 obj["source"] = att.Source == AttachmentSource.Pasted ? "pasted" : "file";
-                obj["previewText"] = TextAttachmentHelper.BuildPreviewText(att);
 
                 var fullText = Encoding.UTF8.GetString(att.Data);
                 obj["charCount"] = att.CharCount > 0 ? att.CharCount : fullText.Length;
                 obj["lineCount"] = att.LineCount > 0 ? att.LineCount : fullText.AsSpan().Count('\n') + 1;
 
+                // Full content with 5MB clamp (UTF-8 safe slice at boundary)
                 const int MaxFullBytes = 5 * 1024 * 1024;
                 const int ClampedBytes = 100 * 1024;
                 if (att.Data.Length <= MaxFullBytes)

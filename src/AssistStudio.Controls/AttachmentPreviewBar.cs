@@ -1,6 +1,5 @@
 ﻿using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using FieldCure.AssistStudio.Controls.Helpers;
 using FieldCure.AssistStudio.Models;
 using FieldCure.Ai.Providers.Models;
 using Microsoft.UI.Xaml;
@@ -31,7 +30,7 @@ public sealed partial class AttachmentPreviewBar : Control
     /// <summary>
     /// The panel obtained from the control template that hosts preview item visuals.
     /// </summary>
-    private StackPanel? _itemsPanel;
+    private WrapPanel _itemsPanel = new() { HorizontalSpacing = 8, VerticalSpacing = 8 };
 
     #endregion
 
@@ -114,7 +113,7 @@ public sealed partial class AttachmentPreviewBar : Control
     public void Clear()
     {
         _attachments.Clear();
-        _itemsPanel?.Children.Clear();
+        _itemsPanel.Children.Clear();
     }
 
     #endregion
@@ -125,7 +124,10 @@ public sealed partial class AttachmentPreviewBar : Control
     protected override void OnApplyTemplate()
     {
         base.OnApplyTemplate();
-        _itemsPanel = GetTemplateChild("PART_ItemsPanel") as StackPanel;
+        if (GetTemplateChild("PART_ItemsHost") is Border host)
+        {
+            host.Child = _itemsPanel;
+        }
     }
 
     #endregion
@@ -137,23 +139,16 @@ public sealed partial class AttachmentPreviewBar : Control
     /// </summary>
     private void OnAttachmentsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        // Ensure template is applied (may be deferred when control starts Collapsed)
-        if (_itemsPanel is null)
-        {
-            ApplyTemplate();
-            _itemsPanel = GetTemplateChild("PART_ItemsPanel") as StackPanel;
-        }
-
         if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems is not null)
         {
             foreach (ChatAttachment item in e.NewItems)
             {
-                _itemsPanel?.Children.Add(CreatePreviewItem(item));
+                _itemsPanel.Children.Add(CreatePreviewItem(item));
             }
         }
         else if (e.Action == NotifyCollectionChangedAction.Reset)
         {
-            _itemsPanel?.Children.Clear();
+            _itemsPanel.Children.Clear();
         }
 
         Visibility = _attachments.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -170,7 +165,7 @@ public sealed partial class AttachmentPreviewBar : Control
             if (index >= 0)
             {
                 _attachments.RemoveAt(index);
-                _itemsPanel?.Children.RemoveAt(index);
+                _itemsPanel.Children.RemoveAt(index);
                 Visibility = _attachments.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
                 AttachmentRemoved?.Invoke(this, attachment);
             }
@@ -182,180 +177,205 @@ public sealed partial class AttachmentPreviewBar : Control
     #region Private Methods
 
     /// <summary>
-    /// Creates a visual preview element for the given attachment, dispatching to a type-specific builder.
+    /// Creates a preview element for the given attachment, dispatching to a type-specific builder.
     /// </summary>
     private Grid CreatePreviewItem(ChatAttachment attachment)
     {
-        var container = attachment.Type switch
-        {
-            AttachmentType.Image => CreateImagePreview(attachment),
-            AttachmentType.TextFile => CreateTextCardPreview(attachment),
-            _ => CreateGenericFileChip(attachment),
-        };
+        var chip = attachment.IsUnsupported
+            ? CreateUnsupportedChip(attachment)
+            : attachment.Type switch
+            {
+                AttachmentType.Image => CreateImageChip(attachment),
+                AttachmentType.TextFile => CreateTextChip(attachment),
+                _ => CreateGenericChip(attachment),
+            };
 
-        AddRemoveButton(container, attachment);
-        return container;
+        AddRemoveButton(chip, attachment);
+        return chip;
     }
 
     /// <summary>
-    /// Creates an image thumbnail preview.
+    /// Creates a compact image chip (48px height) with thumbnail + filename.
     /// </summary>
-    private Grid CreateImagePreview(ChatAttachment attachment)
+    private static Grid CreateImageChip(ChatAttachment attachment)
     {
-        var size = ThumbnailSize;
-        var container = new Grid
-        {
-            Width = size,
-            Height = size,
-            CornerRadius = new CornerRadius(8),
-            BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.Gray),
-            BorderThickness = new Thickness(1),
-            Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
-        };
+        var chip = CreateChipContainer();
 
-        var image = new Image
+        // Thumbnail: actual image, 36×36 cover
+        var thumb = new Border
         {
-            Stretch = Stretch.UniformToFill,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center,
+            Width = 36,
+            Height = 36,
+            CornerRadius = new CornerRadius(6),
         };
-
+        var image = new Image { Stretch = Stretch.UniformToFill };
         var bitmapImage = new BitmapImage();
         var stream = new MemoryStream(attachment.Data);
-        var raStream = stream.AsRandomAccessStream();
-        _ = bitmapImage.SetSourceAsync(raStream);
+        _ = bitmapImage.SetSourceAsync(stream.AsRandomAccessStream());
         image.Source = bitmapImage;
+        thumb.Child = image;
+        Grid.SetColumn(thumb, 0);
+        chip.Children.Add(thumb);
 
-        container.Children.Add(image);
-        return container;
+        // Name
+        var name = CreateChipName(attachment.FileName);
+        Grid.SetColumn(name, 1);
+        chip.Children.Add(name);
+
+        ToolTipService.SetToolTip(chip, attachment.FileName);
+        return chip;
     }
 
     /// <summary>
-    /// Creates a text attachment preview card with monospace content preview,
-    /// fade-out gradient, and badge label.
+    /// Creates a compact text attachment chip (48px height) with icon + display name.
     /// </summary>
-    private static Grid CreateTextCardPreview(ChatAttachment attachment)
+    private static Grid CreateTextChip(ChatAttachment attachment)
     {
-        var defaultBrush = new SolidColorBrush(Microsoft.UI.Colors.Gray);
-        var accentBrush = new SolidColorBrush(Microsoft.UI.Colors.CornflowerBlue);
+        var chip = CreateChipContainer();
 
-        var container = new Grid
+        // Thumbnail: icon on accent background
+        var thumb = new Border
         {
-            Width = 220,
-            Height = 140,
-            CornerRadius = new CornerRadius(8),
-            BorderBrush = defaultBrush,
-            BorderThickness = new Thickness(1),
-            Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
-        };
-
-        // Preview text with monospace font
-        var previewBlock = new TextBlock
-        {
-            Text = TextAttachmentHelper.BuildPreviewText(attachment),
-            FontFamily = new FontFamily("Consolas, 'Cascadia Mono', monospace"),
-            FontSize = 11,
-            TextWrapping = TextWrapping.Wrap,
-            Padding = new Thickness(10, 10, 10, 0),
-            IsTextSelectionEnabled = false,
-            MaxLines = 0,
-        };
-        container.Children.Add(previewBlock);
-
-        // Fade-out gradient overlay (WinUI TextBlock has no OpacityMask)
-        var fadeOverlay = new Border
-        {
-            VerticalAlignment = VerticalAlignment.Bottom,
-            Height = 56,
-            Background = new LinearGradientBrush
+            Width = 36,
+            Height = 36,
+            CornerRadius = new CornerRadius(6),
+            Background = new SolidColorBrush(Microsoft.UI.Colors.SlateGray),
+            Child = new FontIcon
             {
-                StartPoint = new Windows.Foundation.Point(0, 0),
-                EndPoint = new Windows.Foundation.Point(0, 1),
-                GradientStops =
-                {
-                    new GradientStop { Color = Microsoft.UI.Colors.Transparent, Offset = 0.0 },
-                    new GradientStop { Color = Microsoft.UI.Colors.White, Offset = 1.0 },
-                }
-            },
-            IsHitTestVisible = false,
-        };
-        container.Children.Add(fadeOverlay);
-
-        // Badge (bottom-left)
-        var badge = new Border
-        {
-            HorizontalAlignment = HorizontalAlignment.Left,
-            VerticalAlignment = VerticalAlignment.Bottom,
-            Margin = new Thickness(8, 0, 0, 6),
-            Padding = new Thickness(4, 1, 4, 1),
-            CornerRadius = new CornerRadius(3),
-            Background = new SolidColorBrush(Microsoft.UI.Colors.DimGray),
-            Child = new TextBlock
-            {
-                Text = TextAttachmentHelper.GetBadgeLabel(attachment),
-                FontSize = 9,
-                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                Glyph = attachment.Source == AttachmentSource.Pasted ? "\uE77F" : "\uE8A5",
+                FontSize = 18,
                 Foreground = new SolidColorBrush(Microsoft.UI.Colors.White),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
             }
         };
-        container.Children.Add(badge);
+        Grid.SetColumn(thumb, 0);
+        chip.Children.Add(thumb);
 
-        // Hover: highlight border
-        container.PointerEntered += (_, _) => container.BorderBrush = accentBrush;
-        container.PointerExited += (_, _) => container.BorderBrush = defaultBrush;
-
-        // Tooltip
-        var tooltip = attachment.Source == AttachmentSource.Pasted
-            ? $"Pasted text \u00B7 {attachment.CharCount:N0} chars \u00B7 {attachment.LineCount:N0} lines"
+        // Name: "Pasted text" for pasted, filename for file
+        var displayName = attachment.Source == AttachmentSource.Pasted
+            ? "Pasted text"
             : attachment.FileName;
-        ToolTipService.SetToolTip(container, tooltip);
+        var name = CreateChipName(displayName);
+        Grid.SetColumn(name, 1);
+        chip.Children.Add(name);
 
-        return container;
+        // Tooltip with char/line count
+        var tooltipName = attachment.Source == AttachmentSource.Pasted
+            ? "Pasted text"
+            : attachment.FileName;
+        ToolTipService.SetToolTip(chip,
+            $"{tooltipName} \u00B7 {attachment.CharCount:N0} chars \u00B7 {attachment.LineCount:N0} lines");
+
+        return chip;
     }
 
     /// <summary>
-    /// Creates a generic file chip with document icon and filename (for Document type, etc.).
+    /// Creates a generic file chip for Document type attachments.
     /// </summary>
-    private Grid CreateGenericFileChip(ChatAttachment attachment)
+    /// <summary>
+    /// Creates an error-state chip for unsupported image formats.
+    /// Shows strikethrough filename and reduced opacity.
+    /// </summary>
+    private static Grid CreateUnsupportedChip(ChatAttachment attachment)
     {
-        var size = ThumbnailSize;
-        var container = new Grid
+        var chip = CreateChipContainer();
+        chip.Opacity = 0.5;
+
+        var thumb = new Border
         {
-            Width = size,
-            Height = size,
-            CornerRadius = new CornerRadius(8),
+            Width = 36,
+            Height = 36,
+            CornerRadius = new CornerRadius(6),
+            Background = new SolidColorBrush(Microsoft.UI.Colors.DarkRed),
+            Child = new FontIcon
+            {
+                Glyph = "\uE783", // Error icon
+                FontSize = 18,
+                Foreground = new SolidColorBrush(Microsoft.UI.Colors.White),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+            }
+        };
+        Grid.SetColumn(thumb, 0);
+        chip.Children.Add(thumb);
+
+        var name = CreateChipName(attachment.FileName);
+        name.TextDecorations = Windows.UI.Text.TextDecorations.Strikethrough;
+        Grid.SetColumn(name, 1);
+        chip.Children.Add(name);
+
+        ToolTipService.SetToolTip(chip, "Unsupported image format — will not be sent");
+        return chip;
+    }
+
+    private static Grid CreateGenericChip(ChatAttachment attachment)
+    {
+        var chip = CreateChipContainer();
+
+        var thumb = new Border
+        {
+            Width = 36,
+            Height = 36,
+            CornerRadius = new CornerRadius(6),
+            Background = new SolidColorBrush(Microsoft.UI.Colors.SlateGray),
+            Child = new FontIcon
+            {
+                Glyph = "\uE8A5",
+                FontSize = 18,
+                Foreground = new SolidColorBrush(Microsoft.UI.Colors.White),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+            }
+        };
+        Grid.SetColumn(thumb, 0);
+        chip.Children.Add(thumb);
+
+        var name = CreateChipName(attachment.FileName);
+        Grid.SetColumn(name, 1);
+        chip.Children.Add(name);
+
+        ToolTipService.SetToolTip(chip, attachment.FileName);
+        return chip;
+    }
+
+    /// <summary>
+    /// Creates the shared chip container grid (48px height, flexible width, rounded border).
+    /// </summary>
+    private static Grid CreateChipContainer()
+    {
+        var grid = new Grid
+        {
+            Height = 48,
+            MinWidth = 140,
+            MaxWidth = 260,
+            CornerRadius = new CornerRadius(10),
             BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.Gray),
             BorderThickness = new Thickness(1),
+            Padding = new Thickness(6, 6, 10, 6),
             Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
         };
-
-        var stack = new StackPanel
-        {
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center,
-            Spacing = 4
-        };
-        stack.Children.Add(new FontIcon
-        {
-            Glyph = "\uE8A5", // Document icon
-            FontSize = 24,
-            HorizontalAlignment = HorizontalAlignment.Center
-        });
-        stack.Children.Add(new TextBlock
-        {
-            Text = attachment.FileName,
-            FontSize = 10,
-            TextTrimming = TextTrimming.CharacterEllipsis,
-            MaxWidth = MaxTextWidth,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            TextAlignment = TextAlignment.Center
-        });
-        container.Children.Add(stack);
-        return container;
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        return grid;
     }
 
     /// <summary>
-    /// Adds a remove button overlay (hidden until hover) to the container grid.
+    /// Creates the display name TextBlock for a chip (up to 2 lines with ellipsis).
+    /// </summary>
+    private static TextBlock CreateChipName(string text) => new()
+    {
+        Text = text,
+        FontSize = 12,
+        TextWrapping = TextWrapping.Wrap,
+        TextTrimming = TextTrimming.CharacterEllipsis,
+        MaxLines = 2,
+        VerticalAlignment = VerticalAlignment.Center,
+        Margin = new Thickness(10, 0, 0, 0),
+    };
+
+    /// <summary>
+    /// Adds a remove button overlay (hidden until hover) to the chip grid.
     /// </summary>
     private void AddRemoveButton(Grid container, ChatAttachment attachment)
     {

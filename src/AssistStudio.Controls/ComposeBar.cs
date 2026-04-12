@@ -623,15 +623,27 @@ public sealed partial class ComposeBar : Control
 
             // Clipboard bitmaps are BMP/DIB format — compress to a proper
             // image format (JPEG/PNG) so providers accept the media_type.
-            var (compressedData, compressedMime) = ImageCompressor.CompressForApi(rawBytes);
-            var attachment = new ChatAttachment
+            try
             {
-                FileName = "clipboard-image.png",
-                Type = AttachmentType.Image,
-                Data = compressedData,
-                MimeType = compressedMime
-            };
-            _previewBar?.AddAttachment(attachment);
+                var (compressedData, compressedMime) = ImageCompressor.CompressForApi(rawBytes);
+                _previewBar?.AddAttachment(new ChatAttachment
+                {
+                    FileName = "clipboard-image.png",
+                    Type = AttachmentType.Image,
+                    Data = compressedData,
+                    MimeType = compressedMime
+                });
+            }
+            catch (NotSupportedException ex)
+            {
+                DiagnosticLogger.LogWarning($"[Paste] {ex.Message}");
+                _previewBar?.AddAttachment(new ChatAttachment
+                {
+                    FileName = "clipboard-image.png",
+                    Type = AttachmentType.Image,
+                    IsUnsupported = true,
+                });
+            }
             return;
         }
 
@@ -899,7 +911,8 @@ public sealed partial class ComposeBar : Control
         if (!IsInputEnabled) return;
 
         var text = _messageTextBox?.Text?.Trim() ?? "";
-        var attachments = _previewBar?.Attachments.ToList() ?? [];
+        var attachments = _previewBar?.Attachments
+            .Where(a => !a.IsUnsupported).ToList() ?? [];
 
         if (string.IsNullOrEmpty(text) && attachments.Count == 0) return;
 
@@ -1059,17 +1072,30 @@ public sealed partial class ComposeBar : Control
 
         if (isImage)
         {
-            var originalSize = data.Length;
-            var (compressedData, compressedMime) = ImageCompressor.CompressForApi(data);
-            if (compressedData.Length < originalSize)
-                DiagnosticLogger.LogInfo($"[Image] Compressed {originalSize:N0} → {compressedData.Length:N0} bytes ({GetImageMimeType(ext)} → {compressedMime})");
-            return new ChatAttachment
+            try
             {
-                FileName = file.Name,
-                Type = AttachmentType.Image,
-                Data = compressedData,
-                MimeType = compressedMime
-            };
+                var originalSize = data.Length;
+                var (compressedData, compressedMime) = ImageCompressor.CompressForApi(data);
+                if (compressedData.Length < originalSize)
+                    DiagnosticLogger.LogInfo($"[Image] Compressed {originalSize:N0} → {compressedData.Length:N0} bytes ({GetImageMimeType(ext)} → {compressedMime})");
+                return new ChatAttachment
+                {
+                    FileName = file.Name,
+                    Type = AttachmentType.Image,
+                    Data = compressedData,
+                    MimeType = compressedMime
+                };
+            }
+            catch (NotSupportedException ex)
+            {
+                DiagnosticLogger.LogWarning($"[Attach] {ex.Message}");
+                return new ChatAttachment
+                {
+                    FileName = file.Name,
+                    Type = AttachmentType.Image,
+                    IsUnsupported = true,
+                };
+            }
         }
 
         return new ChatAttachment

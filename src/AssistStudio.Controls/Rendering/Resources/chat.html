@@ -39,6 +39,8 @@
         --edit-focus-ring: rgba(100, 149, 237, 0.12);
         --edit-save-bg: #585858;
         --edit-save-hover: #484848;
+        --bg-hover: rgba(0, 0, 0, 0.04);
+        --accent-subtle: rgba(0, 120, 212, 0.12);
     }
 
     [data-theme="dark"] {
@@ -70,6 +72,8 @@
         --edit-focus-ring: rgba(130, 170, 255, 0.15);
         --edit-save-bg: #a0a0a0;
         --edit-save-hover: #b0b0b0;
+        --bg-hover: rgba(255, 255, 255, 0.06);
+        --accent-subtle: rgba(96, 205, 255, 0.15);
     }
 
     /* ===== Base Reset ===== */
@@ -738,6 +742,7 @@
         align-items: flex-start;
         align-content: flex-start;
         gap: 8px;
+        justify-content: flex-end;
         margin-bottom: 8px;
     }
     .attachment-image {
@@ -766,39 +771,55 @@
         font-size: 14px;
     }
 
-    /* ===== Text Attachment Preview Card ===== */
-    .text-attachment-card {
-        width: 220px;
-        height: 140px;
-        border: 1px solid var(--code-border);
-        border-radius: 8px;
+    /* ===== Attachment Chip (shared) ===== */
+    .attachment-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        height: 48px;
+        min-width: 140px;
+        max-width: 260px;
+        padding: 6px 10px 6px 6px;
         background: var(--code-bg);
-        position: relative;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
         cursor: pointer;
-        overflow: hidden;
-        transition: border-color 0.15s;
+        transition: background 0.15s, border-color 0.15s;
+        box-sizing: border-box;
     }
-    .text-attachment-card:hover { border-color: var(--link-color); }
-    .text-attachment-preview {
-        padding: 10px 12px;
-        font-family: 'Cascadia Code', 'Consolas', 'D2Coding', monospace;
-        font-size: 11px;
-        line-height: 1.4;
-        white-space: pre;
-        overflow: hidden;
-        height: calc(100% - 28px);
+    .attachment-chip:hover {
+        background: var(--bg-hover);
+        border-color: var(--link-color);
+    }
+    .attachment-chip-thumb {
+        width: 36px;
+        height: 36px;
+        border-radius: 6px;
+        flex-shrink: 0;
+        object-fit: cover;
+    }
+    .attachment-chip-thumb-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--accent-subtle);
         color: var(--text-primary);
-        -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
-        mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
     }
-    .text-attachment-badge {
-        position: absolute;
-        bottom: 6px; left: 8px;
-        padding: 2px 6px;
-        font-size: 9px; font-weight: 600; letter-spacing: 0.5px;
-        background: var(--code-header-bg);
-        color: var(--timestamp-color);
-        border-radius: 3px;
+    .attachment-chip-glyph {
+        font-family: 'Segoe Fluent Icons', 'Segoe MDL2 Assets';
+        font-size: 18px;
+    }
+    .attachment-chip-name {
+        flex: 1;
+        min-width: 0;
+        font-size: 12px;
+        line-height: 1.3;
+        color: var(--text-primary);
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        word-break: break-all;
     }
 
     /* ===== Text Popover Modal ===== */
@@ -1441,6 +1462,15 @@
         }
     }
 
+    // Opens image modal from a chip element's data attributes (base64 + mime)
+    function openImageModalFromBase64(chipEl) {
+        var base64 = chipEl.getAttribute('data-base64');
+        var mime = chipEl.getAttribute('data-mime') || 'image/png';
+        if (!base64) return;
+        var img = chipEl.querySelector('img');
+        if (img) openImageModal(img);
+    }
+
     function showImageToast(message) {
         var existing = document.querySelector('.image-toast');
         if (existing) existing.remove();
@@ -1470,11 +1500,9 @@
         for (var i = 0; i < attachments.length; i++) {
             var att = attachments[i];
             if (att.type === 'image') {
-                html += '<img class="attachment-image" src="data:' +
-                    escapeHtml(att.mimeType || 'image/png') + ';base64,' + att.base64 +
-                    '" alt="' + escapeHtml(att.fileName) + '" data-tooltip="' + escapeHtml(att.fileName) + '" />';
+                html += renderImageChip(att);
             } else if (att.type === 'text') {
-                html += renderTextCard(att);
+                html += renderTextChip(att);
             } else {
                 html += '<span class="attachment-file">' +
                     '<span class="attachment-file-icon">&#128196;</span>' +
@@ -1486,19 +1514,30 @@
     }
 
     // id is Math.random generated (alphanumeric only) — no sanitization needed
-    function renderTextCard(att) {
-        var badge = att.source === 'pasted' ? 'PASTED'
-            : (att.fileName.split('.').pop() || 'TEXT').toUpperCase();
-        var preview = escapeHtml(att.previewText || '(empty)');
+    function renderImageChip(att) {
+        var displayName = att.fileName || 'Image';
+        return '<div class="attachment-chip" onclick="openImageModalFromBase64(this)"' +
+            ' data-base64="' + att.base64 + '" data-mime="' + escapeHtml(att.mimeType || 'image/png') + '">' +
+            '<img class="attachment-chip-thumb" src="data:' +
+            escapeHtml(att.mimeType || 'image/png') + ';base64,' + att.base64 + '" />' +
+            '<div class="attachment-chip-name">' + escapeHtml(displayName) + '</div>' +
+            '</div>';
+    }
+
+    function renderTextChip(att) {
         var id = 'text-att-' + Math.random().toString(36).substr(2, 9);
+        var displayName = att.source === 'pasted' ? 'Pasted text' : (att.fileName || 'Untitled');
+        var iconGlyph = att.source === 'pasted' ? '\uE77F' : '\uE8A5';
 
         // Register for modal lookup
         window.__textAttachments[id] = att;
 
-        return '<div class="text-attachment-card" id="' + id +
+        return '<div class="attachment-chip" id="' + id +
             '" onclick="openTextModal(\'' + id + '\')">' +
-            '<div class="text-attachment-preview">' + preview + '</div>' +
-            '<span class="text-attachment-badge">' + escapeHtml(badge) + '</span>' +
+            '<div class="attachment-chip-thumb attachment-chip-thumb-icon">' +
+            '<span class="attachment-chip-glyph">' + iconGlyph + '</span>' +
+            '</div>' +
+            '<div class="attachment-chip-name">' + escapeHtml(displayName) + '</div>' +
             '</div>';
     }
 
