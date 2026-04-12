@@ -1,4 +1,4 @@
-namespace FieldCure.AssistStudio.Controls.Helpers;
+﻿namespace FieldCure.AssistStudio.Controls.Helpers;
 
 /// <summary>
 /// Shared utilities for text attachment processing.
@@ -14,7 +14,7 @@ internal static class TextAttachmentHelper
         if (data.Length <= maxBytes) return data;
 
         // UTF-8 continuation bytes are 10xxxxxx — walk back to the start of a char
-        int cut = maxBytes;
+        var cut = maxBytes;
         while (cut > 0 && (data[cut] & 0xC0) == 0x80)
             cut--;
         return data[..cut];

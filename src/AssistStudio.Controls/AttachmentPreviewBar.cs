@@ -150,7 +150,7 @@ public sealed partial class AttachmentPreviewBar : Control
     {
         _itemsPanel.Children.Clear();
         var showNumbers = _attachments.Count >= 2;
-        for (int i = 0; i < _attachments.Count; i++)
+        for (var i = 0; i < _attachments.Count; i++)
         {
             var number = showNumbers ? i + 1 : 0;
             var chip = CreatePreviewItem(_attachments[i], number);

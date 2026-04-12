@@ -1118,7 +1118,7 @@ public sealed partial class ComposeBar : Control
         // Same-second collision avoidance
         if (_previewBar is not null)
         {
-            for (int n = 1; _previewBar.Attachments.Any(a => a.FileName == fileName); n++)
+            for (var n = 1; _previewBar.Attachments.Any(a => a.FileName == fileName); n++)
                 fileName = $"Pasted-{timestamp}-{n}.txt";
         }
 

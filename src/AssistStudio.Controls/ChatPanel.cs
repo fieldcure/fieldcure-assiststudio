@@ -1879,7 +1879,7 @@ public sealed partial class ChatPanel : Control, IDisposable
             var picker = new FileSavePicker();
             picker.SuggestedStartLocation = PickerLocationId.Downloads;
             picker.SuggestedFileName = $"{prefix}_{DateTimeOffset.Now.ToUnixTimeMilliseconds()}";
-            picker.FileTypeChoices.Add(fileTypeLabel, new[] { ext });
+            picker.FileTypeChoices.Add(fileTypeLabel, [ext]);
 
             var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(GetWindow());
             WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
@@ -3068,7 +3068,7 @@ public sealed partial class ChatPanel : Control, IDisposable
                 DiagnosticLogger.LogInfo($"[Tool] Executing: {call.FunctionName} (id={call.Id})");
                 ToolExecutionResult execResult;
                 var sw = System.Diagnostics.Stopwatch.StartNew();
-                bool isError = false;
+                var isError = false;
                 try
                 {
                     execResult = await executor.ExecuteAsync(call, ct);
@@ -3162,7 +3162,7 @@ public sealed partial class ChatPanel : Control, IDisposable
                 {
                     ToolExecutionResult execResult;
                     string? noteForPending = null;
-                    bool isError = false;
+                    var isError = false;
 
                     var approvedEntry = approved.FirstOrDefault(a => a.Call.Id == call.Id);
                     if (approvedEntry.Task is not null)
@@ -3449,7 +3449,7 @@ public sealed partial class ChatPanel : Control, IDisposable
             ParentId = lastAssistant?.Id,
             Summary = new SummaryMeta
             {
-                CoveredMessageIds = coveredMessages.Select(m => m.Id).ToList()
+                CoveredMessageIds = [.. coveredMessages.Select(m => m.Id)]
             }
         };
         RegisterInTree(summaryMessage);

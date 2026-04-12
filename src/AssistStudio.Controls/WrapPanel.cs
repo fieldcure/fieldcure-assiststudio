@@ -1,4 +1,4 @@
-using Microsoft.UI.Xaml;
+﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Windows.Foundation;
 
@@ -52,7 +52,7 @@ public sealed partial class WrapPanel : Panel
         double lineHeight = 0;
         double totalWidth = 0;
         double totalHeight = 0;
-        bool isFirstInLine = true;
+        var isFirstInLine = true;
 
         var childConstraint = new Size(availableSize.Width, double.PositiveInfinity);
 
@@ -95,7 +95,7 @@ public sealed partial class WrapPanel : Panel
         double x = 0;
         double y = 0;
         double lineHeight = 0;
-        bool isFirstInLine = true;
+        var isFirstInLine = true;
 
         foreach (var child in Children)
         {
