@@ -807,13 +807,13 @@
     <value>This server is already managed as a built-in server.</value>
   </data>
   <data name="BuiltIn_InstallSuccess" xml:space="preserve">
-    <value>{0} server installed</value>
+    <value>{0} v{1} installed</value>
   </data>
   <data name="BuiltIn_InstallSuccessMessage" xml:space="preserve">
     <value>Add workspace folders in a conversation to start using it.</value>
   </data>
   <data name="BuiltIn_Installing" xml:space="preserve">
-    <value>Installing {0} v{1}…</value>
+    <value>Installing {0}…</value>
   </data>
   <data name="BuiltIn_Updating" xml:space="preserve">
     <value>Updating {0} v{1} → v{2}…</value>

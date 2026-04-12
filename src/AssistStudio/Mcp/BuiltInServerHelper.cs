@@ -1,11 +1,9 @@
+﻿using AssistStudio.Helpers;
+using FieldCure.AssistStudio.Models;
+using Microsoft.UI.Xaml.Controls;
 using System.Diagnostics;
-using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using AssistStudio.Helpers;
-using FieldCure.AssistStudio.Models;
-using FieldCure.Ai.Providers.Models;
-using Microsoft.UI.Xaml.Controls;
 
 namespace AssistStudio.Mcp;
 
@@ -344,7 +342,7 @@ public static class BuiltInServerHelper
             if (File.Exists(exePath))
                 continue;
 
-            installTasks.Add(InstallPackageAsync(packageId, def.DisplayName));
+            installTasks.Add(InstallPackageAsync(serverKey, packageId, def.DisplayName));
         }
 
         if (installTasks.Count > 0)
@@ -360,10 +358,10 @@ public static class BuiltInServerHelper
     /// <summary>
     /// Installs a single dotnet tool package with notification.
     /// </summary>
-    private static async Task InstallPackageAsync(string packageId, string displayName)
+    private static async Task InstallPackageAsync(string serverKey, string packageId, string displayName)
     {
         LoggingService.LogInfo($"[BuiltIn] Installing {packageId}");
-        NotifyAction(packageId, "BuiltIn_Installing", packageId);
+        NotifyAction(packageId, "BuiltIn_Installing", displayName);
 
         try
         {
@@ -371,7 +369,9 @@ public static class BuiltInServerHelper
             if (result == 0)
             {
                 LoggingService.LogInfo($"[BuiltIn] {packageId} installed successfully");
-                NotifyInstallSuccess(displayName);
+                await RefreshVersionCacheAsync();
+                var version = _versionCache.TryGetValue(serverKey, out var v) ? v : "?";
+                NotifyInstallSuccess(displayName, version);
             }
             else
             {
@@ -693,13 +693,14 @@ public static class BuiltInServerHelper
     /// <summary>
     /// Posts a success notification for server installation.
     /// </summary>
-    private static void NotifyInstallSuccess(string serverName)
+    private static void NotifyInstallSuccess(string serverName, string version)
     {
         var loader = TryGetResourceLoader();
+        var template = loader?.GetString("BuiltIn_InstallSuccess") ?? "{0} v{1} server installed";
 
         NotificationCenter.Instance.Post(
             InfoBarSeverity.Success,
-            string.Format(loader?.GetString("BuiltIn_InstallSuccess") ?? "{0} server installed", serverName),
+            SafeFormat(template, [serverName, version]),
             loader?.GetString("BuiltIn_InstallSuccessMessage") ?? "Configure workspace folders in Profile settings.",
             5000);
     }
@@ -710,10 +711,11 @@ public static class BuiltInServerHelper
     private static void NotifyInstallFailure(string serverName)
     {
         var loader = TryGetResourceLoader();
+        var template = loader?.GetString("BuiltIn_InstallFailed") ?? "Failed to install {0}";
 
         NotificationCenter.Instance.Post(
             InfoBarSeverity.Error,
-            string.Format(loader?.GetString("BuiltIn_InstallFailed") ?? "Failed to install {0}", serverName),
+            SafeFormat(template, [serverName]),
             loader?.GetString("BuiltIn_InstallFailedMessage") ?? "Check your internet connection and try again.",
             8000);
     }
@@ -726,13 +728,30 @@ public static class BuiltInServerHelper
         var loader = TryGetResourceLoader();
 
         var template = loader?.GetString(resourceKey) ?? $"{packageId} — {resourceKey}";
-        var message = args.Length > 0 ? string.Format(template, args) : template;
+        var message = SafeFormat(template, args);
 
         NotificationCenter.Instance.Post(
             InfoBarSeverity.Informational,
             message,
             string.Empty,
             4000);
+    }
+
+    /// <summary>
+    /// Formats a localized notification message, falling back gracefully on format errors.
+    /// </summary>
+    private static string SafeFormat(string template, object[] args)
+    {
+        if (args.Length == 0) return template;
+        try
+        {
+            return string.Format(template, args);
+        }
+        catch (FormatException)
+        {
+            // Prevent a bad resource string from crashing initialization
+            return $"{template} [{string.Join(", ", args)}]";
+        }
     }
 
     /// <summary>
