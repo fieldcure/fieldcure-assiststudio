@@ -1,5 +1,10 @@
-﻿using Microsoft.UI.Xaml;
+﻿using System.Text.Json;
+using Microsoft.UI;
+using Microsoft.UI.Text;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 
 namespace FieldCure.AssistStudio.Controls;
 
@@ -88,7 +93,7 @@ public sealed partial class ToolApprovalPanel : Control
     private Button? _approveButton;
     private Button? _rejectButton;
     private Button? _expandButton;
-    private TextBlock? _argumentsText;
+    private StackPanel? _parametersPanel;
     private TextBlock? _promptText;
     private ScrollViewer? _argumentsContainer;
     private FontIcon? _expandIcon;
@@ -98,6 +103,8 @@ public sealed partial class ToolApprovalPanel : Control
     private string _approveLabel = "Allow";
     private string _rejectLabel = "Reject";
     private string _promptTemplate = "Allow {0} to execute?";
+
+    private const int CollapseThreshold = 120;
 
     #endregion
 
@@ -127,7 +134,7 @@ public sealed partial class ToolApprovalPanel : Control
         _approveButton = GetTemplateChild("PART_ApproveButton") as Button;
         _rejectButton = GetTemplateChild("PART_RejectButton") as Button;
         _expandButton = GetTemplateChild("PART_ExpandButton") as Button;
-        _argumentsText = GetTemplateChild("PART_ArgumentsText") as TextBlock;
+        _parametersPanel = GetTemplateChild("PART_ParametersPanel") as StackPanel;
         _promptText = GetTemplateChild("PART_PromptText") as TextBlock;
         _argumentsContainer = GetTemplateChild("PART_ArgumentsContainer") as ScrollViewer;
         _expandIcon = GetTemplateChild("PART_ExpandIcon") as FontIcon;
@@ -158,8 +165,8 @@ public sealed partial class ToolApprovalPanel : Control
 
         // Sync current state
         UpdatePromptText();
+        PopulateParameters();
         UpdateArgumentsVisibility();
-        UpdateArgumentsText();
         UpdateServerBadge();
     }
 
@@ -223,31 +230,172 @@ public sealed partial class ToolApprovalPanel : Control
             _expandIcon.Glyph = IsExpanded ? "\uE70D" : "\uE70E"; // ChevronUp : ChevronRight
     }
 
-    /// <summary>Updates the arguments text block with formatted JSON.</summary>
-    private void UpdateArgumentsText()
-    {
-        if (_argumentsText is not null)
-            _argumentsText.Text = FormatJson(Arguments);
-    }
+    private static readonly JsonSerializerOptions s_indentedOptions = new() { WriteIndented = true };
 
-    private static readonly System.Text.Json.JsonSerializerOptions s_indentedOptions = new()
+    /// <summary>
+    /// Parses the Arguments JSON and populates the parameters panel with
+    /// individual rows for each property. Long values are collapsible.
+    /// </summary>
+    private void PopulateParameters()
     {
-        WriteIndented = true
-    };
+        if (_parametersPanel is null) return;
+        _parametersPanel.Children.Clear();
 
-    /// <summary>Pretty-prints a JSON string with indentation.</summary>
-    private static string FormatJson(string json)
-    {
-        if (string.IsNullOrWhiteSpace(json)) return string.Empty;
-        try
+        var json = Arguments;
+        if (string.IsNullOrWhiteSpace(json))
         {
-            var doc = System.Text.Json.JsonDocument.Parse(json);
-            return System.Text.Json.JsonSerializer.Serialize(doc, s_indentedOptions);
+            if (_expandButton is not null) _expandButton.IsEnabled = false;
+            return;
         }
+
+        if (_expandButton is not null) _expandButton.IsEnabled = true;
+
+        JsonDocument doc;
+        try { doc = JsonDocument.Parse(json); }
         catch
         {
-            return json;
+            _parametersPanel.Children.Add(CreateRawFallback(json));
+            return;
         }
+
+        using (doc)
+        {
+            if (doc.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                _parametersPanel.Children.Add(CreateRawFallback(json));
+                return;
+            }
+
+            var hasAny = false;
+            foreach (var prop in doc.RootElement.EnumerateObject())
+            {
+                _parametersPanel.Children.Add(CreateParameterRow(prop.Name, prop.Value));
+                hasAny = true;
+            }
+
+            if (!hasAny && _expandButton is not null)
+                _expandButton.IsEnabled = false;
+        }
+    }
+
+    /// <summary>Creates a single parameter row. Short values inline; long values collapsible with chevron.</summary>
+    private static FrameworkElement CreateParameterRow(string name, JsonElement value)
+    {
+        var display = FormatJsonValue(value);
+        var isLong = display.Length > CollapseThreshold || display.Contains('\n');
+
+        if (!isLong)
+        {
+            // Short value: "name  value" on one line
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(0, 1, 0, 1) };
+            row.Children.Add(new TextBlock
+            {
+                Text = name,
+                FontSize = 12,
+                Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
+                VerticalAlignment = VerticalAlignment.Center,
+            });
+            row.Children.Add(new TextBlock
+            {
+                Text = display,
+                FontFamily = new FontFamily("Consolas"),
+                FontSize = 12,
+                IsTextSelectionEnabled = true,
+                VerticalAlignment = VerticalAlignment.Center,
+            });
+            return row;
+        }
+
+        // Long value: chevron + name + preview, click to expand
+        var container = new StackPanel { Margin = new Thickness(0, 1, 0, 1) };
+
+        var chevron = new FontIcon
+        {
+            Glyph = "\uE76C", // ChevronRight
+            FontSize = 10,
+            Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+
+        var preview = display[..Math.Min(CollapseThreshold, display.Length)].Replace('\n', ' ').Replace('\r', ' ');
+        var headerRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+        headerRow.Children.Add(chevron);
+        headerRow.Children.Add(new TextBlock
+        {
+            Text = name,
+            FontSize = 12,
+            Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
+            VerticalAlignment = VerticalAlignment.Center,
+        });
+        headerRow.Children.Add(new TextBlock
+        {
+            Text = preview + "...",
+            FontFamily = new FontFamily("Consolas"),
+            FontSize = 12,
+            MaxLines = 1,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            Foreground = (Brush)Application.Current.Resources["TextFillColorTertiaryBrush"],
+            VerticalAlignment = VerticalAlignment.Center,
+        });
+        container.Children.Add(headerRow);
+
+        var fullText = new TextBlock
+        {
+            Text = display,
+            FontFamily = new FontFamily("Consolas"),
+            FontSize = 12,
+            TextWrapping = TextWrapping.Wrap,
+            IsTextSelectionEnabled = true,
+            Margin = new Thickness(16, 4, 0, 0),
+            Visibility = Visibility.Collapsed,
+        };
+        container.Children.Add(fullText);
+
+        // Click header to toggle
+        headerRow.Tapped += (_, _) =>
+        {
+            if (fullText.Visibility == Visibility.Collapsed)
+            {
+                fullText.Visibility = Visibility.Visible;
+                chevron.Glyph = "\uE70D"; // ChevronDown
+            }
+            else
+            {
+                fullText.Visibility = Visibility.Collapsed;
+                chevron.Glyph = "\uE76C"; // ChevronRight
+            }
+        };
+
+        return container;
+    }
+
+    /// <summary>Fallback: show raw text when JSON parsing fails.</summary>
+    private static FrameworkElement CreateRawFallback(string raw)
+    {
+        return new TextBlock
+        {
+            Text = raw,
+            FontFamily = new FontFamily("Consolas"),
+            FontSize = 11,
+            TextWrapping = TextWrapping.Wrap,
+            IsTextSelectionEnabled = true,
+        };
+    }
+
+    /// <summary>Formats a JsonElement as a display string. Strings unquoted; objects/arrays pretty-printed.</summary>
+    private static string FormatJsonValue(JsonElement value)
+    {
+        return value.ValueKind switch
+        {
+            JsonValueKind.String => value.GetString() ?? string.Empty,
+            JsonValueKind.Number => value.GetRawText(),
+            JsonValueKind.True => "true",
+            JsonValueKind.False => "false",
+            JsonValueKind.Null => "null",
+            JsonValueKind.Object or JsonValueKind.Array =>
+                JsonSerializer.Serialize(value, s_indentedOptions),
+            _ => value.GetRawText(),
+        };
     }
 
     /// <summary>Callback when <see cref="ToolName"/> or <see cref="ToolDisplayName"/> changes.</summary>
@@ -261,7 +409,7 @@ public sealed partial class ToolApprovalPanel : Control
     private static void OnArgumentsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is ToolApprovalPanel panel)
-            panel.UpdateArgumentsText();
+            panel.PopulateParameters();
     }
 
     /// <summary>Callback when <see cref="IsExpanded"/> property changes.</summary>

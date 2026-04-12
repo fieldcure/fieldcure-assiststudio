@@ -430,21 +430,14 @@
                                 </Button>
                             </Grid>
 
-                            <!-- Row 1: Arguments preview (collapsed by default) -->
+                            <!-- Row 1: Parameters preview (collapsed by default) -->
                             <ScrollViewer x:Name="PART_ArgumentsContainer"
                                           Grid.Row="1"
                                           Visibility="Collapsed"
-                                          MaxHeight="200"
-                                          HorizontalScrollBarVisibility="Auto"
+                                          MaxHeight="400"
+                                          HorizontalScrollBarVisibility="Disabled"
                                           VerticalScrollBarVisibility="Auto">
-                                <Border Background="{ThemeResource LayerOnMicaBaseAltFillColorDefaultBrush}"
-                                        CornerRadius="4" Padding="12">
-                                    <TextBlock x:Name="PART_ArgumentsText"
-                                               FontFamily="Consolas, Courier New, monospace"
-                                               FontSize="12"
-                                               TextWrapping="Wrap"
-                                               IsTextSelectionEnabled="True" />
-                                </Border>
+                                <StackPanel x:Name="PART_ParametersPanel" Spacing="4" />
                             </ScrollViewer>
 
                             <!-- Row 2: User instruction (always visible, borderless like ComposeBar) -->
