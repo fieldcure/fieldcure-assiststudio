@@ -360,8 +360,9 @@ public sealed partial class AttachmentPreviewBar : Control
             Padding = new Thickness(6, 6, 10, 6),
             Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
         };
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); // thumbnail
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); // name
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); // remove button
         return grid;
     }
 
@@ -390,14 +391,14 @@ public sealed partial class AttachmentPreviewBar : Control
             Width = 20,
             Height = 20,
             Padding = new Thickness(0),
-            HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Top,
-            Margin = new Thickness(0, 2, 2, 0),
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(4, 0, 0, 0),
             Opacity = 0,
             Tag = attachment
         };
         AutomationProperties.SetName(removeButton, Res.GetString("Attachment_RemoveTooltip"));
         removeButton.Click += OnRemoveClick;
+        Grid.SetColumn(removeButton, 2);
         container.Children.Add(removeButton);
 
         container.PointerEntered += (_, _) => removeButton.Opacity = 1;
