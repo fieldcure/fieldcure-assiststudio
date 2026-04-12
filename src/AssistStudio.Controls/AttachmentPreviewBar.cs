@@ -1,11 +1,12 @@
 ﻿using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using System.Text;
+using FieldCure.AssistStudio.Controls.Helpers;
 using FieldCure.AssistStudio.Models;
 using FieldCure.Ai.Providers.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.ApplicationModel.Resources;
 
@@ -181,9 +182,25 @@ public sealed partial class AttachmentPreviewBar : Control
     #region Private Methods
 
     /// <summary>
-    /// Creates a visual preview element for the given attachment, including a thumbnail and a remove button overlay.
+    /// Creates a visual preview element for the given attachment, dispatching to a type-specific builder.
     /// </summary>
     private Grid CreatePreviewItem(ChatAttachment attachment)
+    {
+        var container = attachment.Type switch
+        {
+            AttachmentType.Image => CreateImagePreview(attachment),
+            AttachmentType.TextFile => CreateTextCardPreview(attachment),
+            _ => CreateGenericFileChip(attachment),
+        };
+
+        AddRemoveButton(container, attachment);
+        return container;
+    }
+
+    /// <summary>
+    /// Creates an image thumbnail preview.
+    /// </summary>
+    private Grid CreateImagePreview(ChatAttachment attachment)
     {
         var size = ThumbnailSize;
         var container = new Grid
@@ -191,97 +208,160 @@ public sealed partial class AttachmentPreviewBar : Control
             Width = size,
             Height = size,
             CornerRadius = new CornerRadius(8),
-            BorderBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(
-                Microsoft.UI.Colors.Gray),
+            BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.Gray),
             BorderThickness = new Thickness(1),
-            Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(
-                Microsoft.UI.Colors.Transparent),
+            Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
         };
 
-        if (attachment.Type == AttachmentType.Image)
+        var image = new Image
         {
-            var image = new Image
-            {
-                Stretch = Microsoft.UI.Xaml.Media.Stretch.UniformToFill,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-            };
+            Stretch = Stretch.UniformToFill,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
 
-            // Load image from byte array
-            var bitmapImage = new BitmapImage();
-            var stream = new MemoryStream(attachment.Data);
-            var raStream = stream.AsRandomAccessStream();
-            _ = bitmapImage.SetSourceAsync(raStream);
-            image.Source = bitmapImage;
+        var bitmapImage = new BitmapImage();
+        var stream = new MemoryStream(attachment.Data);
+        var raStream = stream.AsRandomAccessStream();
+        _ = bitmapImage.SetSourceAsync(raStream);
+        image.Source = bitmapImage;
 
-            container.Children.Add(image);
-        }
-        else if (attachment.Source == AttachmentSource.Pasted)
+        container.Children.Add(image);
+        return container;
+    }
+
+    /// <summary>
+    /// Creates a text attachment preview card with monospace content preview,
+    /// fade-out gradient, and badge label.
+    /// </summary>
+    private static Grid CreateTextCardPreview(ChatAttachment attachment)
+    {
+        var defaultBrush = new SolidColorBrush(Microsoft.UI.Colors.Gray);
+        var accentBrush = new SolidColorBrush(Microsoft.UI.Colors.CornflowerBlue);
+
+        var container = new Grid
         {
-            // Pasted text: wider chip with char/line count label
-            container.Width = 180;
+            Width = 220,
+            Height = 140,
+            CornerRadius = new CornerRadius(8),
+            BorderBrush = defaultBrush,
+            BorderThickness = new Thickness(1),
+            Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+        };
 
-            var stack = new StackPanel
-            {
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-                Spacing = 2
-            };
-            stack.Children.Add(new FontIcon
-            {
-                Glyph = "\uE77F", // Paste icon
-                FontSize = 20,
-                HorizontalAlignment = HorizontalAlignment.Center
-            });
-            stack.Children.Add(new TextBlock
-            {
-                Text = $"Pasted text \u00B7 {attachment.CharCount:N0} chars \u00B7 {attachment.LineCount:N0} lines",
-                FontSize = 10,
-                TextTrimming = TextTrimming.CharacterEllipsis,
-                MaxWidth = 170,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                TextAlignment = TextAlignment.Center
-            });
-            container.Children.Add(stack);
-
-            // Tooltip: first 100 chars preview
-            var text = Encoding.UTF8.GetString(attachment.Data);
-            var preview = text.Length > 100
-                ? text[..100] + $"... ({attachment.CharCount:N0} chars total)"
-                : text;
-            ToolTipService.SetToolTip(container, preview);
-        }
-        else
+        // Preview text with monospace font
+        var previewBlock = new TextBlock
         {
-            // Text file: show icon + filename
-            var stack = new StackPanel
-            {
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-                Spacing = 4
-            };
-            stack.Children.Add(new FontIcon
-            {
-                Glyph = "\uE8A5", // Document icon
-                FontSize = 24,
-                HorizontalAlignment = HorizontalAlignment.Center
-            });
-            stack.Children.Add(new TextBlock
-            {
-                Text = attachment.FileName,
-                FontSize = 10,
-                TextTrimming = TextTrimming.CharacterEllipsis,
-                MaxWidth = MaxTextWidth,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                TextAlignment = TextAlignment.Center
-            });
-            container.Children.Add(stack);
-        }
+            Text = TextAttachmentHelper.BuildPreviewText(attachment),
+            FontFamily = new FontFamily("Consolas, 'Cascadia Mono', monospace"),
+            FontSize = 11,
+            TextWrapping = TextWrapping.Wrap,
+            Padding = new Thickness(10, 10, 10, 0),
+            IsTextSelectionEnabled = false,
+            MaxLines = 0,
+        };
+        container.Children.Add(previewBlock);
 
-        // Remove button (X) overlay -- hidden until hover
+        // Fade-out gradient overlay (WinUI TextBlock has no OpacityMask)
+        var fadeOverlay = new Border
+        {
+            VerticalAlignment = VerticalAlignment.Bottom,
+            Height = 56,
+            Background = new LinearGradientBrush
+            {
+                StartPoint = new Windows.Foundation.Point(0, 0),
+                EndPoint = new Windows.Foundation.Point(0, 1),
+                GradientStops =
+                {
+                    new GradientStop { Color = Microsoft.UI.Colors.Transparent, Offset = 0.0 },
+                    new GradientStop { Color = Microsoft.UI.Colors.White, Offset = 1.0 },
+                }
+            },
+            IsHitTestVisible = false,
+        };
+        container.Children.Add(fadeOverlay);
+
+        // Badge (bottom-left)
+        var badge = new Border
+        {
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Bottom,
+            Margin = new Thickness(8, 0, 0, 6),
+            Padding = new Thickness(4, 1, 4, 1),
+            CornerRadius = new CornerRadius(3),
+            Background = new SolidColorBrush(Microsoft.UI.Colors.DimGray),
+            Child = new TextBlock
+            {
+                Text = TextAttachmentHelper.GetBadgeLabel(attachment),
+                FontSize = 9,
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                Foreground = new SolidColorBrush(Microsoft.UI.Colors.White),
+            }
+        };
+        container.Children.Add(badge);
+
+        // Hover: highlight border
+        container.PointerEntered += (_, _) => container.BorderBrush = accentBrush;
+        container.PointerExited += (_, _) => container.BorderBrush = defaultBrush;
+
+        // Tooltip
+        var tooltip = attachment.Source == AttachmentSource.Pasted
+            ? $"Pasted text \u00B7 {attachment.CharCount:N0} chars \u00B7 {attachment.LineCount:N0} lines"
+            : attachment.FileName;
+        ToolTipService.SetToolTip(container, tooltip);
+
+        return container;
+    }
+
+    /// <summary>
+    /// Creates a generic file chip with document icon and filename (for Document type, etc.).
+    /// </summary>
+    private Grid CreateGenericFileChip(ChatAttachment attachment)
+    {
+        var size = ThumbnailSize;
+        var container = new Grid
+        {
+            Width = size,
+            Height = size,
+            CornerRadius = new CornerRadius(8),
+            BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.Gray),
+            BorderThickness = new Thickness(1),
+            Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+        };
+
+        var stack = new StackPanel
+        {
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Spacing = 4
+        };
+        stack.Children.Add(new FontIcon
+        {
+            Glyph = "\uE8A5", // Document icon
+            FontSize = 24,
+            HorizontalAlignment = HorizontalAlignment.Center
+        });
+        stack.Children.Add(new TextBlock
+        {
+            Text = attachment.FileName,
+            FontSize = 10,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            MaxWidth = MaxTextWidth,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            TextAlignment = TextAlignment.Center
+        });
+        container.Children.Add(stack);
+        return container;
+    }
+
+    /// <summary>
+    /// Adds a remove button overlay (hidden until hover) to the container grid.
+    /// </summary>
+    private void AddRemoveButton(Grid container, ChatAttachment attachment)
+    {
         var removeButton = new Button
         {
-            Content = new FontIcon { Glyph = "\uE711", FontSize = 10 }, // Cancel icon
+            Content = new FontIcon { Glyph = "\uE711", FontSize = 10 },
             Width = 20,
             Height = 20,
             Padding = new Thickness(0),
@@ -295,11 +375,8 @@ public sealed partial class AttachmentPreviewBar : Control
         removeButton.Click += OnRemoveClick;
         container.Children.Add(removeButton);
 
-        // Show/hide remove button on hover
         container.PointerEntered += (_, _) => removeButton.Opacity = 1;
         container.PointerExited += (_, _) => removeButton.Opacity = 0;
-
-        return container;
     }
 
     #endregion

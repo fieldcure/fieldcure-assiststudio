@@ -1,9 +1,11 @@
 ﻿using FieldCure.Ai.Providers.Models;
+using FieldCure.AssistStudio.Controls.Helpers;
 using FieldCure.AssistStudio.Helpers;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Web.WebView2.Core;
 using System.Diagnostics;
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
@@ -847,16 +849,43 @@ internal partial class WebViewChatRenderer
         var array = new JsonArray();
         foreach (var att in attachments)
         {
+            var type = att.Type == AttachmentType.Image ? "image"
+                : att.Type == AttachmentType.TextFile ? "text"
+                : "file";
+
             var obj = new JsonObject
             {
                 ["fileName"] = att.FileName,
-                ["type"] = att.Type == AttachmentType.Image ? "image" : "file",
+                ["type"] = type,
                 ["mimeType"] = att.MimeType ?? "application/octet-stream"
             };
 
             if (att.Type == AttachmentType.Image)
             {
                 obj["base64"] = Convert.ToBase64String(att.Data);
+            }
+            else if (att.Type == AttachmentType.TextFile)
+            {
+                obj["source"] = att.Source == AttachmentSource.Pasted ? "pasted" : "file";
+                obj["previewText"] = TextAttachmentHelper.BuildPreviewText(att);
+
+                var fullText = Encoding.UTF8.GetString(att.Data);
+                obj["charCount"] = att.CharCount > 0 ? att.CharCount : fullText.Length;
+                obj["lineCount"] = att.LineCount > 0 ? att.LineCount : fullText.AsSpan().Count('\n') + 1;
+
+                const int MaxFullBytes = 5 * 1024 * 1024;
+                const int ClampedBytes = 100 * 1024;
+                if (att.Data.Length <= MaxFullBytes)
+                {
+                    obj["fullContent"] = fullText;
+                    obj["isTruncated"] = false;
+                }
+                else
+                {
+                    var clampedSlice = TextAttachmentHelper.SafeUtf8Slice(att.Data, ClampedBytes);
+                    obj["fullContent"] = Encoding.UTF8.GetString(clampedSlice);
+                    obj["isTruncated"] = true;
+                }
             }
 
             array.Add(obj);

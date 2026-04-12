@@ -616,17 +616,20 @@ public sealed partial class ComposeBar : Control
             e.Handled = true;
             var streamRef = await content.GetBitmapAsync();
             using var stream = await streamRef.OpenReadAsync();
-            var bytes = new byte[stream.Size];
+            var rawBytes = new byte[stream.Size];
             using var reader = new DataReader(stream);
             await reader.LoadAsync((uint)stream.Size);
-            reader.ReadBytes(bytes);
+            reader.ReadBytes(rawBytes);
 
+            // Clipboard bitmaps are BMP/DIB format — compress to a proper
+            // image format (JPEG/PNG) so providers accept the media_type.
+            var (compressedData, compressedMime) = ImageCompressor.CompressForApi(rawBytes);
             var attachment = new ChatAttachment
             {
                 FileName = "clipboard-image.png",
                 Type = AttachmentType.Image,
-                Data = bytes,
-                MimeType = "image/png"
+                Data = compressedData,
+                MimeType = compressedMime
             };
             _previewBar?.AddAttachment(attachment);
             return;

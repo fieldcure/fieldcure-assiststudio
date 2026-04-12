@@ -735,6 +735,8 @@
     .attachment-container {
         display: flex;
         flex-wrap: wrap;
+        align-items: flex-start;
+        align-content: flex-start;
         gap: 8px;
         margin-bottom: 8px;
     }
@@ -762,6 +764,87 @@
     }
     .attachment-file-icon {
         font-size: 14px;
+    }
+
+    /* ===== Text Attachment Preview Card ===== */
+    .text-attachment-card {
+        width: 220px;
+        height: 140px;
+        border: 1px solid var(--code-border);
+        border-radius: 8px;
+        background: var(--code-bg);
+        position: relative;
+        cursor: pointer;
+        overflow: hidden;
+        transition: border-color 0.15s;
+    }
+    .text-attachment-card:hover { border-color: var(--link-color); }
+    .text-attachment-preview {
+        padding: 10px 12px;
+        font-family: 'Cascadia Code', 'Consolas', 'D2Coding', monospace;
+        font-size: 11px;
+        line-height: 1.4;
+        white-space: pre;
+        overflow: hidden;
+        height: calc(100% - 28px);
+        color: var(--text-primary);
+        -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+        mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+    }
+    .text-attachment-badge {
+        position: absolute;
+        bottom: 6px; left: 8px;
+        padding: 2px 6px;
+        font-size: 9px; font-weight: 600; letter-spacing: 0.5px;
+        background: var(--code-header-bg);
+        color: var(--timestamp-color);
+        border-radius: 3px;
+    }
+
+    /* ===== Text Popover Modal ===== */
+    .text-popover-backdrop {
+        position: fixed; inset: 0;
+        backdrop-filter: blur(8px);
+        z-index: 9998;
+    }
+    [data-theme="light"] .text-popover-backdrop { background: rgba(255,255,255,0.6); }
+    [data-theme="dark"] .text-popover-backdrop { background: rgba(0,0,0,0.7); }
+    .text-popover-card {
+        position: fixed; top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 9999;
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        width: 70vw; max-width: 800px; max-height: 85vh;
+        display: flex; flex-direction: column;
+        overflow: hidden;
+    }
+    .text-popover-header {
+        display: flex; align-items: center; gap: 8px;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .text-popover-title {
+        flex: 1; font-size: 13px; font-weight: 600;
+        color: var(--text-primary);
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .text-popover-body {
+        font-family: 'Cascadia Code', 'Consolas', 'D2Coding', monospace;
+        font-size: 12px; line-height: 1.5;
+        white-space: pre; overflow: auto;
+        max-height: calc(85vh - 80px);
+        padding: 16px; margin: 0;
+        color: var(--code-text); background: var(--code-bg);
+    }
+    .text-popover-banner {
+        padding: 8px 16px;
+        background: var(--code-header-bg);
+        color: var(--timestamp-color);
+        font-size: 11px;
+        border-bottom: 1px solid var(--border-color);
     }
 
     /* ===== KaTeX Math ===== */
@@ -1378,6 +1461,9 @@
         }
     }
 
+    // Global registry for text attachment data (cleared on page reload via NavigateToString)
+    window.__textAttachments = {};
+
     function renderAttachments(attachments) {
         if (!attachments || attachments.length === 0) return '';
         var html = '<div class="attachment-container">';
@@ -1387,6 +1473,8 @@
                 html += '<img class="attachment-image" src="data:' +
                     escapeHtml(att.mimeType || 'image/png') + ';base64,' + att.base64 +
                     '" alt="' + escapeHtml(att.fileName) + '" data-tooltip="' + escapeHtml(att.fileName) + '" />';
+            } else if (att.type === 'text') {
+                html += renderTextCard(att);
             } else {
                 html += '<span class="attachment-file">' +
                     '<span class="attachment-file-icon">&#128196;</span>' +
@@ -1395,6 +1483,102 @@
         }
         html += '</div>';
         return html;
+    }
+
+    // id is Math.random generated (alphanumeric only) — no sanitization needed
+    function renderTextCard(att) {
+        var badge = att.source === 'pasted' ? 'PASTED'
+            : (att.fileName.split('.').pop() || 'TEXT').toUpperCase();
+        var preview = escapeHtml(att.previewText || '(empty)');
+        var id = 'text-att-' + Math.random().toString(36).substr(2, 9);
+
+        // Register for modal lookup
+        window.__textAttachments[id] = att;
+
+        return '<div class="text-attachment-card" id="' + id +
+            '" onclick="openTextModal(\'' + id + '\')">' +
+            '<div class="text-attachment-preview">' + preview + '</div>' +
+            '<span class="text-attachment-badge">' + escapeHtml(badge) + '</span>' +
+            '</div>';
+    }
+
+    function openTextModal(cardId) {
+        var att = window.__textAttachments && window.__textAttachments[cardId];
+        if (!att) return;
+        closeTextModal();
+
+        var backdrop = document.createElement('div');
+        backdrop.className = 'text-popover-backdrop';
+        backdrop.id = 'text-popover-backdrop';
+        backdrop.addEventListener('click', closeTextModal);
+
+        var card = document.createElement('div');
+        card.className = 'text-popover-card';
+        card.id = 'text-popover-card';
+
+        // Header: title + copy + close
+        var header = document.createElement('div');
+        header.className = 'text-popover-header';
+
+        var title = document.createElement('span');
+        title.className = 'text-popover-title';
+        title.textContent = att.source === 'pasted'
+            ? 'Pasted text \u00B7 ' + (att.charCount || 0).toLocaleString() + ' chars \u00B7 ' + (att.lineCount || 0).toLocaleString() + ' lines'
+            : att.fileName;
+
+        var copyBtn = document.createElement('button');
+        copyBtn.className = 'msg-action-btn';
+        copyBtn.setAttribute('data-tooltip', 'Copy all');
+        copyBtn.textContent = '\uE8C8';
+        copyBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            navigator.clipboard.writeText(att.fullContent || '');
+            flashCopyBtn(copyBtn);
+        });
+
+        var closeBtn = document.createElement('button');
+        closeBtn.className = 'msg-action-btn';
+        closeBtn.setAttribute('data-tooltip', 'Close');
+        closeBtn.textContent = '\uE711';
+        closeBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            closeTextModal();
+        });
+
+        header.appendChild(title);
+        header.appendChild(copyBtn);
+        header.appendChild(closeBtn);
+        card.appendChild(header);
+
+        // Truncation banner
+        if (att.isTruncated) {
+            var banner = document.createElement('div');
+            banner.className = 'text-popover-banner';
+            banner.textContent = 'Showing first 100 KB of ' + (att.charCount || 0).toLocaleString() + ' chars';
+            card.appendChild(banner);
+        }
+
+        // Body (pre tag, textContent for XSS safety)
+        var body = document.createElement('pre');
+        body.className = 'text-popover-body';
+        body.textContent = att.fullContent || '';
+
+        card.appendChild(body);
+        document.body.appendChild(backdrop);
+        document.body.appendChild(card);
+        document.addEventListener('keydown', _textModalEscHandler);
+    }
+
+    function closeTextModal() {
+        var el = document.getElementById('text-popover-backdrop');
+        if (el) el.remove();
+        el = document.getElementById('text-popover-card');
+        if (el) el.remove();
+        document.removeEventListener('keydown', _textModalEscHandler);
+    }
+
+    function _textModalEscHandler(e) {
+        if (e.key === 'Escape') { e.preventDefault(); closeTextModal(); }
     }
 
     function fixCjkEmphasis(html) {
