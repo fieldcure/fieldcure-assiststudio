@@ -1,12 +1,11 @@
-﻿using System.Collections.ObjectModel;
-using System.Collections.Specialized;
-using FieldCure.AssistStudio.Models;
-using FieldCure.Ai.Providers.Models;
+﻿using FieldCure.Ai.Providers.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using Windows.ApplicationModel.Resources;
 
 namespace FieldCure.AssistStudio.Controls;
@@ -139,19 +138,24 @@ public sealed partial class AttachmentPreviewBar : Control
     /// </summary>
     private void OnAttachmentsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems is not null)
-        {
-            foreach (ChatAttachment item in e.NewItems)
-            {
-                _itemsPanel.Children.Add(CreatePreviewItem(item));
-            }
-        }
-        else if (e.Action == NotifyCollectionChangedAction.Reset)
-        {
-            _itemsPanel.Children.Clear();
-        }
-
+        RebuildChips();
         Visibility = _attachments.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>
+    /// Rebuilds all chip visuals with correct numbering.
+    /// Called on any collection change (add, remove, reset).
+    /// </summary>
+    private void RebuildChips()
+    {
+        _itemsPanel.Children.Clear();
+        var showNumbers = _attachments.Count >= 2;
+        for (int i = 0; i < _attachments.Count; i++)
+        {
+            var number = showNumbers ? i + 1 : 0;
+            var chip = CreatePreviewItem(_attachments[i], number);
+            _itemsPanel.Children.Add(chip);
+        }
     }
 
     /// <summary>
@@ -161,12 +165,9 @@ public sealed partial class AttachmentPreviewBar : Control
     {
         if (sender is Button { Tag: ChatAttachment attachment })
         {
-            var index = _attachments.IndexOf(attachment);
-            if (index >= 0)
+            // _attachments.Remove triggers OnAttachmentsChanged → RebuildChips
+            if (_attachments.Remove(attachment))
             {
-                _attachments.RemoveAt(index);
-                _itemsPanel.Children.RemoveAt(index);
-                Visibility = _attachments.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
                 AttachmentRemoved?.Invoke(this, attachment);
             }
         }
@@ -179,15 +180,17 @@ public sealed partial class AttachmentPreviewBar : Control
     /// <summary>
     /// Creates a preview element for the given attachment, dispatching to a type-specific builder.
     /// </summary>
-    private Grid CreatePreviewItem(ChatAttachment attachment)
+    /// <param name="attachment">The attachment to visualize.</param>
+    /// <param name="number">1-based index for multi-attachment numbering; 0 to hide.</param>
+    private Grid CreatePreviewItem(ChatAttachment attachment, int number)
     {
         var chip = attachment.IsUnsupported
-            ? CreateUnsupportedChip(attachment)
+            ? CreateUnsupportedChip(attachment, number)
             : attachment.Type switch
             {
-                AttachmentType.Image => CreateImageChip(attachment),
-                AttachmentType.TextFile => CreateTextChip(attachment),
-                _ => CreateGenericChip(attachment),
+                AttachmentType.Image => CreateImageChip(attachment, number),
+                AttachmentType.TextFile => CreateTextChip(attachment, number),
+                _ => CreateGenericChip(attachment, number),
             };
 
         AddRemoveButton(chip, attachment);
@@ -195,13 +198,18 @@ public sealed partial class AttachmentPreviewBar : Control
     }
 
     /// <summary>
+    /// Prefixes a display name with a number if applicable (e.g., "1. screenshot.png").
+    /// </summary>
+    private static string FormatDisplayName(string name, int number)
+        => number > 0 ? $"{number}. {name}" : name;
+
+    /// <summary>
     /// Creates a compact image chip (48px height) with thumbnail + filename.
     /// </summary>
-    private static Grid CreateImageChip(ChatAttachment attachment)
+    private static Grid CreateImageChip(ChatAttachment attachment, int number)
     {
         var chip = CreateChipContainer();
 
-        // Thumbnail: actual image, 36×36 cover
         var thumb = new Border
         {
             Width = 36,
@@ -217,8 +225,7 @@ public sealed partial class AttachmentPreviewBar : Control
         Grid.SetColumn(thumb, 0);
         chip.Children.Add(thumb);
 
-        // Name
-        var name = CreateChipName(attachment.FileName);
+        var name = CreateChipName(FormatDisplayName(attachment.FileName, number));
         Grid.SetColumn(name, 1);
         chip.Children.Add(name);
 
@@ -229,11 +236,10 @@ public sealed partial class AttachmentPreviewBar : Control
     /// <summary>
     /// Creates a compact text attachment chip (48px height) with icon + display name.
     /// </summary>
-    private static Grid CreateTextChip(ChatAttachment attachment)
+    private static Grid CreateTextChip(ChatAttachment attachment, int number)
     {
         var chip = CreateChipContainer();
 
-        // Thumbnail: icon on accent background
         var thumb = new Border
         {
             Width = 36,
@@ -252,11 +258,10 @@ public sealed partial class AttachmentPreviewBar : Control
         Grid.SetColumn(thumb, 0);
         chip.Children.Add(thumb);
 
-        // Name: "Pasted text" for pasted, filename for file
-        var displayName = attachment.Source == AttachmentSource.Pasted
+        var rawName = attachment.Source == AttachmentSource.Pasted
             ? "Pasted text"
             : attachment.FileName;
-        var name = CreateChipName(displayName);
+        var name = CreateChipName(FormatDisplayName(rawName, number));
         Grid.SetColumn(name, 1);
         chip.Children.Add(name);
 
@@ -277,7 +282,7 @@ public sealed partial class AttachmentPreviewBar : Control
     /// Creates an error-state chip for unsupported image formats.
     /// Shows strikethrough filename and reduced opacity.
     /// </summary>
-    private static Grid CreateUnsupportedChip(ChatAttachment attachment)
+    private static Grid CreateUnsupportedChip(ChatAttachment attachment, int number)
     {
         var chip = CreateChipContainer();
         chip.Opacity = 0.5;
@@ -290,7 +295,7 @@ public sealed partial class AttachmentPreviewBar : Control
             Background = new SolidColorBrush(Microsoft.UI.Colors.DarkRed),
             Child = new FontIcon
             {
-                Glyph = "\uE783", // Error icon
+                Glyph = "\uE783",
                 FontSize = 18,
                 Foreground = new SolidColorBrush(Microsoft.UI.Colors.White),
                 HorizontalAlignment = HorizontalAlignment.Center,
@@ -300,16 +305,16 @@ public sealed partial class AttachmentPreviewBar : Control
         Grid.SetColumn(thumb, 0);
         chip.Children.Add(thumb);
 
-        var name = CreateChipName(attachment.FileName);
+        var name = CreateChipName(FormatDisplayName(attachment.FileName, number));
         name.TextDecorations = Windows.UI.Text.TextDecorations.Strikethrough;
         Grid.SetColumn(name, 1);
         chip.Children.Add(name);
 
-        ToolTipService.SetToolTip(chip, "Unsupported image format — will not be sent");
+        ToolTipService.SetToolTip(chip, "Unsupported image format \u2014 will not be sent");
         return chip;
     }
 
-    private static Grid CreateGenericChip(ChatAttachment attachment)
+    private static Grid CreateGenericChip(ChatAttachment attachment, int number)
     {
         var chip = CreateChipContainer();
 
@@ -331,7 +336,7 @@ public sealed partial class AttachmentPreviewBar : Control
         Grid.SetColumn(thumb, 0);
         chip.Children.Add(thumb);
 
-        var name = CreateChipName(attachment.FileName);
+        var name = CreateChipName(FormatDisplayName(attachment.FileName, number));
         Grid.SetColumn(name, 1);
         chip.Children.Add(name);
 

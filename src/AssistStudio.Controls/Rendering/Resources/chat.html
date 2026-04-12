@@ -1496,13 +1496,15 @@
 
     function renderAttachments(attachments) {
         if (!attachments || attachments.length === 0) return '';
+        var showNumbers = attachments.length >= 2;
         var html = '<div class="attachment-container">';
         for (var i = 0; i < attachments.length; i++) {
             var att = attachments[i];
+            var num = showNumbers ? (i + 1) : 0;
             if (att.type === 'image') {
-                html += renderImageChip(att);
+                html += renderImageChip(att, num);
             } else if (att.type === 'text') {
-                html += renderTextChip(att);
+                html += renderTextChip(att, num);
             } else {
                 html += '<span class="attachment-file">' +
                     '<span class="attachment-file-icon">&#128196;</span>' +
@@ -1513,9 +1515,13 @@
         return html;
     }
 
+    function formatChipName(name, num) {
+        return num ? num + '. ' + name : name;
+    }
+
     // id is Math.random generated (alphanumeric only) — no sanitization needed
-    function renderImageChip(att) {
-        var displayName = att.fileName || 'Image';
+    function renderImageChip(att, num) {
+        var displayName = formatChipName(att.fileName || 'Image', num);
         return '<div class="attachment-chip" onclick="openImageModalFromBase64(this)"' +
             ' data-base64="' + att.base64 + '" data-mime="' + escapeHtml(att.mimeType || 'image/png') + '">' +
             '<img class="attachment-chip-thumb" src="data:' +
@@ -1524,12 +1530,12 @@
             '</div>';
     }
 
-    function renderTextChip(att) {
+    function renderTextChip(att, num) {
         var id = 'text-att-' + Math.random().toString(36).substr(2, 9);
-        var displayName = att.source === 'pasted' ? 'Pasted text' : (att.fileName || 'Untitled');
+        var rawName = att.source === 'pasted' ? 'Pasted text' : (att.fileName || 'Untitled');
+        var displayName = formatChipName(rawName, num);
         var iconGlyph = att.source === 'pasted' ? '\uE77F' : '\uE8A5';
 
-        // Register for modal lookup
         window.__textAttachments[id] = att;
 
         return '<div class="attachment-chip" id="' + id +
