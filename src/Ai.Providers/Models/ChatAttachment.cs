@@ -1,4 +1,21 @@
+using System.Text.Json.Serialization;
+
 namespace FieldCure.Ai.Providers.Models;
+
+/// <summary>
+/// Origin of a chat attachment, used for display differentiation.
+/// </summary>
+public enum AttachmentSource
+{
+    /// <summary>File added via picker or drag-and-drop.</summary>
+    File,
+
+    /// <summary>Image pasted from clipboard or dropped.</summary>
+    Image,
+
+    /// <summary>Plain text pasted from clipboard, auto-converted to attachment.</summary>
+    Pasted
+}
 
 /// <summary>
 /// Specifies the type of file attached to a chat message.
@@ -71,6 +88,18 @@ public partial class ChatAttachment
 
     /// <summary>The MIME type of the file (e.g., "image/png").</summary>
     public string? MimeType { get; set; }
+
+    /// <summary>The origin of this attachment (file picker, clipboard image, pasted text).</summary>
+    [JsonIgnore]
+    public AttachmentSource Source { get; set; } = AttachmentSource.File;
+
+    /// <summary>Cached character count for display (pasted text attachments).</summary>
+    [JsonIgnore]
+    public int CharCount { get; set; }
+
+    /// <summary>Cached line count for display (pasted text attachments).</summary>
+    [JsonIgnore]
+    public int LineCount { get; set; }
 
     #endregion
 }

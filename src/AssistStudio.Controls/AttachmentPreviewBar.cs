@@ -1,5 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.Text;
 using FieldCure.AssistStudio.Models;
 using FieldCure.Ai.Providers.Models;
 using Microsoft.UI.Xaml;
@@ -214,6 +215,41 @@ public sealed partial class AttachmentPreviewBar : Control
             image.Source = bitmapImage;
 
             container.Children.Add(image);
+        }
+        else if (attachment.Source == AttachmentSource.Pasted)
+        {
+            // Pasted text: wider chip with char/line count label
+            container.Width = 180;
+
+            var stack = new StackPanel
+            {
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                Spacing = 2
+            };
+            stack.Children.Add(new FontIcon
+            {
+                Glyph = "\uE77F", // Paste icon
+                FontSize = 20,
+                HorizontalAlignment = HorizontalAlignment.Center
+            });
+            stack.Children.Add(new TextBlock
+            {
+                Text = $"Pasted text \u00B7 {attachment.CharCount:N0} chars \u00B7 {attachment.LineCount:N0} lines",
+                FontSize = 10,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                MaxWidth = 170,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                TextAlignment = TextAlignment.Center
+            });
+            container.Children.Add(stack);
+
+            // Tooltip: first 100 chars preview
+            var text = Encoding.UTF8.GetString(attachment.Data);
+            var preview = text.Length > 100
+                ? text[..100] + $"... ({attachment.CharCount:N0} chars total)"
+                : text;
+            ToolTipService.SetToolTip(container, preview);
         }
         else
         {

@@ -7,6 +7,7 @@ using FieldCure.AssistStudio.Controls;
 using FieldCure.AssistStudio.Models;
 using System.Collections;
 using System.Collections.ObjectModel;
+using System.Text;
 
 namespace AssistStudio.Modules.ViewModels;
 
@@ -152,19 +153,43 @@ public partial class MainViewModel : ObservableObject
                 if (!result.Media.TryGetValue(mediaRef.FileName, out var bytes))
                     continue;
 
-                if (mediaRef.Source == "user_upload")
+                if (mediaRef.Source is "user_upload" or "user_pasted")
                 {
-                    attachments.Add(new ChatAttachment(
-                        mediaRef.FileName, AttachmentType.Image, bytes, mediaRef.MimeType));
+                    var type = mediaRef.MimeType.StartsWith("text/")
+                        ? AttachmentType.TextFile
+                        : AttachmentType.Image;
+                    var source = mediaRef.Source == "user_pasted"
+                        ? AttachmentSource.Pasted
+                        : AttachmentSource.File;
+
+                    int charCount = mediaRef.CharCount ?? 0;
+                    int lineCount = mediaRef.LineCount ?? 0;
+
+                    // Recompute if cache missing (legacy .astx or manual edit)
+                    if (source == AttachmentSource.Pasted && (charCount == 0 || lineCount == 0))
+                    {
+                        var text = Encoding.UTF8.GetString(bytes);
+                        charCount = text.Length;
+                        lineCount = text.AsSpan().Count('\n') + 1;
+                    }
+
+                    var fileName = mediaRef.OriginalFileName ?? mediaRef.FileName;
+                    attachments.Add(new ChatAttachment(fileName, type, bytes, mediaRef.MimeType)
+                    {
+                        Source = source,
+                        CharCount = charCount,
+                        LineCount = lineCount,
+                    });
                 }
                 else
                 {
                     var dataUri = $"data:{mediaRef.MimeType};base64,{Convert.ToBase64String(bytes)}";
-                    var kind = mediaRef.MimeType.StartsWith("image/") ? MediaContentKind.Image
-                        : mediaRef.MimeType.StartsWith("audio/") ? MediaContentKind.Audio
-                        : mediaRef.MimeType.StartsWith("video/") ? MediaContentKind.Video
+                    var mime = mediaRef.MimeType;
+                    var kind = mime.StartsWith("image/") ? MediaContentKind.Image
+                        : mime.StartsWith("audio/") ? MediaContentKind.Audio
+                        : mime.StartsWith("video/") ? MediaContentKind.Video
                         : MediaContentKind.Download;
-                    toolMedia.Add(new MediaContent(dataUri, mediaRef.MimeType, kind));
+                    toolMedia.Add(new MediaContent(dataUri, mime, kind));
                 }
             }
 

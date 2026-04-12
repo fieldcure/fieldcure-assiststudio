@@ -107,7 +107,7 @@ public static class ConversationManager
 
         // Collect media and build saved messages
         var savedMessages = new List<SavedMessage>(messages.Count);
-        var mediaEntries = new Dictionary<string, byte[]>(); // entryName -> bytes
+        var mediaEntries = new Dictionary<string, (byte[] Data, string MimeType)>(); // entryName -> (bytes, mime)
 
         foreach (var m in messages)
         {
@@ -129,20 +129,35 @@ public static class ConversationManager
                 Summary = m.Summary,
             };
 
-            // Persist user image attachments
+            // Persist user attachments (images + text files including pasted text)
             if (m.Role == ChatRole.User && m.Attachments is { Count: > 0 })
             {
-                foreach (var att in m.Attachments.Where(a => a.Type == AttachmentType.Image))
+                foreach (var att in m.Attachments)
                 {
-                    var entryName = AddMediaEntry(mediaEntries, att.Data, att.MimeType ?? "image/png");
+                    if (att.Type != AttachmentType.Image && att.Type != AttachmentType.TextFile)
+                        continue;
+
+                    var mime = att.MimeType ?? "application/octet-stream";
+                    var entryName = AddMediaEntry(mediaEntries, att.Data, mime);
                     saved.Media ??= [];
-                    saved.Media.Add(new MediaReference
+
+                    var source = att.Source == AttachmentSource.Pasted ? "user_pasted" : "user_upload";
+                    var mediaRef = new MediaReference
                     {
                         Id = $"upload_{saved.Media.Count}",
                         FileName = entryName,
-                        MimeType = att.MimeType ?? "image/png",
-                        Source = "user_upload"
-                    });
+                        MimeType = mime,
+                        Source = source,
+                        OriginalFileName = att.FileName != entryName ? att.FileName : null,
+                    };
+
+                    if (att.Source == AttachmentSource.Pasted)
+                    {
+                        mediaRef.CharCount = att.CharCount;
+                        mediaRef.LineCount = att.LineCount;
+                    }
+
+                    saved.Media.Add(mediaRef);
                 }
             }
 
@@ -214,11 +229,13 @@ public static class ConversationManager
                     await JsonSerializer.SerializeAsync(stream, data, ConversationTypeInfo);
                 }
 
-                // Write media entries
-                foreach (var (entryName, bytes) in mediaEntries)
+                // Write media entries (text gets compression; images are already compressed)
+                foreach (var (entryName, (bytes, mimeType)) in mediaEntries)
                 {
-                    // Media files are typically already compressed (PNG, JPEG, etc.)
-                    var mediaEntry = archive.CreateEntry(entryName, CompressionLevel.NoCompression);
+                    var level = mimeType.StartsWith("text/", StringComparison.Ordinal)
+                        ? CompressionLevel.Optimal
+                        : CompressionLevel.NoCompression;
+                    var mediaEntry = archive.CreateEntry(entryName, level);
                     await using var stream = mediaEntry.Open();
                     await stream.WriteAsync(bytes);
                 }
@@ -448,14 +465,14 @@ public static class ConversationManager
     /// Returns the zip entry name (e.g., "media/a1b2c3d4e5f67890.png").
     /// Deduplicates identical content automatically.
     /// </summary>
-    private static string AddMediaEntry(Dictionary<string, byte[]> entries, byte[] data, string mimeType)
+    private static string AddMediaEntry(Dictionary<string, (byte[] Data, string MimeType)> entries, byte[] data, string mimeType)
     {
         var entryName = ComputeMediaEntryName(data, mimeType);
 
         if (entries.TryGetValue(entryName, out var existing))
         {
             // Hash collision check: same short hash but different content
-            if (!existing.AsSpan().SequenceEqual(data))
+            if (!existing.Data.AsSpan().SequenceEqual(data))
             {
                 // Fallback to full SHA-256 hash
                 var fullHash = SHA256.HashData(data);
@@ -464,13 +481,13 @@ public static class ConversationManager
                 entryName = $"{MediaDirPrefix}{fullHashHex}{ext}";
 
                 // If still collides (practically impossible), just use it
-                entries.TryAdd(entryName, data);
+                entries.TryAdd(entryName, (data, mimeType));
             }
             // else: same content, deduplication — no need to add again
         }
         else
         {
-            entries[entryName] = data;
+            entries[entryName] = (data, mimeType);
         }
 
         return entryName;
@@ -514,6 +531,7 @@ public static class ConversationManager
     /// </summary>
     private static string MimeToExtension(string mimeType) => mimeType switch
     {
+        "text/plain" => ".txt",
         "image/png" => ".png",
         "image/jpeg" => ".jpg",
         "image/gif" => ".gif",

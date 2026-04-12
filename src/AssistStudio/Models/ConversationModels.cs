@@ -140,6 +140,18 @@ public class MediaReference
 
     /// <summary>Associated tool call ID (for mcp_tool source).</summary>
     public string? ToolCallId { get; set; }
+
+    /// <summary>Original user-facing filename before content-addressed storage (e.g., "Pasted-20260410-153022.txt").</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? OriginalFileName { get; set; }
+
+    /// <summary>Cached character count for pasted text attachments. Null for non-pasted media.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? CharCount { get; set; }
+
+    /// <summary>Cached line count for pasted text attachments. Null for non-pasted media.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? LineCount { get; set; }
 }
 
 /// <summary>

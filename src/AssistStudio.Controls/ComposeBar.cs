@@ -106,6 +106,14 @@ public sealed partial class ComposeBar : Control
         DependencyProperty.Register(nameof(EnabledToolNames), typeof(IReadOnlyList<string>), typeof(ComposeBar),
             new PropertyMetadata(null));
 
+    /// <summary>
+    /// Identifies the <see cref="PasteAsAttachmentThreshold"/> dependency property.
+    /// Minimum character count for pasted text to be auto-converted into an attachment chip.
+    /// Set to 0 or negative to disable. Default: 500.
+    /// </summary>
+    public static readonly DependencyProperty PasteAsAttachmentThresholdProperty =
+        DependencyProperty.Register(nameof(PasteAsAttachmentThreshold), typeof(int), typeof(ComposeBar),
+            new PropertyMetadata(500));
 
     #endregion
 
@@ -302,6 +310,15 @@ public sealed partial class ComposeBar : Control
         set => SetValue(EnabledToolNamesProperty, value);
     }
 
+    /// <summary>
+    /// Gets or sets the character threshold above which pasted text is converted to an attachment chip.
+    /// Set to 0 or negative to disable the feature. Default: 500.
+    /// </summary>
+    public int PasteAsAttachmentThreshold
+    {
+        get => (int)GetValue(PasteAsAttachmentThresholdProperty);
+        set => SetValue(PasteAsAttachmentThresholdProperty, value);
+    }
 
     #endregion
 
@@ -634,7 +651,31 @@ public sealed partial class ComposeBar : Control
             return;
         }
 
-        // Text paste: let default behavior handle it
+        // Long text paste → convert to attachment chip.
+        // Must set Handled synchronously BEFORE any await to prevent
+        // the default paste from inserting text into the TextBox.
+        if (PasteAsAttachmentThreshold > 0 && content.Contains(StandardDataFormats.Text))
+        {
+            e.Handled = true;
+
+            try
+            {
+                var text = await content.GetTextAsync();
+                if (!string.IsNullOrEmpty(text) && text.Length >= PasteAsAttachmentThreshold)
+                {
+                    var attachment = CreatePastedTextAttachment(text);
+                    _previewBar?.AddAttachment(attachment);
+                    return;
+                }
+
+                // Below threshold: manually insert at caret since we cancelled default
+                InsertTextAtCaret(_messageTextBox, text ?? string.Empty);
+            }
+            catch
+            {
+                // Clipboard read failure — nothing to insert, nothing to attach
+            }
+        }
     }
 
     /// <summary>
@@ -1035,6 +1076,50 @@ public sealed partial class ComposeBar : Control
             Data = data,
             MimeType = "text/plain"
         };
+    }
+
+    /// <summary>
+    /// Creates a <see cref="ChatAttachment"/> representing pasted text content from the clipboard.
+    /// </summary>
+    private ChatAttachment CreatePastedTextAttachment(string text)
+    {
+        var timestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+        var fileName = $"Pasted-{timestamp}.txt";
+
+        // Same-second collision avoidance
+        if (_previewBar is not null)
+        {
+            for (int n = 1; _previewBar.Attachments.Any(a => a.FileName == fileName); n++)
+                fileName = $"Pasted-{timestamp}-{n}.txt";
+        }
+
+        return new ChatAttachment
+        {
+            FileName = fileName,
+            Type = AttachmentType.TextFile,
+            Data = Encoding.UTF8.GetBytes(text),
+            MimeType = "text/plain",
+            Source = AttachmentSource.Pasted,
+            CharCount = text.Length,
+            LineCount = text.AsSpan().Count('\n') + 1
+        };
+    }
+
+    /// <summary>
+    /// Manually inserts text at the current caret position in a TextBox,
+    /// replacing any selected text. Used when default paste is pre-empted.
+    /// </summary>
+    private static void InsertTextAtCaret(TextBox? textBox, string text)
+    {
+        if (textBox is null || string.IsNullOrEmpty(text)) return;
+
+        var start = textBox.SelectionStart;
+        var length = textBox.SelectionLength;
+        var current = textBox.Text ?? string.Empty;
+
+        textBox.Text = current[..start] + text + current[(start + length)..];
+        textBox.SelectionStart = start + text.Length;
+        textBox.SelectionLength = 0;
     }
 
     /// <summary>
