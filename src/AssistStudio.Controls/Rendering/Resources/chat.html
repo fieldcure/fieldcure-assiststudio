@@ -1771,6 +1771,30 @@
         catch(e) { return str; }
     }
 
+    /**
+     * Formats a tool result for display. If the result is a sub-agent JSON
+     * (has status + report fields), renders metadata as a compact header and
+     * the report as rendered markdown. Otherwise falls back to pretty JSON or plain text.
+     */
+    function formatToolResult(raw) {
+        try {
+            var obj = JSON.parse(raw);
+            if (obj && typeof obj.report === 'string' && typeof obj.status === 'string') {
+                // Sub-agent result: structured display
+                var meta = '<div class="tool-details-label" style="margin-bottom:4px">'
+                    + escapeHtml(obj.status);
+                if (obj.rounds_executed != null) meta += ' · ' + obj.rounds_executed + ' rounds';
+                if (obj.duration_seconds != null) meta += ' · ' + obj.duration_seconds + 's';
+                if (obj.used_preset) meta += ' · ' + escapeHtml(obj.used_preset);
+                meta += '</div>';
+                var rendered = '<div class="rendered-zone">' + renderMarkdown(obj.report) + '</div>';
+                return meta + rendered;
+            }
+        } catch(e) { /* not JSON or no report */ }
+        // Fallback: pretty-print JSON or plain text
+        return '<pre>' + escapeHtml(formatJson(raw)) + '</pre>';
+    }
+
     function getContentRawText(id, contentSpan) {
         var ps = _progressiveState[id];
         if (ps && ps.fullText) return ps.fullText;
@@ -2177,7 +2201,7 @@
                 }
                 if (info.result) {
                     content.innerHTML += '<div class="tool-details-label">Result</div>'
-                        + '<pre>' + escapeHtml(info.result) + '</pre>';
+                        + formatToolResult(info.result);
                 }
                 det.appendChild(content);
                 block.appendChild(det);
