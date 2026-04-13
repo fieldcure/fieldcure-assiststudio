@@ -7,6 +7,7 @@ using FieldCure.Ai.Execution;
 using FieldCure.Ai.Providers;
 using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Controls;
+using FieldCure.AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml.Controls;
 using System.Collections;
@@ -91,9 +92,20 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     [ObservableProperty] private IAiProvider? _provider;
 
     /// <summary>
-    /// Optional app tasks provider for title generation and summarization.
+    /// Auxiliary provider resolver for title, summary, and sub-agent tasks.
+    /// Validates connectivity and falls back to the parent provider on failure.
     /// </summary>
-    [ObservableProperty] private IAiProvider? _appTasksProvider;
+    [ObservableProperty] private IAuxiliaryProviderResolver? _auxiliaryResolver;
+
+    /// <summary>
+    /// Preset name for title generation. <see langword="null"/> means inherit from conversation.
+    /// </summary>
+    [ObservableProperty] private string? _titlePreset;
+
+    /// <summary>
+    /// Preset name for summary generation. <see langword="null"/> means inherit from conversation.
+    /// </summary>
+    [ObservableProperty] private string? _summaryPreset;
 
     /// <summary>
     /// The system prompt sent with AI requests.
@@ -287,7 +299,9 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 
         // Set observable fields — ChatTabView.xaml binds to these via x:Bind
         _provider = ProviderFactory.Create(preset);
-        _appTasksProvider = ResolveAppTasksProvider(availablePresets);
+        _auxiliaryResolver = new AuxiliaryProviderResolver(() => AvailablePresets!);
+        _titlePreset = ResolveTaskPreset(AppSettings.TitleSource, AppSettings.TitlePreset);
+        _summaryPreset = ResolveTaskPreset(AppSettings.SummarySource, AppSettings.SummaryPreset);
         _systemPrompt = systemPrompt;
         _theme = theme;
         _availablePresets = availablePresets;
@@ -307,6 +321,9 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             AutoTitle = AppSettings.AppAutoTitle;
             AutoSummarize = AppSettings.AppAutoSummary;
             MaxInputTokens = AppSettings.AppMaxInputTokens;
+            TitlePreset = ResolveTaskPreset(AppSettings.TitleSource, AppSettings.TitlePreset);
+            SummaryPreset = ResolveTaskPreset(AppSettings.SummarySource, AppSettings.SummaryPreset);
+            _subAgentTool = null; // Invalidate cached sub-agent tool on settings change
         };
 
         // Apply linked tools from active profile (built-in + MCP)
@@ -640,10 +657,6 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         }
         // RAG is shared — no per-tab cleanup needed
 
-        if (AppTasksProvider is IDisposable utilDisposable)
-        {
-            utilDisposable.Dispose();
-        }
         if (Provider is IDisposable disposable)
         {
             disposable.Dispose();
@@ -1297,6 +1310,8 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         return sb.ToString().TrimEnd();
     }
 
+    #endregion
+
     #region Tool Resolution Helpers
 
     /// <summary>
@@ -1432,54 +1447,48 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         return _subAgentTool ??= new SubAgentTool(
             new SubAgentExecutor(
                 new AgentLoop(),
-                ResolveProviderByName,
-                ResolveToolsForSubAgentAsync,
-                SelectedPreset?.Name ?? "Default"),
+                ResolveProviderForSubAgentAsync,
+                ResolveToolsForSubAgentAsync),
             () => _cachedKbId,
             Specialists.SpecialistRegistry.Instance,
-            () => AppSettings.WebSearchSpecialistPreset);
+            () => AppSettings.WebSearchSpecialistPreset,
+            () => ResolveTaskPreset(AppSettings.SubAgentSource, AppSettings.SubAgentPreset));
     }
 
     /// <summary>
-    /// Resolves a provider preset name to an <see cref="IAiProvider"/> instance.
-    /// Used as <see cref="SubAgentExecutor.ProviderResolver"/> delegate.
+    /// Async provider resolver for sub-agent execution.
+    /// Uses the auxiliary resolver for connectivity validation and fallback.
     /// </summary>
-    private IAiProvider ResolveProviderByName(string presetName)
+    /// <remarks>
+    /// Resolution order:
+    /// <list type="number">
+    ///   <item>If <paramref name="presetName"/> is non-null (specialist override or explicit), use it.</item>
+    ///   <item>Else, use the Sub-Agent per-task setting (Inherit → parent, Specific → that preset).</item>
+    /// </list>
+    /// All paths go through <see cref="IAuxiliaryProviderResolver"/> for fallback on failure.
+    /// </remarks>
+    /// <summary>
+    /// Resolves a provider for sub-agent execution. PresetName is fully resolved
+    /// by <see cref="SubAgentTool"/> before reaching here — this method just
+    /// delegates to the auxiliary resolver for preset lookup and fallback.
+    /// </summary>
+    private async Task<IAiProvider> ResolveProviderForSubAgentAsync(string? presetName, CancellationToken ct)
     {
-        if (AvailablePresets is not null)
-        {
-            foreach (var obj in AvailablePresets)
-            {
-                if (obj is ProviderPreset p && p.Name == presetName)
-                    return ProviderFactory.Create(p);
-            }
-        }
+        var parentProvider = Provider ?? throw new InvalidOperationException(
+            "No parent provider available for sub-agent fallback.");
 
-        return Provider ?? throw new InvalidOperationException(
-            $"No provider found for preset '{presetName}' and no fallback available.");
+        if (AuxiliaryResolver is { } resolver)
+            return await resolver.ResolveWithFallbackAsync(presetName, parentProvider, "SubAgent", ct);
+
+        return parentProvider;
     }
-
-    #endregion
 
     /// <summary>
-    /// Resolves the app tasks provider based on the user's settings, returning <c>null</c>
-    /// if the source is not set to "Specific" or no matching preset is found.
+    /// Resolves a per-task preset name from the source/preset pair in AppSettings.
+    /// Returns <see langword="null"/> for "Inherit" (meaning use parent provider).
     /// </summary>
-    /// <returns>The app tasks provider, or <c>null</c> if not configured.</returns>
-    private static IAiProvider? ResolveAppTasksProvider(IList availablePresets)
-    {
-        if (AppSettings.AppTasksSource != "Specific") return null;
-
-        var presetName = AppSettings.AppTasksPreset;
-        if (string.IsNullOrEmpty(presetName)) return null;
-
-        foreach (var obj in availablePresets)
-        {
-            if (obj is ProviderPreset p && p.Name == presetName)
-                return ProviderFactory.Create(p);
-        }
-        return null;
-    }
+    private static string? ResolveTaskPreset(string source, string preset)
+        => source == "Specific" && !string.IsNullOrEmpty(preset) ? preset : null;
 
     #endregion
 }

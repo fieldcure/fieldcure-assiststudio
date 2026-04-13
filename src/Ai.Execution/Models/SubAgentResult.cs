@@ -34,7 +34,7 @@ public sealed class SubAgentResult
     /// <summary>
     /// Provider preset that was actually used.
     /// </summary>
-    public required string UsedPreset { get; init; }
+    public required string? UsedPreset { get; init; }
 }
 
 /// <summary>

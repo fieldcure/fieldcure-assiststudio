@@ -74,23 +74,87 @@ public static class AppSettings
         set => Settings.Values["SystemPrompt"] = value;
     }
 
+    #region Per-Task Provider Settings
+
     /// <summary>
-    /// Gets or sets the app tasks model source mode ("Current" or "Specific").
+    /// Gets or sets the title generation provider source ("Inherit" or "Specific").
     /// </summary>
-    public static string AppTasksSource
+    public static string TitleSource
     {
-        get => Settings.Values["AppTasksSource"] as string ?? "Current";
-        set => Settings.Values["AppTasksSource"] = value;
+        get => Settings.Values["TitleSource"] as string ?? "Inherit";
+        set { Settings.Values["TitleSource"] = value; TaskSettingsChanged?.Invoke(null, EventArgs.Empty); }
     }
 
     /// <summary>
-    /// Gets or sets the name of the preset used for app tasks when source is "Specific".
+    /// Gets or sets the preset name for title generation when <see cref="TitleSource"/> is "Specific".
     /// </summary>
-    public static string AppTasksPreset
+    public static string TitlePreset
     {
-        get => Settings.Values["AppTasksPreset"] as string ?? "";
-        set => Settings.Values["AppTasksPreset"] = value;
+        get => Settings.Values["TitlePreset"] as string ?? "";
+        set { Settings.Values["TitlePreset"] = value; TaskSettingsChanged?.Invoke(null, EventArgs.Empty); }
     }
+
+    /// <summary>
+    /// Gets or sets the summary provider source ("Inherit" or "Specific").
+    /// </summary>
+    public static string SummarySource
+    {
+        get => Settings.Values["SummarySource"] as string ?? "Inherit";
+        set { Settings.Values["SummarySource"] = value; TaskSettingsChanged?.Invoke(null, EventArgs.Empty); }
+    }
+
+    /// <summary>
+    /// Gets or sets the preset name for summary when <see cref="SummarySource"/> is "Specific".
+    /// </summary>
+    public static string SummaryPreset
+    {
+        get => Settings.Values["SummaryPreset"] as string ?? "";
+        set { Settings.Values["SummaryPreset"] = value; TaskSettingsChanged?.Invoke(null, EventArgs.Empty); }
+    }
+
+    /// <summary>
+    /// Gets or sets the sub-agent provider source ("Inherit" or "Specific").
+    /// </summary>
+    public static string SubAgentSource
+    {
+        get => Settings.Values["SubAgentSource"] as string ?? "Inherit";
+        set { Settings.Values["SubAgentSource"] = value; TaskSettingsChanged?.Invoke(null, EventArgs.Empty); }
+    }
+
+    /// <summary>
+    /// Gets or sets the preset name for sub-agent when <see cref="SubAgentSource"/> is "Specific".
+    /// </summary>
+    public static string SubAgentPreset
+    {
+        get => Settings.Values["SubAgentPreset"] as string ?? "";
+        set { Settings.Values["SubAgentPreset"] = value; TaskSettingsChanged?.Invoke(null, EventArgs.Empty); }
+    }
+
+    /// <summary>
+    /// One-time migration: moves legacy <c>AppTasksSource</c>/<c>AppTasksPreset</c>
+    /// to <see cref="TitleSource"/>/<see cref="TitlePreset"/> and deletes the old keys.
+    /// Call once at app startup.
+    /// </summary>
+    public static void MigrateAppTasksSettings()
+    {
+        if (Settings.Values.ContainsKey("AppTasksSource"))
+        {
+            var source = Settings.Values["AppTasksSource"] as string;
+            var preset = Settings.Values["AppTasksPreset"] as string;
+
+            if (source == "Specific" && !string.IsNullOrEmpty(preset))
+            {
+                // Only migrate if user had explicitly set a specific preset
+                Settings.Values["TitleSource"] = "Specific";
+                Settings.Values["TitlePreset"] = preset;
+            }
+
+            Settings.Values.Remove("AppTasksSource");
+            Settings.Values.Remove("AppTasksPreset");
+        }
+    }
+
+    #endregion
 
     /// <summary>
     /// Gets or sets whether automatic conversation title generation is enabled.
@@ -923,7 +987,7 @@ public static class AppSettings
             });
         }
 
-        // Ollama (always available, no key needed)
+        // Ollama (local, may not be running)
         var ollamaModel = GetDefaultModel("Ollama");
         presets.Add(new ProviderPreset
         {

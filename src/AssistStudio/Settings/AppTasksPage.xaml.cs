@@ -1,37 +1,26 @@
-﻿using AssistStudio.Helpers;
-using FieldCure.Ai.Providers.Models;
+using AssistStudio.Helpers;
+using FieldCure.AssistStudio.Controls;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Markup;
 using Microsoft.UI.Xaml.Navigation;
-using Windows.ApplicationModel.Resources;
 using Windows.Globalization.NumberFormatting;
 
 namespace AssistStudio.Settings;
 
 /// <summary>
-/// Settings page for configuring app tasks behavior: model source selection,
+/// Settings page for configuring per-task provider sources (title, summary, sub-agent),
 /// auto-title generation, and auto-summarization toggles.
-/// Embedding and contextualizer settings have moved to the Connect page (Knowledge Archive card).
 /// </summary>
 public sealed partial class AppTasksPage : Page
 {
     #region Fields
 
-    /// <summary>
-    /// Flag to suppress event handlers during programmatic UI updates.
-    /// </summary>
     private bool _suppressEvents;
-
-    private readonly ResourceLoader _loader = new();
 
     #endregion
 
     #region Constructors
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AppTasksPage"/> class.
-    /// </summary>
     public AppTasksPage()
     {
         InitializeComponent();
@@ -54,27 +43,27 @@ public sealed partial class AppTasksPage : Page
 
         _suppressEvents = true;
 
-        // Load model source
-        var source = AppSettings.AppTasksSource;
-        for (var i = 0; i < ModelSourceRadio.Items.Count; i++)
-        {
-            if (ModelSourceRadio.Items[i] is RadioButton rb && rb.Tag as string == source)
-            {
-                ModelSourceRadio.SelectedIndex = i;
-                break;
-            }
-        }
+        // Load per-task selectors
+        TitleSelector.Load(
+            ParseSource(AppSettings.TitleSource),
+            AppSettings.TitlePreset);
 
-        PresetCombo.Visibility = source == "Specific" ? Visibility.Visible : Visibility.Collapsed;
+        SummarySelector.Load(
+            ParseSource(AppSettings.SummarySource),
+            AppSettings.SummaryPreset);
 
-        // Populate presets
-        PopulatePresetCombo();
+        SubAgentSelector.Load(
+            ParseSource(AppSettings.SubAgentSource),
+            AppSettings.SubAgentPreset);
 
         // Load toggles
         AutoTitleToggle.IsOn = AppSettings.AppAutoTitle;
         AutoSummaryToggle.IsOn = AppSettings.AppAutoSummary;
         MaxInputTokensBox.Value = AppSettings.AppMaxInputTokens;
-        SummaryThresholdPanel.Visibility = AutoSummaryToggle.IsOn ? Visibility.Visible : Visibility.Collapsed;
+
+        // Show details only when toggle is on
+        TitleDetailsPanel.Visibility = AutoTitleToggle.IsOn ? Visibility.Visible : Visibility.Collapsed;
+        SummaryDetailsPanel.Visibility = AutoSummaryToggle.IsOn ? Visibility.Visible : Visibility.Collapsed;
 
         _suppressEvents = false;
     }
@@ -83,111 +72,51 @@ public sealed partial class AppTasksPage : Page
 
     #region Private Methods
 
-    /// <summary>
-    /// Populates the preset combo box with available provider presets and selects the saved choice.
-    /// </summary>
-    private void PopulatePresetCombo()
-    {
-        PresetCombo.Items.Clear();
+    private static AuxiliaryTaskSource ParseSource(string source)
+        => source == "Specific" ? AuxiliaryTaskSource.Specific : AuxiliaryTaskSource.Inherit;
 
-        var items = AppSettings.BuildOrderedPresetItems();
-        var selectedName = AppSettings.AppTasksPreset;
-        var selectedIndex = -1;
-
-        foreach (var obj in items)
-        {
-            if (obj is ProviderPreset preset)
-            {
-                var displayName = preset.ProviderType == "Mock" ? "Demo" : preset.Name;
-                PresetCombo.Items.Add(displayName);
-                if (preset.Name == selectedName)
-                {
-                    selectedIndex = PresetCombo.Items.Count - 1;
-                }
-            }
-            else if (obj is "-")
-            {
-                var border = (Border)XamlReader.Load(
-                    """
-                    <Border xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                            Height="1" HorizontalAlignment="Stretch"
-                            Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
-                    """);
-                PresetCombo.Items.Add(new ComboBoxItem
-                {
-                    IsEnabled = false,
-                    IsHitTestVisible = false,
-                    MinHeight = 0,
-                    Height = 9,
-                    Padding = new Thickness(0),
-                    Content = border,
-                });
-            }
-        }
-
-        if (selectedIndex >= 0)
-        {
-            PresetCombo.SelectedIndex = selectedIndex;
-        }
-        else if (PresetCombo.Items.Count > 0)
-        {
-            PresetCombo.SelectedIndex = 0;
-        }
-    }
+    private static string SourceToString(AuxiliaryTaskSource source)
+        => source == AuxiliaryTaskSource.Specific ? "Specific" : "Inherit";
 
     #endregion
 
     #region Event Handlers
 
-    /// <summary>
-    /// Handles model source radio button changes to switch between "Current" and "Specific" modes.
-    /// </summary>
-    private void OnModelSourceChanged(object sender, SelectionChangedEventArgs e)
+    private void OnTitleSettingsChanged(object? sender, EventArgs e)
     {
         if (_suppressEvents) return;
-
-        if (ModelSourceRadio.SelectedItem is RadioButton rb && rb.Tag is string tag)
-        {
-            AppSettings.AppTasksSource = tag;
-            PresetCombo.Visibility = tag == "Specific" ? Visibility.Visible : Visibility.Collapsed;
-        }
+        AppSettings.TitleSource = SourceToString(TitleSelector.Source);
+        AppSettings.TitlePreset = TitleSelector.PresetName;
     }
 
-    /// <summary>
-    /// Handles preset combo box selection changes to persist the chosen app tasks preset.
-    /// </summary>
-    private void OnPresetSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void OnSummarySettingsChanged(object? sender, EventArgs e)
     {
         if (_suppressEvents) return;
-
-        if (PresetCombo.SelectedItem is string name)
-        {
-            AppSettings.AppTasksPreset = name;
-        }
+        AppSettings.SummarySource = SourceToString(SummarySelector.Source);
+        AppSettings.SummaryPreset = SummarySelector.PresetName;
     }
 
-    /// <summary>
-    /// Handles the auto-title toggle switch change to persist the setting.
-    /// </summary>
+    private void OnSubAgentSettingsChanged(object? sender, EventArgs e)
+    {
+        if (_suppressEvents) return;
+        AppSettings.SubAgentSource = SourceToString(SubAgentSelector.Source);
+        AppSettings.SubAgentPreset = SubAgentSelector.PresetName;
+    }
+
     private void OnAutoTitleToggled(object sender, RoutedEventArgs e)
     {
         if (_suppressEvents) return;
         AppSettings.AppAutoTitle = AutoTitleToggle.IsOn;
+        TitleDetailsPanel.Visibility = AutoTitleToggle.IsOn ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    /// <summary>
-    /// Handles the auto-summary toggle switch change to persist the setting.
-    /// </summary>
     private void OnAutoSummaryToggled(object sender, RoutedEventArgs e)
     {
         if (_suppressEvents) return;
         AppSettings.AppAutoSummary = AutoSummaryToggle.IsOn;
-        SummaryThresholdPanel.Visibility = AutoSummaryToggle.IsOn ? Visibility.Visible : Visibility.Collapsed;
+        SummaryDetailsPanel.Visibility = AutoSummaryToggle.IsOn ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    /// <summary>
-    /// Handles the max input tokens number box value change to persist the setting.
-    /// </summary>
     private void OnMaxInputTokensChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
         if (_suppressEvents || double.IsNaN(args.NewValue)) return;

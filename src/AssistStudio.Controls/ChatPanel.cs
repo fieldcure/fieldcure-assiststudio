@@ -125,9 +125,19 @@ public sealed partial class ChatPanel : Control, IDisposable
         DependencyProperty.Register(nameof(RecentTurnsToKeep), typeof(int), typeof(ChatPanel),
             new PropertyMetadata(10));
 
-    /// <summary>Identifies the <see cref="UtilityProvider"/> dependency property.</summary>
-    public static readonly DependencyProperty UtilityProviderProperty =
-        DependencyProperty.Register(nameof(UtilityProvider), typeof(IAiProvider), typeof(ChatPanel),
+    /// <summary>Identifies the <see cref="AuxiliaryProviderResolver"/> dependency property.</summary>
+    public static readonly DependencyProperty AuxiliaryProviderResolverProperty =
+        DependencyProperty.Register(nameof(AuxiliaryProviderResolver), typeof(IAuxiliaryProviderResolver), typeof(ChatPanel),
+            new PropertyMetadata(null));
+
+    /// <summary>Identifies the <see cref="TitlePreset"/> dependency property.</summary>
+    public static readonly DependencyProperty TitlePresetProperty =
+        DependencyProperty.Register(nameof(TitlePreset), typeof(string), typeof(ChatPanel),
+            new PropertyMetadata(null));
+
+    /// <summary>Identifies the <see cref="SummaryPreset"/> dependency property.</summary>
+    public static readonly DependencyProperty SummaryPresetProperty =
+        DependencyProperty.Register(nameof(SummaryPreset), typeof(string), typeof(ChatPanel),
             new PropertyMetadata(null));
 
     /// <summary>Identifies the <see cref="WorkspaceContext"/> dependency property.</summary>
@@ -701,13 +711,33 @@ public sealed partial class ChatPanel : Control, IDisposable
     }
 
     /// <summary>
-    /// Gets or sets the provider used for utility tasks (title generation, summarization).
-    /// Falls back to the main <see cref="Provider"/> if not set.
+    /// Gets or sets the resolver for auxiliary providers (title, summary).
+    /// When set, resolves the requested preset with automatic fallback to the main <see cref="Provider"/>.
     /// </summary>
-    public IAiProvider? UtilityProvider
+    public IAuxiliaryProviderResolver? AuxiliaryProviderResolver
     {
-        get => (IAiProvider?)GetValue(UtilityProviderProperty);
-        set => SetValue(UtilityProviderProperty, value);
+        get => (IAuxiliaryProviderResolver?)GetValue(AuxiliaryProviderResolverProperty);
+        set => SetValue(AuxiliaryProviderResolverProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the preset name for title generation.
+    /// <see langword="null"/> or empty means inherit from the current conversation provider.
+    /// </summary>
+    public string? TitlePreset
+    {
+        get => (string?)GetValue(TitlePresetProperty);
+        set => SetValue(TitlePresetProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the preset name for summary generation.
+    /// <see langword="null"/> or empty means inherit from the current conversation provider.
+    /// </summary>
+    public string? SummaryPreset
+    {
+        get => (string?)GetValue(SummaryPresetProperty);
+        set => SetValue(SummaryPresetProperty, value);
     }
 
     /// <summary>
@@ -3576,6 +3606,10 @@ public sealed partial class ChatPanel : Control, IDisposable
     {
         if (Provider is null) return;
 
+        var summaryProvider = AuxiliaryProviderResolver is { } resolver
+            ? await resolver.ResolveWithFallbackAsync(SummaryPreset, Provider, "Summary", ct)
+            : Provider;
+
         // Find the range to summarize: from last summary (exclusive) to end of _messages
         var startIndex = 0;
         for (var i = _messages.Count - 1; i >= 0; i--)
@@ -3613,8 +3647,8 @@ public sealed partial class ChatPanel : Control, IDisposable
         var summaryMessage = new ChatMessage(ChatRole.Assistant)
         {
             IsStreaming = true,
-            ProviderName = Provider.ProviderName,
-            ProviderModelId = Provider.ModelId,
+            ProviderName = summaryProvider.ProviderName,
+            ProviderModelId = summaryProvider.ModelId,
             ParentId = lastAssistant?.Id,
             Summary = new SummaryMeta
             {
@@ -3623,12 +3657,12 @@ public sealed partial class ChatPanel : Control, IDisposable
         };
         RegisterInTree(summaryMessage);
         _messages.Add(summaryMessage);
-        await _renderer.BeginAssistantMessageAsync(summaryMessage.Id, Provider.ProviderName, Provider.ModelId, isSummary: true);
+        await _renderer.BeginAssistantMessageAsync(summaryMessage.Id, summaryProvider.ProviderName, summaryProvider.ModelId, isSummary: true);
 
         var elapsedSw = System.Diagnostics.Stopwatch.StartNew();
         try
         {
-            var result = await ConsumeStreamAsync(Provider.StreamAsync(summaryRequest, ct), summaryMessage, ct);
+            var result = await ConsumeStreamAsync(summaryProvider.StreamAsync(summaryRequest, ct), summaryMessage, ct);
 
             // Store token counts for compression ratio display
             if (result.Usage is { } u)
@@ -3754,8 +3788,7 @@ public sealed partial class ChatPanel : Control, IDisposable
     /// </summary>
     private void UpdateRefreshTooltip()
     {
-        var provider = UtilityProvider ?? Provider;
-        var providerName = provider?.ProviderName ?? "";
+        var providerName = Provider?.ProviderName ?? "";
 
         var format2 = Res.GetString("Chat_RegenerateTitle");
         if (!string.IsNullOrEmpty(format2) && !string.IsNullOrEmpty(providerName) && _titleRefreshButton is not null)
@@ -3784,12 +3817,15 @@ public sealed partial class ChatPanel : Control, IDisposable
     }
 
     /// <summary>
-    /// Core logic for generating or regenerating the conversation title using the utility or main provider.
+    /// Core logic for generating or regenerating the conversation title using the resolved auxiliary provider.
     /// </summary>
     private async Task GenerateTitleCoreAsync()
     {
-        var provider = UtilityProvider ?? Provider;
-        if (provider is null or MockProvider) return;
+        if (Provider is null or MockProvider) return;
+
+        var provider = AuxiliaryProviderResolver is { } resolver
+            ? await resolver.ResolveWithFallbackAsync(TitlePreset, Provider, "Title")
+            : Provider;
 
         // Build context from conversation history
         var userMsg = _messages.FirstOrDefault(m => m.Role == ChatRole.User);

@@ -97,20 +97,22 @@ public sealed class WebSearchSpecialist : ISpecialist
                - If a page is too noisy, use a script to extract specific sections.
 
             4. **Report format**
-               Return your report in this exact structure:
+               Return your report in this exact structure, translating the section
+               headers into the user's query language:
 
-               ## 요약
-               [핵심 발견 2-3문장]
+               ## Summary
+               [2-3 sentences of key findings]
 
-               ## 출처
-               1. [제목](url) — 핵심 내용 한 줄
-               2. [제목](url) — 핵심 내용 한 줄
+               ## Sources
+               1. [title](url) — one-line key point
+               2. [title](url) — one-line key point
 
-               ## 상세
-               [분석 내용. 출처별로 정리.]
+               ## Details
+               [Analysis, organized by source.]
 
             5. **Language**
-               - Write the report in the same language as the user's query.
+               - Write the report (including section headers) in the same language
+                 as the user's query. For a Korean query, use 요약 / 출처 / 상세.
 
             ## User query
             {userQuery}

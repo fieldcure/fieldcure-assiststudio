@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using FieldCure.Ai.Providers.Models;
 
@@ -33,7 +34,7 @@ public sealed class AgentLoop : IAgentLoop
 
         try
         {
-            System.Diagnostics.Debug.WriteLine(
+            Debug.WriteLine(
                 $"[AgentLoop] Starting: tools={toolList?.Count ?? 0}, maxRounds={context.MaxRounds}, "
                 + $"systemPrompt={context.SystemPrompt?.Length ?? 0} chars, userPrompt={context.UserPrompt?.Length ?? 0} chars, "
                 + $"provider={context.Provider.GetType().Name}");
@@ -54,7 +55,7 @@ public sealed class AgentLoop : IAgentLoop
 
                     if (totalChars > context.MaxContextChars * 0.8)
                     {
-                        System.Diagnostics.Debug.WriteLine(
+                        Debug.WriteLine(
                             $"[AgentLoop] Context limit reached: {totalChars:N0} chars "
                             + $"(threshold: {context.MaxContextChars * 0.8:N0}). Forcing summary.");
 
@@ -78,7 +79,7 @@ public sealed class AgentLoop : IAgentLoop
                     Tools = toolsForRound,
                 };
 
-                System.Diagnostics.Debug.WriteLine(
+                Debug.WriteLine(
                     $"[AgentLoop] Round {round}: messages={messages.Count}, "
                     + $"totalContentChars={messages.Sum(m => m.Content?.Length ?? 0)}, "
                     + $"tools={toolsForRound?.Count ?? 0}{(forceFinish ? " (FORCE FINISH)" : "")}");
@@ -115,7 +116,7 @@ public sealed class AgentLoop : IAgentLoop
                         var originalLength = toolResult.Length;
                         toolResult = toolResult[..context.MaxToolResultChars]
                             + $"\n\n[Truncated: {originalLength:N0} → {context.MaxToolResultChars:N0} chars]";
-                        System.Diagnostics.Debug.WriteLine(
+                        Debug.WriteLine(
                             $"[AgentLoop] Tool result truncated: {toolCall.FunctionName}, {originalLength:N0} → {context.MaxToolResultChars:N0} chars");
                     }
 

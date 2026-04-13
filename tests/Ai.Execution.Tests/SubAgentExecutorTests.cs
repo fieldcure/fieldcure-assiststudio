@@ -1,5 +1,6 @@
 using FieldCure.Ai.Execution.Models;
 using FieldCure.Ai.Execution.Tests.Mocks;
+using FieldCure.Ai.Providers;
 using FieldCure.Ai.Providers.Models;
 using MockProvider = FieldCure.Ai.Execution.Tests.Mocks.MockProvider;
 
@@ -27,7 +28,7 @@ public sealed class SubAgentExecutorTests
 
         Assert.AreEqual(SubAgentStatus.Completed, result.Status);
         Assert.AreEqual("## 결론\nTask completed successfully.", result.Report);
-        Assert.AreEqual("test-preset", result.UsedPreset);
+        Assert.IsNull(result.UsedPreset);
         Assert.IsTrue(result.Duration > TimeSpan.Zero);
         Assert.AreEqual(0, result.ToolCallCount);
     }
@@ -41,13 +42,12 @@ public sealed class SubAgentExecutorTests
         string? resolvedPreset = null;
         var executor = new SubAgentExecutor(
             new AgentLoop(),
-            presetName =>
+            (presetName, _) =>
             {
                 resolvedPreset = presetName;
-                return provider;
+                return Task.FromResult<IAiProvider>(provider);
             },
-            (_, _, _) => Task.FromResult<IReadOnlyList<IAssistTool>>([]),
-            "default-preset");
+            (_, _, _) => Task.FromResult<IReadOnlyList<IAssistTool>>([]));
 
         var request = new SubAgentRequest
         {
@@ -127,8 +127,8 @@ public sealed class SubAgentExecutorTests
         await executor.ExecuteAsync(request);
 
         var systemPrompt = provider.ReceivedRequests[0].SystemPrompt!;
-        Assert.IsTrue(systemPrompt.Contains("결론"),
-            "Default report template should include Korean template.");
+        Assert.IsTrue(systemPrompt.Contains("Conclusion"),
+            "Default report template should include English template.");
     }
 
     [TestMethod]
@@ -165,9 +165,8 @@ public sealed class SubAgentExecutorTests
 
         var executor = new SubAgentExecutor(
             new AgentLoop(),
-            _ => slowProvider,
-            (_, _, _) => Task.FromResult<IReadOnlyList<IAssistTool>>([]),
-            "test-preset");
+            (_, _) => Task.FromResult<IAiProvider>(slowProvider),
+            (_, _, _) => Task.FromResult<IReadOnlyList<IAssistTool>>([]));
 
         var request = new SubAgentRequest
         {
@@ -206,9 +205,8 @@ public sealed class SubAgentExecutorTests
     {
         var executor = new SubAgentExecutor(
             new AgentLoop(),
-            _ => throw new InvalidOperationException("API key not found"),
-            (_, _, _) => Task.FromResult<IReadOnlyList<IAssistTool>>([]),
-            "test-preset");
+            (string? _, CancellationToken _) => throw new InvalidOperationException("API key not found"),
+            (_, _, _) => Task.FromResult<IReadOnlyList<IAssistTool>>([]));
 
         var request = new SubAgentRequest { Prompt = "go" };
         var result = await executor.ExecuteAsync(request);
@@ -225,9 +223,8 @@ public sealed class SubAgentExecutorTests
     {
         return new SubAgentExecutor(
             new AgentLoop(),
-            _ => provider,
-            (_, _, _) => Task.FromResult<IReadOnlyList<IAssistTool>>([]),
-            "test-preset");
+            (_, _) => Task.FromResult<IAiProvider>(provider),
+            (_, _, _) => Task.FromResult<IReadOnlyList<IAssistTool>>([]));
     }
 
     #endregion

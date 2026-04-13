@@ -16,8 +16,9 @@ public sealed class SubAgentExecutor : ISubAgentExecutor
     /// <summary>
     /// Resolves a provider preset name to an <see cref="IAiProvider"/> instance.
     /// Injected by the host (e.g., AssistStudio Core, Runner).
+    /// The resolver may perform async validation (e.g., connectivity check with fallback).
     /// </summary>
-    public delegate IAiProvider ProviderResolver(string presetName);
+    public delegate Task<IAiProvider> ProviderResolver(string? presetName, CancellationToken cancellationToken);
 
     /// <summary>
     /// Resolves MCP server IDs and tool allowlist to a list of available tools.
@@ -31,46 +32,44 @@ public sealed class SubAgentExecutor : ISubAgentExecutor
 
     static readonly string DefaultReportTemplate =
         """
-        작업이 끝나면 다음 형식으로 보고하세요:
+        When the task is complete, report using this format:
 
-        ## 결론
-        (핵심 결론 한두 문장)
+        ## Conclusion
+        (Key conclusion in one or two sentences)
 
-        ## 주요 발견
-        (핵심 발견 사항 정리)
+        ## Key Findings
+        (Summary of important findings)
 
-        ## 근거
-        (출처, 데이터, 참조)
+        ## Evidence
+        (Sources, data, references)
 
-        ## 후속 작업
-        (필요시 추가 조사/작업 제안)
+        ## Follow-up
+        (Suggested next steps, if any)
         """;
 
     readonly IAgentLoop _agentLoop;
     readonly ProviderResolver _resolveProvider;
     readonly ToolResolver _resolveTools;
-    readonly string _defaultPresetName;
 
     /// <summary>
     /// Creates a new sub-agent executor.
     /// </summary>
     /// <param name="agentLoop">Agent loop implementation to use.</param>
-    /// <param name="resolveProvider">Resolves preset name → IAiProvider.</param>
-    /// <param name="resolveTools">Resolves MCP servers + allowlist → tools.</param>
-    /// <param name="defaultPresetName">
-    /// Fallback preset when <see cref="SubAgentRequest.PresetName"/> is null
-    /// (typically the parent conversation's current preset).
+    /// <param name="resolveProvider">
+    /// Resolves preset name → IAiProvider. May perform async validation
+    /// and fallback (e.g., via <c>IAuxiliaryProviderResolver</c>).
+    /// Called with <see cref="SubAgentRequest.PresetName"/> which may be <see langword="null"/>
+    /// if the caller intends the resolver to use its own fallback policy.
     /// </param>
+    /// <param name="resolveTools">Resolves MCP servers + allowlist → tools.</param>
     public SubAgentExecutor(
         IAgentLoop agentLoop,
         ProviderResolver resolveProvider,
-        ToolResolver resolveTools,
-        string defaultPresetName)
+        ToolResolver resolveTools)
     {
         _agentLoop = agentLoop;
         _resolveProvider = resolveProvider;
         _resolveTools = resolveTools;
-        _defaultPresetName = defaultPresetName;
     }
 
     /// <inheritdoc/>
@@ -85,12 +84,12 @@ public sealed class SubAgentExecutor : ISubAgentExecutor
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCts.CancelAfter(request.Timeout);
 
-        var presetName = request.PresetName ?? _defaultPresetName;
+        var presetName = request.PresetName;
 
         try
         {
-            // 1. Resolve provider
-            var provider = _resolveProvider(presetName);
+            // 1. Resolve provider (may perform async validation + fallback)
+            var provider = await _resolveProvider(presetName, timeoutCts.Token);
 
             // 2. Resolve tools
             var tools = await _resolveTools(

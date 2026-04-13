@@ -3,6 +3,8 @@
     x:Class="AssistStudio.Settings.AppTasksPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:AssistStudio.Controls"
+    xmlns:local="using:AssistStudio.Settings"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
@@ -24,69 +26,82 @@
 
         <!-- Content -->
         <ScrollViewer Grid.Row="1" Padding="20,16">
-            <StackPanel Spacing="24" MaxWidth="480" HorizontalAlignment="Left" Padding="0,0,0,24">
+            <StackPanel Spacing="16" MaxWidth="480" HorizontalAlignment="Left" Padding="0,0,0,24">
 
                 <TextBlock x:Uid="AppTasks_Description"
-                           Text="Choose which model the app uses for background tasks such as title generation and conversation summaries."
+                           Text="Choose which model the app uses for background tasks such as title generation, summarization, and sub-agent execution."
                            Style="{StaticResource CaptionTextBlockStyle}"
                            TextWrapping="Wrap"
-                           Opacity="0.7" />
+                           Opacity="0.7"
+                           Margin="0,0,0,12" />
 
-                <!-- Model Source Selection -->
-                <StackPanel Spacing="12">
-                    <TextBlock x:Uid="AppTasks_ModelSource" Text="Model source"
-                               Style="{StaticResource BodyStrongTextBlockStyle}" />
+                <!-- Title Generation -->
+                <controls:CollapsibleSection x:Name="TitleSection"
+                    x:Uid="AppTasks_TitleSection"
+                    Header="Title generation"
+                    IsExpanded="True">
+                    <controls:CollapsibleSection.Body>
+                        <StackPanel Spacing="12" Padding="0">
+                            <ToggleSwitch x:Name="AutoTitleToggle"
+                                          OnContent="On" OffContent="Off"
+                                          Toggled="OnAutoTitleToggled" />
 
-                    <RadioButtons x:Name="ModelSourceRadio"
-                                  SelectionChanged="OnModelSourceChanged">
-                        <RadioButton x:Uid="AppTasks_UseCurrent" Content="Use the current chat model" Tag="Current" />
-                        <RadioButton x:Uid="AppTasks_UseSpecific" Content="Use a specific provider" Tag="Specific" />
-                    </RadioButtons>
+                            <StackPanel x:Name="TitleDetailsPanel" Spacing="12" Visibility="Collapsed">
+                                <local:TaskPresetSelector x:Name="TitleSelector"
+                                    SettingsChanged="OnTitleSettingsChanged" />
+                            </StackPanel>
+                        </StackPanel>
+                    </controls:CollapsibleSection.Body>
+                </controls:CollapsibleSection>
 
-                    <ComboBox x:Name="PresetCombo"
-                              x:Uid="AppTasks_Provider"
-                              Header="Provider"
-                              HorizontalAlignment="Stretch"
-                              Visibility="Collapsed"
-                              SelectionChanged="OnPresetSelectionChanged" />
-                </StackPanel>
+                <!-- Summary -->
+                <controls:CollapsibleSection x:Name="SummarySection"
+                    x:Uid="AppTasks_SummarySection"
+                    Header="Summary"
+                    IsExpanded="True">
+                    <controls:CollapsibleSection.Body>
+                        <StackPanel Spacing="12" Padding="0">
+                            <ToggleSwitch x:Name="AutoSummaryToggle"
+                                          OnContent="On" OffContent="Off"
+                                          Toggled="OnAutoSummaryToggled" />
 
-                <!-- Tasks Toggle -->
-                <StackPanel Spacing="12">
-                    <TextBlock x:Uid="AppTasks_AutoTasks" Text="Automatic tasks"
-                               Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            <StackPanel x:Name="SummaryDetailsPanel" Spacing="12" Visibility="Collapsed">
+                                <local:TaskPresetSelector x:Name="SummarySelector"
+                                    SettingsChanged="OnSummarySettingsChanged" />
 
-                    <ToggleSwitch x:Name="AutoTitleToggle"
-                                  x:Uid="AppTasks_AutoTitle"
-                                  Header="Generate conversation titles automatically"
-                                  OnContent="On" OffContent="Off"
-                                  Toggled="OnAutoTitleToggled" />
+                                <StackPanel x:Name="SummaryThresholdPanel" Spacing="6">
+                                <NumberBox x:Name="MaxInputTokensBox"
+                                           x:Uid="AppTasks_MaxInputTokens"
+                                           Header="Summary threshold (tokens)"
+                                           Minimum="1000"
+                                           Maximum="1000000"
+                                           SpinButtonPlacementMode="Inline"
+                                           SmallChange="10000"
+                                           LargeChange="50000"
+                                           ValueChanged="OnMaxInputTokensChanged" />
+                                <TextBlock x:Uid="AppTasks_MaxInputTokensHint"
+                                           Text="When input tokens exceed this value, prior conversation is summarized automatically. Set below your model's context limit."
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           TextWrapping="Wrap"
+                                           Opacity="0.6" />
+                            </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+                    </controls:CollapsibleSection.Body>
+                </controls:CollapsibleSection>
 
-                    <ToggleSwitch x:Name="AutoSummaryToggle"
-                                  x:Uid="AppTasks_AutoSummary"
-                                  Header="Summarize long conversations automatically"
-                                  OnContent="On" OffContent="Off"
-                                  Toggled="OnAutoSummaryToggled" />
-
-                    <StackPanel x:Name="SummaryThresholdPanel" Spacing="6" Visibility="Collapsed" Padding="0,0,0,0">
-                        <NumberBox x:Name="MaxInputTokensBox"
-                                   x:Uid="AppTasks_MaxInputTokens"
-                                   Header="Summary threshold"
-                                   Minimum="1000"
-                                   Maximum="1000000"
-                                   SpinButtonPlacementMode="Inline"
-                                   SmallChange="10000"
-                                   LargeChange="50000"
-                                   ValueChanged="OnMaxInputTokensChanged" />
-                        <TextBlock x:Uid="AppTasks_MaxInputTokensHint"
-                                   Text="When input tokens exceed this value, prior conversation is summarized automatically. Set below your model's context limit."
-                                   Style="{StaticResource CaptionTextBlockStyle}"
-                                   TextWrapping="Wrap"
-                                   Opacity="0.6" />
-                    </StackPanel>
-                </StackPanel>
-
-                <!-- Embedding & Contextualizer settings moved to Connect page (Knowledge Archive card) -->
+                <!-- Sub-Agent -->
+                <controls:CollapsibleSection x:Name="SubAgentSection"
+                    x:Uid="AppTasks_SubAgentSection"
+                    Header="Sub-Agent"
+                    IsExpanded="True">
+                    <controls:CollapsibleSection.Body>
+                        <StackPanel Spacing="12" Padding="0">
+                            <local:TaskPresetSelector x:Name="SubAgentSelector"
+                                SettingsChanged="OnSubAgentSettingsChanged" />
+                        </StackPanel>
+                    </controls:CollapsibleSection.Body>
+                </controls:CollapsibleSection>
 
             </StackPanel>
         </ScrollViewer>

@@ -57,6 +57,7 @@ public partial class App : Application
     {
         DocumentParserFactoryExtensions.AddPdfSupport();
         ConversationManager.Initialize(ApplicationData.Current.LocalFolder.Path);
+        AppSettings.MigrateAppTasksSettings();
 
         // Clean up leftover temp media from previous sessions (e.g. abnormal shutdown)
         ChatPanel.CleanupTempMedia();

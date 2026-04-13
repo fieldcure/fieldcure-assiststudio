@@ -2,6 +2,7 @@
 using AssistStudio.Models;
 using AssistStudio.Tools;
 using CommunityToolkit.Mvvm.ComponentModel;
+using FieldCure.Ai.Providers;
 using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Controls;
 using FieldCure.AssistStudio.Models;
@@ -53,6 +54,12 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     private List<Profile> _profiles;
 
+    /// <summary>
+    /// Whether Ollama was reachable at startup. When <c>false</c>, Ollama presets
+    /// are excluded from new tab preset lists.
+    /// </summary>
+    private bool _ollamaReachable = true;
+
     #endregion
 
     #region Constructors
@@ -66,6 +73,9 @@ public partial class MainViewModel : ObservableObject
 
         // Register available tools
         ToolRegistry.Register(new SearchToolsTool(App.McpRegistry));
+
+        // Fire-and-forget Ollama check for UI dropdown cleanup
+        _ = FilterUnreachableOllamaAsync();
     }
 
     #endregion
@@ -85,7 +95,7 @@ public partial class MainViewModel : ObservableObject
             preset,
             GetActivePromptText(),
             GetCurrentTheme(),
-            GetPresets(),
+            new ArrayList(GetFilteredPresets()),
             _profiles,
             GetActiveProfile(),
             _tabCounter);
@@ -120,12 +130,12 @@ public partial class MainViewModel : ObservableObject
 
         // Find matching preset or use default
         ProviderPreset? preset = null;
-        var presets = GetPresets();
+        var filteredPresets = GetFilteredPresets();
         if (data.ProviderPresetName is not null)
         {
-            foreach (var obj in presets)
+            foreach (var p in filteredPresets)
             {
-                if (obj is ProviderPreset p && p.Name == data.ProviderPresetName)
+                if (p.Name == data.ProviderPresetName)
                 {
                     preset = p;
                     break;
@@ -212,7 +222,7 @@ public partial class MainViewModel : ObservableObject
                 preset,
                 GetActivePromptText(),
                 GetCurrentTheme(),
-                presets,
+                new ArrayList(filteredPresets),
                 _profiles,
                 GetActiveProfile());
 
@@ -225,7 +235,7 @@ public partial class MainViewModel : ObservableObject
                 preset,
                 GetActivePromptText(),
                 GetCurrentTheme(),
-                presets,
+                new ArrayList(filteredPresets),
                 _profiles,
                 GetActiveProfile());
 
@@ -340,11 +350,11 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public void RefreshPresetsOnAll()
     {
-        var presets = GetPresets();
-        LoggingService.LogInfo($"[Settings] Refreshing presets: {presets.Count} presets on {Tabs.Count} tabs");
+        var filtered = new ArrayList(GetFilteredPresets());
+        LoggingService.LogInfo($"[Settings] Refreshing presets: {filtered.Count} presets on {Tabs.Count} tabs");
         foreach (var tab in Tabs)
         {
-            tab.ApplyPresets(presets);
+            tab.ApplyPresets(filtered);
         }
     }
 
@@ -492,20 +502,46 @@ public partial class MainViewModel : ObservableObject
     /// <returns>The default provider preset.</returns>
     private ProviderPreset GetDefaultPreset()
     {
-        var presets = GetPresets();
+        var presets = GetFilteredPresets();
         if (presets.Count == 0)
             return new ProviderPreset { Name = "Mock", ProviderType = "Mock" };
 
         var preferredType = GetActiveProfile()?.PreferredProviderType;
         if (preferredType is not null)
         {
-            foreach (var obj in presets)
+            foreach (var p in presets)
             {
-                if (obj is ProviderPreset p && p.ProviderType == preferredType) return p;
+                if (p.ProviderType == preferredType) return p;
             }
         }
 
-        return presets.OfType<ProviderPreset>().First();
+        // Preferred provider not available — fall back to first
+        return presets[0];
+    }
+
+    /// <summary>
+    /// Returns the preset list with unreachable providers (e.g., Ollama) filtered out.
+    /// </summary>
+    /// <summary>
+    /// Returns the preset list with unusable providers filtered out:
+    /// <list type="bullet">
+    ///   <item>Ollama — excluded when <see cref="_ollamaReachable"/> is <c>false</c></item>
+    ///   <item>Cloud/custom providers — excluded when API key is missing</item>
+    ///   <item>Mock — kept for development/testing</item>
+    /// </list>
+    /// </summary>
+    private List<ProviderPreset> GetFilteredPresets()
+    {
+        var all = GetPresets();
+        var result = new List<ProviderPreset>();
+        foreach (var obj in all)
+        {
+            if (obj is not ProviderPreset p) continue;
+            if (!_ollamaReachable && p.ProviderType == "Ollama") continue;
+            if (p.RequiresApiKey && string.IsNullOrEmpty(p.ApiKey)) continue;
+            result.Add(p);
+        }
+        return result;
     }
 
     /// <summary>
@@ -520,6 +556,29 @@ public partial class MainViewModel : ObservableObject
             "Dark" => ChatTheme.Dark,
             _ => ChatTheme.System,
         };
+    }
+
+    /// <summary>
+    /// Fire-and-forget Ollama reachability check for UI cleanup.
+    /// Sets <see cref="_ollamaReachable"/> to <c>false</c> when complete,
+    /// causing <see cref="GetFilteredPresets"/> to exclude Ollama from preset dropdowns.
+    /// Not a safety mechanism — <see cref="IAuxiliaryProviderResolver"/> validates
+    /// at call time as a runtime safety net.
+    /// </summary>
+    private async Task FilterUnreachableOllamaAsync()
+    {
+        try
+        {
+            var baseUrl = AppSettings.GetOllamaBaseUrl() ?? "http://localhost:11434";
+            using var provider = new OllamaProvider(baseUrl: baseUrl);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            var info = await provider.ValidateConnectionAsync(cts.Token);
+            if (info.IsValid) return;
+        }
+        catch { /* unreachable */ }
+
+        _ollamaReachable = false;
+        LoggingService.LogInfo("[App] Ollama unreachable — excluded from preset dropdowns");
     }
 
     /// <summary>

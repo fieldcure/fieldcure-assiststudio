@@ -261,22 +261,28 @@
     <value>앱 작업</value>
   </data>
   <data name="AppTasks_Description.Text" xml:space="preserve">
-    <value>제목 생성, 대화 요약 등 백그라운드 작업에 사용할 모델을 선택합니다.</value>
+    <value>제목 생성, 대화 요약, 서브에이전트 실행 등 백그라운드 작업에 사용할 모델을 선택합니다.</value>
   </data>
-  <data name="AppTasks_ModelSource.Text" xml:space="preserve">
-    <value>모델 소스</value>
+  <data name="AppTasks_TitleSection.Header" xml:space="preserve">
+    <value>대화 제목 자동 생성</value>
   </data>
-  <data name="AppTasks_UseCurrent.Content" xml:space="preserve">
-    <value>현재 채팅 모델 사용</value>
+  <data name="AppTasks_SummarySection.Header" xml:space="preserve">
+    <value>긴 대화 자동 요약</value>
   </data>
-  <data name="AppTasks_UseSpecific.Content" xml:space="preserve">
+  <data name="AppTasks_SubAgentSection.Header" xml:space="preserve">
+    <value>서브에이전트</value>
+  </data>
+  <data name="TaskPreset_ProviderSettings.Text" xml:space="preserve">
+    <value>프로바이더 설정</value>
+  </data>
+  <data name="TaskPreset_Inherit.Content" xml:space="preserve">
+    <value>대화에서 상속</value>
+  </data>
+  <data name="TaskPreset_Specific.Content" xml:space="preserve">
     <value>특정 프로바이더 사용</value>
   </data>
-  <data name="AppTasks_Provider.Header" xml:space="preserve">
+  <data name="TaskPreset_Provider.Header" xml:space="preserve">
     <value>프로바이더</value>
-  </data>
-  <data name="AppTasks_AutoTasks.Text" xml:space="preserve">
-    <value>자동 작업</value>
   </data>
   <data name="AppTasks_AutoTitle.Header" xml:space="preserve">
     <value>대화 제목 자동 생성</value>

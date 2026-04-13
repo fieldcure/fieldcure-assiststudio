@@ -261,22 +261,28 @@
     <value>App Tasks</value>
   </data>
   <data name="AppTasks_Description.Text" xml:space="preserve">
-    <value>Choose which model the app uses for background tasks such as title generation and conversation summaries.</value>
+    <value>Choose which model the app uses for background tasks such as title generation, conversation summaries, and sub-agent execution.</value>
   </data>
-  <data name="AppTasks_ModelSource.Text" xml:space="preserve">
-    <value>Model source</value>
+  <data name="AppTasks_TitleSection.Header" xml:space="preserve">
+    <value>Title generation</value>
   </data>
-  <data name="AppTasks_UseCurrent.Content" xml:space="preserve">
-    <value>Use the current chat model</value>
+  <data name="AppTasks_SummarySection.Header" xml:space="preserve">
+    <value>Summary</value>
   </data>
-  <data name="AppTasks_UseSpecific.Content" xml:space="preserve">
+  <data name="AppTasks_SubAgentSection.Header" xml:space="preserve">
+    <value>Sub-Agent</value>
+  </data>
+  <data name="TaskPreset_ProviderSettings.Text" xml:space="preserve">
+    <value>Provider settings</value>
+  </data>
+  <data name="TaskPreset_Inherit.Content" xml:space="preserve">
+    <value>Inherit from conversation</value>
+  </data>
+  <data name="TaskPreset_Specific.Content" xml:space="preserve">
     <value>Use a specific provider</value>
   </data>
-  <data name="AppTasks_Provider.Header" xml:space="preserve">
+  <data name="TaskPreset_Provider.Header" xml:space="preserve">
     <value>Provider</value>
-  </data>
-  <data name="AppTasks_AutoTasks.Text" xml:space="preserve">
-    <value>Automatic tasks</value>
   </data>
   <data name="AppTasks_AutoTitle.Header" xml:space="preserve">
     <value>Generate conversation titles automatically</value>

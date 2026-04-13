@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="AssistStudio.Settings.TaskPresetSelector"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <StackPanel Spacing="8">
+        <TextBlock x:Name="SectionHeader" x:Uid="TaskPreset_ProviderSettings"
+                   Text="Provider settings"
+                   Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+        <RadioButtons x:Name="SourceRadio"
+                      SelectionChanged="OnSourceChanged">
+            <RadioButton x:Name="InheritRadio" x:Uid="TaskPreset_Inherit"
+                         Content="Inherit from conversation" Tag="Inherit" />
+            <RadioButton x:Name="SpecificRadio" x:Uid="TaskPreset_Specific"
+                         Content="Use a specific provider" Tag="Specific" />
+        </RadioButtons>
+
+        <ComboBox x:Name="PresetCombo"
+                  x:Uid="TaskPreset_Provider"
+                  Header="Provider"
+                  HorizontalAlignment="Stretch"
+                  Visibility="Collapsed"
+                  SelectionChanged="OnPresetChanged" />
+    </StackPanel>
+</UserControl>
