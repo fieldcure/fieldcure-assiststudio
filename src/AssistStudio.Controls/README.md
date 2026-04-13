@@ -167,6 +167,26 @@ Override the default template in your app's resources:
 | WebView2 Runtime | Evergreen |
 | Target Platform | Windows 10 1903+ (10.0.19041.0) |
 
+### Per-Monitor DPI Awareness
+
+Your host application **must** declare `PerMonitorV2` DPI awareness.
+`ChatPanel` renders through an embedded WebView2, and without this setting
+the Chromium compositor receives a scaled-down viewport on high-DPI displays
+(125 %+), causing blurry text and scroll/hit-test dead zones.
+
+Add the following to your `app.manifest`:
+
+```xml
+<application xmlns="urn:schemas-microsoft-com:asm.v3">
+  <windowsSettings>
+    <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2</dpiAwareness>
+  </windowsSettings>
+</application>
+```
+
+> WinUI 3 project templates sometimes omit this declaration. At 100 % scaling
+> everything works fine; the issue only appears at higher DPI settings.
+
 ## License
 
 [MIT](https://github.com/fieldcure/fieldcure-assiststudio/blob/main/LICENSE) — Copyright (c) 2026 FieldCure Co., Ltd.

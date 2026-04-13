@@ -67,6 +67,35 @@ var stream = _client.Messages.CreateStreaming(new MessageCreateParams
 });
 ```
 
+## DPI Awareness (Important)
+
+`ChatPanel` hosts a WebView2 control whose internal compositor must know the
+true physical pixel size of its window.  If the hosting process is **not**
+declared as per-monitor DPI aware, Windows silently scales the HWND — and
+WebView2 ends up with a viewport that is smaller than the XAML layout expects.
+
+On high-DPI displays (125 %, 150 %, 200 % scaling) this manifests as:
+
+* **Blurry text** — the page is rendered at 1 x and bitmap-stretched by the OS.
+* **Scroll / hit-test dead zones** — mouse-wheel and click events only register
+  in the top-left portion of the WebView2 because Chromium's compositor thinks
+  the viewport is smaller than it really is.
+
+This sample's `app.manifest` already includes the required declaration:
+
+```xml
+<application xmlns="urn:schemas-microsoft-com:asm.v3">
+  <windowsSettings>
+    <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2</dpiAwareness>
+  </windowsSettings>
+</application>
+```
+
+> **If you integrate `ChatPanel` into your own app**, make sure your
+> `app.manifest` contains the same setting.  WinUI 3 project templates
+> sometimes omit it, and the symptom is subtle — everything looks fine at
+> 100 % scaling but breaks at higher DPI.
+
 ## Run
 
 Set `AnthropicSdkSample` as the startup project in VS and press F5.
