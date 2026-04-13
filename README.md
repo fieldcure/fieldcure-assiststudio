@@ -284,6 +284,18 @@ The workspace app bundles MCP servers that are auto-installed and managed:
 - **Outbox** ([`FieldCure.Mcp.Outbox`](https://www.nuget.org/packages/FieldCure.Mcp.Outbox)) — Send messages via Slack, Telegram, Discord, Email (SMTP), and KakaoTalk. Shared instance across all tabs.
 - **BuiltInServerHelper** — Auto-installs and auto-updates built-in servers to latest NuGet version via `dotnet tool` on app startup. Read-only tools (read, list, search) skip user approval.
 
+#### Manual Update
+
+Built-in servers update automatically on next launch. To update immediately:
+
+```bash
+dotnet tool update FieldCure.Mcp.Essentials --tool-path "%LOCALAPPDATA%\FieldCure\AssistStudio\tools"
+```
+
+Replace the package name with any built-in server: `FieldCure.Mcp.Filesystem`, `FieldCure.Mcp.Rag`, `FieldCure.Mcp.Outbox`, or `FieldCure.AssistStudio.Runner`.
+
+> **Note:** Close AssistStudio before running — the tool executable may be locked while the app is running.
+
 ---
 
 ## Configuration

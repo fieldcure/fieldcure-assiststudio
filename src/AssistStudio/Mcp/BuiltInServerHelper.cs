@@ -349,9 +349,6 @@ public static class BuiltInServerHelper
         {
             LoggingService.LogInfo($"[BuiltIn] Installing {installTasks.Count} missing package(s)");
             await Task.WhenAll(installTasks);
-
-            // Refresh cache after new installs
-            await RefreshVersionCacheAsync();
         }
     }
 
@@ -396,7 +393,36 @@ public static class BuiltInServerHelper
         if (pending is null || pending.Updates.Count == 0)
             return;
 
-        var total = pending.Updates.Count;
+        // Filter out entries already at or above target version
+        // (e.g., user manually upgraded via `dotnet tool update`)
+        var actualUpdates = pending.Updates.Where(entry =>
+        {
+            var serverKey = NuGetPackages
+                .FirstOrDefault(kv => kv.Value.Equals(entry.Package, StringComparison.OrdinalIgnoreCase))
+                .Key;
+
+            if (serverKey is not null
+                && _versionCache.TryGetValue(serverKey, out var installedStr)
+                && Version.TryParse(installedStr, out var installed)
+                && Version.TryParse(entry.To, out var target)
+                && installed >= target)
+            {
+                LoggingService.LogInfo(
+                    $"[BuiltIn] Skipping update for {entry.Package}: already at {installedStr} (target {entry.To})");
+                return false;
+            }
+
+            return true;
+        }).ToList();
+
+        if (actualUpdates.Count == 0)
+        {
+            LoggingService.LogInfo("[BuiltIn] All pending updates already satisfied, cleaning up");
+            DeletePendingUpdates();
+            return;
+        }
+
+        var total = actualUpdates.Count;
         LoggingService.LogInfo($"[BuiltIn] Applying {total} pending update(s)");
 
         var loader = TryGetResourceLoader();
@@ -404,11 +430,11 @@ public static class BuiltInServerHelper
 
         var token = NotificationCenter.Instance.PostPersistent(
             InfoBarSeverity.Informational,
-            string.Format(progressTitle, 0, total),
+            SafeFormat(progressTitle, [0, total]),
             string.Empty);
 
         var completed = 0;
-        var updateTasks = pending.Updates.Select(async entry =>
+        var updateTasks = actualUpdates.Select(async entry =>
         {
             try
             {
@@ -436,7 +462,7 @@ public static class BuiltInServerHelper
 
                 var count = Interlocked.Increment(ref completed);
                 NotificationCenter.Instance.Update(token,
-                    title: string.Format(progressTitle, count, total));
+                    title: SafeFormat(progressTitle, [count, total]));
 
                 if (process.ExitCode == 0)
                     LoggingService.LogInfo($"[BuiltIn] Updated {entry.Package} {entry.From} → {entry.To}");
@@ -684,7 +710,7 @@ public static class BuiltInServerHelper
                     ?? "MCP package updates ready";
             var template = loader?.GetString("BuiltIn_UpdateAvailable_Body")
                            ?? "{0} {1} → {2} and {3} more";
-            body = string.Format(template, first.Package, first.From, first.To, updates.Count - 1);
+            body = SafeFormat(template, [first.Package, first.From, first.To, updates.Count - 1]);
         }
 
         NotificationCenter.Instance.Post(InfoBarSeverity.Informational, title, body, 8000);
