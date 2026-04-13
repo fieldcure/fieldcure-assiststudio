@@ -2,6 +2,7 @@ using AssistStudio.Mcp;
 using FieldCure.AssistStudio.Models;
 using FieldCure.Ai.Providers.Models;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 
 namespace AssistStudio.Tools;
@@ -87,7 +88,8 @@ public class SearchToolsTool : IAssistTool, ISearchToolScope
             .Select(t => FormatTool(t, detail))
             .ToList();
 
-        return Task.FromResult(JsonSerializer.Serialize(matched));
+        return Task.FromResult(JsonSerializer.Serialize(matched,
+            new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping }));
     }
 
     #endregion

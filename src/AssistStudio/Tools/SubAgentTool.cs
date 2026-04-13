@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using AssistStudio.Specialists;
 using FieldCure.Ai.Execution;
@@ -257,7 +258,11 @@ public sealed class SubAgentTool : IAssistTool
             rounds_executed = result.RoundsExecuted,
             duration_seconds = Math.Round(result.Duration.TotalSeconds, 1),
             used_preset = result.UsedPreset,
-        }, new JsonSerializerOptions { WriteIndented = false });
+        }, new JsonSerializerOptions
+        {
+            WriteIndented = false,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        });
     }
 
     #endregion
