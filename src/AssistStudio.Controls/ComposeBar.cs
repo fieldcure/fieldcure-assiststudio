@@ -91,6 +91,16 @@ public sealed partial class ComposeBar : Control
         DependencyProperty.Register(nameof(ShowAttachButton), typeof(bool), typeof(ComposeBar),
             new PropertyMetadata(true, OnShowAttachButtonChanged));
 
+    /// <summary>Identifies the <see cref="ShowPresetSelector"/> dependency property.</summary>
+    public static readonly DependencyProperty ShowPresetSelectorProperty =
+        DependencyProperty.Register(nameof(ShowPresetSelector), typeof(bool), typeof(ComposeBar),
+            new PropertyMetadata(true, OnShowPresetSelectorChanged));
+
+    /// <summary>Identifies the <see cref="ShowProfileSelector"/> dependency property.</summary>
+    public static readonly DependencyProperty ShowProfileSelectorProperty =
+        DependencyProperty.Register(nameof(ShowProfileSelector), typeof(bool), typeof(ComposeBar),
+            new PropertyMetadata(true, OnShowProfileSelectorChanged));
+
     /// <summary>Identifies the <see cref="InputAreaMinHeight"/> dependency property.</summary>
     public static readonly DependencyProperty InputAreaMinHeightProperty =
         DependencyProperty.Register(nameof(InputAreaMinHeight), typeof(double), typeof(ComposeBar),
@@ -283,6 +293,24 @@ public sealed partial class ComposeBar : Control
     }
 
     /// <summary>
+    /// Gets or sets whether the preset (model) selector ComboBox is visible.
+    /// </summary>
+    public bool ShowPresetSelector
+    {
+        get => (bool)GetValue(ShowPresetSelectorProperty);
+        set => SetValue(ShowPresetSelectorProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets whether the profile selector ComboBox is visible.
+    /// </summary>
+    public bool ShowProfileSelector
+    {
+        get => (bool)GetValue(ShowProfileSelectorProperty);
+        set => SetValue(ShowProfileSelectorProperty, value);
+    }
+
+    /// <summary>
     /// Gets or sets the minimum height of the input text area.
     /// </summary>
     public double InputAreaMinHeight
@@ -441,6 +469,12 @@ public sealed partial class ComposeBar : Control
         // Apply initial visibility for ShowAttachButton
         if (_attachButton is not null)
             _attachButton.Visibility = ShowAttachButton ? Visibility.Visible : Visibility.Collapsed;
+
+        // Apply initial visibility for selector ComboBoxes
+        if (_presetComboBox is not null)
+            _presetComboBox.Visibility = ShowPresetSelector ? Visibility.Visible : Visibility.Collapsed;
+        if (_profileComboBox is not null)
+            _profileComboBox.Visibility = ShowProfileSelector ? Visibility.Visible : Visibility.Collapsed;
 
         // Update Send button when attachments change
         if (_previewBar is not null)
@@ -836,6 +870,32 @@ public sealed partial class ComposeBar : Control
         if (d is ComposeBar self && self._attachButton is not null)
         {
             self._attachButton.Visibility = (bool)e.NewValue
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="ShowPresetSelector"/> changes to show or hide the preset ComboBox.
+    /// </summary>
+    private static void OnShowPresetSelectorChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ComposeBar self && self._presetComboBox is not null)
+        {
+            self._presetComboBox.Visibility = (bool)e.NewValue
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="ShowProfileSelector"/> changes to show or hide the profile ComboBox.
+    /// </summary>
+    private static void OnShowProfileSelectorChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ComposeBar self && self._profileComboBox is not null)
+        {
+            self._profileComboBox.Visibility = (bool)e.NewValue
                 ? Visibility.Visible
                 : Visibility.Collapsed;
         }

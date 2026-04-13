@@ -115,7 +115,10 @@ public sealed partial class ChatPanel : Control, IDisposable
         DependencyProperty.Register(nameof(MaxToolCallRounds), typeof(int), typeof(ChatPanel),
             new PropertyMetadata(10));
 
-
+    /// <summary>Identifies the <see cref="DisableInternalSendFlow"/> dependency property.</summary>
+    public static readonly DependencyProperty DisableInternalSendFlowProperty =
+        DependencyProperty.Register(nameof(DisableInternalSendFlow), typeof(bool), typeof(ChatPanel),
+            new PropertyMetadata(false));
 
     /// <summary>Identifies the <see cref="RecentTurnsToKeep"/> dependency property.</summary>
     public static readonly DependencyProperty RecentTurnsToKeepProperty =
@@ -167,6 +170,15 @@ public sealed partial class ChatPanel : Control, IDisposable
         DependencyProperty.Register(nameof(ShowTitleBar), typeof(bool), typeof(ChatPanel),
             new PropertyMetadata(true, OnShowTitleBarChanged));
 
+    /// <summary>Identifies the <see cref="ShowPresetSelector"/> dependency property.</summary>
+    public static readonly DependencyProperty ShowPresetSelectorProperty =
+        DependencyProperty.Register(nameof(ShowPresetSelector), typeof(bool), typeof(ChatPanel),
+            new PropertyMetadata(true, OnShowPresetSelectorChanged));
+
+    /// <summary>Identifies the <see cref="ShowProfileSelector"/> dependency property.</summary>
+    public static readonly DependencyProperty ShowProfileSelectorProperty =
+        DependencyProperty.Register(nameof(ShowProfileSelector), typeof(bool), typeof(ChatPanel),
+            new PropertyMetadata(true, OnShowProfileSelectorChanged));
 
     /// <summary>Identifies the <see cref="WorkspaceFolders"/> dependency property.</summary>
     public static readonly DependencyProperty WorkspaceFoldersProperty =
@@ -426,6 +438,28 @@ public sealed partial class ChatPanel : Control, IDisposable
         }
     }
 
+    /// <summary>
+    /// Called when <see cref="ShowPresetSelector"/> changes to show or hide the preset ComboBox.
+    /// </summary>
+    private static void OnShowPresetSelectorChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && panel._inputArea is not null)
+        {
+            panel._inputArea.ShowPresetSelector = (bool)e.NewValue;
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="ShowProfileSelector"/> changes to show or hide the profile ComboBox.
+    /// </summary>
+    private static void OnShowProfileSelectorChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && panel._inputArea is not null)
+        {
+            panel._inputArea.ShowProfileSelector = (bool)e.NewValue;
+        }
+    }
+
     #endregion
 
     #region Fields
@@ -454,6 +488,11 @@ public sealed partial class ChatPanel : Control, IDisposable
     /// Cancellation token source for the currently active streaming operation.
     /// </summary>
     private CancellationTokenSource? _streamingCts;
+
+    /// <summary>
+    /// Tracks the currently active external assistant turn handle, if any.
+    /// </summary>
+    private AssistantTurnHandle? _currentTurn;
 
     /// <summary>
     /// Gets whether the WebView2 renderer has been initialized.
@@ -642,6 +681,17 @@ public sealed partial class ChatPanel : Control, IDisposable
     }
 
     /// <summary>
+    /// Gets or sets whether to disable the internal AI provider send flow.
+    /// When <c>true</c>, <see cref="UserMessageSubmitted"/> fires but the built-in provider pipeline is skipped.
+    /// Use this when driving the conversation externally (e.g., via Anthropic SDK directly).
+    /// </summary>
+    public bool DisableInternalSendFlow
+    {
+        get => (bool)GetValue(DisableInternalSendFlowProperty);
+        set => SetValue(DisableInternalSendFlowProperty, value);
+    }
+
+    /// <summary>
     /// Gets or sets the number of recent conversation turns to keep when summarizing.
     /// </summary>
     public int RecentTurnsToKeep
@@ -754,6 +804,24 @@ public sealed partial class ChatPanel : Control, IDisposable
     {
         get => (bool)GetValue(ShowTitleBarProperty);
         set => SetValue(ShowTitleBarProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets whether the preset (model) selector is visible in the compose bar.
+    /// </summary>
+    public bool ShowPresetSelector
+    {
+        get => (bool)GetValue(ShowPresetSelectorProperty);
+        set => SetValue(ShowPresetSelectorProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets whether the profile selector is visible in the compose bar.
+    /// </summary>
+    public bool ShowProfileSelector
+    {
+        get => (bool)GetValue(ShowProfileSelectorProperty);
+        set => SetValue(ShowProfileSelectorProperty, value);
     }
 
     /// <summary>
@@ -1029,6 +1097,13 @@ public sealed partial class ChatPanel : Control, IDisposable
     /// </summary>
     public event EventHandler<(string Title, string Message)>? NotificationRequested;
 
+    /// <summary>
+    /// Occurs when the user submits a message via the compose bar, after the user message
+    /// has been added to the conversation. When <see cref="DisableInternalSendFlow"/> is <c>true</c>,
+    /// the internal provider send flow is skipped and external code is expected to drive the assistant response.
+    /// </summary>
+    public event EventHandler<MessageSentEventArgs>? UserMessageSubmitted;
+
     #endregion
 
     #region Constructors
@@ -1208,6 +1283,8 @@ public sealed partial class ChatPanel : Control, IDisposable
             // Sync tools and visibility settings
             _inputArea.AvailableTools = RegisteredTools;
             _inputArea.ShowAttachButton = AllowAttachments;
+            _inputArea.ShowPresetSelector = ShowPresetSelector;
+            _inputArea.ShowProfileSelector = ShowProfileSelector;
             if (IsReadOnly)
                 _inputArea.Visibility = Visibility.Collapsed;
         }
@@ -1216,6 +1293,10 @@ public sealed partial class ChatPanel : Control, IDisposable
             _rootGrid.DragOver += OnDragOver;
             _rootGrid.Drop += OnDrop;
         }
+        // Apply initial ShowTitleBar value (XAML may set False before OnApplyTemplate)
+        if (_titleBar is not null && !ShowTitleBar)
+            _titleBar.Visibility = Visibility.Collapsed;
+
         if (_titleEditButton is not null)
         {
             _titleEditButton.Click += OnTitleEditClick;
@@ -1295,6 +1376,63 @@ public sealed partial class ChatPanel : Control, IDisposable
         RegisterInTree(msg);
         _messages.Add(msg);
     }
+
+    /// <summary>
+    /// Adds a user message to the conversation without triggering the internal provider send flow.
+    /// Use this when driving the conversation externally (e.g., via Anthropic SDK directly).
+    /// </summary>
+    /// <param name="text">The message text.</param>
+    /// <param name="attachments">Optional attachments to include with the message.</param>
+    /// <returns>The created user message.</returns>
+    public async Task<ChatMessage> AddUserMessageAsync(string text, IReadOnlyList<ChatAttachment>? attachments = null)
+    {
+        SwitchToChatLayout();
+        return await AddUserMessageCoreAsync(text, attachments ?? []);
+    }
+
+    /// <summary>
+    /// Begins an external assistant turn. The caller drives the streaming via the returned handle.
+    /// Only one handle may be active at a time; calling this while a previous handle is undisposed
+    /// throws <see cref="InvalidOperationException"/>.
+    /// </summary>
+    /// <param name="providerName">Display name of the provider (e.g., "Claude").</param>
+    /// <param name="modelId">Model identifier (e.g., "claude-sonnet-4-20250514").</param>
+    /// <param name="parentMessageId">Parent message ID for branching. Defaults to the last message.</param>
+    /// <returns>An <see cref="AssistantTurnHandle"/> that must be disposed when the turn completes.</returns>
+    public AssistantTurnHandle BeginAssistantTurn(
+        string? providerName = null, string? modelId = null, string? parentMessageId = null)
+    {
+        if (_currentTurn is { IsDisposed: false })
+            throw new InvalidOperationException("Previous assistant turn is not disposed. Dispose it before starting a new one.");
+
+        var message = new ChatMessage(ChatRole.Assistant)
+        {
+            IsStreaming = true,
+            ProviderName = providerName,
+            ProviderModelId = modelId,
+            ParentId = parentMessageId ?? (_messages.Count > 0 ? _messages[^1].Id : null),
+        };
+        RegisterInTree(message);
+        _messages.Add(message);
+        _ = _renderer.BeginAssistantMessageAsync(message.Id, providerName, modelId);
+        MessageAdded?.Invoke(this, message);
+
+        if (_inputArea is not null)
+            _inputArea.IsInputEnabled = false;
+
+        // Create a CTS wired to the Stop button (OnStopRequested cancels _streamingCts)
+        _streamingCts?.Dispose();
+        _streamingCts = new CancellationTokenSource();
+
+        var handle = new AssistantTurnHandle(this, message, _streamingCts.Token);
+        _currentTurn = handle;
+        return handle;
+    }
+
+    /// <summary>
+    /// Returns a snapshot of the current conversation messages for external consumers (e.g., SDK converters).
+    /// </summary>
+    public IReadOnlyList<ChatMessage> GetConversationSnapshot() => [.. _messages];
 
     /// <summary>
     /// Sets keyboard focus to the message input text box.
@@ -1483,6 +1621,23 @@ public sealed partial class ChatPanel : Control, IDisposable
     }
 
     /// <summary>
+    /// Core logic for adding a user message to the conversation tree and rendering it.
+    /// </summary>
+    private async Task<ChatMessage> AddUserMessageCoreAsync(string text, IReadOnlyList<ChatAttachment> attachments)
+    {
+        var parentId = _messages.Count > 0 ? _messages[^1].Id : null;
+        var userMessage = new ChatMessage(ChatRole.User, text) { Attachments = attachments, ParentId = parentId };
+        RegisterInTree(userMessage);
+        _messages.Add(userMessage);
+        await _renderer.AppendUserMessageAsync(
+            userMessage.Id, userMessage.Content, userMessage.Timestamp.ToString("O"),
+            userMessage.Attachments, userMessage.SiblingIndex, userMessage.SiblingCount);
+        MessageAdded?.Invoke(this, userMessage);
+        DiagnosticLogger.LogInfo($"[Chat] User message sent, attachments={attachments.Count}");
+        return userMessage;
+    }
+
+    /// <summary>
     /// Handles the MessageSent event from the input area to send a user message and stream an assistant response.
     /// </summary>
     private async void OnMessageSent(object? sender, MessageSentEventArgs e)
@@ -1492,16 +1647,12 @@ public sealed partial class ChatPanel : Control, IDisposable
 
         SwitchToChatLayout();
 
-        // Add user message with attachments
-        var parentId = _messages.Count > 0 ? _messages[^1].Id : null;
-        var userMessage = new ChatMessage(ChatRole.User, e.Text) { Attachments = e.Attachments, ParentId = parentId };
-        RegisterInTree(userMessage);
-        _messages.Add(userMessage);
-        await _renderer.AppendUserMessageAsync(
-            userMessage.Id, userMessage.Content, userMessage.Timestamp.ToString("O"),
-            userMessage.Attachments, userMessage.SiblingIndex, userMessage.SiblingCount);
-        MessageAdded?.Invoke(this, userMessage);
-        DiagnosticLogger.LogInfo($"[Chat] User message sent, attachments={e.Attachments.Count}");
+        var userMessage = await AddUserMessageCoreAsync(e.Text, e.Attachments);
+
+        UserMessageSubmitted?.Invoke(this, e);
+
+        // When external code drives the conversation, skip internal provider flow.
+        if (DisableInternalSendFlow) return;
 
         // Stream assistant response
         if (Provider is null)
@@ -2527,12 +2678,7 @@ public sealed partial class ChatPanel : Control, IDisposable
             : [.. RegisteredTools.Where(t => enabledNames.Contains(t.Name))];
     }
 
-    /// <summary>Aggregated result returned after consuming a streaming response.</summary>
-    private record StreamResult(TokenUsage? Usage, bool IsTruncated, IReadOnlyList<ToolCall>? ToolCalls = null)
-    {
-        /// <summary>Gets whether the stream produced any tool calls.</summary>
-        public bool HasToolCalls => ToolCalls is { Count: > 0 };
-    }
+    // StreamResult is now a public type in Models/StreamResult.cs
 
     /// <summary>
     /// Batched rendering instruction sent from the background producer to the UI-thread consumer.
@@ -2809,6 +2955,29 @@ public sealed partial class ChatPanel : Control, IDisposable
         }
 
         return controlChars > ctrlSample.Length * 0.05; // >5% control chars
+    }
+
+    /// <summary>
+    /// Internal entry point for <see cref="AssistantTurnHandle.ConsumeStreamAsync"/>.
+    /// </summary>
+    internal Task<StreamResult> ConsumeStreamInternalAsync(
+        IAsyncEnumerable<StreamEvent> events, ChatMessage message, CancellationToken ct)
+        => ConsumeStreamAsync(events, message, ct);
+
+    /// <summary>
+    /// Finalizes an externally-driven assistant turn: renders the final message state
+    /// and restores the input area.
+    /// </summary>
+    internal async Task FinalizeHandleAsync(ChatMessage message)
+    {
+        message.IsStreaming = false;
+        await _renderer.FinalizeMessageAsync(message.Id, message.Content);
+        if (_inputArea is not null)
+        {
+            _inputArea.IsInputEnabled = true;
+            _inputArea.FocusInput();
+        }
+        _currentTurn = null;
     }
 
     /// <summary>
