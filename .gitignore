@@ -5,6 +5,7 @@
 *.suo
 .claude/
 *.user
+samples/**/launchSettings.json
 *.userosscache
 *.sln.docstates
 
