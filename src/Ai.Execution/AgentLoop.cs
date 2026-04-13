@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text.Json;
 using FieldCure.Ai.Providers.Models;
 
@@ -10,6 +9,15 @@ namespace FieldCure.Ai.Execution;
 /// </summary>
 public sealed class AgentLoop : IAgentLoop
 {
+    /// <summary>
+    /// Optional log callback. Host applications can wire this to their
+    /// logging infrastructure (e.g., <c>DiagnosticLogger.LogInfo</c>).
+    /// When <c>null</c>, log messages are silently discarded.
+    /// </summary>
+    public Action<string>? LogCallback { get; set; }
+
+    private void Log(string message) => LogCallback?.Invoke(message);
+
     /// <inheritdoc/>
     public async Task<AgentLoopResult> RunAsync(
         AgentLoopContext context,
@@ -34,7 +42,7 @@ public sealed class AgentLoop : IAgentLoop
 
         try
         {
-            Debug.WriteLine(
+            Log(
                 $"[AgentLoop] Starting: tools={toolList?.Count ?? 0}, maxRounds={context.MaxRounds}, "
                 + $"systemPrompt={context.SystemPrompt?.Length ?? 0} chars, userPrompt={context.UserPrompt?.Length ?? 0} chars, "
                 + $"provider={context.Provider.GetType().Name}");
@@ -55,7 +63,7 @@ public sealed class AgentLoop : IAgentLoop
 
                     if (totalChars > context.MaxContextChars * 0.8)
                     {
-                        Debug.WriteLine(
+                        Log(
                             $"[AgentLoop] Context limit reached: {totalChars:N0} chars "
                             + $"(threshold: {context.MaxContextChars * 0.8:N0}). Forcing summary.");
 
@@ -79,7 +87,7 @@ public sealed class AgentLoop : IAgentLoop
                     Tools = toolsForRound,
                 };
 
-                Debug.WriteLine(
+                Log(
                     $"[AgentLoop] Round {round}: messages={messages.Count}, "
                     + $"totalContentChars={messages.Sum(m => m.Content?.Length ?? 0)}, "
                     + $"tools={toolsForRound?.Count ?? 0}{(forceFinish ? " (FORCE FINISH)" : "")}");
@@ -116,7 +124,7 @@ public sealed class AgentLoop : IAgentLoop
                         var originalLength = toolResult.Length;
                         toolResult = toolResult[..context.MaxToolResultChars]
                             + $"\n\n[Truncated: {originalLength:N0} → {context.MaxToolResultChars:N0} chars]";
-                        Debug.WriteLine(
+                        Log(
                             $"[AgentLoop] Tool result truncated: {toolCall.FunctionName}, {originalLength:N0} → {context.MaxToolResultChars:N0} chars");
                     }
 

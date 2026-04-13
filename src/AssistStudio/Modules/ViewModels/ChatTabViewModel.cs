@@ -1446,7 +1446,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     {
         return _subAgentTool ??= new SubAgentTool(
             new SubAgentExecutor(
-                new AgentLoop(),
+                new AgentLoop { LogCallback = DiagnosticLogger.LogInfo },
                 ResolveProviderForSubAgentAsync,
                 ResolveToolsForSubAgentAsync),
             () => _cachedKbId,
