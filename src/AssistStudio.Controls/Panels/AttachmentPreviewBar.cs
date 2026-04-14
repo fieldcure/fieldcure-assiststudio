@@ -29,7 +29,7 @@ public sealed partial class AttachmentPreviewBar : Control
     /// <summary>
     /// The panel obtained from the control template that hosts preview item visuals.
     /// </summary>
-    private WrapPanel _itemsPanel = new() { HorizontalSpacing = 8, VerticalSpacing = 8 };
+    private readonly WrapPanel _itemsPanel = new() { HorizontalSpacing = 8, VerticalSpacing = 8 };
 
     #endregion
 

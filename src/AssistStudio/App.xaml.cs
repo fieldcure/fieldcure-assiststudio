@@ -319,9 +319,7 @@ public partial class App : Application
                         Title = enumSchema.Title,
                         Description = enumSchema.Description,
                         DefaultValue = enumSchema.Default,
-                        Options = enumSchema.Enum
-                            .Select(v => new ElicitationOptionInfo { Value = v, DisplayTitle = v })
-                            .ToList()
+                        Options = [.. enumSchema.Enum.Select(v => new ElicitationOptionInfo { Value = v, DisplayTitle = v })]
                     },
 
                 ModelContextProtocol.Protocol.ElicitRequestParams.TitledSingleSelectEnumSchema titledSchema =>
@@ -332,9 +330,7 @@ public partial class App : Application
                         Title = titledSchema.Title,
                         Description = titledSchema.Description,
                         DefaultValue = titledSchema.Default,
-                        Options = titledSchema.OneOf
-                            .Select(o => new ElicitationOptionInfo { Value = o.Const, DisplayTitle = o.Title })
-                            .ToList()
+                        Options = [.. titledSchema.OneOf.Select(o => new ElicitationOptionInfo { Value = o.Const, DisplayTitle = o.Title })]
                     },
 
                 ModelContextProtocol.Protocol.ElicitRequestParams.BooleanSchema boolSchema =>
