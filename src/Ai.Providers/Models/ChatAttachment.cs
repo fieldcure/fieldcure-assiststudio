@@ -102,6 +102,13 @@ public partial class ChatAttachment
     public int LineCount { get; set; }
 
     /// <summary>
+    /// Full path of the source file when attached via file picker or drag-drop.
+    /// <c>null</c> for clipboard-pasted content. Used for duplicate detection.
+    /// </summary>
+    [JsonIgnore]
+    public string? SourcePath { get; set; }
+
+    /// <summary>
     /// Indicates the image format is unsupported and cannot be sent to the API.
     /// Chip is shown with strikethrough; excluded from send payload.
     /// </summary>

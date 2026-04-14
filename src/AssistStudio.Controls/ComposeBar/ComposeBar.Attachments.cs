@@ -57,14 +57,7 @@ public sealed partial class ComposeBar
         var files = await picker.PickMultipleFilesAsync();
         if (files is null) return;
 
-        foreach (var file in files)
-        {
-            var attachment = await CreateAttachmentAsync(file);
-            if (attachment is not null)
-            {
-                _previewBar?.AddAttachment(attachment);
-            }
-        }
+        await AddFilesAsync(files);
     }
 
     #endregion
@@ -73,6 +66,7 @@ public sealed partial class ComposeBar
 
     /// <summary>
     /// Add storage items as attachments. Called from drag-drop and external sources.
+    /// Duplicate files (same path) are silently skipped.
     /// </summary>
     public async Task AddFilesAsync(IReadOnlyList<IStorageItem> items)
     {
@@ -80,6 +74,12 @@ public sealed partial class ComposeBar
         {
             if (item is StorageFile file)
             {
+                // Skip duplicate: same source path already attached
+                if (!string.IsNullOrEmpty(file.Path) &&
+                    _previewBar?.Attachments.Any(a =>
+                        string.Equals(a.SourcePath, file.Path, StringComparison.OrdinalIgnoreCase)) == true)
+                    continue;
+
                 var attachment = await CreateAttachmentAsync(file);
                 if (attachment is not null)
                 {
@@ -142,17 +142,7 @@ public sealed partial class ComposeBar
         {
             e.Handled = true;
             var items = await content.GetStorageItemsAsync();
-            foreach (var item in items)
-            {
-                if (item is StorageFile file)
-                {
-                    var attachment = await CreateAttachmentAsync(file);
-                    if (attachment is not null)
-                    {
-                        _previewBar?.AddAttachment(attachment);
-                    }
-                }
-            }
+            await AddFilesAsync(items);
             return;
         }
 
@@ -226,6 +216,7 @@ public sealed partial class ComposeBar
 
         if (!isImage && !isText && !isDocument) return null;
 
+        var sourcePath = file.Path;
         var buffer = await FileIO.ReadBufferAsync(file);
         var data = buffer.ToArray();
 
@@ -239,7 +230,8 @@ public sealed partial class ComposeBar
                     FileName = file.Name,
                     Type = AttachmentType.Document,
                     Data = data,
-                    MimeType = "application/pdf"
+                    MimeType = "application/pdf",
+                    SourcePath = sourcePath
                 };
             }
 
@@ -253,7 +245,8 @@ public sealed partial class ComposeBar
                     FileName = file.Name,
                     Type = AttachmentType.TextFile,
                     Data = Encoding.UTF8.GetBytes(extractedText),
-                    MimeType = "text/plain"
+                    MimeType = "text/plain",
+                    SourcePath = sourcePath
                 };
             }
         }
@@ -271,7 +264,8 @@ public sealed partial class ComposeBar
                     FileName = file.Name,
                     Type = AttachmentType.Image,
                     Data = compressedData,
-                    MimeType = compressedMime
+                    MimeType = compressedMime,
+                    SourcePath = sourcePath
                 };
             }
             catch (NotSupportedException ex)
@@ -282,6 +276,7 @@ public sealed partial class ComposeBar
                     FileName = file.Name,
                     Type = AttachmentType.Image,
                     IsUnsupported = true,
+                    SourcePath = sourcePath
                 };
             }
         }
@@ -291,7 +286,8 @@ public sealed partial class ComposeBar
             FileName = file.Name,
             Type = AttachmentType.TextFile,
             Data = data,
-            MimeType = "text/plain"
+            MimeType = "text/plain",
+            SourcePath = sourcePath
         };
     }
 
