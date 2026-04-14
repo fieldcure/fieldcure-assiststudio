@@ -15,13 +15,17 @@ public class MarkdownExporterTests
         IReadOnlyList<ToolCall>? toolCalls = null,
         SummaryMeta? summary = null,
         string? thinkingContent = null,
-        IReadOnlyList<MediaContent>? toolMedia = null)
+        IReadOnlyList<MediaContent>? toolMedia = null,
+        string? providerName = null,
+        string? providerModelId = null)
         => new(ChatRole.Assistant, content)
         {
             ToolCalls = toolCalls,
             Summary = summary,
             ThinkingContent = thinkingContent,
             ToolMedia = toolMedia,
+            ProviderName = providerName,
+            ProviderModelId = providerModelId,
         };
 
     private static ChatMessage Tool(string toolCallId, string content)
@@ -323,5 +327,52 @@ public class MarkdownExporterTests
 
         Assert.AreEqual("<details>", lines[nextContentIdx].Trim(),
             "After empty-content assistant, should go straight to tool <details> block");
+    }
+
+    [TestMethod]
+    public void Export_AssistantAttribution_IncludesProviderAndModel()
+    {
+        var messages = new List<ChatMessage>
+        {
+            User("Hi"),
+            Assistant("Hello!", providerName: "OpenAI", providerModelId: "gpt-4o"),
+        };
+
+        var result = MarkdownExporter.Export(messages);
+
+        StringAssert.Contains(result.Markdown, "## Assistant · OpenAI · gpt-4o");
+    }
+
+    [TestMethod]
+    public void Export_AssistantAttribution_MixedProviders()
+    {
+        var messages = new List<ChatMessage>
+        {
+            User("Hi"),
+            Assistant("Hello from OpenAI!", providerName: "OpenAI", providerModelId: "gpt-4o"),
+            User("Switch model"),
+            Assistant("Hello from Claude!", providerName: "Anthropic", providerModelId: "claude-sonnet-4-6"),
+        };
+
+        var result = MarkdownExporter.Export(messages);
+
+        StringAssert.Contains(result.Markdown, "## Assistant · OpenAI · gpt-4o");
+        StringAssert.Contains(result.Markdown, "## Assistant · Anthropic · claude-sonnet-4-6");
+    }
+
+    [TestMethod]
+    public void Export_AssistantAttribution_NoProvider_NoSuffix()
+    {
+        var messages = new List<ChatMessage>
+        {
+            User("Hi"),
+            Assistant("Hello!"),
+        };
+
+        var result = MarkdownExporter.Export(messages);
+        var lines = result.Markdown.Split('\n');
+        var header = lines.First(l => l.StartsWith("## Assistant")).TrimEnd();
+
+        Assert.AreEqual("## Assistant", header);
     }
 }

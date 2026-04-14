@@ -142,15 +142,16 @@ public static class MarkdownExporter
         Dictionary<string, ReadOnlyMemory<byte>> media, ref int mediaCounter)
     {
         // Header
+        var attribution = BuildAttribution(msg);
         if (msg.Summary is not null)
         {
-            sb.AppendLine("## Assistant (요약)");
+            sb.AppendLine($"## Assistant{attribution} (요약)");
             sb.AppendLine();
             AppendSummaryBlockquote(sb, msg.Summary);
         }
         else
         {
-            sb.AppendLine("## Assistant");
+            sb.AppendLine($"## Assistant{attribution}");
             sb.AppendLine();
         }
 
@@ -331,6 +332,22 @@ public static class MarkdownExporter
     #endregion
 
     #region Helpers
+
+    /// <summary>
+    /// Builds " · ProviderName · ModelId" suffix for assistant headers.
+    /// Returns empty string when both are null.
+    /// </summary>
+    private static string BuildAttribution(ChatMessage msg)
+    {
+        if (msg.ProviderName is null && msg.ProviderModelId is null)
+            return "";
+
+        var parts = new List<string>(2);
+        if (msg.ProviderName is not null) parts.Add(msg.ProviderName);
+        if (msg.ProviderModelId is not null) parts.Add(msg.ProviderModelId);
+
+        return " · " + string.Join(" · ", parts);
+    }
 
     private static string MimeToExtension(string? mimeType)
     {
