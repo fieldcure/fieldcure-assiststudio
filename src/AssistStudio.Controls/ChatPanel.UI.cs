@@ -1,0 +1,1407 @@
+﻿using FieldCure.Ai.Providers;
+using FieldCure.Ai.Providers.Models;
+using FieldCure.AssistStudio.Helpers;
+using FieldCure.AssistStudio.Models;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using System.Collections;
+using Windows.ApplicationModel.DataTransfer;
+
+namespace FieldCure.AssistStudio.Controls;
+
+public sealed partial class ChatPanel
+{
+    #region Dependency Properties
+
+    /// <summary>Identifies the <see cref="Provider"/> dependency property.</summary>
+    public static readonly DependencyProperty ProviderProperty =
+        DependencyProperty.Register(nameof(Provider), typeof(IAiProvider), typeof(ChatPanel),
+            new PropertyMetadata(null));
+
+    /// <summary>Identifies the <see cref="Placeholder"/> dependency property.</summary>
+    public static readonly DependencyProperty PlaceholderProperty =
+        DependencyProperty.Register(nameof(Placeholder), typeof(string), typeof(ChatPanel),
+            new PropertyMetadata("Type a message..."));
+
+    /// <summary>Identifies the <see cref="SystemPrompt"/> dependency property.</summary>
+    public static readonly DependencyProperty SystemPromptProperty =
+        DependencyProperty.Register(nameof(SystemPrompt), typeof(string), typeof(ChatPanel),
+            new PropertyMetadata(null));
+
+    /// <summary>Identifies the <see cref="MemoryText"/> dependency property.</summary>
+    public static readonly DependencyProperty MemoryTextProperty =
+        DependencyProperty.Register(nameof(MemoryText), typeof(string), typeof(ChatPanel),
+            new PropertyMetadata(null));
+
+    /// <summary>Identifies the <see cref="Theme"/> dependency property.</summary>
+    public static readonly DependencyProperty ThemeProperty =
+        DependencyProperty.Register(nameof(Theme), typeof(ChatTheme), typeof(ChatPanel),
+            new PropertyMetadata(ChatTheme.System, OnThemePropertyChanged));
+
+    /// <summary>Identifies the <see cref="AvailablePresets"/> dependency property.</summary>
+    public static readonly DependencyProperty AvailablePresetsProperty =
+        DependencyProperty.Register(nameof(AvailablePresets), typeof(IList), typeof(ChatPanel),
+            new PropertyMetadata(null, OnAvailablePresetsChanged));
+
+    /// <summary>Identifies the <see cref="SelectedPreset"/> dependency property.</summary>
+    public static readonly DependencyProperty SelectedPresetProperty =
+        DependencyProperty.Register(nameof(SelectedPreset), typeof(ProviderPreset), typeof(ChatPanel),
+            new PropertyMetadata(null, OnSelectedPresetChanged));
+
+    /// <summary>Identifies the <see cref="AvailableProfiles"/> dependency property.</summary>
+    public static readonly DependencyProperty AvailableProfilesProperty =
+        DependencyProperty.Register(nameof(AvailableProfiles), typeof(IList<Profile>), typeof(ChatPanel),
+            new PropertyMetadata(null, OnAvailableProfilesChanged));
+
+    /// <summary>Identifies the <see cref="SelectedProfile"/> dependency property.</summary>
+    public static readonly DependencyProperty SelectedProfileProperty =
+        DependencyProperty.Register(nameof(SelectedProfile), typeof(Profile), typeof(ChatPanel),
+            new PropertyMetadata(null, OnSelectedProfileChanged));
+
+    /// <summary>Identifies the <see cref="IsDebugMode"/> dependency property.</summary>
+    public static readonly DependencyProperty IsDebugModeProperty =
+        DependencyProperty.Register(nameof(IsDebugMode), typeof(bool), typeof(ChatPanel),
+            new PropertyMetadata(false, OnIsDebugModeChanged));
+
+    /// <summary>Identifies the <see cref="Title"/> dependency property.</summary>
+    public static readonly DependencyProperty TitleProperty =
+        DependencyProperty.Register(nameof(Title), typeof(string), typeof(ChatPanel),
+            new PropertyMetadata(null, OnTitlePropertyChanged));
+
+    /// <summary>Identifies the <see cref="AutoTitle"/> dependency property.</summary>
+    public static readonly DependencyProperty AutoTitleProperty =
+        DependencyProperty.Register(nameof(AutoTitle), typeof(bool), typeof(ChatPanel),
+            new PropertyMetadata(false));
+
+    /// <summary>Identifies the <see cref="AutoSummarize"/> dependency property.</summary>
+    public static readonly DependencyProperty AutoSummarizeProperty =
+        DependencyProperty.Register(nameof(AutoSummarize), typeof(bool), typeof(ChatPanel),
+            new PropertyMetadata(false));
+
+    /// <summary>Identifies the <see cref="MaxInputTokens"/> dependency property.</summary>
+    public static readonly DependencyProperty MaxInputTokensProperty =
+        DependencyProperty.Register(nameof(MaxInputTokens), typeof(int), typeof(ChatPanel),
+            new PropertyMetadata(0));
+
+    /// <summary>Identifies the <see cref="MaxToolCallRounds"/> dependency property.</summary>
+    public static readonly DependencyProperty MaxToolCallRoundsProperty =
+        DependencyProperty.Register(nameof(MaxToolCallRounds), typeof(int), typeof(ChatPanel),
+            new PropertyMetadata(10));
+
+    /// <summary>Identifies the <see cref="DisableInternalSendFlow"/> dependency property.</summary>
+    public static readonly DependencyProperty DisableInternalSendFlowProperty =
+        DependencyProperty.Register(nameof(DisableInternalSendFlow), typeof(bool), typeof(ChatPanel),
+            new PropertyMetadata(false));
+
+    /// <summary>Identifies the <see cref="RecentTurnsToKeep"/> dependency property.</summary>
+    public static readonly DependencyProperty RecentTurnsToKeepProperty =
+        DependencyProperty.Register(nameof(RecentTurnsToKeep), typeof(int), typeof(ChatPanel),
+            new PropertyMetadata(10));
+
+    /// <summary>Identifies the <see cref="AuxiliaryProviderResolver"/> dependency property.</summary>
+    public static readonly DependencyProperty AuxiliaryProviderResolverProperty =
+        DependencyProperty.Register(nameof(AuxiliaryProviderResolver), typeof(IAuxiliaryProviderResolver), typeof(ChatPanel),
+            new PropertyMetadata(null));
+
+    /// <summary>Identifies the <see cref="TitlePreset"/> dependency property.</summary>
+    public static readonly DependencyProperty TitlePresetProperty =
+        DependencyProperty.Register(nameof(TitlePreset), typeof(string), typeof(ChatPanel),
+            new PropertyMetadata(null));
+
+    /// <summary>Identifies the <see cref="SummaryPreset"/> dependency property.</summary>
+    public static readonly DependencyProperty SummaryPresetProperty =
+        DependencyProperty.Register(nameof(SummaryPreset), typeof(string), typeof(ChatPanel),
+            new PropertyMetadata(null));
+
+    /// <summary>Identifies the <see cref="WorkspaceContext"/> dependency property.</summary>
+    public static readonly DependencyProperty WorkspaceContextProperty =
+        DependencyProperty.Register(nameof(WorkspaceContext), typeof(IWorkspaceContext), typeof(ChatPanel),
+            new PropertyMetadata(null));
+
+    /// <summary>Identifies the <see cref="ContextProvider"/> dependency property.</summary>
+    public static readonly DependencyProperty ContextProviderProperty =
+        DependencyProperty.Register(nameof(ContextProvider), typeof(IContextProvider), typeof(ChatPanel),
+            new PropertyMetadata(null));
+
+    /// <summary>Identifies the <see cref="RegisteredTools"/> dependency property.</summary>
+    public static readonly DependencyProperty RegisteredToolsProperty =
+        DependencyProperty.Register(nameof(RegisteredTools), typeof(IReadOnlyList<IAssistTool>), typeof(ChatPanel),
+            new PropertyMetadata(null, OnRegisteredToolsChanged));
+
+    /// <summary>Identifies the <see cref="McpTools"/> dependency property.</summary>
+    public static readonly DependencyProperty McpToolsProperty =
+        DependencyProperty.Register(nameof(McpTools), typeof(IReadOnlyList<IAssistTool>), typeof(ChatPanel),
+            new PropertyMetadata(null));
+
+    /// <summary>Identifies the <see cref="FontFamily"/> dependency property for chat rendering.</summary>
+    public new static readonly DependencyProperty FontFamilyProperty =
+        DependencyProperty.Register("ChatFontFamily", typeof(string), typeof(ChatPanel),
+            new PropertyMetadata(null, OnFontFamilyChanged));
+
+    /// <summary>Identifies the <see cref="FontSize"/> dependency property for chat rendering.</summary>
+    public new static readonly DependencyProperty FontSizeProperty =
+        DependencyProperty.Register("ChatFontSize", typeof(double), typeof(ChatPanel),
+            new PropertyMetadata(15.0, OnFontSizeChanged));
+
+    /// <summary>Identifies the <see cref="IsReadOnly"/> dependency property.</summary>
+    public static readonly DependencyProperty IsReadOnlyProperty =
+        DependencyProperty.Register(nameof(IsReadOnly), typeof(bool), typeof(ChatPanel),
+            new PropertyMetadata(false, OnIsReadOnlyChanged));
+
+    /// <summary>Identifies the <see cref="ShowTitleBar"/> dependency property.</summary>
+    public static readonly DependencyProperty ShowTitleBarProperty =
+        DependencyProperty.Register(nameof(ShowTitleBar), typeof(bool), typeof(ChatPanel),
+            new PropertyMetadata(true, OnShowTitleBarChanged));
+
+    /// <summary>Identifies the <see cref="ShowPresetSelector"/> dependency property.</summary>
+    public static readonly DependencyProperty ShowPresetSelectorProperty =
+        DependencyProperty.Register(nameof(ShowPresetSelector), typeof(bool), typeof(ChatPanel),
+            new PropertyMetadata(true, OnShowPresetSelectorChanged));
+
+    /// <summary>Identifies the <see cref="ShowProfileSelector"/> dependency property.</summary>
+    public static readonly DependencyProperty ShowProfileSelectorProperty =
+        DependencyProperty.Register(nameof(ShowProfileSelector), typeof(bool), typeof(ChatPanel),
+            new PropertyMetadata(true, OnShowProfileSelectorChanged));
+
+    /// <summary>Identifies the <see cref="WorkspaceFolders"/> dependency property.</summary>
+    public static readonly DependencyProperty WorkspaceFoldersProperty =
+        DependencyProperty.Register(nameof(WorkspaceFolders), typeof(IReadOnlyList<string>), typeof(ChatPanel),
+            new PropertyMetadata(null, OnWorkspaceFoldersChanged));
+
+    /// <summary>Identifies the <see cref="IsWorkspaceEnabled"/> dependency property.</summary>
+    public static readonly DependencyProperty IsWorkspaceEnabledProperty =
+        DependencyProperty.Register(nameof(IsWorkspaceEnabled), typeof(bool), typeof(ChatPanel),
+            new PropertyMetadata(true, OnIsWorkspaceEnabledChanged));
+
+    /// <summary>Identifies the <see cref="KnowledgeArchiveFolder"/> dependency property.</summary>
+    public static readonly DependencyProperty KnowledgeArchiveFolderProperty =
+        DependencyProperty.Register(nameof(KnowledgeArchiveFolder), typeof(string), typeof(ChatPanel),
+            new PropertyMetadata(null, OnKnowledgeArchiveFolderChanged));
+
+    private static void OnKnowledgeArchiveFolderChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel)
+            panel.UpdateFolderButtonBadge();
+    }
+
+    /// <summary>Identifies the <see cref="IsKnowledgeArchiveEnabled"/> dependency property.</summary>
+    public static readonly DependencyProperty IsKnowledgeArchiveEnabledProperty =
+        DependencyProperty.Register(nameof(IsKnowledgeArchiveEnabled), typeof(bool), typeof(ChatPanel),
+            new PropertyMetadata(false));
+
+    /// <summary>Identifies the <see cref="IsArchiveIndexing"/> dependency property.</summary>
+    public static readonly DependencyProperty IsArchiveIndexingProperty =
+        DependencyProperty.Register(nameof(IsArchiveIndexing), typeof(bool), typeof(ChatPanel),
+            new PropertyMetadata(false));
+
+    /// <summary>Identifies the <see cref="ArchiveIndexingProgress"/> dependency property.</summary>
+    public static readonly DependencyProperty ArchiveIndexingProgressProperty =
+        DependencyProperty.Register(nameof(ArchiveIndexingProgress), typeof(double), typeof(ChatPanel),
+            new PropertyMetadata(0.0));
+
+    /// <summary>Identifies the <see cref="ArchiveIndexingText"/> dependency property.</summary>
+    public static readonly DependencyProperty ArchiveIndexingTextProperty =
+        DependencyProperty.Register(nameof(ArchiveIndexingText), typeof(string), typeof(ChatPanel),
+            new PropertyMetadata(""));
+
+    /// <summary>Identifies the <see cref="IsArchiveLocked"/> dependency property.</summary>
+    public static readonly DependencyProperty IsArchiveLockedProperty =
+        DependencyProperty.Register(nameof(IsArchiveLocked), typeof(bool), typeof(ChatPanel),
+            new PropertyMetadata(false));
+
+    /// <summary>Identifies the <see cref="ChatZoomFactor"/> dependency property.</summary>
+    public static readonly DependencyProperty ChatZoomFactorProperty =
+        DependencyProperty.Register(nameof(ChatZoomFactor), typeof(double), typeof(ChatPanel),
+            new PropertyMetadata(1.05, OnChatZoomFactorChanged));
+
+    /// <summary>Identifies the <see cref="AllowAttachments"/> dependency property.</summary>
+    public static readonly DependencyProperty AllowAttachmentsProperty =
+        DependencyProperty.Register(nameof(AllowAttachments), typeof(bool), typeof(ChatPanel),
+            new PropertyMetadata(true, OnAllowAttachmentsChanged));
+
+    /// <summary>Identifies the <see cref="EmptyStateContent"/> dependency property.</summary>
+    public static readonly DependencyProperty EmptyStateContentProperty =
+        DependencyProperty.Register(nameof(EmptyStateContent), typeof(object), typeof(ChatPanel),
+            new PropertyMetadata(null));
+
+    #endregion
+
+    #region Dependency Property Callbacks
+
+    /// <summary>
+    /// Called when the <see cref="Theme"/> property changes to apply the new theme.
+    /// </summary>
+    private static void OnThemePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && panel._isInitialized)
+        {
+            _ = panel.ApplyThemeAsync();
+        }
+    }
+
+    /// <summary>
+    /// Called when the <see cref="IsDebugMode"/> property changes to toggle debug UI in the renderer.
+    /// </summary>
+    private static void OnIsDebugModeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && panel._isInitialized)
+        {
+            _ = panel._renderer.SetDebugModeAsync((bool)e.NewValue);
+        }
+    }
+
+    /// <summary>
+    /// Called when the <see cref="Title"/> property changes to update the title bar UI.
+    /// </summary>
+    private static void OnTitlePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel)
+        {
+            panel.UpdateTitleDisplay();
+            panel.UpdateRefreshTooltip();
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="AvailablePresets"/> changes to push preset list to the input area.
+    /// </summary>
+    private static void OnAvailablePresetsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && panel._inputArea is not null)
+        {
+            panel._inputArea.AvailablePresets = e.NewValue as IList;
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="SelectedPreset"/> changes to sync the input area and update placeholder text.
+    /// </summary>
+    private static void OnSelectedPresetChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is not ChatPanel panel) return;
+
+        if (e.NewValue is ProviderPreset preset)
+        {
+            if (panel._inputArea is not null)
+                panel._inputArea.SelectedPreset = preset;
+            var displayName = preset.ProviderType == "Mock" ? "Demo" : preset.Name;
+            var label = string.IsNullOrEmpty(preset.ModelId)
+                ? displayName
+                : $"{displayName}/{preset.ModelId}";
+            panel.UpdatePlaceholderWithProvider(label);
+        }
+        else
+        {
+            // Preset cleared (all providers removed)
+            if (panel._inputArea is not null)
+                panel._inputArea.SelectedPreset = null;
+            panel.UpdatePlaceholderWithProvider(null);
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="AvailableProfiles"/> changes to push prompt presets to the input area.
+    /// </summary>
+    private static void OnAvailableProfilesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && e.NewValue is IList<Profile> presets)
+        {
+            if (panel._inputArea is not null)
+                panel._inputArea.AvailableProfiles = presets;
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="SelectedProfile"/> changes to sync the input area and update the system prompt.
+    /// </summary>
+    private static void OnSelectedProfileChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && e.NewValue is Profile preset)
+        {
+            if (panel._inputArea is not null)
+            {
+                panel._inputArea.SelectedProfile = preset;
+                panel._inputArea.SelectProfileInCombo(preset);
+            }
+            // Update the actual system prompt used in requests
+            panel.SystemPrompt = preset.SystemPrompt;
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="RegisteredTools"/> changes to sync tools to the input area.
+    /// </summary>
+    private static void OnRegisteredToolsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && panel._inputArea is not null)
+        {
+            panel._inputArea.AvailableTools = panel.RegisteredTools;
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="FontFamily"/> changes to update the chat rendering font.
+    /// </summary>
+    private static void OnFontFamilyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && panel._isInitialized && e.NewValue is string fontFamily)
+        {
+            _ = panel._renderer.SetFontFamilyAsync(fontFamily);
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="FontSize"/> changes to update the chat rendering font size.
+    /// </summary>
+    private static void OnFontSizeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && panel._isInitialized && e.NewValue is double fontSize)
+        {
+            _ = panel._renderer.SetFontSizeAsync(fontSize);
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="IsReadOnly"/> changes to show or hide the input area.
+    /// </summary>
+    private static void OnIsReadOnlyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && panel._inputArea is not null)
+        {
+            panel._inputArea.Visibility = (bool)e.NewValue
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="ShowTitleBar"/> changes to show or hide the title bar.
+    /// </summary>
+    private static void OnShowTitleBarChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && panel._titleBar is not null)
+        {
+            panel._titleBar.Visibility = (bool)e.NewValue
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="WorkspaceFolders"/> changes to update the folder button badge.
+    /// </summary>
+    private static void OnWorkspaceFoldersChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel)
+        {
+            panel.UpdateFolderButtonBadge();
+            panel._renderer.WorkspaceFolders = e.NewValue as IReadOnlyList<string>;
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="IsWorkspaceEnabled"/> changes to update the folder button appearance.
+    /// </summary>
+    private static void OnIsWorkspaceEnabledChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel)
+        {
+            panel.UpdateFolderButtonAppearance();
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="AllowAttachments"/> changes to show or hide the attach button.
+    /// </summary>
+    private static void OnAllowAttachmentsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && panel._inputArea is not null)
+        {
+            panel._inputArea.ShowAttachButton = (bool)e.NewValue;
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="ShowPresetSelector"/> changes to show or hide the preset ComboBox.
+    /// </summary>
+    private static void OnShowPresetSelectorChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && panel._inputArea is not null)
+        {
+            panel._inputArea.ShowPresetSelector = (bool)e.NewValue;
+        }
+    }
+
+    /// <summary>
+    /// Called when <see cref="ShowProfileSelector"/> changes to show or hide the profile ComboBox.
+    /// </summary>
+    private static void OnShowProfileSelectorChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && panel._inputArea is not null)
+        {
+            panel._inputArea.ShowProfileSelector = (bool)e.NewValue;
+        }
+    }
+
+    #endregion
+
+    #region Public Properties
+
+    /// <summary>
+    /// Gets or sets whether to automatically generate a title after the first assistant response.
+    /// </summary>
+    public bool AutoTitle
+    {
+        get => (bool)GetValue(AutoTitleProperty);
+        set => SetValue(AutoTitleProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets whether to automatically summarize the conversation when input tokens exceed <see cref="MaxInputTokens"/>.
+    /// </summary>
+    public bool AutoSummarize
+    {
+        get => (bool)GetValue(AutoSummarizeProperty);
+        set => SetValue(AutoSummarizeProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the maximum input tokens before auto-summarization triggers. 0 = disabled (default).
+    /// </summary>
+    public int MaxInputTokens
+    {
+        get => (int)GetValue(MaxInputTokensProperty);
+        set => SetValue(MaxInputTokensProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the maximum number of consecutive tool call rounds before forcing a text response.
+    /// </summary>
+    public int MaxToolCallRounds
+    {
+        get => (int)GetValue(MaxToolCallRoundsProperty);
+        set => SetValue(MaxToolCallRoundsProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets whether to disable the internal AI provider send flow.
+    /// When <c>true</c>, <see cref="UserMessageSubmitted"/> fires but the built-in provider pipeline is skipped.
+    /// Use this when driving the conversation externally (e.g., via Anthropic SDK directly).
+    /// </summary>
+    public bool DisableInternalSendFlow
+    {
+        get => (bool)GetValue(DisableInternalSendFlowProperty);
+        set => SetValue(DisableInternalSendFlowProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the number of recent conversation turns to keep when summarizing.
+    /// </summary>
+    public int RecentTurnsToKeep
+    {
+        get => (int)GetValue(RecentTurnsToKeepProperty);
+        set => SetValue(RecentTurnsToKeepProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the resolver for auxiliary providers (title, summary).
+    /// When set, resolves the requested preset with automatic fallback to the main <see cref="Provider"/>.
+    /// </summary>
+    public IAuxiliaryProviderResolver? AuxiliaryProviderResolver
+    {
+        get => (IAuxiliaryProviderResolver?)GetValue(AuxiliaryProviderResolverProperty);
+        set => SetValue(AuxiliaryProviderResolverProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the preset name for title generation.
+    /// <see langword="null"/> or empty means inherit from the current conversation provider.
+    /// </summary>
+    public string? TitlePreset
+    {
+        get => (string?)GetValue(TitlePresetProperty);
+        set => SetValue(TitlePresetProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the preset name for summary generation.
+    /// <see langword="null"/> or empty means inherit from the current conversation provider.
+    /// </summary>
+    public string? SummaryPreset
+    {
+        get => (string?)GetValue(SummaryPresetProperty);
+        set => SetValue(SummaryPresetProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the optional workspace context provider. When set, the current workspace state
+    /// is automatically injected into every AI request.
+    /// </summary>
+    public IWorkspaceContext? WorkspaceContext
+    {
+        get => (IWorkspaceContext?)GetValue(WorkspaceContextProperty);
+        set => SetValue(WorkspaceContextProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the optional RAG context provider. When set, relevant context chunks are
+    /// retrieved for the user's query and passed to the AI provider.
+    /// </summary>
+    public IContextProvider? ContextProvider
+    {
+        get => (IContextProvider?)GetValue(ContextProviderProperty);
+        set => SetValue(ContextProviderProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the registered tools available for AI tool calling. When non-empty, the provider uses
+    /// CompleteAsync (non-streaming) to enable tool call responses.
+    /// </summary>
+    public IReadOnlyList<IAssistTool> RegisteredTools
+    {
+        get => (IReadOnlyList<IAssistTool>?)GetValue(RegisteredToolsProperty) ?? [];
+        set => SetValue(RegisteredToolsProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets additional MCP tools that are executable but not sent in the API tools array.
+    /// These tools are discovered via <c>search_tools</c> and made available to the <see cref="ToolCallExecutor"/>.
+    /// </summary>
+    public IReadOnlyList<IAssistTool> McpTools
+    {
+        get => (IReadOnlyList<IAssistTool>?)GetValue(McpToolsProperty) ?? [];
+        set => SetValue(McpToolsProperty, value);
+    }
+
+    /// <summary>
+    /// Optional delegate called before sending to auto-connect servers and filter tools by connection state.
+    /// Receives user-selected tools, returns only tools that are actually usable.
+    /// When set, <see cref="McpTools"/> should also be updated by the delegate to reflect connected servers.
+    /// </summary>
+    public Func<IReadOnlyList<IAssistTool>, Task<IReadOnlyList<IAssistTool>>>? PrepareToolsForSendAsync { get; set; }
+
+    /// <summary>
+    /// Validates whether a specialist name is registered and eligible for auto-approval.
+    /// Injected by the host to connect ChatPanel (Controls) to SpecialistRegistry (App)
+    /// without circular project references.
+    /// </summary>
+    public Func<string, bool>? IsRegisteredSpecialist { get; set; }
+
+    /// <summary>
+    /// Resolves a specialist name to its display name for UI labeling.
+    /// Returns null if the specialist is not found.
+    /// </summary>
+    public Func<string, string?>? SpecialistDisplayNameResolver { get; set; }
+
+    /// <summary>
+    /// Gets or sets the font family name for chat message rendering.
+    /// </summary>
+    public new string? FontFamily
+    {
+        get => (string?)GetValue(FontFamilyProperty);
+        set => SetValue(FontFamilyProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the base font size in pixels for chat message rendering.
+    /// </summary>
+    public new double FontSize
+    {
+        get => (double)GetValue(FontSizeProperty);
+        set => SetValue(FontSizeProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets whether the chat panel is in read-only mode (input area hidden).
+    /// </summary>
+    public bool IsReadOnly
+    {
+        get => (bool)GetValue(IsReadOnlyProperty);
+        set => SetValue(IsReadOnlyProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets whether the title bar is visible.
+    /// </summary>
+    public bool ShowTitleBar
+    {
+        get => (bool)GetValue(ShowTitleBarProperty);
+        set => SetValue(ShowTitleBarProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets whether the preset (model) selector is visible in the compose bar.
+    /// </summary>
+    public bool ShowPresetSelector
+    {
+        get => (bool)GetValue(ShowPresetSelectorProperty);
+        set => SetValue(ShowPresetSelectorProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets whether the profile selector is visible in the compose bar.
+    /// </summary>
+    public bool ShowProfileSelector
+    {
+        get => (bool)GetValue(ShowProfileSelectorProperty);
+        set => SetValue(ShowProfileSelectorProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the workspace folder paths for the current conversation.
+    /// When folders are present, the built-in Filesystem MCP server is activated.
+    /// </summary>
+    public IReadOnlyList<string>? WorkspaceFolders
+    {
+        get => (IReadOnlyList<string>?)GetValue(WorkspaceFoldersProperty);
+        set => SetValue(WorkspaceFoldersProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets whether the Workspace capability is enabled in the current profile.
+    /// When false, the folder flyout is read-only and grayed out.
+    /// </summary>
+    public bool IsWorkspaceEnabled
+    {
+        get => (bool)GetValue(IsWorkspaceEnabledProperty);
+        set => SetValue(IsWorkspaceEnabledProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the Knowledge Archive folder path for the current conversation.
+    /// Single folder — each conversation has at most one archive folder.
+    /// </summary>
+    public string? KnowledgeArchiveFolder
+    {
+        get => (string?)GetValue(KnowledgeArchiveFolderProperty);
+        set => SetValue(KnowledgeArchiveFolderProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets whether the Knowledge Archive capability is enabled in the current profile.
+    /// </summary>
+    public bool IsKnowledgeArchiveEnabled
+    {
+        get => (bool)GetValue(IsKnowledgeArchiveEnabledProperty);
+        set => SetValue(IsKnowledgeArchiveEnabledProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets whether the Knowledge Archive is currently indexing.
+    /// Controls visibility of the progress ring in the title bar and progress bar in the flyout.
+    /// </summary>
+    public bool IsArchiveIndexing
+    {
+        get => (bool)GetValue(IsArchiveIndexingProperty);
+        set => SetValue(IsArchiveIndexingProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the indexing progress as a percentage (0–100).
+    /// </summary>
+    public double ArchiveIndexingProgress
+    {
+        get => (double)GetValue(ArchiveIndexingProgressProperty);
+        set => SetValue(ArchiveIndexingProgressProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the indexing status text (e.g., "3/10 files...").
+    /// </summary>
+    public string ArchiveIndexingText
+    {
+        get => (string)GetValue(ArchiveIndexingTextProperty);
+        set => SetValue(ArchiveIndexingTextProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets whether the Knowledge Archive folder is locked by another process.
+    /// When true, shows a lock icon and hides the reindex button.
+    /// </summary>
+    public bool IsArchiveLocked
+    {
+        get => (bool)GetValue(IsArchiveLockedProperty);
+        set => SetValue(IsArchiveLockedProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the CSS zoom factor for the chat WebView2 content.
+    /// Default is 1.05 (105%). Adjusts both zoom and max-width to keep visual width at 800px.
+    /// </summary>
+    public double ChatZoomFactor
+    {
+        get => (double)GetValue(ChatZoomFactorProperty);
+        set => SetValue(ChatZoomFactorProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets whether file attachments are allowed.
+    /// </summary>
+    public bool AllowAttachments
+    {
+        get => (bool)GetValue(AllowAttachmentsProperty);
+        set => SetValue(AllowAttachmentsProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets custom content displayed in the empty state panel.
+    /// </summary>
+    public object? EmptyStateContent
+    {
+        get => GetValue(EmptyStateContentProperty);
+        set => SetValue(EmptyStateContentProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the AI provider used for streaming chat responses.
+    /// </summary>
+    public IAiProvider? Provider
+    {
+        get => (IAiProvider?)GetValue(ProviderProperty);
+        set => SetValue(ProviderProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the placeholder text shown in the input area.
+    /// </summary>
+    public string Placeholder
+    {
+        get => (string)GetValue(PlaceholderProperty);
+        set => SetValue(PlaceholderProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the system prompt included with every AI request.
+    /// </summary>
+    public string? SystemPrompt
+    {
+        get => (string?)GetValue(SystemPromptProperty);
+        set => SetValue(SystemPromptProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the persistent memory text injected into the system prompt.
+    /// </summary>
+    public string? MemoryText
+    {
+        get => (string?)GetValue(MemoryTextProperty);
+        set => SetValue(MemoryTextProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the theme mode for the chat panel (System, Light, or Dark).
+    /// </summary>
+    public ChatTheme Theme
+    {
+        get => (ChatTheme)GetValue(ThemeProperty);
+        set => SetValue(ThemeProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the list of available provider presets shown in the input area dropdown.
+    /// </summary>
+    public IList? AvailablePresets
+    {
+        get => (IList?)GetValue(AvailablePresetsProperty);
+        set => SetValue(AvailablePresetsProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the currently selected provider preset.
+    /// </summary>
+    public ProviderPreset? SelectedPreset
+    {
+        get => (ProviderPreset?)GetValue(SelectedPresetProperty);
+        set => SetValue(SelectedPresetProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the list of available prompt presets shown in the input area dropdown.
+    /// </summary>
+    public IList<Profile>? AvailableProfiles
+    {
+        get => (IList<Profile>?)GetValue(AvailableProfilesProperty);
+        set => SetValue(AvailableProfilesProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the currently selected prompt preset.
+    /// </summary>
+    public Profile? SelectedProfile
+    {
+        get => (Profile?)GetValue(SelectedProfileProperty);
+        set => SetValue(SelectedProfileProperty, value);
+    }
+
+    /// <summary>
+    /// Enables debug mode: adds "Copy Request" / "Copy Response" buttons to the last
+    /// message pair, allowing inspection of the actual API request body and raw response.
+    /// </summary>
+    public bool IsDebugMode
+    {
+        get => (bool)GetValue(IsDebugModeProperty);
+        set => SetValue(IsDebugModeProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the conversation title displayed in the title bar.
+    /// </summary>
+    public string? Title
+    {
+        get => (string?)GetValue(TitleProperty);
+        set => SetValue(TitleProperty, value);
+    }
+
+    #endregion
+
+    #region Events
+
+    /// <summary>
+    /// Occurs when the user selects a different provider preset.
+    /// </summary>
+    public event EventHandler<ProviderPreset>? PresetChanged;
+
+    /// <summary>
+    /// Occurs when a new message (user or assistant) is added to the conversation.
+    /// </summary>
+    public event EventHandler<ChatMessage>? MessageAdded;
+
+    /// <summary>
+    /// Occurs when the user switches to a different conversation branch.
+    /// </summary>
+    public event EventHandler? BranchChanged;
+
+    /// <summary>
+    /// Occurs when a conversation title is generated or regenerated by the AI provider.
+    /// </summary>
+    public event EventHandler<string>? TitleGenerated;
+
+    /// <summary>
+    /// Occurs when the user selects a different profile.
+    /// </summary>
+    public event EventHandler<Profile>? ProfileChanged;
+
+    /// <summary>
+    /// Occurs when the user clicks the title edit button.
+    /// </summary>
+    public event EventHandler<string>? TitleEditRequested;
+
+    /// <summary>
+    /// Occurs when the user adds or removes workspace folders via the title bar flyout.
+    /// The event argument contains the updated folder list.
+    /// </summary>
+    public event EventHandler<IReadOnlyList<string>>? WorkspaceFoldersChanged;
+
+    /// <summary>
+    /// Occurs when the user clicks "Add Folder" in the workspace folders flyout.
+    /// The App layer should handle this to show a FolderPicker and update <see cref="WorkspaceFolders"/>.
+    /// </summary>
+    public event EventHandler? WorkspaceFolderAddRequested;
+
+    /// <summary>
+    /// Occurs when the user sets or removes the Knowledge Archive folder via the flyout.
+    /// The event argument is the folder path (null to remove).
+    /// </summary>
+    public event EventHandler<string?>? KnowledgeArchiveFolderChanged;
+
+    /// <summary>
+    /// Callback that returns the list of available knowledge bases for the KB selector.
+    /// Set by the App layer (e.g., ChatTabView) since Controls cannot reference App services.
+    /// </summary>
+    public Func<List<KbItem>>? KbItemsProvider { get; set; }
+
+    /// <summary>
+    /// Occurs when a keyboard shortcut is pressed inside the WebView2 that should be handled by the host.
+    /// </summary>
+    public event EventHandler<string>? KeyboardShortcutPressed;
+
+    /// <summary>
+    /// Occurs when the control wants to display a notification (e.g., image saved/copied).
+    /// </summary>
+    public event EventHandler<(string Title, string Message)>? NotificationRequested;
+
+    /// <summary>
+    /// Occurs when the user submits a message via the compose bar, after the user message
+    /// has been added to the conversation. When <see cref="DisableInternalSendFlow"/> is <c>true</c>,
+    /// the internal provider send flow is skipped and external code is expected to drive the assistant response.
+    /// </summary>
+    public event EventHandler<MessageSentEventArgs>? UserMessageSubmitted;
+
+    #endregion
+
+    #region Overrides
+
+    /// <inheritdoc />
+    protected override void OnApplyTemplate()
+    {
+        base.OnApplyTemplate();
+
+        // Detach old event handlers
+        if (_inputArea is not null)
+        {
+            _inputArea.MessageSent -= OnMessageSent;
+            _inputArea.PresetChanged -= OnInputPresetChanged;
+            _inputArea.ProfileChanged -= OnInputProfileChanged;
+            _inputArea.StopRequested -= OnStopRequested;
+        }
+        if (_approvalPanel is not null)
+        {
+            _approvalPanel.Approved -= OnToolApproved;
+            _approvalPanel.Rejected -= OnToolRejected;
+        }
+        if (_elicitationPanel is not null)
+        {
+            _elicitationPanel.Submitted -= OnElicitationSubmitted;
+            _elicitationPanel.Declined -= OnElicitationDeclined;
+            _elicitationPanel.Cancelled -= OnElicitationCancelled;
+        }
+        if (_rootGrid is not null)
+        {
+            _rootGrid.DragOver -= OnDragOver;
+            _rootGrid.Drop -= OnDrop;
+        }
+        if (_titleEditButton is not null)
+            _titleEditButton.Click -= OnTitleEditClick;
+        if (_titleRefreshButton is not null)
+            _titleRefreshButton.Click -= OnTitleRefreshClick;
+        // Reset folder flyout part references (will be re-resolved on next Flyout.Opening)
+        _folderAddButton = null;
+        _folderDisabledHint = null;
+        _folderList = null;
+        _folderEmpty = null;
+        _archiveDisabledHint = null;
+        _kbSelector = null;
+        _archiveEmpty = null;
+
+        // Get template parts
+        _rootGrid = GetTemplateChild("PART_RootGrid") as Grid;
+        _emptyStatePanel = GetTemplateChild("PART_EmptyStatePanel") as Grid;
+        _emptyStateContent = GetTemplateChild("PART_EmptyStateContent") as StackPanel;
+        _inputArea = GetTemplateChild("PART_InputArea") as ComposeBar;
+        _chatLayout = GetTemplateChild("PART_ChatLayout") as Grid;
+        _titleBar = GetTemplateChild("PART_TitleBar") as StackPanel;
+        _titleText = GetTemplateChild("PART_TitleText") as TextBlock;
+        _titleEditButton = GetTemplateChild("PART_TitleEditButton") as Button;
+        _titleRefreshButton = GetTemplateChild("PART_TitleRefreshButton") as Button;
+        _titleFolderButton = GetTemplateChild("PART_TitleFolderButton") as Button;
+
+        _chatWebView = GetTemplateChild("PART_ChatWebView") as WebView2;
+        _approvalPanel = GetTemplateChild("PART_ToolApprovalPanel") as ToolApprovalPanel;
+        _elicitationPanel = GetTemplateChild("PART_ToolElicitationPanel") as ToolElicitationPanel;
+
+        // Wire search bar
+        _searchBar = GetTemplateChild("PART_SearchBar") as FrameworkElement;
+        _searchTextBox = GetTemplateChild("PART_SearchTextBox") as TextBox;
+        _searchCount = GetTemplateChild("PART_SearchCount") as TextBlock;
+        _searchPrevButton = GetTemplateChild("PART_SearchPrevButton") as Button;
+        _searchNextButton = GetTemplateChild("PART_SearchNextButton") as Button;
+        _searchCloseButton = GetTemplateChild("PART_SearchCloseButton") as Button;
+
+        if (_searchTextBox is not null)
+        {
+            _searchDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
+            _searchDebounceTimer.Tick += async (s, e) =>
+            {
+                _searchDebounceTimer.Stop();
+                await ExecuteSearchAsync(_searchTextBox.Text);
+            };
+            _searchTextBox.TextChanged += (s, e) =>
+            {
+                _searchDebounceTimer.Stop();
+                _searchDebounceTimer.Start();
+            };
+            _searchTextBox.KeyDown += (s, e) =>
+            {
+                if (e.Key == Windows.System.VirtualKey.Escape)
+                {
+                    CloseSearchBar();
+                    e.Handled = true;
+                }
+                else if (e.Key == Windows.System.VirtualKey.Enter)
+                {
+                    _ = NavigateSearchAsync(1);
+                    e.Handled = true;
+                }
+            };
+        }
+        if (_searchPrevButton is not null) _searchPrevButton.Click += (s, e) => _ = NavigateSearchAsync(-1);
+        if (_searchNextButton is not null) _searchNextButton.Click += (s, e) => _ = NavigateSearchAsync(1);
+        if (_searchCloseButton is not null) _searchCloseButton.Click += (s, e) => CloseSearchBar();
+
+        // Wire approval panel events
+        if (_approvalPanel is not null)
+        {
+            _approvalPanel.Approved += OnToolApproved;
+            _approvalPanel.Rejected += OnToolRejected;
+        }
+
+        // Wire elicitation panel events
+        if (_elicitationPanel is not null)
+        {
+            _elicitationPanel.Submitted += OnElicitationSubmitted;
+            _elicitationPanel.Declined += OnElicitationDeclined;
+            _elicitationPanel.Cancelled += OnElicitationCancelled;
+        }
+
+        // Set initial background to match CSS --bg-primary (before WebView2 loads)
+        if (_rootGrid is not null)
+            _rootGrid.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(LightBg);
+
+        // Push title text (may have been set before template was applied)
+        if (_titleText is not null && !string.IsNullOrEmpty(Title))
+            _titleText.Text = Title;
+
+        // Attach event handlers and sync current property values
+        if (_inputArea is not null)
+        {
+            _inputArea.InputFocused += async (_, _) =>
+            {
+                if (_isInitialized) await _renderer.CloseImageModalAsync();
+            };
+            _inputArea.MessageSent += OnMessageSent;
+            _inputArea.PresetChanged += OnInputPresetChanged;
+            _inputArea.ProfileChanged += OnInputProfileChanged;
+            _inputArea.StopRequested += OnStopRequested;
+            // Push current values (may have been set before template was applied)
+            if (AvailablePresets is { } presets)
+                _inputArea.AvailablePresets = presets;
+            if (SelectedPreset is { } selectedPreset)
+                _inputArea.SelectedPreset = selectedPreset;
+            if (AvailableProfiles is { } promptPresets)
+                _inputArea.AvailableProfiles = promptPresets;
+            if (SelectedProfile is { } selectedProfile)
+            {
+                _inputArea.SelectedProfile = selectedProfile;
+                _inputArea.SelectProfileInCombo(selectedProfile);
+            }
+
+            // Sync tools and visibility settings
+            _inputArea.AvailableTools = RegisteredTools;
+            _inputArea.ShowAttachButton = AllowAttachments;
+            _inputArea.ShowPresetSelector = ShowPresetSelector;
+            _inputArea.ShowProfileSelector = ShowProfileSelector;
+            if (IsReadOnly)
+                _inputArea.Visibility = Visibility.Collapsed;
+        }
+        if (_rootGrid is not null)
+        {
+            _rootGrid.DragOver += OnDragOver;
+            _rootGrid.Drop += OnDrop;
+        }
+        // Apply initial ShowTitleBar value (XAML may set False before OnApplyTemplate)
+        if (_titleBar is not null && !ShowTitleBar)
+            _titleBar.Visibility = Visibility.Collapsed;
+
+        if (_titleEditButton is not null)
+        {
+            _titleEditButton.Click += OnTitleEditClick;
+            var tooltip = Res.GetString("ChatPanel_EditTitleTooltip");
+            SetBottomRightToolTip(_titleEditButton, !string.IsNullOrEmpty(tooltip) ? tooltip : "Edit title");
+        }
+        if (_titleRefreshButton is not null)
+            _titleRefreshButton.Click += OnTitleRefreshClick;
+        if (_titleFolderButton is not null)
+        {
+            // Wire Flyout.Opening for lazy PART_ resolution and content population
+            if (_titleFolderButton.Flyout is Flyout folderFlyout)
+            {
+                folderFlyout.Opened += OnFolderFlyoutOpened;
+                folderFlyout.Opening += OnFolderFlyoutOpening;
+            }
+
+            SetBottomRightToolTip(_titleFolderButton, Res.GetString("Folder_Tooltip") ?? "Folders");
+        }
+
+        UpdateFolderButtonBadge();
+        UpdateFolderButtonAppearance();
+        UpdateTitleDisplay();
+
+        // Subscribe to Loaded for WebView2 initialization
+        Loaded += OnLoaded;
+    }
+
+    #endregion
+
+    #region Loaded Handler
+
+    /// <summary>
+    /// Handles the Loaded event to initialize the WebView2 renderer and render any pre-existing messages.
+    /// </summary>
+    private async void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        DiagnosticLogger.LogInfo($"[Chat] OnLoaded: initialized={_isInitialized}, initializing={_initializing}, webView={_chatWebView is not null}");
+        if (_isInitialized || _initializing) return;
+
+        try
+        {
+            if (_chatWebView is null)
+            {
+                DiagnosticLogger.LogInfo("[Chat] OnLoaded: _chatWebView is null, skipping init (disposed panel?)");
+                return;
+            }
+
+            _initializing = true;
+            await _renderer.InitializeAsync(_chatWebView);
+            _isInitialized = true;
+            await ApplyThemeAsync();
+            await ApplyLocaleStringsAsync();
+            ApplyChatZoom();
+            if (IsDebugMode)
+                await _renderer.SetDebugModeAsync(true);
+
+            // Render any pre-existing messages (restored conversations)
+            await RenderRestoredMessagesAsync();
+
+            // Warm up the WebView2 internal HWND so accelerator keys
+            // and focus work immediately (without waiting for user click).
+            _chatWebView.Focus(FocusState.Programmatic);
+            _inputArea?.FocusInput();
+
+            // Listen for theme changes
+            ActualThemeChanged += async (_, _) => await ApplyThemeAsync();
+        }
+        catch (Exception ex)
+        {
+            _initializing = false;
+            DiagnosticLogger.LogException(ex);
+        }
+    }
+
+    #endregion
+
+    #region Drag & Drop
+
+    /// <summary>
+    /// Handles the DragOver event to accept file drop operations.
+    /// </summary>
+    private void OnDragOver(object sender, DragEventArgs e)
+    {
+        if (e.DataView.Contains(StandardDataFormats.StorageItems))
+        {
+            e.AcceptedOperation = DataPackageOperation.Copy;
+        }
+    }
+
+    /// <summary>
+    /// Handles the Drop event to add dropped files as attachments.
+    /// </summary>
+    private async void OnDrop(object sender, DragEventArgs e)
+    {
+        if (!e.DataView.Contains(StandardDataFormats.StorageItems)) return;
+        var items = await e.DataView.GetStorageItemsAsync();
+        if (_inputArea is not null)
+            await _inputArea.AddFilesAsync(items);
+    }
+
+    #endregion
+
+    #region Input Event Handlers
+
+    /// <summary>
+    /// Handles the preset changed event from the input area to propagate the selection.
+    /// </summary>
+    private void OnInputPresetChanged(object? sender, ProviderPreset preset)
+    {
+        SelectedPreset = preset;
+        PresetChanged?.Invoke(this, preset);
+    }
+
+    /// <summary>
+    /// Handles the prompt preset changed event from the input area to update the system prompt.
+    /// </summary>
+    private void OnInputProfileChanged(object? sender, Profile profile)
+    {
+        SelectedProfile = profile;
+        SystemPrompt = profile.SystemPrompt;
+        ProfileChanged?.Invoke(this, profile);
+    }
+
+    #endregion
+
+    #region Theme & Locale
+
+    /// <summary>
+    /// Determines whether the current theme is dark based on the <see cref="Theme"/> property or system setting.
+    /// </summary>
+    private bool IsDarkTheme() => Theme switch
+    {
+        ChatTheme.Light => false,
+        ChatTheme.Dark => true,
+        _ => ActualTheme == ElementTheme.Dark
+    };
+
+    /// <summary>
+    /// Applies the current theme (light or dark) to the root grid background and WebView renderer.
+    /// </summary>
+    private async Task ApplyThemeAsync()
+    {
+        if (!_isInitialized) return;
+
+        var isDark = IsDarkTheme();
+        if (_rootGrid is not null)
+            _rootGrid.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(isDark ? DarkBg : LightBg);
+        await _renderer.SetThemeAsync(isDark);
+    }
+
+    /// <summary>
+    /// Loads localized UI strings from resources and pushes them to the WebView renderer.
+    /// </summary>
+    private async Task ApplyLocaleStringsAsync()
+    {
+        if (!_isInitialized) return;
+
+        try
+        {
+            var loader = new Windows.ApplicationModel.Resources.ResourceLoader(
+                "AssistStudio.Controls/Resources");
+
+            var strings = new Dictionary<string, string>
+            {
+                ["copy"] = loader.GetString("Chat_Copy"),
+                ["copied"] = loader.GetString("Chat_Copied"),
+                ["continue_label"] = loader.GetString("Chat_Continue"),
+                ["code"] = loader.GetString("Chat_Code"),
+                ["copyPrompt"] = loader.GetString("Chat_CopyPrompt"),
+                ["copyMessage"] = loader.GetString("Chat_CopyMessage"),
+                ["edit"] = loader.GetString("Chat_Edit"),
+                ["retry"] = loader.GetString("Chat_Retry"),
+                ["copyRequest"] = loader.GetString("Chat_CopyRequest"),
+                ["copyResponse"] = loader.GetString("Chat_CopyResponse"),
+                ["tokens"] = loader.GetString("Chat_Tokens"),
+                ["editBranchHint"] = loader.GetString("Chat_EditBranchHint"),
+                ["editCancel"] = loader.GetString("Chat_EditCancel"),
+                ["editSave"] = loader.GetString("Chat_EditSave"),
+                ["showMore"] = loader.GetString("Chat_ShowMore"),
+                ["showLess"] = loader.GetString("Chat_ShowLess"),
+                ["imageSave"] = loader.GetString("Chat_ImageSave"),
+                ["imageCopy"] = loader.GetString("Chat_ImageCopy"),
+                ["imageExpand"] = loader.GetString("Chat_ImageExpand"),
+                ["imageClose"] = loader.GetString("Chat_ImageClose"),
+                ["imageSaved"] = loader.GetString("Chat_ImageSaved"),
+                ["imageCopied"] = loader.GetString("Chat_ImageCopied"),
+                ["seconds"] = loader.GetString("Chat_Seconds"),
+                ["minutes"] = loader.GetString("Chat_Minutes"),
+                ["hours"] = loader.GetString("Chat_Hours"),
+                ["summaryHeader"] = loader.GetString("Chat_SummaryHeader")
+            };
+
+            // Filter out empty strings (key not found returns empty)
+            var validStrings = strings
+                .Where(kv => !string.IsNullOrEmpty(kv.Value))
+                .ToDictionary(kv => kv.Key, kv => kv.Value);
+
+            if (validStrings.Count > 0)
+            {
+                await _renderer.SetLocaleStringsAsync(validStrings);
+            }
+        }
+        catch
+        {
+            // Resource loading may fail if no .resw files are available (consumer app).
+            // Defaults in chat.html will be used.
+        }
+    }
+
+    /// <summary>
+    /// Handles <see cref="ChatZoomFactor"/> changes — applies CSS zoom and adjusts max-width.
+    /// </summary>
+    private static void OnChatZoomFactorChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ChatPanel panel && panel._isInitialized)
+            panel.ApplyChatZoom();
+    }
+
+    /// <summary>
+    /// Applies the current <see cref="ChatZoomFactor"/> to the WebView2 via CSS zoom
+    /// and compensates <c>#chat-container</c> max-width to keep visual width at 800px.
+    /// </summary>
+    private void ApplyChatZoom()
+    {
+        _ = _renderer.ApplyZoomAsync(ChatZoomFactor);
+    }
+
+    #endregion
+
+    #region UI Utilities
+
+    /// <summary>
+    /// Sets a tooltip with <see cref="Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse"/> placement on the specified element.
+    /// </summary>
+    private static void SetBottomRightToolTip(FrameworkElement element, string text)
+    {
+        ToolTipService.SetToolTip(element, new ToolTip
+        {
+            Content = text,
+            Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
+        });
+    }
+
+    /// <summary>
+    /// Transitions the layout from the empty state panel to the active chat layout.
+    /// </summary>
+    private void SwitchToChatLayout()
+    {
+        if (_chatLayout is null || _emptyStatePanel is null ||
+            _emptyStateContent is null || _inputArea is null) return;
+        if (_chatLayout.Visibility == Microsoft.UI.Xaml.Visibility.Visible) return;
+
+        _emptyStatePanel.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+        _chatLayout.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+
+        _isConversationActive = true;
+        UpdateTitleDisplay();
+
+        // Move InputArea from EmptyStatePanel into ChatLayout as Row 2
+        _emptyStateContent.Children.Remove(_inputArea);
+        _inputArea.HorizontalAlignment = Microsoft.UI.Xaml.HorizontalAlignment.Stretch;
+        Grid.SetRow(_inputArea, 2);
+        _chatLayout.Children.Add(_inputArea);
+    }
+
+    /// <summary>
+    /// Updates the input area placeholder text to include the provider name.
+    /// </summary>
+    private void UpdatePlaceholderWithProvider(string? providerName)
+    {
+        if (string.IsNullOrEmpty(providerName))
+        {
+            var fallback = Res.GetString("ComposeBar_Placeholder");
+            Placeholder = !string.IsNullOrEmpty(fallback) ? fallback : "Type a message...";
+            return;
+        }
+
+        var format = Res.GetString("ComposeBar_AskProvider");
+        if (!string.IsNullOrEmpty(format))
+        {
+            Placeholder = string.Format(format, providerName);
+            return;
+        }
+
+        Placeholder = $"Ask {providerName}...";
+    }
+
+    /// <summary>
+    /// Updates the title refresh button tooltip to include the provider name.
+    /// </summary>
+    private void UpdateRefreshTooltip()
+    {
+        var providerName = Provider?.ProviderName ?? "";
+
+        var format2 = Res.GetString("Chat_RegenerateTitle");
+        if (!string.IsNullOrEmpty(format2) && !string.IsNullOrEmpty(providerName) && _titleRefreshButton is not null)
+        {
+            SetBottomRightToolTip(_titleRefreshButton, string.Format(format2, providerName));
+            return;
+        }
+
+        if (_titleRefreshButton is not null)
+        {
+            SetBottomRightToolTip(_titleRefreshButton,
+                string.IsNullOrEmpty(providerName)
+                    ? "Regenerate title"
+                    : $"Regenerate title with {providerName}");
+        }
+    }
+
+    #endregion
+}
