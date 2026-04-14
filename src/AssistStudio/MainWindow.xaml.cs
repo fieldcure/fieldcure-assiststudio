@@ -463,27 +463,30 @@ public sealed partial class MainWindow : Window
                 }
             }
 
+            var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
             var mediaNote = result.Media.Count > 0 ? $" + {result.Media.Count} media" : "";
             NotificationCenter.Instance.Post(
                 Microsoft.UI.Xaml.Controls.InfoBarSeverity.Success,
-                "Markdown exported",
+                loader.GetString("Export_Success"),
                 $"{Path.GetFileName(mdPath)}{mediaNote}",
                 3000);
         }
         catch (UnauthorizedAccessException)
         {
+            var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
             NotificationCenter.Instance.Post(
                 Microsoft.UI.Xaml.Controls.InfoBarSeverity.Error,
-                "Export failed",
-                "Access denied. Check Controlled Folder Access settings.",
+                loader.GetString("Export_Failed"),
+                loader.GetString("Export_AccessDenied"),
                 5000);
         }
         catch (Exception ex)
         {
+            var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
             LoggingService.LogException(ex);
             NotificationCenter.Instance.Post(
                 Microsoft.UI.Xaml.Controls.InfoBarSeverity.Error,
-                "Export failed",
+                loader.GetString("Export_Failed"),
                 ex.Message,
                 5000);
         }
@@ -501,12 +504,13 @@ public sealed partial class MainWindow : Window
         package.SetText(result.Markdown);
         Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
 
+        var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
         var mediaNote = result.Media.Count > 0
-            ? $"{result.Media.Count} media file(s) not included"
-            : "Ready to paste";
+            ? string.Format(loader.GetString("Export_MediaNotIncluded"), result.Media.Count)
+            : loader.GetString("Export_ReadyToPaste");
         NotificationCenter.Instance.Post(
             Microsoft.UI.Xaml.Controls.InfoBarSeverity.Success,
-            "Copied to clipboard",
+            loader.GetString("Export_Copied"),
             mediaNote,
             3000);
     }

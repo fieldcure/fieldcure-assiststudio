@@ -70,6 +70,24 @@
   <data name="Menu_Settings.Text" xml:space="preserve">
     <value>Settings</value>
   </data>
+  <data name="Export_Success" xml:space="preserve">
+    <value>Markdown exported</value>
+  </data>
+  <data name="Export_Failed" xml:space="preserve">
+    <value>Export failed</value>
+  </data>
+  <data name="Export_AccessDenied" xml:space="preserve">
+    <value>Access denied. Check Controlled Folder Access settings.</value>
+  </data>
+  <data name="Export_Copied" xml:space="preserve">
+    <value>Copied to clipboard</value>
+  </data>
+  <data name="Export_ReadyToPaste" xml:space="preserve">
+    <value>Ready to paste</value>
+  </data>
+  <data name="Export_MediaNotIncluded" xml:space="preserve">
+    <value>{0} media file(s) not included</value>
+  </data>
   <data name="Menu_ClearRecentHistory" xml:space="preserve">
     <value>Clear Recent History</value>
   </data>
