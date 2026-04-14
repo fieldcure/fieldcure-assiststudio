@@ -1,4 +1,5 @@
 ﻿using FieldCure.Ai.Providers;
+using FieldCure.Ai.Providers.Export;
 using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Controls.Helpers;
 using FieldCure.AssistStudio.Controls.Rendering;
@@ -216,6 +217,24 @@ public sealed partial class ChatPanel
     private static string LoadGreeting()
     {
         return Res.GetString("ChatPanel_Greeting") ?? "How can I help you today?";
+    }
+
+    #endregion
+
+    #region Export
+
+    /// <summary>
+    /// Exports the active conversation branch as a Markdown document.
+    /// Pure in-memory operation — performs no file I/O.
+    /// </summary>
+    /// <returns>A <see cref="MarkdownExportResult"/> containing the Markdown text and extracted media blobs.</returns>
+    public MarkdownExportResult ExportToMarkdown()
+    {
+        return MarkdownExporter.Export(
+            GetMessages(),
+            title: Title,
+            providerName: Provider?.ProviderName,
+            modelId: Provider?.ModelId);
     }
 
     #endregion

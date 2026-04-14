@@ -77,6 +77,12 @@ public partial class ChatMessage : INotifyPropertyChanged
     public ChatRole Role { get; }
 
     /// <summary>The text content of the message. Raises <see cref="PropertyChanged"/> when updated.</summary>
+    /// <remarks>
+    /// INVARIANT: This property stores raw markdown as authored or streamed.
+    /// Rendering (e.g. via marked.js in WebView2) is one-directional; rendered
+    /// HTML must never be written back to this property.
+    /// <see cref="Export.MarkdownExporter"/> relies on this invariant to produce lossless exports.
+    /// </remarks>
     public string Content
     {
         get => _content;

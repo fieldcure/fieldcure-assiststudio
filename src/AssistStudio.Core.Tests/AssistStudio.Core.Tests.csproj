@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AssistStudio.Core\AssistStudio.Core.csproj" />
+    <ProjectReference Include="..\Ai.Providers\Ai.Providers.csproj" />
   </ItemGroup>
 
 </Project>
