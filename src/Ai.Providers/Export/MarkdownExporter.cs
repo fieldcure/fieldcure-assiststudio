@@ -23,9 +23,7 @@ public static class MarkdownExporter
     /// <returns>A <see cref="MarkdownExportResult"/> containing the Markdown text and extracted media blobs.</returns>
     public static MarkdownExportResult Export(
         IReadOnlyList<ChatMessage> messages,
-        string? title = null,
-        string? providerName = null,
-        string? modelId = null)
+        string? title = null)
     {
         var sb = new StringBuilder();
         var media = new Dictionary<string, ReadOnlyMemory<byte>>();
@@ -34,13 +32,22 @@ public static class MarkdownExporter
         // Collect tool results keyed by ToolCallId for matching.
         var toolResults = BuildToolResultMap(messages);
 
+        // Track which ToolCallIds are claimed by an Assistant's ToolCalls.
+        var claimedToolCallIds = new HashSet<string>();
+        foreach (var m in messages)
+        {
+            if (m.Role == ChatRole.Assistant && m.ToolCalls is { Count: > 0 })
+                foreach (var tc in m.ToolCalls)
+                    claimedToolCallIds.Add(tc.Id);
+        }
+
         // Count user-visible messages (User + Assistant only) for frontmatter.
         var visibleCount = 0;
         foreach (var m in messages)
             if (m.Role is ChatRole.User or ChatRole.Assistant) visibleCount++;
 
         // --- Frontmatter ---
-        AppendFrontmatter(sb, title, providerName, modelId, messages, visibleCount);
+        AppendFrontmatter(sb, title, messages, visibleCount);
 
         // --- Messages ---
         foreach (var msg in messages)
@@ -60,9 +67,10 @@ public static class MarkdownExporter
                     break;
 
                 case ChatRole.Tool:
-                    // Tool results are consumed by the preceding Assistant's ToolCalls.
-                    // If orphaned (no matching Assistant), emit standalone.
-                    if (!toolResults.ContainsKey(msg.ToolCallId ?? ""))
+                    // Tool results claimed by a preceding Assistant's ToolCalls are already
+                    // rendered inside that Assistant's <details> block — skip them here.
+                    // Only orphaned Tool messages (no matching ToolCall) get standalone output.
+                    if (!claimedToolCallIds.Contains(msg.ToolCallId ?? ""))
                         AppendOrphanToolResult(sb, msg);
                     break;
             }
@@ -80,7 +88,7 @@ public static class MarkdownExporter
     #region Frontmatter
 
     private static void AppendFrontmatter(
-        StringBuilder sb, string? title, string? providerName, string? modelId,
+        StringBuilder sb, string? title,
         IReadOnlyList<ChatMessage> messages, int messageCount)
     {
         sb.AppendLine("---");
@@ -90,12 +98,6 @@ public static class MarkdownExporter
 
         if (messages.Count > 0)
             sb.AppendLine($"created: {messages[0].Timestamp.ToString("O", CultureInfo.InvariantCulture)}");
-
-        if (!string.IsNullOrWhiteSpace(providerName))
-            sb.AppendLine($"provider: {providerName}");
-
-        if (!string.IsNullOrWhiteSpace(modelId))
-            sb.AppendLine($"model: {modelId}");
 
         sb.AppendLine($"message_count: {messageCount}");
         sb.AppendLine("---");

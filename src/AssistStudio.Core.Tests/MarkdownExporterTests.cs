@@ -235,14 +235,11 @@ public class MarkdownExporterTests
             Assistant("World"),
         };
 
-        var result = MarkdownExporter.Export(messages,
-            title: "Test Chat",
-            providerName: "OpenAI",
-            modelId: "gpt-4o");
+        var result = MarkdownExporter.Export(messages, title: "Test Chat");
 
         StringAssert.Contains(result.Markdown, "title: \"Test Chat\"");
-        StringAssert.Contains(result.Markdown, "provider: OpenAI");
-        StringAssert.Contains(result.Markdown, "model: gpt-4o");
+        Assert.IsFalse(result.Markdown.Contains("provider:"));
+        Assert.IsFalse(result.Markdown.Contains("model:"));
         StringAssert.Contains(result.Markdown, "message_count: 2");
         StringAssert.Contains(result.Markdown, "created:");
     }
@@ -386,5 +383,34 @@ public class MarkdownExporterTests
 
         Assert.AreEqual(2, openCount, "Should have 2 <details open> blocks");
         Assert.AreEqual(2, closeCount, "Should have 2 </details> closings");
+    }
+
+    [TestMethod]
+    public void Export_ToolResultNotDuplicated()
+    {
+        var tc = new ToolCall
+        {
+            Id = "tc_1",
+            FunctionName = "delegate_task",
+            Arguments = "{\"prompt\":\"search\"}"
+        };
+        var messages = new List<ChatMessage>
+        {
+            User("Do something"),
+            Assistant("", toolCalls: [tc]),
+            Tool("tc_1", "task completed successfully"),
+            Assistant("Done!"),
+        };
+
+        var result = MarkdownExporter.Export(messages);
+
+        // The tool result should appear exactly once — inside the Assistant's <details> block,
+        // not a second time as a standalone "Tool Result" block.
+        var occurrences = result.Markdown.Split("task completed successfully").Length - 1;
+        Assert.AreEqual(1, occurrences, "Tool result should appear exactly once, not duplicated");
+
+        // Should NOT have an orphan "Tool Result" block
+        Assert.IsFalse(result.Markdown.Contains("<summary>Tool Result</summary>"),
+            "Matched tool results should not produce orphan blocks");
     }
 }

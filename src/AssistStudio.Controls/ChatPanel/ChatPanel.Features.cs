@@ -232,9 +232,7 @@ public sealed partial class ChatPanel
     {
         return MarkdownExporter.Export(
             GetMessages(),
-            title: Title,
-            providerName: Provider?.ProviderName,
-            modelId: Provider?.ModelId);
+            title: Title);
     }
 
     #endregion
