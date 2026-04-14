@@ -265,7 +265,7 @@ public sealed partial class MainWindow : Window
     {
         if (_client is null) return;
 
-        ExportButton.IsEnabled = true;
+        ExportButton.IsEnabled = false;
 
         var modelId = _selectedModelId;
 
@@ -301,5 +301,7 @@ public sealed partial class MainWindow : Window
             // a ContentDialog would be more reliable for production code.
             handle.Message.Content += $"\n\n[Error: {ex.Message}]";
         }
+
+        ExportButton.IsEnabled = true;
     }
 }
