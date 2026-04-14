@@ -908,7 +908,8 @@ public sealed partial class ChatPanel
                 {
                     DiagnosticLogger.LogWarning($"[Tool] Execution error: {call.FunctionName} — {ex.Message}");
                     DiagnosticLogger.LogException(ex);
-                    execResult = new ToolExecutionResult($"{{\"error\":\"{ex.Message}\"}}");
+                    execResult = new ToolExecutionResult(
+                        System.Text.Json.JsonSerializer.Serialize(new { error = ex.Message }));
                     isError = true;
                 }
                 sw.Stop();
@@ -1007,7 +1008,8 @@ public sealed partial class ChatPanel
                         {
                             DiagnosticLogger.LogWarning($"[Tool] Sub-Agent error: {call.Id} — {ex.Message}");
                             DiagnosticLogger.LogException(ex);
-                            execResult = new ToolExecutionResult($"{{\"error\":\"{ex.Message}\"}}");
+                            execResult = new ToolExecutionResult(
+                                System.Text.Json.JsonSerializer.Serialize(new { error = ex.Message }));
                             isError = true;
                         }
                     }
