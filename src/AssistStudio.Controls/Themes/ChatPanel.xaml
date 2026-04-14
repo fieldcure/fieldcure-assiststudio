@@ -1,0 +1,258 @@
+﻿<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:FieldCure.AssistStudio.Controls">
+
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="ms-appx:///AssistStudio.Controls/Themes/Shared.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <!-- ChatPanel -->
+    <Style TargetType="local:ChatPanel">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:ChatPanel">
+                    <Grid x:Name="PART_RootGrid" AllowDrop="True">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="FolderStates">
+                                <VisualState x:Name="NoFolders" />
+                                <VisualState x:Name="HasFolders">
+                                    <VisualState.Setters>
+                                        <Setter Target="PART_FolderIcon.Glyph" Value="&#xE8D5;" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="IndexingStates">
+                                <VisualState x:Name="Idle" />
+                                <VisualState x:Name="Indexing">
+                                    <Storyboard RepeatBehavior="Forever">
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="PART_FolderIcon"
+                                            Storyboard.TargetProperty="Opacity"
+                                            From="1.0" To="0.3"
+                                            Duration="0:0:0.8"
+                                            AutoReverse="True" />
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <!-- Title bar: always visible -->
+                        <StackPanel x:Name="PART_TitleBar" Grid.Row="0">
+                            <Grid Padding="20,14,20,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <!-- Left: title + edit/refresh -->
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                                    <TextBlock x:Name="PART_TitleText"
+                                               Style="{StaticResource SubtitleTextBlockStyle}"
+                                               FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis"
+                                               MaxLines="1"
+                                               VerticalAlignment="Center" />
+                                    <Button x:Name="PART_TitleEditButton"
+                                            x:Uid="ChatPanel_EditTitle"
+                                            Style="{StaticResource SubtleButtonStyle}"
+                                            Padding="4"
+                                            VerticalAlignment="Center">
+                                        <FontIcon Glyph="&#xE70F;" FontSize="12" />
+                                    </Button>
+                                    <Button x:Name="PART_TitleRefreshButton"
+                                            x:Uid="ChatPanel_RefreshTitle"
+                                            Style="{StaticResource SubtleButtonStyle}"
+                                            Padding="4"
+                                            VerticalAlignment="Center">
+                                        <FontIcon Glyph="&#xE777;" FontSize="12" />
+                                    </Button>
+                                </StackPanel>
+                                <!-- Right: folder button with indexing animation -->
+                                <Button x:Name="PART_TitleFolderButton"
+                                        Grid.Column="1"
+                                        Style="{StaticResource SubtleButtonStyle}"
+                                        Padding="4"
+                                        VerticalAlignment="Center">
+                                    <Button.Flyout>
+                                        <Flyout Placement="BottomEdgeAlignedLeft">
+                                            <StackPanel MinWidth="300" Spacing="4">
+                                                <!-- Workspace Folders header + Add button -->
+                                                <Grid Margin="0,0,0,4">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock x:Name="PART_FolderHeaderText"
+                                                               Text="Workspace Folders"
+                                                               FontWeight="SemiBold"
+                                                               VerticalAlignment="Center" />
+                                                    <Button x:Name="PART_FolderAddButton"
+                                                            Grid.Column="1"
+                                                            Style="{StaticResource SubtleButtonStyle}"
+                                                            Padding="6,2,6,2"
+                                                            VerticalAlignment="Center">
+                                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                                            <FontIcon Glyph="&#xE710;" FontSize="10" />
+                                                            <TextBlock x:Name="PART_FolderAddButtonText"
+                                                                       Text="Add Folder" FontSize="12" />
+                                                        </StackPanel>
+                                                    </Button>
+                                                </Grid>
+
+                                                <!-- Workspace disabled hint -->
+                                                <TextBlock x:Name="PART_FolderDisabledHint"
+                                                           Text="Enable Workspace in your profile to use these folders."
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                           FontSize="12" TextWrapping="Wrap"
+                                                           Margin="0,0,0,4" Visibility="Collapsed" />
+
+                                                <!-- Dynamic folder list (populated in code-behind) -->
+                                                <StackPanel x:Name="PART_FolderList" Spacing="2" />
+
+                                                <!-- Workspace empty state -->
+                                                <TextBlock x:Name="PART_FolderEmpty"
+                                                           Text="(empty)"
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                           FontSize="12" Margin="8,0,0,0" />
+
+                                                <!-- Divider -->
+                                                <Rectangle Height="1"
+                                                           Fill="{ThemeResource DividerStrokeColorDefaultBrush}"
+                                                           Opacity="0.3" Margin="0,8,0,4" />
+
+                                                <!-- Knowledge Archive header -->
+                                                <TextBlock x:Name="PART_ArchiveHeaderText"
+                                                           Text="Knowledge Archive"
+                                                           FontWeight="SemiBold"
+                                                           Margin="0,0,0,4" />
+
+                                                <!-- Archive disabled hint -->
+                                                <TextBlock x:Name="PART_ArchiveDisabledHint"
+                                                           Text="Enable Knowledge Archive in your profile."
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                           FontSize="12" TextWrapping="Wrap"
+                                                           Margin="0,0,0,4" Visibility="Collapsed" />
+
+                                                <!-- KB selector -->
+                                                <ComboBox x:Name="PART_KbSelector"
+                                                          HorizontalAlignment="Stretch"
+                                                          PlaceholderText="Select knowledge base"
+                                                          DisplayMemberPath="Name" />
+
+                                                <!-- No KBs hint -->
+                                                <TextBlock x:Name="PART_ArchiveEmpty"
+                                                           Text="No knowledge bases. Create one in Settings."
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                           FontSize="12" Margin="0,4,0,0"
+                                                           Visibility="Collapsed" />
+                                            </StackPanel>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                    <FontIcon x:Name="PART_FolderIcon" Glyph="&#xE838;" FontSize="14" />
+                                </Button>
+                            </Grid>
+                            <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                        </StackPanel>
+
+                        <!-- Empty state: input centered vertically -->
+                        <Grid x:Name="PART_EmptyStatePanel"
+                              Grid.Row="1"
+                              VerticalAlignment="Center"
+                              HorizontalAlignment="Stretch"
+                              Padding="24">
+                            <StackPanel x:Name="PART_EmptyStateContent" VerticalAlignment="Center" MaxWidth="680">
+                                <local:ComposeBar x:Name="PART_InputArea"
+                                                      HorizontalAlignment="Stretch"
+                                                      Placeholder="{TemplateBinding Placeholder}" />
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Chat layout (initially collapsed) -->
+                        <Grid x:Name="PART_ChatLayout" Grid.Row="1" Visibility="Collapsed">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <WebView2 x:Name="PART_ChatWebView" Grid.Row="0" DefaultBackgroundColor="Transparent" IsTabStop="False" />
+
+                            <!-- Search bar overlay (right-aligned in WebView2 area) -->
+                            <Border x:Name="PART_SearchBar" Grid.Row="0"
+                                    VerticalAlignment="Top"
+                                    HorizontalAlignment="Right"
+                                    Margin="0,8,28,0"
+                                    Padding="6,4"
+                                    CornerRadius="6"
+                                    Background="{ThemeResource SolidBackgroundFillColorQuarternaryBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    Translation="0,0,32"
+                                    Visibility="Collapsed">
+                                <Border.Shadow>
+                                    <ThemeShadow />
+                                </Border.Shadow>
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <TextBox x:Name="PART_SearchTextBox"
+                                             x:Uid="Chat_SearchTextBox"
+                                             Width="200" Height="28"
+                                             Padding="8,4"
+                                             FontSize="13"
+                                             BorderThickness="0"
+                                             VerticalAlignment="Center">
+                                        <TextBox.Resources>
+                                            <SolidColorBrush x:Key="TextControlBorderBrush" Color="Transparent" />
+                                            <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="Transparent" />
+                                            <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="Transparent" />
+                                            <Thickness x:Key="TextControlBorderThemeThickness">0</Thickness>
+                                            <Thickness x:Key="TextControlBorderThemeThicknessFocused">0</Thickness>
+                                        </TextBox.Resources>
+                                    </TextBox>
+                                    <TextBlock x:Name="PART_SearchCount"
+                                               VerticalAlignment="Center"
+                                               Margin="2,0"
+                                               Opacity="0.6"
+                                               FontSize="12" />
+                                    <Button x:Name="PART_SearchPrevButton"
+                                            Width="28" Height="28"
+                                            MinWidth="28" MinHeight="28"
+                                            Padding="0"
+                                            x:Uid="Chat_SearchPrevButton"
+                                            Style="{StaticResource SubtleButtonStyle}">
+                                        <FontIcon FontFamily="{ThemeResource SymbolThemeFontFamily}" Glyph="&#xE70E;" FontSize="11" />
+                                    </Button>
+                                    <Button x:Name="PART_SearchNextButton"
+                                            Width="28" Height="28"
+                                            MinWidth="28" MinHeight="28"
+                                            Padding="0"
+                                            x:Uid="Chat_SearchNextButton"
+                                            Style="{StaticResource SubtleButtonStyle}">
+                                        <FontIcon FontFamily="{ThemeResource SymbolThemeFontFamily}" Glyph="&#xE70D;" FontSize="11" />
+                                    </Button>
+                                    <Button x:Name="PART_SearchCloseButton"
+                                            Width="28" Height="28"
+                                            MinWidth="28" MinHeight="28"
+                                            Padding="0"
+                                            x:Uid="Chat_SearchCloseButton"
+                                            Style="{StaticResource SubtleButtonStyle}">
+                                        <FontIcon FontFamily="{ThemeResource SymbolThemeFontFamily}" Glyph="&#xE711;" FontSize="11" />
+                                    </Button>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Tool approval panel (shown in place of ComposeBar when confirmation needed) -->
+                            <local:ToolApprovalPanel x:Name="PART_ToolApprovalPanel" Grid.Row="1" />
+                            <!-- Tool elicitation panel (shown when MCP server requests user input) -->
+                            <local:ToolElicitationPanel x:Name="PART_ToolElicitationPanel" Grid.Row="1" />
+                        </Grid>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>
