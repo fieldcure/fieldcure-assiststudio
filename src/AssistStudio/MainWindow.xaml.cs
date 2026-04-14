@@ -424,8 +424,10 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private void OnMainMenuOpening(object? sender, object e)
     {
-        var hasMessages = ViewModel.SelectedTab?.GetMessages().Count > 0;
-        ExportSubMenu.IsEnabled = hasMessages;
+        var messages = ViewModel.SelectedTab?.GetMessages();
+        var hasMessages = messages is { Count: > 0 };
+        var isStreaming = hasMessages && messages![^1].IsStreaming;
+        ExportSubMenu.IsEnabled = hasMessages && !isStreaming;
     }
 
     /// <summary>
