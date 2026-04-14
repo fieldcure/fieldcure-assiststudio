@@ -1,5 +1,23 @@
 ﻿# Release Notes — FieldCure.Ai.Providers
 
+## v0.4.0
+
+### Added
+- **Markdown export** — `ConversationExporter` with per-message provider attribution and `<details open>` structure
+- **File attachment deduplication** — deduplicate by source path before sending to providers
+- **Multi-attachment labeling** — unified numbering across all providers for multiple file attachments
+- **Paste-as-attachment** — auto-convert long pasted text to attachment chip
+- **Token compression summary** — `SummaryMeta` model with compression ratio display in summary header
+- **Auxiliary provider settings** — per-task provider overrides with runtime fallback
+
+### Changed
+- **Frontmatter removal** — remove frontmatter provider/model from conversation format
+- **Tool result deduplication fix** — prevent duplicate tool results in conversation history
+- **Timestamp preservation** — preserve original response timestamp and elapsed time across save/load
+- **`.astx` migration** — update stale `.astd` references and filter MRU by extension
+
+---
+
 ## v0.3.0
 
 ### Added

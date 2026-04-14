@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
-    <Version>0.3.0</Version>
+    <Version>0.4.0</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CA1416</NoWarn>
 
@@ -22,7 +22,7 @@
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;claude;openai;gemini;ollama;llm;provider;streaming</PackageTags>
-    <PackageReleaseNotes>v0.3.0: Custom OpenAI-compatible provider registration (CustomProviderConfig, ProviderFactory.RegisterCustomProvider). ThinkTagParser for streaming think-tag extraction. OpenAI reasoning_details support (MiniMax-style structured thinking). stream_options scoped to OpenAI/Groq only for custom provider compatibility.</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.4.0: Markdown export with per-message attribution. File attachment deduplication and multi-attachment labeling. Token compression with summary metadata. Frontmatter provider/model removal. Paste-as-attachment support. Auxiliary provider settings with runtime fallback. Timestamp and elapsed time preservation across save/load.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
