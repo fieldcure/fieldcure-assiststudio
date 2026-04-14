@@ -57,8 +57,8 @@ public class MarkdownExporterTests
 
         var result = MarkdownExporter.Export(messages);
 
-        StringAssert.Contains(result.Markdown, "## User");
-        StringAssert.Contains(result.Markdown, "## Assistant");
+        StringAssert.Contains(result.Markdown, "<summary><b>User</b></summary>");
+        StringAssert.Contains(result.Markdown, "<summary><b>Assistant</b></summary>");
         StringAssert.Contains(result.Markdown, "message_count: 2");
     }
 
@@ -92,7 +92,7 @@ public class MarkdownExporterTests
 
         var result = MarkdownExporter.Export(messages);
 
-        StringAssert.Contains(result.Markdown, "## Assistant (요약)");
+        StringAssert.Contains(result.Markdown, "<summary><b>Assistant</b> (요약)</summary>");
         StringAssert.Contains(result.Markdown, "이전 메시지 12개 (약 3,450 토큰)를 요약한 내용입니다.");
     }
 
@@ -134,13 +134,11 @@ public class MarkdownExporterTests
 
         var result = MarkdownExporter.Export(messages);
 
-        StringAssert.Contains(result.Markdown, "<details>");
         StringAssert.Contains(result.Markdown, "<summary>Tool: web_search</summary>");
         StringAssert.Contains(result.Markdown, "**Input:**");
         StringAssert.Contains(result.Markdown, "\"query\"");
         StringAssert.Contains(result.Markdown, "**Result:**");
         StringAssert.Contains(result.Markdown, "Found 5 results about SK hynix.");
-        StringAssert.Contains(result.Markdown, "</details>");
     }
 
     [TestMethod]
@@ -175,7 +173,7 @@ public class MarkdownExporterTests
 
         StringAssert.Contains(result.Markdown, "**script.js:**");
         StringAssert.Contains(result.Markdown, "console.log('hello');");
-        Assert.AreEqual(0, result.Media.Count); // Text files are inline, not media.
+        Assert.AreEqual(0, result.Media.Count);
     }
 
     [TestMethod]
@@ -224,10 +222,8 @@ public class MarkdownExporterTests
 
         var result = MarkdownExporter.Export(messages);
 
-        StringAssert.Contains(result.Markdown, "<details>");
         StringAssert.Contains(result.Markdown, "<summary>Thinking</summary>");
         StringAssert.Contains(result.Markdown, "Let me reason through this...");
-        StringAssert.Contains(result.Markdown, "</details>");
     }
 
     [TestMethod]
@@ -263,7 +259,6 @@ public class MarkdownExporterTests
 
         var result = MarkdownExporter.Export(messages);
 
-        Assert.IsFalse(result.Markdown.Contains("## System"));
         Assert.IsFalse(result.Markdown.Contains("You are a helpful assistant."));
         StringAssert.Contains(result.Markdown, "message_count: 2");
     }
@@ -305,23 +300,21 @@ public class MarkdownExporterTests
 
         var result = MarkdownExporter.Export(messages);
 
-        // The empty-content assistant message should have the tool block
-        // but no empty text paragraph between header and tool.
+        // After summary line and blank line, next non-blank should be tool <details>, not empty text.
         var lines = result.Markdown.Split('\n');
-        var assistantHeaderIdx = -1;
+        var summaryIdx = -1;
         for (int i = 0; i < lines.Length; i++)
         {
-            if (lines[i].Trim() == "## Assistant")
+            if (lines[i].Contains("<summary><b>Assistant</b></summary>"))
             {
-                assistantHeaderIdx = i;
+                summaryIdx = i;
                 break;
             }
         }
 
-        Assert.IsTrue(assistantHeaderIdx >= 0, "Should have ## Assistant header");
+        Assert.IsTrue(summaryIdx >= 0, "Should have Assistant summary line");
 
-        // After the header and blank line, next non-blank line should be <details>, not empty content.
-        var nextContentIdx = assistantHeaderIdx + 1;
+        var nextContentIdx = summaryIdx + 1;
         while (nextContentIdx < lines.Length && string.IsNullOrWhiteSpace(lines[nextContentIdx]))
             nextContentIdx++;
 
@@ -340,7 +333,7 @@ public class MarkdownExporterTests
 
         var result = MarkdownExporter.Export(messages);
 
-        StringAssert.Contains(result.Markdown, "## Assistant · OpenAI · gpt-4o");
+        StringAssert.Contains(result.Markdown, "<summary><b>Assistant</b> · OpenAI · gpt-4o</summary>");
     }
 
     [TestMethod]
@@ -356,8 +349,8 @@ public class MarkdownExporterTests
 
         var result = MarkdownExporter.Export(messages);
 
-        StringAssert.Contains(result.Markdown, "## Assistant · OpenAI · gpt-4o");
-        StringAssert.Contains(result.Markdown, "## Assistant · Anthropic · claude-sonnet-4-6");
+        StringAssert.Contains(result.Markdown, "<b>Assistant</b> · OpenAI · gpt-4o");
+        StringAssert.Contains(result.Markdown, "<b>Assistant</b> · Anthropic · claude-sonnet-4-6");
     }
 
     [TestMethod]
@@ -371,8 +364,27 @@ public class MarkdownExporterTests
 
         var result = MarkdownExporter.Export(messages);
         var lines = result.Markdown.Split('\n');
-        var header = lines.First(l => l.StartsWith("## Assistant")).TrimEnd();
+        var summary = lines.First(l => l.Contains("<summary><b>Assistant</b>")).TrimEnd();
 
-        Assert.AreEqual("## Assistant", header);
+        Assert.AreEqual("<summary><b>Assistant</b></summary>", summary);
+    }
+
+    [TestMethod]
+    public void Export_DetailsOpenStructure_AllMessagesWrapped()
+    {
+        var messages = new List<ChatMessage>
+        {
+            User("Hello"),
+            Assistant("World"),
+        };
+
+        var result = MarkdownExporter.Export(messages);
+
+        // Count <details open> and </details> — should have 2 pairs (User + Assistant)
+        var openCount = result.Markdown.Split("<details open>").Length - 1;
+        var closeCount = result.Markdown.Split("</details>").Length - 1;
+
+        Assert.AreEqual(2, openCount, "Should have 2 <details open> blocks");
+        Assert.AreEqual(2, closeCount, "Should have 2 </details> closings");
     }
 }

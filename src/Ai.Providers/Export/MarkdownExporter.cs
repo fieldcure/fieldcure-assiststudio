@@ -115,7 +115,8 @@ public static class MarkdownExporter
         StringBuilder sb, ChatMessage msg,
         Dictionary<string, ReadOnlyMemory<byte>> media, ref int mediaCounter)
     {
-        sb.AppendLine("## User");
+        sb.AppendLine("<details open>");
+        sb.AppendLine("<summary><b>User</b></summary>");
         sb.AppendLine();
 
         // Attachments before content.
@@ -130,6 +131,9 @@ public static class MarkdownExporter
             sb.AppendLine(msg.Content);
             sb.AppendLine();
         }
+
+        sb.AppendLine("</details>");
+        sb.AppendLine();
     }
 
     #endregion
@@ -145,13 +149,15 @@ public static class MarkdownExporter
         var attribution = BuildAttribution(msg);
         if (msg.Summary is not null)
         {
-            sb.AppendLine($"## Assistant{attribution} (요약)");
+            sb.AppendLine("<details open>");
+            sb.AppendLine($"<summary><b>Assistant</b> (요약)</summary>");
             sb.AppendLine();
             AppendSummaryBlockquote(sb, msg.Summary);
         }
         else
         {
-            sb.AppendLine($"## Assistant{attribution}");
+            sb.AppendLine("<details open>");
+            sb.AppendLine($"<summary><b>Assistant</b>{attribution}</summary>");
             sb.AppendLine();
         }
 
@@ -189,6 +195,9 @@ public static class MarkdownExporter
             foreach (var tm in msg.ToolMedia)
                 AppendToolMedia(sb, tm, media, ref mediaCounter);
         }
+
+        sb.AppendLine("</details>");
+        sb.AppendLine();
     }
 
     private static void AppendSummaryBlockquote(StringBuilder sb, SummaryMeta summary)
