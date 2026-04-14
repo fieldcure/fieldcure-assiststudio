@@ -22,7 +22,7 @@
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;agent;execution;sub-agent;tool-use;llm</PackageTags>
-    <PackageReleaseNotes>v0.3.0: BREAKING — SubAgentExecutor.ProviderResolver is now async (Task&lt;IAiProvider&gt;). Removed _defaultPresetName; null PresetName resolved by caller's fallback policy.</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.3.0: BREAKING — SubAgentExecutor.ProviderResolver async. LogCallback for host-injected logging. Per-task auxiliary provider settings with runtime fallback.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
