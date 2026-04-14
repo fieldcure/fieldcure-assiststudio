@@ -74,7 +74,8 @@
 
                                 <FlyoutBase.AttachedFlyout>
                                     <MenuFlyout x:Name="MainMenuFlyout"
-                                                Placement="BottomEdgeAlignedLeft">
+                                                Placement="BottomEdgeAlignedLeft"
+                                                Opening="OnMainMenuOpening">
                                         <MenuFlyoutItem x:Uid="Menu_New" Text="New"
                                                         Click="OnMenuNewTab"
                                                         KeyboardAcceleratorTextOverride="Ctrl+N">
@@ -117,6 +118,26 @@
                                                 <FontIcon Glyph="&#xEA35;" />
                                             </MenuFlyoutItem.Icon>
                                         </MenuFlyoutItem>
+                                        <MenuFlyoutSubItem x:Name="ExportSubMenu"
+                                                           x:Uid="Menu_ExportMarkdown"
+                                                           Text="Export as Markdown"
+                                                           IsEnabled="False">
+                                            <MenuFlyoutSubItem.Icon>
+                                                <FontIcon Glyph="&#xE72D;" />
+                                            </MenuFlyoutSubItem.Icon>
+                                            <MenuFlyoutItem x:Uid="Menu_ExportToFile" Text="Save to file..."
+                                                            Click="OnMenuExportToFile">
+                                                <MenuFlyoutItem.Icon>
+                                                    <FontIcon Glyph="&#xE74E;" />
+                                                </MenuFlyoutItem.Icon>
+                                            </MenuFlyoutItem>
+                                            <MenuFlyoutItem x:Uid="Menu_ExportToClipboard" Text="Copy to clipboard"
+                                                            Click="OnMenuExportToClipboard">
+                                                <MenuFlyoutItem.Icon>
+                                                    <FontIcon Glyph="&#xE8C8;" />
+                                                </MenuFlyoutItem.Icon>
+                                            </MenuFlyoutItem>
+                                        </MenuFlyoutSubItem>
                                         <MenuFlyoutSeparator />
                                         <MenuFlyoutItem x:Uid="Menu_Settings" Text="Settings"
                                                         Click="OnMenuSettings">

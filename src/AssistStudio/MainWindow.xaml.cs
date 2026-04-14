@@ -420,6 +420,98 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
+    /// Updates export submenu enabled state based on the active tab's message count.
+    /// </summary>
+    private void OnMainMenuOpening(object? sender, object e)
+    {
+        var hasMessages = ViewModel.SelectedTab?.GetMessages().Count > 0;
+        ExportSubMenu.IsEnabled = hasMessages;
+    }
+
+    /// <summary>
+    /// Exports the active conversation as Markdown and saves to a file via FileSavePicker.
+    /// </summary>
+    private async void OnMenuExportToFile(object sender, RoutedEventArgs e)
+    {
+        var tab = ViewModel.SelectedTab;
+        var result = tab?.ExportToMarkdown();
+        if (result is null) return;
+
+        var picker = new FileSavePicker();
+        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
+        picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+        picker.SuggestedFileName = tab!.Title ?? "conversation";
+        picker.FileTypeChoices.Add("Markdown", [".md"]);
+
+        var file = await picker.PickSaveFileAsync();
+        if (file is null) return;
+
+        try
+        {
+            var mdPath = file.Path;
+            await File.WriteAllTextAsync(mdPath, result.Markdown, System.Text.Encoding.UTF8);
+
+            // Write media subfolder if any
+            if (result.Media.Count > 0)
+            {
+                var baseDir = Path.GetDirectoryName(mdPath)!;
+                foreach (var (relPath, data) in result.Media)
+                {
+                    var mediaPath = Path.Combine(baseDir, relPath.Replace('/', Path.DirectorySeparatorChar));
+                    Directory.CreateDirectory(Path.GetDirectoryName(mediaPath)!);
+                    await File.WriteAllBytesAsync(mediaPath, data.ToArray());
+                }
+            }
+
+            var mediaNote = result.Media.Count > 0 ? $" + {result.Media.Count} media" : "";
+            NotificationCenter.Instance.Post(
+                Microsoft.UI.Xaml.Controls.InfoBarSeverity.Success,
+                "Markdown exported",
+                $"{Path.GetFileName(mdPath)}{mediaNote}",
+                3000);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            NotificationCenter.Instance.Post(
+                Microsoft.UI.Xaml.Controls.InfoBarSeverity.Error,
+                "Export failed",
+                "Access denied. Check Controlled Folder Access settings.",
+                5000);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.LogException(ex);
+            NotificationCenter.Instance.Post(
+                Microsoft.UI.Xaml.Controls.InfoBarSeverity.Error,
+                "Export failed",
+                ex.Message,
+                5000);
+        }
+    }
+
+    /// <summary>
+    /// Exports the active conversation as Markdown and copies to the clipboard.
+    /// </summary>
+    private void OnMenuExportToClipboard(object sender, RoutedEventArgs e)
+    {
+        var result = ViewModel.SelectedTab?.ExportToMarkdown();
+        if (result is null) return;
+
+        var package = new Windows.ApplicationModel.DataTransfer.DataPackage();
+        package.SetText(result.Markdown);
+        Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
+
+        var mediaNote = result.Media.Count > 0
+            ? $"{result.Media.Count} media file(s) not included"
+            : "Ready to paste";
+        NotificationCenter.Instance.Post(
+            Microsoft.UI.Xaml.Controls.InfoBarSeverity.Success,
+            "Copied to clipboard",
+            mediaNote,
+            3000);
+    }
+
+    /// <summary>
     /// Opens a file picker to load a conversation from disk into a new tab.
     /// </summary>
     private async void OnMenuLoadConversation(object sender, RoutedEventArgs e)

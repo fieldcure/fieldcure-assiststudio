@@ -58,6 +58,15 @@
   <data name="Menu_SaveAll.Text" xml:space="preserve">
     <value>모두 저장</value>
   </data>
+  <data name="Menu_ExportMarkdown.Text" xml:space="preserve">
+    <value>Markdown으로 내보내기</value>
+  </data>
+  <data name="Menu_ExportToFile.Text" xml:space="preserve">
+    <value>파일로 저장...</value>
+  </data>
+  <data name="Menu_ExportToClipboard.Text" xml:space="preserve">
+    <value>클립보드로 복사</value>
+  </data>
   <data name="Menu_Settings.Text" xml:space="preserve">
     <value>설정</value>
   </data>

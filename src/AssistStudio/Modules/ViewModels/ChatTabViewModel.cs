@@ -5,6 +5,7 @@ using AssistStudio.Tools;
 using CommunityToolkit.Mvvm.ComponentModel;
 using FieldCure.Ai.Execution;
 using FieldCure.Ai.Providers;
+using FieldCure.Ai.Providers.Export;
 using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Controls;
 using FieldCure.AssistStudio.Helpers;
@@ -525,6 +526,12 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     {
         return Panel?.GetMessages() ?? [];
     }
+
+    /// <summary>
+    /// Exports the active conversation branch as Markdown.
+    /// Returns null if the panel is not available.
+    /// </summary>
+    public MarkdownExportResult? ExportToMarkdown() => Panel?.ExportToMarkdown();
 
     /// <summary>
     /// Gets all messages in the conversation tree (active path + all branches).
