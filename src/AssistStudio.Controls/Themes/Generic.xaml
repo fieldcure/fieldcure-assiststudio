@@ -5,19 +5,8 @@
 
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="ms-appx:///AssistStudio.Controls/Themes/Shared.xaml"/>
+        <ResourceDictionary Source="ms-appx:///AssistStudio.Controls/Themes/AttachmentPreviewBar.xaml"/>
     </ResourceDictionary.MergedDictionaries>
-
-    <!-- AttachmentPreviewBar -->
-    <Style TargetType="local:AttachmentPreviewBar">
-        <Setter Property="Visibility" Value="Collapsed" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="local:AttachmentPreviewBar">
-                    <Border x:Name="PART_ItemsHost" Padding="4" />
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
 
     <!-- ComposeBar -->
     <Style TargetType="local:ComposeBar">
