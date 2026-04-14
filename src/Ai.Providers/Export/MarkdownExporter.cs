@@ -18,8 +18,6 @@ public static class MarkdownExporter
     /// </summary>
     /// <param name="messages">Active-path messages in chronological order (from <c>GetMessages()</c>).</param>
     /// <param name="title">Conversation title for the YAML frontmatter.</param>
-    /// <param name="providerName">Provider name (e.g. "OpenAI", "Claude").</param>
-    /// <param name="modelId">Model identifier (e.g. "gpt-4o", "claude-sonnet-4-20250514").</param>
     /// <returns>A <see cref="MarkdownExportResult"/> containing the Markdown text and extracted media blobs.</returns>
     public static MarkdownExportResult Export(
         IReadOnlyList<ChatMessage> messages,
