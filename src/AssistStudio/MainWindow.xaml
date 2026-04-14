@@ -126,13 +126,15 @@
                                                 <FontIcon Glyph="&#xE72D;" />
                                             </MenuFlyoutSubItem.Icon>
                                             <MenuFlyoutItem x:Uid="Menu_ExportToFile" Text="Save to file..."
-                                                            Click="OnMenuExportToFile">
+                                                            Click="OnMenuExportToFile"
+                                                            AutomationProperties.Name="Export conversation as Markdown file">
                                                 <MenuFlyoutItem.Icon>
                                                     <FontIcon Glyph="&#xE74E;" />
                                                 </MenuFlyoutItem.Icon>
                                             </MenuFlyoutItem>
                                             <MenuFlyoutItem x:Uid="Menu_ExportToClipboard" Text="Copy to clipboard"
-                                                            Click="OnMenuExportToClipboard">
+                                                            Click="OnMenuExportToClipboard"
+                                                            AutomationProperties.Name="Copy conversation as Markdown to clipboard">
                                                 <MenuFlyoutItem.Icon>
                                                     <FontIcon Glyph="&#xE8C8;" />
                                                 </MenuFlyoutItem.Icon>
