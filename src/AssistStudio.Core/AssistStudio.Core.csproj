@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
-    <Version>0.15.0</Version>
+    <Version>0.16.0</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CA1416</NoWarn>
 
@@ -22,7 +22,7 @@
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;claude;openai;gemini;ollama;llm;provider;streaming</PackageTags>
-    <PackageReleaseNotes>v0.15.0: Updated transitive dependency Ai.Providers 0.2.0 → 0.3.0. No source changes in Core itself.</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.16.0: Fix stale .astd references to .astx and filter MRU by extension. Ai.Providers 0.3.0 → 0.4.0.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

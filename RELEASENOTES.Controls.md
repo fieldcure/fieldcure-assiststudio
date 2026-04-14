@@ -1,5 +1,27 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Controls.WinUI
 
+## [0.16.0] - 2026-04-14
+
+### Added
+- **Markdown export** — conversation export with per-message attribution
+- **External streaming API** — `AssistantTurnHandle`, `StreamResult`, and visibility DPs for SDK consumers
+- **Sub-agent report** — render sub-agent report as markdown in tool block details
+- **Structured ToolApprovalPanel** — XAML DataTemplates with Expander-based parameters
+
+### Changed
+- **Folder reorganization** — Controls project restructured by concern (ChatPanel, ComposeBar, Rendering, etc.)
+- **ChatPanel/ComposeBar refactoring** — split into concern-based partial classes
+- **Style extraction** — per-control XAML files (ComposeBar, AttachmentPreviewBar, SubtleButton, Shared.xaml)
+- **Attachment chip** — move remove button to right of name instead of overlaying thumbnail
+
+### Fixed
+- **Tool error JSON injection** — replace string interpolation with `JsonSerializer.Serialize` for safe error messages
+- **Unicode escape in WebView2** — fix tool result rendering with special characters
+- **Tool result duplication** — prevent duplicate tool results in conversation
+- **DPI scaling** — add PerMonitorV2 to sample app manifest for WebView2
+
+---
+
 ## [0.15.0] - 2026-04-10
 
 ### Added

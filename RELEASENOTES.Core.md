@@ -1,5 +1,15 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Core
 
+## [0.16.0] - 2026-04-14
+
+### Fixed
+- Update stale `.astd` references to `.astx` and filter MRU by extension
+
+### Changed
+- Ai.Providers 0.3.0 → 0.4.0
+
+---
+
 ## [0.15.0] - 2026-04-10
 
 ### Changed
