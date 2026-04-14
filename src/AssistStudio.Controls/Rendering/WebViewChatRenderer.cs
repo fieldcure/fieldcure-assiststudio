@@ -255,7 +255,7 @@ internal partial class WebViewChatRenderer
             ["ms"] = durationMs,
             ["error"] = isError
         };
-        var script = $"window.assistChat.appendToolBlock({Js(id)}, {info.ToJsonString()})";
+        var script = $"window.assistChat.appendToolBlock({Js(id)}, {info.ToJsonString(WebViewJsonOptions)})";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 
@@ -891,13 +891,24 @@ internal partial class WebViewChatRenderer
             array.Add(obj);
         }
 
-        return array.ToJsonString();
+        return array.ToJsonString(WebViewJsonOptions);
     }
 
     /// <summary>
-    /// JSON-escapes a string value for safe interpolation into JavaScript code.
+    /// JSON options for serializing values injected into WebView2 script.
+    /// Uses relaxed escaping so non-ASCII characters (Korean, emoji, etc.)
+    /// are emitted as-is instead of \uXXXX sequences.
     /// </summary>
-    private static string Js(string value) => JsonSerializer.Serialize(value);
+    private static readonly JsonSerializerOptions WebViewJsonOptions = new()
+    {
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
+
+    /// <summary>
+    /// JSON-escapes a string value for safe interpolation into JavaScript code.
+    /// Uses relaxed encoding to preserve non-ASCII characters.
+    /// </summary>
+    private static string Js(string value) => JsonSerializer.Serialize(value, WebViewJsonOptions);
 
     #endregion
 
