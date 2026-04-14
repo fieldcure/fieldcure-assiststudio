@@ -18,6 +18,7 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
             <TextBlock Text="Anthropic SDK Sample"
@@ -33,12 +34,27 @@
                       Background="Transparent"
                       SelectionChanged="OnModelSelectionChanged" />
 
-            <Button Grid.Column="3"
+            <Button x:Name="ExportButton"
+                    Grid.Column="3"
+                    Content="Export"
+                    VerticalAlignment="Center"
+                    Margin="0,0,8,0"
+                    IsEnabled="False"
+                    Click="OnExportClick"
+                    ToolTipService.ToolTip="Copy conversation as Markdown"
+                    AutomationProperties.Name="Export conversation to Markdown"
+                    Style="{StaticResource DefaultButtonStyle}" />
+
+            <Button Grid.Column="4"
                     Content="Reset API Key"
                     VerticalAlignment="Center"
                     Click="OnResetKeyClicked"
                     Style="{StaticResource DefaultButtonStyle}" />
         </Grid>
+
+        <TeachingTip x:Name="ExportTip"
+                     Target="{x:Bind ExportButton}"
+                     IsLightDismissEnabled="True" />
 
         <controls:ChatPanel
             x:Name="ChatPanel"

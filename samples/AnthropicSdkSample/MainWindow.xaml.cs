@@ -6,6 +6,7 @@ using FieldCure.AssistStudio.Controls.Helpers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Windows.Security.Credentials;
+using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
 
 namespace AnthropicSdkSample;
@@ -226,10 +227,45 @@ public sealed partial class MainWindow : Window
 
     #endregion
 
+    #region Export
+
+    /// <summary>
+    /// Exports the active conversation as Markdown and copies it to the clipboard.
+    /// Shows a brief confirmation via TeachingTip.
+    /// </summary>
+    private void OnExportClick(object sender, RoutedEventArgs e)
+    {
+        var messages = ChatPanel.GetMessages();
+
+        if (messages.Count == 0)
+        {
+            ExportTip.Title = "No messages to export";
+            ExportTip.Subtitle = "Start a conversation first.";
+            ExportTip.IsOpen = true;
+            return;
+        }
+
+        var result = ChatPanel.ExportToMarkdown();
+
+        var package = new DataPackage();
+        package.SetText(result.Markdown);
+        Clipboard.SetContent(package);
+
+        ExportTip.Title = "Copied to clipboard";
+        ExportTip.Subtitle = result.Media.Count > 0
+            ? $"{result.Media.Count} media file(s) not included in clipboard"
+            : null;
+        ExportTip.IsOpen = true;
+    }
+
+    #endregion
+
     /// <summary>Handles user message submission by streaming from the Anthropic API into the ChatPanel.</summary>
     private async void OnUserMessageSubmitted(object? sender, MessageSentEventArgs e)
     {
         if (_client is null) return;
+
+        ExportButton.IsEnabled = true;
 
         var modelId = _selectedModelId;
 
