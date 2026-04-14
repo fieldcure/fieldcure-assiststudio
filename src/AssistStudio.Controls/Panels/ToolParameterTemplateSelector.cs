@@ -1,10 +1,10 @@
-using Microsoft.UI.Xaml;
+﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
 namespace FieldCure.AssistStudio.Controls;
 
 /// <summary>Selects between short inline and long collapsible parameter templates.</summary>
-public sealed class ToolParameterTemplateSelector : DataTemplateSelector
+public sealed partial class ToolParameterTemplateSelector : DataTemplateSelector
 {
     /// <summary>Template for short, inline parameter values.</summary>
     public DataTemplate? ShortTemplate { get; set; }

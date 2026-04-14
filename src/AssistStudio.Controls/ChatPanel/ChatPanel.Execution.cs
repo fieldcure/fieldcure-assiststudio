@@ -1367,7 +1367,7 @@ public sealed partial class ChatPanel
         string toolName,
         string serverName,
         string message,
-        IReadOnlyList<Models.ElicitationFieldInfo> fields)
+        IReadOnlyList<ElicitationFieldInfo> fields)
     {
         if (_elicitationPanel is null || _inputArea is null)
             return ("cancel", null);

@@ -1,4 +1,4 @@
-namespace FieldCure.AssistStudio.Controls.Models;
+﻿namespace FieldCure.AssistStudio.Controls;
 
 /// <summary>
 /// Describes a single field to render in the <see cref="ToolElicitationPanel"/>.

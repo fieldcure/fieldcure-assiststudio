@@ -1,4 +1,4 @@
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using System.Web;
 using AssistStudio.Helpers;
 using AssistStudio.Mcp;
@@ -10,7 +10,6 @@ using Windows.ApplicationModel.Activation;
 using Windows.Storage;
 using FieldCure.Ai.Providers;
 using FieldCure.AssistStudio.Controls;
-using FieldCure.AssistStudio.Controls.Models;
 using FieldCure.DocumentParsers.Pdf;
 using WindowHelper = FieldCure.AssistStudio.Controls.Helpers.WindowHelper;
 

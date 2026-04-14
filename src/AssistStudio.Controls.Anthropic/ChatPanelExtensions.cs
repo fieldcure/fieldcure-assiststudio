@@ -1,7 +1,6 @@
-using Anthropic.Models.Messages;
+﻿using Anthropic.Models.Messages;
 using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Anthropic;
-using FieldCure.AssistStudio.Controls;
 
 namespace FieldCure.AssistStudio.Controls.Anthropic;
 
