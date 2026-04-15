@@ -109,24 +109,18 @@ public sealed partial class EmbeddingModelSelector : UserControl
     #region Public Methods
 
     /// <summary>
-    /// Builds the model radio button lists with availability checks against
-    /// Ollama (<c>/api/tags</c>) and the credential vault (OpenAI / Claude
-    /// API keys). Unavailable models are rendered as <c>IsEnabled=false</c>
-    /// with a "(설치 안 됨)" or "(API 키 없음)" badge so a new KB dialog
-    /// simply prevents picking a broken model at the source.
+    /// Builds the model radio button lists and decorates unreachable
+    /// models with a "(설치 안 됨)" badge. The read-only notification
+    /// principle: the UI reports the current state and lets the user
+    /// act on it. Radios stay clickable regardless of availability —
+    /// a false negative from the probe (Ollama daemon just restarted,
+    /// network blip) should never lock the user out of a selection.
     ///
-    /// In re-indexing mode (when <see cref="CurrentEmbeddingModel"/> or
-    /// <see cref="CurrentContextualizer"/> is set), the current selection
-    /// is preserved even if it is unavailable — we never auto-switch to a
-    /// working model on the user's behalf. Instead we surface an inline
-    /// warning explaining the trade-off (install the model vs. full
-    /// re-index cost) and leave the decision to the user. The selected
-    /// radio stays disabled so the user has to make an explicit choice.
-    ///
-    /// If the Ollama check itself fails (daemon not running), we fall back
-    /// to rendering every Ollama model as available — we can't tell
-    /// installed from not, and false positives would be worse than
-    /// silence. Call after setting Current* properties.
+    /// The user's current selection is signaled by the radio dot and
+    /// by the dialog title (set by the caller in re-indexing mode) —
+    /// no redundant "(current)" text next to the model, no warning
+    /// box telling the user what to do. Call after setting Current*
+    /// properties.
     /// </summary>
     public async Task InitializeAsync()
     {
@@ -142,38 +136,35 @@ public sealed partial class EmbeddingModelSelector : UserControl
         var labels = new ModelListLabels(
             Multilingual: _loader.GetString("Connect_Multilingual"),
             Disabled: _loader.GetString("KB_DialogContextDisabled") ?? "Disabled",
-            Current: _loader.GetString("KB_ModelCurrent") ?? "(current)",
-            CurrentUnavailableWarning: _loader.GetString("KB_ModelCurrentUnavailableWarning")
-                ?? "This KB is indexed with the currently selected model. Install the model, or pick a different one to re-index.");
+            NotInstalled: _loader.GetString("KB_ModelNotInstalled") ?? "(not installed)");
 
-        // Pre-compute the availability verdict for every catalog entry so
-        // BuildModelList stays synchronous. One service instance is shared
-        // across both lists (embedding + contextualizer) so the underlying
-        // Ollama /api/tags probe and credential lookups only happen once.
-        var service = new ModelAvailabilityService();
-        var availability = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        // Pre-compute availability once per catalog entry so BuildModelList
+        // can stay synchronous. One checker instance is shared across both
+        // lists so Ollama /api/tags and credential lookups only run once.
+        var checker = new ModelAvailabilityChecker();
+        var available = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
         foreach (var (id, provider, _, _) in EmbeddingModels)
         {
-            if (!availability.ContainsKey(id))
-                availability[id] = await service.CheckModelAsync(MapProviderName(provider), id);
+            if (!available.ContainsKey(id))
+                available[id] = await checker.IsAvailableAsync(MapProviderName(provider), id);
         }
         foreach (var (id, provider, _, _) in ContextualizerModels)
         {
-            if (!string.IsNullOrEmpty(id) && !availability.ContainsKey(id))
-                availability[id] = await service.CheckModelAsync(MapProviderName(provider), id);
+            if (!string.IsNullOrEmpty(id) && !available.ContainsKey(id))
+                available[id] = await checker.IsAvailableAsync(MapProviderName(provider), id);
         }
 
         BuildModelList(EmbeddingModelPanel, EmbeddingModels, embeddingDefault,
-            "EmbeddingModel", CurrentEmbeddingModel, availability, labels, OnEmbeddingSelected);
+            "EmbeddingModel", available, labels, OnEmbeddingSelected);
 
         BuildModelList(ContextualizerPanel, ContextualizerModels, contextualizerDefault,
-            "Contextualizer", CurrentContextualizer, availability, labels, OnContextualizerSelected);
+            "Contextualizer", available, labels, OnContextualizerSelected);
     }
 
     /// <summary>
     /// Normalizes the catalog's display-cased provider label (e.g. "Ollama",
-    /// "OpenAI", "Claude") to the lowercase provider key the availability
-    /// service expects (<c>ollama</c>, <c>openai</c>, <c>anthropic</c>).
+    /// "OpenAI", "Claude") to the lowercase provider key the checker
+    /// expects (<c>ollama</c>, <c>openai</c>, <c>anthropic</c>).
     /// </summary>
     private static string MapProviderName(string displayProvider) => displayProvider switch
     {
@@ -184,17 +175,14 @@ public sealed partial class EmbeddingModelSelector : UserControl
     };
 
     /// <summary>
-    /// Bundle of localized label strings used by <see cref="BuildModelList"/>.
-    /// Pulled into a record so the signature doesn't grow every time a new
-    /// variant string is added. The availability reason strings live on the
-    /// checker classes themselves (see <see cref="OllamaChecker"/> etc.)
-    /// and reach the UI via the per-model dictionary.
+    /// Localized labels used by <see cref="BuildModelList"/>. Trimmed to
+    /// the three strings that still survive after the simplification
+    /// (multilingual tag, contextualizer placeholder, not-installed badge).
     /// </summary>
     private sealed record ModelListLabels(
         string Multilingual,
         string Disabled,
-        string Current,
-        string CurrentUnavailableWarning);
+        string NotInstalled);
 
 
     /// <summary>
@@ -246,25 +234,23 @@ public sealed partial class EmbeddingModelSelector : UserControl
     #region Private Methods
 
     /// <summary>
-    /// Builds a grouped radio button list for model selection. Appends a
-    /// "(current)" label to the active model in re-indexing mode and a
-    /// "(설치 안 됨)" / "(API 키 없음)" caution badge to unavailable
-    /// models. If the user's currently selected model is unavailable, a
-    /// warning InfoBar is appended to the panel explaining the trade-off
-    /// of install-vs-switch so the user can make an explicit call.
+    /// Builds a grouped radio button list for model selection. Models that
+    /// are currently unreachable get a "(설치 안 됨)" badge next to their
+    /// label but remain enabled and selectable — the badge is a fact
+    /// report, not a gate. The current selection is shown via the radio
+    /// dot itself; any higher-level "this is what your KB was indexed
+    /// with" framing lives in the dialog title set by the caller.
     /// </summary>
     private static void BuildModelList(
         StackPanel panel,
         (string Id, string Provider, string Label, string Meta)[] models,
         string selectedId,
         string groupName,
-        string? currentModelId,
-        IReadOnlyDictionary<string, string?> availability,
+        IReadOnlyDictionary<string, bool> available,
         ModelListLabels labels,
         RoutedEventHandler onChanged)
     {
         var lastProvider = "";
-        var currentSelectionIsUnavailable = false;
 
         foreach (var (id, provider, label, meta) in models)
         {
@@ -282,31 +268,19 @@ public sealed partial class EmbeddingModelSelector : UserControl
             }
 
             var isPlaceholder = string.IsNullOrEmpty(id);
-            var unavailableReason = isPlaceholder
-                ? null
-                : (availability.TryGetValue(id, out var reason) ? reason : null);
-            var isUnavailable = unavailableReason is not null;
+            var isAvailable = isPlaceholder
+                || !available.TryGetValue(id, out var ok)
+                || ok;
 
             var isCurrentlySelected = isPlaceholder
                 ? string.IsNullOrEmpty(selectedId)
                 : selectedId == id;
-            var isTheCurrentIndex = currentModelId is not null &&
-                (isPlaceholder ? string.IsNullOrEmpty(currentModelId) : currentModelId == id);
-
-            // If the currently-indexed model is unavailable we keep it
-            // selected and disabled, and track the fact so we can append a
-            // warning block at the end of the list. New-KB mode (where
-            // currentModelId is null) just disables unavailable radios
-            // without a warning — nothing has been committed yet.
-            if (isUnavailable && isTheCurrentIndex)
-                currentSelectionIsUnavailable = true;
 
             var radio = new RadioButton
             {
                 GroupName = groupName,
                 Tag = id,
                 IsChecked = isCurrentlySelected,
-                IsEnabled = !isUnavailable,
                 Margin = new Thickness(0),
             };
 
@@ -333,15 +307,13 @@ public sealed partial class EmbeddingModelSelector : UserControl
                 });
             }
 
-            // Unavailability badge — "(설치 안 됨)" or "(API 키 없음)" in
-            // caution color. Shown both in create mode (user picking a
-            // broken model) and edit mode (previously-valid model no
-            // longer installed).
-            if (unavailableReason is not null)
+            // "(설치 안 됨)" fact badge. Caution color so it reads as a
+            // soft warning without demanding action.
+            if (!isAvailable)
             {
                 content.Children.Add(new TextBlock
                 {
-                    Text = unavailableReason,
+                    Text = labels.NotInstalled,
                     VerticalAlignment = VerticalAlignment.Center,
                     Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
                     Foreground = (Microsoft.UI.Xaml.Media.Brush)
@@ -349,36 +321,9 @@ public sealed partial class EmbeddingModelSelector : UserControl
                 });
             }
 
-            // "(current)" tag in re-indexing mode
-            if (isTheCurrentIndex)
-            {
-                content.Children.Add(new TextBlock
-                {
-                    Text = labels.Current,
-                    Opacity = 0.5,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-                });
-            }
-
             radio.Content = content;
             radio.Checked += onChanged;
             panel.Children.Add(radio);
-        }
-
-        // Edit-mode-only warning: the current selection is no longer
-        // available. We tell the user exactly what the trade-off is so
-        // they can make the call.
-        if (currentSelectionIsUnavailable)
-        {
-            panel.Children.Add(new InfoBar
-            {
-                IsOpen = true,
-                IsClosable = false,
-                Severity = InfoBarSeverity.Warning,
-                Message = labels.CurrentUnavailableWarning,
-                Margin = new Thickness(0, 8, 0, 0),
-            });
         }
     }
 

@@ -31,19 +31,20 @@ public static class RagProcessManager
             return StartExecResult.NotFound(kbId);
         }
 
-        // Pre-flight: ask each checker whether the configured models are
-        // currently reachable. If any model is down we bail out with a
-        // user-visible reason string instead of spawning exec — the v1.4.2
-        // 2-commit pipeline would preserve OCR output on failure, but the
-        // user's time is still wasted if contextualization fails on every
-        // single chunk before the error surfaces.
-        var service = new ModelAvailabilityService();
-        var problems = await service.CheckKbAsync(kb);
+        // Pre-flight: ask the availability checker whether the configured
+        // models are currently reachable. If any model is down we bail
+        // out with a per-slot state-only message instead of spawning
+        // exec — the v1.4.2 2-commit pipeline would preserve OCR output
+        // on failure, but the user's time is still wasted if Stage 3 or
+        // Stage 4 blows up on every single chunk before the error
+        // surfaces in the index timing log.
+        var availabilityChecker = new ModelAvailabilityChecker();
+        var problems = await availabilityChecker.CheckKbAsync(kb);
         if (problems.Count > 0)
         {
             LoggingService.LogWarning(
-                $"[RAG] exec aborted — pre-flight found {problems.Count} problem(s) in {kbId}: " +
-                string.Join("; ", problems.Select(p => $"{p.Role} '{p.ModelId}': {p.Reason}")));
+                $"[RAG] exec aborted — pre-flight found {problems.Count} unreachable model(s) in {kbId}: " +
+                string.Join("; ", problems.Select(p => $"{p.Role} '{p.ModelId}'")));
             return StartExecResult.PreflightFailed(problems);
         }
 

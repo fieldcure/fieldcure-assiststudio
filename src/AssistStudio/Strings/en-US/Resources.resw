@@ -715,20 +715,17 @@
   <data name="KB_ModelNotInstalled" xml:space="preserve">
     <value>(not installed)</value>
   </data>
-  <data name="KB_ModelMissingApiKey" xml:space="preserve">
-    <value>(API key missing)</value>
-  </data>
-  <data name="KB_ModelCurrentUnavailableWarning" xml:space="preserve">
-    <value>This knowledge base is indexed with the currently selected model. Install the model, or pick a different one to re-index — changing the model triggers a full re-index (OCR and contextualization will re-run, which takes time and may incur cost).</value>
+  <data name="KB_SettingsDialogTitleWithIndex" xml:space="preserve">
+    <value>{0} settings (indexed with: {1})</value>
   </data>
   <data name="KB_PreflightFailureTitle" xml:space="preserve">
     <value>Cannot start re-indexing</value>
   </data>
   <data name="KB_PreflightEmbeddingUnavailable" xml:space="preserve">
-    <value>Embedding model '{0}': {1}</value>
+    <value>Embedding model '{0}' is not available.</value>
   </data>
   <data name="KB_PreflightContextualizerUnavailable" xml:space="preserve">
-    <value>Contextualizer model '{0}': {1}</value>
+    <value>Contextualizer model '{0}' is not available.</value>
   </data>
   <data name="KB_StatusModelUnavailable" xml:space="preserve">
     <value>Model unavailable</value>

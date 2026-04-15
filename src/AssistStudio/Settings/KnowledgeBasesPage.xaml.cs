@@ -338,10 +338,21 @@ public sealed partial class KnowledgeBasesPage : Page
         };
         panel.Children.Add(warning);
 
+        // Build the title with the "indexed with" hint so users can see
+        // at a glance which models were used for the current index, even
+        // if those models are no longer reachable. Format:
+        //   "kb-3 설정 (인덱싱: qwen3-embedding:8b · qwen3:4b)"
+        // Skip the suffix when the contextualizer is disabled.
+        var indexedWithModels = kb.Embedding.Model;
+        if (!string.IsNullOrEmpty(kb.Contextualizer.Model))
+            indexedWithModels += $" \u00b7 {kb.Contextualizer.Model}";
+        var titleFormat = _loader.GetString("KB_SettingsDialogTitleWithIndex") ?? "{0} \u00b7 ({1})";
+        var dialogTitle = string.Format(titleFormat, kb.Name, indexedWithModels);
+
         var dialog = new ContentDialog
         {
             XamlRoot = XamlRoot,
-            Title = string.Format(_loader.GetString("KB_SettingsDialogTitle"), kb.Name),
+            Title = dialogTitle,
             PrimaryButtonText = _loader.GetString("KB_SaveAndReindex"),
             SecondaryButtonText = _loader.GetString("KB_Save"),
             CloseButtonText = _loader.GetString("Dialog_Cancel"),
@@ -428,12 +439,19 @@ public sealed partial class KnowledgeBasesPage : Page
 
         if (result.Outcome == StartExecOutcome.PreflightFailed && result.Problems is { Count: > 0 })
         {
-            var embedTemplate = _loader.GetString("KB_PreflightEmbeddingUnavailable") ?? "Embedding model '{0}': {1}";
-            var ctxTemplate = _loader.GetString("KB_PreflightContextualizerUnavailable") ?? "Contextualizer model '{0}': {1}";
+            // State-only messaging: we report that the model cannot be
+            // reached, not why. Ollama might be off, the model might not
+            // be pulled, the network might be blocked — guessing the
+            // cause would push the user toward a specific fix that may
+            // not even be the right one.
+            var embedTemplate = _loader.GetString("KB_PreflightEmbeddingUnavailable")
+                ?? "Embedding model '{0}' is not available.";
+            var ctxTemplate = _loader.GetString("KB_PreflightContextualizerUnavailable")
+                ?? "Contextualizer model '{0}' is not available.";
             var lines = result.Problems.Select(p =>
                 string.Format(
                     p.Role == KbModelRole.Embedding ? embedTemplate : ctxTemplate,
-                    p.ModelId, p.Reason));
+                    p.ModelId));
             body = string.Join("\n", lines);
         }
         else
@@ -660,11 +678,10 @@ public sealed partial class KnowledgeBasesPage : Page
         var kbs = KnowledgeBaseStore.ListAll();
         _allItems.Clear();
 
-        // Shared availability service for this refresh pass. Creating one
-        // instance for the whole loop means the OllamaChecker's /api/tags
-        // probe runs once regardless of how many KBs are in the list, and
-        // PasswordVault lookups are cached per checker too.
-        var availabilityService = new ModelAvailabilityService();
+        // Shared availability checker for this refresh pass. One instance
+        // for the whole loop means the Ollama /api/tags probe runs once
+        // regardless of how many KBs are in the list.
+        var availabilityChecker = new ModelAvailabilityChecker();
         var statusUnavailableLabel = _loader.GetString("KB_StatusModelUnavailable") ?? "Model unavailable";
 
         foreach (var kb in kbs)
@@ -682,16 +699,13 @@ public sealed partial class KnowledgeBasesPage : Page
                 ModelInfoText = modelInfo,
             };
 
-            // Probe the KB's configured models. Problems get collapsed
-            // into a single short warning line on the card — the user
-            // can open settings for the full detail view with per-model
-            // reasons. Read-only: this never mutates the KB config.
-            var problems = await availabilityService.CheckKbAsync(kb);
+            // State report only: which models are currently unreachable.
+            // No reason strings — that would be a guess at best.
+            var problems = await availabilityChecker.CheckKbAsync(kb);
             if (problems.Count > 0)
             {
-                var detail = string.Join(", ",
-                    problems.Select(p => $"{p.ModelId} {p.Reason}"));
-                item.ModelWarningText = $"\u26a0 {statusUnavailableLabel}: {detail}";
+                var ids = string.Join(", ", problems.Select(p => p.ModelId));
+                item.ModelWarningText = $"\u26a0 {statusUnavailableLabel}: {ids}";
             }
 
             // Restore cached change-check results
