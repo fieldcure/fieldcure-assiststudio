@@ -154,24 +154,6 @@
     <value>사용할 도구나 서버가 없습니다.
 프로필 설정에서 추가하세요.</value>
   </data>
-  <data name="Tool_read_file" xml:space="preserve">
-    <value>파일 읽기</value>
-  </data>
-  <data name="Tool_write_file" xml:space="preserve">
-    <value>파일 쓰기</value>
-  </data>
-  <data name="Tool_search_files" xml:space="preserve">
-    <value>파일 검색</value>
-  </data>
-  <data name="Tool_run_command" xml:space="preserve">
-    <value>명령 실행</value>
-  </data>
-  <data name="Tool_fetch_url" xml:space="preserve">
-    <value>URL 가져오기</value>
-  </data>
-  <data name="Tool_delegate_task" xml:space="preserve">
-    <value>서브 에이전트</value>
-  </data>
   <data name="ChatPanel_EditTitleTooltip" xml:space="preserve">
     <value>제목 편집</value>
   </data>

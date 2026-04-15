@@ -744,20 +744,15 @@ public sealed partial class ChatPanel
     #region Tool Name Utilities
 
     /// <summary>
-    /// Returns a localized display name for a tool, falling back to the tool name.
+    /// Returns a display name for a tool. Tool names are technical identifiers and
+    /// are intentionally not localized — translating only a hand-picked subset would
+    /// be inconsistent with dynamic MCP tools, which always carry English identifiers.
     /// </summary>
-    private string GetLocalizedToolName(string toolName)
+    private string GetToolDisplayName(string toolName)
     {
         var tool = RegisteredTools.FirstOrDefault(t => t.Name == toolName)
             ?? McpTools.FirstOrDefault(t => t.Name == toolName);
         if (tool is null) return toolName;
-
-        try
-        {
-            var localized = Res.GetString($"Tool_{toolName}");
-            if (!string.IsNullOrEmpty(localized)) return localized;
-        }
-        catch { /* Fall through to default */ }
 
         // For MCP tools, use Name instead of DisplayName to avoid
         // duplicating the server name (shown separately in the badge).

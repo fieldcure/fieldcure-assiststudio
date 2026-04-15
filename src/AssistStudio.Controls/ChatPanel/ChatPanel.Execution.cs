@@ -819,7 +819,7 @@ public sealed partial class ChatPanel
                     var matchedTool = RegisteredTools.FirstOrDefault(t => t.Name == toolName)
                         ?? McpTools.FirstOrDefault(t => t.Name == toolName);
                     _approvalPanel.ToolName = toolName;
-                    _approvalPanel.ToolDisplayName = GetLocalizedToolName(toolName);
+                    _approvalPanel.ToolDisplayName = GetToolDisplayName(toolName);
                     _approvalPanel.ServerName = (matchedTool as McpToolAdapter)?.ServerName ?? "";
                     _approvalPanel.Arguments = arguments;
                     _approvalPanel.IsExpanded = true;
@@ -1376,7 +1376,7 @@ public sealed partial class ChatPanel
 
         DiagnosticLogger.LogInfo($"[Elicitation] Requested: {toolName} (server={serverName})");
 
-        _elicitationPanel.ToolName = GetLocalizedToolName(toolName);
+        _elicitationPanel.ToolName = GetToolDisplayName(toolName);
         _elicitationPanel.ServerName = serverName;
         _elicitationPanel.Message = message;
         _elicitationPanel.Fields = fields;
