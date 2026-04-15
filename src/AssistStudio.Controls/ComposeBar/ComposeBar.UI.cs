@@ -317,12 +317,10 @@ public sealed partial class ComposeBar
         // Apply localized tooltips (x:Uid doesn't work in TemplatedControls from library assemblies)
         try
         {
-            var loader = new Windows.ApplicationModel.Resources.ResourceLoader(
-                "AssistStudio.Controls/Resources");
-            SetTooltip(_attachButton, loader.GetString("ComposeBar_AttachTooltip"));
-            SetTooltip(_stopButton, loader.GetString("ComposeBar_StopTooltip"));
-            SetTooltip(_sendButton, loader.GetString("ComposeBar_SendTooltip"));
-            SetTooltip(_toolButton, loader.GetString("ComposeBar_ToolsTooltip"));
+            SetTooltip(_attachButton, Res.GetString("ComposeBar_AttachTooltip"));
+            SetTooltip(_stopButton, Res.GetString("ComposeBar_StopTooltip"));
+            SetTooltip(_sendButton, Res.GetString("ComposeBar_SendTooltip"));
+            SetTooltip(_toolButton, Res.GetString("ComposeBar_ToolsTooltip"));
         }
         catch { /* Resource not found — tooltips will be empty */ }
 

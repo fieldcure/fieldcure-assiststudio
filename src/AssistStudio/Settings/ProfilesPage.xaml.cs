@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Markup;
 using Microsoft.UI.Xaml.Navigation;
+using Microsoft.Windows.ApplicationModel.Resources;
 
 namespace AssistStudio.Settings;
 
@@ -17,6 +18,8 @@ namespace AssistStudio.Settings;
 /// </summary>
 public sealed partial class ProfilesPage : Page
 {
+    private static readonly ResourceLoader Res = new();
+
     #region Fields
 
     /// <summary>
@@ -74,8 +77,7 @@ public sealed partial class ProfilesPage : Page
         _suppressEvents = false;
 
         // Set reset button tooltip (localized)
-        var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
-        ToolTipService.SetToolTip(ResetProfileButton, loader.GetString("Profiles_ResetProfile"));
+        ToolTipService.SetToolTip(ResetProfileButton, Res.GetString("Profiles_ResetProfile"));
         ToolTipService.SetPlacement(ResetProfileButton, Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse);
 
         LoadSelectedProfile();
@@ -140,13 +142,12 @@ public sealed partial class ProfilesPage : Page
             SelectionLength = "New Profile".Length
         };
 
-        var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
         var dialog = new ThemedContentDialog
         {
-            Title = loader.GetString("Profiles_NewProfileDialog"),
+            Title = Res.GetString("Profiles_NewProfileDialog"),
             Content = input,
-            PrimaryButtonText = loader.GetString("Dialog_OK"),
-            CloseButtonText = loader.GetString("Dialog_Cancel"),
+            PrimaryButtonText = Res.GetString("Dialog_OK"),
+            CloseButtonText = Res.GetString("Dialog_Cancel"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = XamlRoot,
         };
@@ -365,8 +366,7 @@ public sealed partial class ProfilesPage : Page
     private void PopulateProviderCombo()
     {
         ProviderCombo.Items.Clear();
-        var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
-        var anyProviderLabel = loader.GetString("Profiles_AnyProvider");
+        var anyProviderLabel = Res.GetString("Profiles_AnyProvider");
 
         // "Any provider" item
         ProviderCombo.Items.Add(new ComboBoxItem
@@ -478,7 +478,6 @@ public sealed partial class ProfilesPage : Page
     {
         UnsubscribeToolsPanelEvents();
         ToolsPanel.Children.Clear();
-        var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
 
         // Build server list: always include built-in servers, plus user-configured servers
         var filesystemId = $"builtin_{BuiltInServerHelper.FilesystemKey}";
@@ -504,7 +503,7 @@ public sealed partial class ProfilesPage : Page
 
             var cb = new CheckBox
             {
-                Content = loader.GetString("Profiles_EssentialsLabel") is { Length: > 0 } l
+                Content = Res.GetString("Profiles_EssentialsLabel") is { Length: > 0 } l
                     ? l : BuiltInServerHelper.EssentialsDisplayName,
                 Tag = $"builtin_{BuiltInServerHelper.EssentialsKey}",
                 IsChecked = profile.EnabledServers.Contains($"builtin_{BuiltInServerHelper.EssentialsKey}"),
@@ -518,7 +517,7 @@ public sealed partial class ProfilesPage : Page
 
             ToolsPanel.Children.Add(new TextBlock
             {
-                Text = loader.GetString("Profiles_EssentialsHint"),
+                Text = Res.GetString("Profiles_EssentialsHint"),
                 Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
                 TextWrapping = TextWrapping.Wrap,
                 Opacity = 0.5,
@@ -552,8 +551,8 @@ public sealed partial class ProfilesPage : Page
             ToolsPanel.Children.Add(row);
 
             var wsHint = enabledSet.Contains(filesystemId)
-                ? loader.GetString("Profiles_WorkspaceSuppressHint")
-                : loader.GetString("Profiles_WorkspaceHint");
+                ? Res.GetString("Profiles_WorkspaceSuppressHint")
+                : Res.GetString("Profiles_WorkspaceHint");
             ToolsPanel.Children.Add(new TextBlock
             {
                 Text = wsHint,
@@ -592,7 +591,7 @@ public sealed partial class ProfilesPage : Page
 
             ToolsPanel.Children.Add(new TextBlock
             {
-                Text = loader.GetString("Profiles_KnowledgeHint"),
+                Text = Res.GetString("Profiles_KnowledgeHint"),
                 Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
                 TextWrapping = TextWrapping.Wrap,
                 Opacity = 0.5,
@@ -630,7 +629,7 @@ public sealed partial class ProfilesPage : Page
 
             ToolsPanel.Children.Add(new TextBlock
             {
-                Text = loader.GetString("Profiles_OutboxHint"),
+                Text = Res.GetString("Profiles_OutboxHint"),
                 Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
                 TextWrapping = TextWrapping.Wrap,
                 Opacity = 0.5,
@@ -666,7 +665,7 @@ public sealed partial class ProfilesPage : Page
 
             ToolsPanel.Children.Add(new TextBlock
             {
-                Text = loader.GetString("Profiles_RunnerHint"),
+                Text = Res.GetString("Profiles_RunnerHint"),
                 Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
                 TextWrapping = TextWrapping.Wrap,
                 Opacity = 0.5,
@@ -718,7 +717,7 @@ public sealed partial class ProfilesPage : Page
         // Info hints
         ToolsPanel.Children.Add(new TextBlock
         {
-            Text = loader.GetString("Profiles_ToolsDefaultHint"),
+            Text = Res.GetString("Profiles_ToolsDefaultHint"),
             Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
             TextWrapping = TextWrapping.Wrap,
             Opacity = 0.5,
@@ -728,7 +727,7 @@ public sealed partial class ProfilesPage : Page
         {
             ToolsPanel.Children.Add(new TextBlock
             {
-                Text = loader.GetString("Profiles_ServerToolsHint"),
+                Text = Res.GetString("Profiles_ServerToolsHint"),
                 Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
                 TextWrapping = TextWrapping.Wrap,
                 Opacity = 0.5,

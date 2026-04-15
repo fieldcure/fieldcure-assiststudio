@@ -1,7 +1,7 @@
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Windows.ApplicationModel.Resources;
+using Microsoft.Windows.ApplicationModel.Resources;
 
 namespace AssistStudio.Controls;
 

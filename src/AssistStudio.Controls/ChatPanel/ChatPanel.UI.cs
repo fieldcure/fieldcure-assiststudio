@@ -1252,37 +1252,34 @@ public sealed partial class ChatPanel
 
         try
         {
-            var loader = new Windows.ApplicationModel.Resources.ResourceLoader(
-                "AssistStudio.Controls/Resources");
-
             var strings = new Dictionary<string, string>
             {
-                ["copy"] = loader.GetString("Chat_Copy"),
-                ["copied"] = loader.GetString("Chat_Copied"),
-                ["continue_label"] = loader.GetString("Chat_Continue"),
-                ["code"] = loader.GetString("Chat_Code"),
-                ["copyPrompt"] = loader.GetString("Chat_CopyPrompt"),
-                ["copyMessage"] = loader.GetString("Chat_CopyMessage"),
-                ["edit"] = loader.GetString("Chat_Edit"),
-                ["retry"] = loader.GetString("Chat_Retry"),
-                ["copyRequest"] = loader.GetString("Chat_CopyRequest"),
-                ["copyResponse"] = loader.GetString("Chat_CopyResponse"),
-                ["tokens"] = loader.GetString("Chat_Tokens"),
-                ["editBranchHint"] = loader.GetString("Chat_EditBranchHint"),
-                ["editCancel"] = loader.GetString("Chat_EditCancel"),
-                ["editSave"] = loader.GetString("Chat_EditSave"),
-                ["showMore"] = loader.GetString("Chat_ShowMore"),
-                ["showLess"] = loader.GetString("Chat_ShowLess"),
-                ["imageSave"] = loader.GetString("Chat_ImageSave"),
-                ["imageCopy"] = loader.GetString("Chat_ImageCopy"),
-                ["imageExpand"] = loader.GetString("Chat_ImageExpand"),
-                ["imageClose"] = loader.GetString("Chat_ImageClose"),
-                ["imageSaved"] = loader.GetString("Chat_ImageSaved"),
-                ["imageCopied"] = loader.GetString("Chat_ImageCopied"),
-                ["seconds"] = loader.GetString("Chat_Seconds"),
-                ["minutes"] = loader.GetString("Chat_Minutes"),
-                ["hours"] = loader.GetString("Chat_Hours"),
-                ["summaryHeader"] = loader.GetString("Chat_SummaryHeader")
+                ["copy"] = Res.GetString("Chat_Copy"),
+                ["copied"] = Res.GetString("Chat_Copied"),
+                ["continue_label"] = Res.GetString("Chat_Continue"),
+                ["code"] = Res.GetString("Chat_Code"),
+                ["copyPrompt"] = Res.GetString("Chat_CopyPrompt"),
+                ["copyMessage"] = Res.GetString("Chat_CopyMessage"),
+                ["edit"] = Res.GetString("Chat_Edit"),
+                ["retry"] = Res.GetString("Chat_Retry"),
+                ["copyRequest"] = Res.GetString("Chat_CopyRequest"),
+                ["copyResponse"] = Res.GetString("Chat_CopyResponse"),
+                ["tokens"] = Res.GetString("Chat_Tokens"),
+                ["editBranchHint"] = Res.GetString("Chat_EditBranchHint"),
+                ["editCancel"] = Res.GetString("Chat_EditCancel"),
+                ["editSave"] = Res.GetString("Chat_EditSave"),
+                ["showMore"] = Res.GetString("Chat_ShowMore"),
+                ["showLess"] = Res.GetString("Chat_ShowLess"),
+                ["imageSave"] = Res.GetString("Chat_ImageSave"),
+                ["imageCopy"] = Res.GetString("Chat_ImageCopy"),
+                ["imageExpand"] = Res.GetString("Chat_ImageExpand"),
+                ["imageClose"] = Res.GetString("Chat_ImageClose"),
+                ["imageSaved"] = Res.GetString("Chat_ImageSaved"),
+                ["imageCopied"] = Res.GetString("Chat_ImageCopied"),
+                ["seconds"] = Res.GetString("Chat_Seconds"),
+                ["minutes"] = Res.GetString("Chat_Minutes"),
+                ["hours"] = Res.GetString("Chat_Hours"),
+                ["summaryHeader"] = Res.GetString("Chat_SummaryHeader")
             };
 
             // Filter out empty strings (key not found returns empty)

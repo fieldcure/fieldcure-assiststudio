@@ -1,8 +1,9 @@
-using System.Text.Json;
-using AssistStudio.Mcp;
+﻿using AssistStudio.Mcp;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
+using Microsoft.Windows.ApplicationModel.Resources;
+using System.Text.Json;
 
 namespace AssistStudio.Settings;
 
@@ -12,6 +13,8 @@ namespace AssistStudio.Settings;
 /// </summary>
 public sealed partial class MemoryPage : Page
 {
+    private static readonly ResourceLoader Res = new();
+
     private string _deleteTooltip = "Delete";
     private string _connectingText = "Connecting to Essentials server...";
 
@@ -31,9 +34,8 @@ public sealed partial class MemoryPage : Page
     {
         try
         {
-            var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
-            _deleteTooltip = loader.GetString("Memory_DeleteTooltip") is { Length: > 0 } s ? s : "Delete";
-            _connectingText = loader.GetString("Memory_Connecting") is { Length: > 0 } s2 ? s2 : _connectingText;
+            _deleteTooltip = Res.GetString("Memory_DeleteTooltip") is { Length: > 0 } s ? s : "Delete";
+            _connectingText = Res.GetString("Memory_Connecting") is { Length: > 0 } s2 ? s2 : _connectingText;
         }
         catch { /* fallback defaults */ }
 
@@ -236,9 +238,8 @@ public sealed partial class MemoryPage : Page
         string title, content;
         try
         {
-            var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
-            title = loader.GetString("Memory_ClearAll") is { Length: > 0 } t ? t : "Clear All";
-            content = loader.GetString("Memory_ClearConfirm") is { Length: > 0 } c
+            title = Res.GetString("Memory_ClearAll") is { Length: > 0 } t ? t : "Clear All";
+            content = Res.GetString("Memory_ClearConfirm") is { Length: > 0 } c
                 ? c : "Are you sure you want to clear all memories?";
         }
         catch

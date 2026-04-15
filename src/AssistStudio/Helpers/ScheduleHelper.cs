@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using Microsoft.Data.Sqlite;
-using Windows.ApplicationModel.Resources;
+using Microsoft.Windows.ApplicationModel.Resources;
 
 namespace AssistStudio.Helpers;
 

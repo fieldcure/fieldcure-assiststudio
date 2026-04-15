@@ -2,6 +2,7 @@
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.Windows.ApplicationModel.Resources;
 
 namespace FieldCure.AssistStudio.Controls;
 
@@ -12,6 +13,9 @@ namespace FieldCure.AssistStudio.Controls;
 /// </summary>
 public sealed partial class ToolElicitationPanel : Control
 {
+    private static readonly ResourceLoader Res =
+        new(ResourceLoader.GetDefaultResourceFilePath(), "AssistStudio.Controls/Resources");
+
     #region Dependency Properties
 
     /// <summary>Identifies the <see cref="ToolName"/> dependency property.</summary>
@@ -142,11 +146,9 @@ public sealed partial class ToolElicitationPanel : Control
         // Load localized strings
         try
         {
-            var loader = new Windows.ApplicationModel.Resources.ResourceLoader(
-                "AssistStudio.Controls/Resources");
-            _declineLabel = loader.GetString("ToolElicitation_Skip");
-            _submitLabel = loader.GetString("ToolElicitation_Submit");
-            _promptTemplate = loader.GetString("ToolElicitation_Prompt");
+            _declineLabel = Res.GetString("ToolElicitation_Skip");
+            _submitLabel = Res.GetString("ToolElicitation_Submit");
+            _promptTemplate = Res.GetString("ToolElicitation_Prompt");
         }
         catch { /* Use defaults */ }
 

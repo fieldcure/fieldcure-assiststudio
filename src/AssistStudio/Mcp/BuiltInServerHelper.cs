@@ -1,6 +1,7 @@
 ﻿using AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.Windows.ApplicationModel.Resources;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -13,6 +14,13 @@ namespace AssistStudio.Mcp;
 /// </summary>
 public static class BuiltInServerHelper
 {
+    /// <summary>
+    /// Shared <see cref="ResourceLoader"/> for localized strings used in built-in
+    /// server notifications. Initialized once at type load; thread-safe and safe to
+    /// call from any thread (no <c>CoreWindow</c> dependency).
+    /// </summary>
+    private static readonly ResourceLoader Res = new();
+
     #region Constants
 
     /// <summary>
@@ -428,8 +436,7 @@ public static class BuiltInServerHelper
         var total = actualUpdates.Count;
         LoggingService.LogInfo($"[BuiltIn] Applying {total} pending update(s)");
 
-        var loader = TryGetResourceLoader();
-        var progressTitle = loader?.GetString("BuiltIn_UpdatingProgress") ?? "Updating MCP packages ({0}/{1})";
+        var progressTitle = Res.GetString("BuiltIn_UpdatingProgress") ?? "Updating MCP packages ({0}/{1})";
 
         var token = NotificationCenter.Instance.PostPersistent(
             InfoBarSeverity.Informational,
@@ -490,7 +497,7 @@ public static class BuiltInServerHelper
         // Dismiss progress, show completion
         NotificationCenter.Instance.Dismiss(token);
 
-        var completeMsg = loader?.GetString("BuiltIn_UpdateComplete") ?? "MCP packages updated";
+        var completeMsg = Res.GetString("BuiltIn_UpdateComplete") ?? "MCP packages updated";
         NotificationCenter.Instance.Post(InfoBarSeverity.Success, completeMsg, string.Empty, 3000);
     }
 
@@ -696,7 +703,6 @@ public static class BuiltInServerHelper
     /// </summary>
     private static void ShowUpdateNotification(List<PendingUpdateEntry> updates)
     {
-        var loader = TryGetResourceLoader();
 
         string title;
         string body;
@@ -704,16 +710,16 @@ public static class BuiltInServerHelper
         if (updates.Count == 1)
         {
             var u = updates[0];
-            title = loader?.GetString("BuiltIn_UpdateAvailable_Title")
+            title = Res.GetString("BuiltIn_UpdateAvailable_Title")
                     ?? "MCP package update ready";
             body = $"{u.Package} {u.From} → {u.To}";
         }
         else
         {
             var first = updates[0];
-            title = loader?.GetString("BuiltIn_UpdateAvailable_Title")
+            title = Res.GetString("BuiltIn_UpdateAvailable_Title")
                     ?? "MCP package updates ready";
-            var template = loader?.GetString("BuiltIn_UpdateAvailable_Body")
+            var template = Res.GetString("BuiltIn_UpdateAvailable_Body")
                            ?? "{0} {1} → {2} and {3} more";
             body = SafeFormat(template, [first.Package, first.From, first.To, updates.Count - 1]);
         }
@@ -726,13 +732,12 @@ public static class BuiltInServerHelper
     /// </summary>
     private static void NotifyInstallSuccess(string serverName, string version)
     {
-        var loader = TryGetResourceLoader();
-        var template = loader?.GetString("BuiltIn_InstallSuccess") ?? "{0} v{1} server installed";
+        var template = Res.GetString("BuiltIn_InstallSuccess") ?? "{0} v{1} server installed";
 
         NotificationCenter.Instance.Post(
             InfoBarSeverity.Success,
             SafeFormat(template, [serverName, version]),
-            loader?.GetString("BuiltIn_InstallSuccessMessage") ?? "Configure workspace folders in Profile settings.",
+            Res.GetString("BuiltIn_InstallSuccessMessage") ?? "Configure workspace folders in Profile settings.",
             5000);
     }
 
@@ -741,13 +746,12 @@ public static class BuiltInServerHelper
     /// </summary>
     private static void NotifyInstallFailure(string serverName)
     {
-        var loader = TryGetResourceLoader();
-        var template = loader?.GetString("BuiltIn_InstallFailed") ?? "Failed to install {0}";
+        var template = Res.GetString("BuiltIn_InstallFailed") ?? "Failed to install {0}";
 
         NotificationCenter.Instance.Post(
             InfoBarSeverity.Error,
             SafeFormat(template, [serverName]),
-            loader?.GetString("BuiltIn_InstallFailedMessage") ?? "Check your internet connection and try again.",
+            Res.GetString("BuiltIn_InstallFailedMessage") ?? "Check your internet connection and try again.",
             8000);
     }
 
@@ -756,9 +760,8 @@ public static class BuiltInServerHelper
     /// </summary>
     private static void NotifyAction(string packageId, string resourceKey, params string[] args)
     {
-        var loader = TryGetResourceLoader();
 
-        var template = loader?.GetString(resourceKey) ?? $"{packageId} — {resourceKey}";
+        var template = Res.GetString(resourceKey) ?? $"{packageId} — {resourceKey}";
         var message = SafeFormat(template, args);
 
         NotificationCenter.Instance.Post(
@@ -783,21 +786,6 @@ public static class BuiltInServerHelper
             // Prevent a bad resource string from crashing initialization
             return $"{template} [{string.Join(", ", args)}]";
         }
-    }
-
-    /// <summary>
-    /// Safely creates a thread-safe WinUI 3 ResourceLoader, returning <c>null</c> if unavailable.
-    /// Uses <see cref="Microsoft.Windows.ApplicationModel.Resources.ResourceLoader"/> (Windows App SDK)
-    /// rather than the legacy <c>Windows.ApplicationModel.Resources.ResourceLoader</c>, whose
-    /// parameterless constructor calls <c>GetForCurrentView()</c> internally and throws a
-    /// <see cref="System.Runtime.InteropServices.COMException"/> when invoked from a thread
-    /// without a <c>CoreWindow</c> (i.e. any <see cref="Task.Run"/> context such as the
-    /// background update check).
-    /// </summary>
-    private static Microsoft.Windows.ApplicationModel.Resources.ResourceLoader? TryGetResourceLoader()
-    {
-        try { return new Microsoft.Windows.ApplicationModel.Resources.ResourceLoader(); }
-        catch { return null; }
     }
 
     #endregion

@@ -11,6 +11,7 @@ using FieldCure.AssistStudio.Controls;
 using FieldCure.AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.Windows.ApplicationModel.Resources;
 using System.Collections;
 
 namespace AssistStudio.Modules.ViewModels;
@@ -21,6 +22,8 @@ namespace AssistStudio.Modules.ViewModels;
 /// </summary>
 public partial class ChatTabViewModel : ObservableObject, IDisposable
 {
+    private static readonly ResourceLoader Res = new();
+
     #region Observable Fields — Tab
 
     /// <summary>
@@ -294,8 +297,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         CurrentPreset = preset;
         _title = preset.Name;
 
-        var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
-        var prefix = loader.GetString("Tab_NewConversation");
+        var prefix = Res.GetString("Tab_NewConversation");
         _tabHeader = tabNumber > 0 ? $"{prefix} {tabNumber}" : prefix;
 
         // Set observable fields — ChatTabView.xaml binds to these via x:Bind
@@ -802,13 +804,12 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         if (Panel is null) return;
 
         var input = new TextBox { Text = currentTitle, SelectionStart = currentTitle.Length };
-        var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
         var dialog = new ThemedContentDialog
         {
-            Title = loader.GetString("Dialog_RenameConversation"),
+            Title = Res.GetString("Dialog_RenameConversation"),
             Content = input,
-            PrimaryButtonText = loader.GetString("Dialog_OK"),
-            CloseButtonText = loader.GetString("Dialog_Cancel"),
+            PrimaryButtonText = Res.GetString("Dialog_OK"),
+            CloseButtonText = Res.GetString("Dialog_Cancel"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = Panel.XamlRoot,
         };

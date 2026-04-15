@@ -754,8 +754,7 @@ public sealed partial class ChatPanel
 
         try
         {
-            var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
-            var localized = loader.GetString($"Tool_{toolName}");
+            var localized = Res.GetString($"Tool_{toolName}");
             if (!string.IsNullOrEmpty(localized)) return localized;
         }
         catch { /* Fall through to default */ }

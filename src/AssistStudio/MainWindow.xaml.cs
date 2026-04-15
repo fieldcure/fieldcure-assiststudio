@@ -10,6 +10,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.Windows.ApplicationModel.Resources;
 using Windows.Foundation;
 using Windows.Graphics;
 using Windows.Storage.Pickers;
@@ -24,6 +25,8 @@ namespace AssistStudio;
 /// </summary>
 public sealed partial class MainWindow : Window
 {
+    private static readonly ResourceLoader Res = new();
+
     #region Fields
 
     /// <summary>
@@ -465,30 +468,27 @@ public sealed partial class MainWindow : Window
                 }
             }
 
-            var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
             var mediaNote = result.Media.Count > 0 ? $" + {result.Media.Count} media" : "";
             NotificationCenter.Instance.Post(
                 Microsoft.UI.Xaml.Controls.InfoBarSeverity.Success,
-                loader.GetString("Export_Success"),
+                Res.GetString("Export_Success"),
                 $"{Path.GetFileName(mdPath)}{mediaNote}",
                 3000);
         }
         catch (UnauthorizedAccessException)
         {
-            var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
             NotificationCenter.Instance.Post(
                 Microsoft.UI.Xaml.Controls.InfoBarSeverity.Error,
-                loader.GetString("Export_Failed"),
-                loader.GetString("Export_AccessDenied"),
+                Res.GetString("Export_Failed"),
+                Res.GetString("Export_AccessDenied"),
                 5000);
         }
         catch (Exception ex)
         {
-            var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
             LoggingService.LogException(ex);
             NotificationCenter.Instance.Post(
                 Microsoft.UI.Xaml.Controls.InfoBarSeverity.Error,
-                loader.GetString("Export_Failed"),
+                Res.GetString("Export_Failed"),
                 ex.Message,
                 5000);
         }
@@ -506,13 +506,12 @@ public sealed partial class MainWindow : Window
         package.SetText(result.Markdown);
         Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
 
-        var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
         var mediaNote = result.Media.Count > 0
-            ? string.Format(loader.GetString("Export_MediaNotIncluded"), result.Media.Count)
-            : loader.GetString("Export_ReadyToPaste");
+            ? string.Format(Res.GetString("Export_MediaNotIncluded"), result.Media.Count)
+            : Res.GetString("Export_ReadyToPaste");
         NotificationCenter.Instance.Post(
             Microsoft.UI.Xaml.Controls.InfoBarSeverity.Success,
-            loader.GetString("Export_Copied"),
+            Res.GetString("Export_Copied"),
             mediaNote,
             3000);
     }
@@ -553,10 +552,9 @@ public sealed partial class MainWindow : Window
 
         if (recentPaths.Count == 0)
         {
-            var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
             var emptyItem = new MenuFlyoutItem
             {
-                Text = loader.GetString("Menu_NoRecentConversations"),
+                Text = Res.GetString("Menu_NoRecentConversations"),
                 IsEnabled = false,
             };
             RecentConversationsSubMenu.Items.Add(emptyItem);
@@ -596,10 +594,9 @@ public sealed partial class MainWindow : Window
         // Separator + Clear
         RecentConversationsSubMenu.Items.Add(new MenuFlyoutSeparator());
 
-        var loader2 = new Windows.ApplicationModel.Resources.ResourceLoader();
         var clearItem = new MenuFlyoutItem
         {
-            Text = loader2.GetString("Menu_ClearRecentHistory"),
+            Text = Res.GetString("Menu_ClearRecentHistory"),
         };
         clearItem.Click += (_, _) =>
         {
@@ -638,14 +635,13 @@ public sealed partial class MainWindow : Window
     {
         if (tab.IsDirty && tab.GetMessages().Count > 0)
         {
-            var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
             var dialog = new ThemedContentDialog
             {
-                Title = loader.GetString("Dialog_SaveConversation"),
-                Content = loader.GetString("Dialog_SaveConversationContent"),
-                PrimaryButtonText = loader.GetString("Dialog_Save"),
-                SecondaryButtonText = loader.GetString("Dialog_DontSave"),
-                CloseButtonText = loader.GetString("Dialog_Cancel"),
+                Title = Res.GetString("Dialog_SaveConversation"),
+                Content = Res.GetString("Dialog_SaveConversationContent"),
+                PrimaryButtonText = Res.GetString("Dialog_Save"),
+                SecondaryButtonText = Res.GetString("Dialog_DontSave"),
+                CloseButtonText = Res.GetString("Dialog_Cancel"),
                 DefaultButton = ContentDialogButton.Primary,
                 XamlRoot = Content.XamlRoot,
             };
@@ -704,14 +700,13 @@ public sealed partial class MainWindow : Window
         // Ask to save if conversation has unsaved changes
         if (vm.IsDirty && vm.GetMessages().Count > 0)
         {
-            var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
             var dialog = new ThemedContentDialog
             {
-                Title = loader.GetString("Dialog_SaveConversation"),
-                Content = loader.GetString("Dialog_SaveConversationContent"),
-                PrimaryButtonText = loader.GetString("Dialog_Save"),
-                SecondaryButtonText = loader.GetString("Dialog_DontSave"),
-                CloseButtonText = loader.GetString("Dialog_Cancel"),
+                Title = Res.GetString("Dialog_SaveConversation"),
+                Content = Res.GetString("Dialog_SaveConversationContent"),
+                PrimaryButtonText = Res.GetString("Dialog_Save"),
+                SecondaryButtonText = Res.GetString("Dialog_DontSave"),
+                CloseButtonText = Res.GetString("Dialog_Cancel"),
                 DefaultButton = ContentDialogButton.Primary,
                 XamlRoot = Content.XamlRoot,
             };
@@ -770,14 +765,13 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
         var dialog = new ThemedContentDialog
         {
-            Title = loader.GetString("Dialog_UnsavedChanges"),
-            Content = string.Format(loader.GetString("Dialog_UnsavedChangesContent"), dirtyTabs.Count),
-            PrimaryButtonText = loader.GetString("Dialog_SaveAllExit"),
-            SecondaryButtonText = loader.GetString("Dialog_DiscardExit"),
-            CloseButtonText = loader.GetString("Dialog_Cancel"),
+            Title = Res.GetString("Dialog_UnsavedChanges"),
+            Content = string.Format(Res.GetString("Dialog_UnsavedChangesContent"), dirtyTabs.Count),
+            PrimaryButtonText = Res.GetString("Dialog_SaveAllExit"),
+            SecondaryButtonText = Res.GetString("Dialog_DiscardExit"),
+            CloseButtonText = Res.GetString("Dialog_Cancel"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = Content.XamlRoot,
         };

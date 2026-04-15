@@ -6,7 +6,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using Windows.ApplicationModel.Resources;
+using Microsoft.Windows.ApplicationModel.Resources;
 
 namespace FieldCure.AssistStudio.Controls;
 

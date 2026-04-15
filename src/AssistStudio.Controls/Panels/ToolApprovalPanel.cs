@@ -2,6 +2,7 @@
 using System.Text.Json;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.Windows.ApplicationModel.Resources;
 
 namespace FieldCure.AssistStudio.Controls;
 
@@ -11,6 +12,9 @@ namespace FieldCure.AssistStudio.Controls;
 /// </summary>
 public sealed partial class ToolApprovalPanel : Control
 {
+    private static readonly ResourceLoader Res =
+        new(ResourceLoader.GetDefaultResourceFilePath(), "AssistStudio.Controls/Resources");
+
     #region Dependency Properties
 
     /// <summary>Identifies the <see cref="ToolName"/> dependency property.</summary>
@@ -147,13 +151,11 @@ public sealed partial class ToolApprovalPanel : Control
         // Load localized strings
         try
         {
-            var loader = new Windows.ApplicationModel.Resources.ResourceLoader(
-                "AssistStudio.Controls/Resources");
-            _approveLabel = loader.GetString("ToolApproval_Approve");
-            _rejectLabel = loader.GetString("ToolApproval_Reject");
-            _promptTemplate = loader.GetString("ToolApproval_Prompt");
+            _approveLabel = Res.GetString("ToolApproval_Approve");
+            _rejectLabel = Res.GetString("ToolApproval_Reject");
+            _promptTemplate = Res.GetString("ToolApproval_Prompt");
             if (_userNoteBox is not null)
-                _userNoteBox.PlaceholderText = loader.GetString("ToolApproval_NotePlaceholder");
+                _userNoteBox.PlaceholderText = Res.GetString("ToolApproval_NotePlaceholder");
         }
         catch { /* Use defaults */ }
 

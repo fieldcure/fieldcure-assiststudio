@@ -1,4 +1,5 @@
 ﻿using Microsoft.UI.Xaml.Controls;
+using Microsoft.Windows.ApplicationModel.Resources;
 
 namespace FieldCure.AssistStudio.Controls;
 
@@ -8,6 +9,9 @@ namespace FieldCure.AssistStudio.Controls;
 /// </summary>
 public sealed partial class ComposeBar : Control
 {
+    private static readonly ResourceLoader Res =
+        new(ResourceLoader.GetDefaultResourceFilePath(), "AssistStudio.Controls/Resources");
+
     #region Fields
 
     /// <summary>

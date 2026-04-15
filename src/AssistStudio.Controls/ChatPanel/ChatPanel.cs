@@ -3,6 +3,7 @@ using FieldCure.AssistStudio.Controls.Rendering;
 using FieldCure.AssistStudio.Helpers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.Windows.ApplicationModel.Resources;
 using System.Collections.ObjectModel;
 
 namespace FieldCure.AssistStudio.Controls;
@@ -26,8 +27,8 @@ public enum ChatTheme
 /// </summary>
 public sealed partial class ChatPanel : Control, IDisposable
 {
-    private static readonly Windows.ApplicationModel.Resources.ResourceLoader Res =
-        new("AssistStudio.Controls/Resources");
+    private static readonly ResourceLoader Res =
+        new(ResourceLoader.GetDefaultResourceFilePath(), "AssistStudio.Controls/Resources");
 
     #region Fields
 

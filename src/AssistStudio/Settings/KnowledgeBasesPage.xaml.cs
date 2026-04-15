@@ -9,7 +9,7 @@ using Microsoft.UI.Xaml.Navigation;
 using Microsoft.UI.Xaml.Shapes;
 using System.Text.Json;
 using IOPath = System.IO.Path;
-using Windows.ApplicationModel.Resources;
+using Microsoft.Windows.ApplicationModel.Resources;
 
 namespace AssistStudio.Settings;
 

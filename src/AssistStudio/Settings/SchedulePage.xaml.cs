@@ -2,6 +2,7 @@ using AssistStudio.Helpers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
+using Microsoft.Windows.ApplicationModel.Resources;
 
 namespace AssistStudio.Settings;
 
@@ -11,6 +12,8 @@ namespace AssistStudio.Settings;
 /// </summary>
 public sealed partial class SchedulePage : Page
 {
+    private static readonly ResourceLoader Res = new();
+
     #region Fields
 
     private List<ScheduleItem> _allItems = [];
@@ -54,16 +57,15 @@ public sealed partial class SchedulePage : Page
     {
         try
         {
-            var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
-            _deleteTooltip = loader.GetString("Schedule_DeleteTooltip") is { Length: > 0 } s1 ? s1 : _deleteTooltip;
-            _enableTooltip = loader.GetString("Schedule_EnableTooltip") is { Length: > 0 } s2 ? s2 : _enableTooltip;
-            _disableTooltip = loader.GetString("Schedule_DisableTooltip") is { Length: > 0 } s3 ? s3 : _disableTooltip;
-            _loadingText = loader.GetString("Schedule_Loading") is { Length: > 0 } s4 ? s4 : _loadingText;
-            _deleteConfirmTitle = loader.GetString("Schedule_DeleteConfirmTitle") is { Length: > 0 } s6 ? s6 : _deleteConfirmTitle;
-            _deleteConfirmContent = loader.GetString("Schedule_DeleteConfirmContent") is { Length: > 0 } s7 ? s7 : _deleteConfirmContent;
-            _cancelText = loader.GetString("Common_Cancel") is { Length: > 0 } s8 ? s8 : _cancelText;
-            _errorTitle = loader.GetString("Common_Error") is { Length: > 0 } s9 ? s9 : _errorTitle;
-            _okText = loader.GetString("Common_OK") is { Length: > 0 } s10 ? s10 : _okText;
+            _deleteTooltip = Res.GetString("Schedule_DeleteTooltip") is { Length: > 0 } s1 ? s1 : _deleteTooltip;
+            _enableTooltip = Res.GetString("Schedule_EnableTooltip") is { Length: > 0 } s2 ? s2 : _enableTooltip;
+            _disableTooltip = Res.GetString("Schedule_DisableTooltip") is { Length: > 0 } s3 ? s3 : _disableTooltip;
+            _loadingText = Res.GetString("Schedule_Loading") is { Length: > 0 } s4 ? s4 : _loadingText;
+            _deleteConfirmTitle = Res.GetString("Schedule_DeleteConfirmTitle") is { Length: > 0 } s6 ? s6 : _deleteConfirmTitle;
+            _deleteConfirmContent = Res.GetString("Schedule_DeleteConfirmContent") is { Length: > 0 } s7 ? s7 : _deleteConfirmContent;
+            _cancelText = Res.GetString("Common_Cancel") is { Length: > 0 } s8 ? s8 : _cancelText;
+            _errorTitle = Res.GetString("Common_Error") is { Length: > 0 } s9 ? s9 : _errorTitle;
+            _okText = Res.GetString("Common_OK") is { Length: > 0 } s10 ? s10 : _okText;
         }
         catch { /* fallback defaults */ }
 

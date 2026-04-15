@@ -62,10 +62,6 @@ public sealed partial class ComposeBar
         // Empty state: no tools enabled
         if (tools.Count == 0)
         {
-            Windows.ApplicationModel.Resources.ResourceLoader? emptyRes = null;
-            try { emptyRes = new Windows.ApplicationModel.Resources.ResourceLoader("AssistStudio.Controls/Resources"); }
-            catch { /* keep defaults */ }
-
             var emptyPanel = new StackPanel
             {
                 Spacing = 4,
@@ -74,8 +70,9 @@ public sealed partial class ComposeBar
             };
             emptyPanel.Children.Add(new TextBlock
             {
-                Text = emptyRes?.GetString("ComposeBar_NoToolsEnabled")
-                    ?? "No tools or servers enabled.\nAdd them in Profile settings.",
+                Text = Res.GetString("ComposeBar_NoToolsEnabled") is { Length: > 0 } emptyText
+                    ? emptyText
+                    : "No tools or servers enabled.\nAdd them in Profile settings.",
                 TextWrapping = TextWrapping.Wrap,
                 Opacity = 0.6,
                 FontSize = 12,
@@ -89,10 +86,6 @@ public sealed partial class ComposeBar
             return;
         }
 
-        Windows.ApplicationModel.Resources.ResourceLoader? res = null;
-        try { res = new Windows.ApplicationModel.Resources.ResourceLoader("AssistStudio.Controls/Resources"); }
-        catch { /* keep defaults */ }
-
         var panel = new StackPanel { Spacing = 4 };
         var allCheckBoxes = new List<CheckBox>();
 
@@ -100,7 +93,7 @@ public sealed partial class ComposeBar
         foreach (var tool in tools.Where(IsVisibleTool))
         {
             // Try localized name from resources (e.g., Tool_read_file → "파일 읽기")
-            var displayName = res?.GetString($"Tool_{tool.Name}") is { Length: > 0 } localized
+            var displayName = Res.GetString($"Tool_{tool.Name}") is { Length: > 0 } localized
                 ? localized
                 : tool.DisplayName;
 
@@ -127,8 +120,8 @@ public sealed partial class ComposeBar
             Margin = new Thickness(0, 2, 0, 2),
         });
 
-        var selectLabel = res?.GetString("ComposeBar_SelectAll") ?? "Select all";
-        var deselectLabel = res?.GetString("ComposeBar_DeselectAll") ?? "Deselect all";
+        var selectLabel = Res.GetString("ComposeBar_SelectAll") ?? "Select all";
+        var deselectLabel = Res.GetString("ComposeBar_DeselectAll") ?? "Deselect all";
         var allChecked = allCheckBoxes.All(c => c.IsChecked == true);
 
         var toggleLink = new HyperlinkButton
