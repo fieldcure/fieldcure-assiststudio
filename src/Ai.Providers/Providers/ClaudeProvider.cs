@@ -65,7 +65,7 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
     /// <summary>
     /// Initializes a new <see cref="ClaudeProvider"/> with an internally managed <see cref="HttpClient"/>.
     /// </summary>
-    public ClaudeProvider(string apiKey, string model = "claude-sonnet-4-20250514")
+    public ClaudeProvider(string apiKey, string model = "claude-sonnet-4-6")
         : this(new HttpClient(), apiKey, model, ownsHttpClient: true)
     {
     }
@@ -73,7 +73,7 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
     /// <summary>
     /// Initializes a new <see cref="ClaudeProvider"/> with an externally managed <see cref="HttpClient"/>.
     /// </summary>
-    public ClaudeProvider(HttpClient httpClient, string apiKey, string model = "claude-sonnet-4-20250514")
+    public ClaudeProvider(HttpClient httpClient, string apiKey, string model = "claude-sonnet-4-6")
         : this(httpClient, apiKey, model, ownsHttpClient: false)
     {
     }

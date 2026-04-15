@@ -75,7 +75,7 @@ internal static class SdkEvents
         {
             ID = "msg_test",
             Content = [],
-            Model = "claude-sonnet-4-20250514",
+            Model = "claude-sonnet-4-6",
             StopDetails = null,
             StopReason = StopReason.EndTurn,
             StopSequence = null,

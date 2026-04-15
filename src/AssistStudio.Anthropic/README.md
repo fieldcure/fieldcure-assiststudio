@@ -53,7 +53,7 @@ var result = AnthropicMessageConverter.Convert(messages);
 
 var response = await client.Messages.Create(new()
 {
-    Model = "claude-sonnet-4-20250514",
+    Model = "claude-sonnet-4-6",
     System = result.SystemPrompt is not null
         ? new(result.SystemPrompt) : null,
     Messages = result.Messages,

@@ -400,7 +400,7 @@ public static class AppSettings
     /// </summary>
     private static readonly (string ProviderType, string DisplayName, string? BaseUrl, string FallbackModel)[] KnownProviders =
     [
-        ("Claude", "Anthropic Claude", null, "claude-sonnet-4-20250514"),
+        ("Claude", "Anthropic Claude", null, "claude-sonnet-4-6"),
         ("OpenAI", "OpenAI", null, "gpt-4o"),
         ("Gemini", "Google Gemini", null, "gemini-2.0-flash"),
         ("Groq", "Groq", "https://api.groq.com/openai/v1", "llama-3.3-70b-versatile"),

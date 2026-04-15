@@ -23,7 +23,7 @@ var preset = new ProviderPreset
 {
     ProviderType = "Claude",
     ApiKey = "sk-...",
-    ModelId = "claude-sonnet-4-20250514",
+    ModelId = "claude-sonnet-4-6",
 };
 
 var provider = ProviderFactory.Create(preset);

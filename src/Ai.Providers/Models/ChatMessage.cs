@@ -108,7 +108,7 @@ public partial class ChatMessage : INotifyPropertyChanged
     public string? ProviderName { get; init; }
 
     /// <summary>
-    /// Model ID used to generate this message (e.g., "claude-sonnet-4-20250514").
+    /// Model ID used to generate this message (e.g., "claude-sonnet-4-6").
     /// </summary>
     public string? ProviderModelId { get; init; }
 

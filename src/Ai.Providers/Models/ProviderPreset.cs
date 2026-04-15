@@ -52,7 +52,7 @@ public partial class ProviderPreset : INotifyPropertyChanged
     public string ApiKey { get; set; } = "";
 
     /// <summary>
-    /// The model identifier to use with this provider (e.g., "gpt-4o", "claude-sonnet-4-20250514").
+    /// The model identifier to use with this provider (e.g., "gpt-4o", "claude-sonnet-4-6").
     /// </summary>
     public string ModelId
     {

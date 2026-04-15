@@ -49,7 +49,7 @@ dotnet add package FieldCure.AssistStudio.Controls.WinUI
 using FieldCure.Ai.Providers;
 
 // Code-behind — assign a provider
-Chat.Provider = new ClaudeProvider(apiKey: "sk-ant-...", modelId: "claude-sonnet-4-20250514");
+Chat.Provider = new ClaudeProvider(apiKey: "sk-ant-...", modelId: "claude-sonnet-4-6");
 ```
 
 ## Controls

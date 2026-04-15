@@ -100,7 +100,7 @@ dotnet add package FieldCure.AssistStudio.Controls.WinUI
 using FieldCure.Ai.Providers;
 
 // Pick a provider — API key comes from the user
-var provider = new ClaudeProvider(apiKey: "sk-ant-...", modelId: "claude-sonnet-4-20250514");
+var provider = new ClaudeProvider(apiKey: "sk-ant-...", modelId: "claude-sonnet-4-6");
 ```
 
 ```xml
@@ -308,7 +308,7 @@ var preset = new ProviderPreset
     Name = "Claude Sonnet",
     ProviderType = "Claude",
     ApiKey = "sk-ant-...",
-    ModelId = "claude-sonnet-4-20250514",
+    ModelId = "claude-sonnet-4-6",
     Temperature = 0.7,
     MaxTokens = 4096,
     StreamingEnabled = true,

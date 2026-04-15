@@ -54,7 +54,7 @@ public class BuildRequestBodyThinkingTests
     [TestMethod]
     public async Task Claude_ThinkingEnabled_IncludesThinkingBlock()
     {
-        using var provider = new ClaudeProvider(MockClient(), "test-key", "claude-sonnet-4-20250514");
+        using var provider = new ClaudeProvider(MockClient(), "test-key", "claude-sonnet-4-6");
         var request = MakeRequest(thinkingEnabled: true, thinkingBudget: 8192);
 
         using var doc = await CaptureRequestBodyAsync(provider, request);
@@ -69,7 +69,7 @@ public class BuildRequestBodyThinkingTests
     [TestMethod]
     public async Task Claude_ThinkingEnabled_MinBudget1024()
     {
-        using var provider = new ClaudeProvider(MockClient(), "test-key", "claude-sonnet-4-20250514");
+        using var provider = new ClaudeProvider(MockClient(), "test-key", "claude-sonnet-4-6");
         var request = MakeRequest(thinkingEnabled: true, thinkingBudget: 500);
 
         using var doc = await CaptureRequestBodyAsync(provider, request);
@@ -82,7 +82,7 @@ public class BuildRequestBodyThinkingTests
     [TestMethod]
     public async Task Claude_ThinkingDisabled_NoThinkingBlock()
     {
-        using var provider = new ClaudeProvider(MockClient(), "test-key", "claude-sonnet-4-20250514");
+        using var provider = new ClaudeProvider(MockClient(), "test-key", "claude-sonnet-4-6");
         var request = MakeRequest(thinkingEnabled: false);
 
         using var doc = await CaptureRequestBodyAsync(provider, request);
@@ -94,7 +94,7 @@ public class BuildRequestBodyThinkingTests
     [TestMethod]
     public async Task Claude_ThinkingEnabled_DefaultBudget16384()
     {
-        using var provider = new ClaudeProvider(MockClient(), "test-key", "claude-sonnet-4-20250514");
+        using var provider = new ClaudeProvider(MockClient(), "test-key", "claude-sonnet-4-6");
         var request = MakeRequest(thinkingEnabled: true, thinkingBudget: null);
 
         using var doc = await CaptureRequestBodyAsync(provider, request);
@@ -270,8 +270,8 @@ public class BuildRequestBodyThinkingTests
     #region ThinkingSupport Detection
 
     [TestMethod]
-    [DataRow("claude-sonnet-4-20250514", ThinkingSupport.Optional)]
-    [DataRow("claude-opus-4-20250514", ThinkingSupport.Optional)]
+    [DataRow("claude-sonnet-4-6", ThinkingSupport.Optional)]
+    [DataRow("claude-opus-4-6", ThinkingSupport.Optional)]
     [DataRow("claude-3.5-haiku-20241022", ThinkingSupport.NotSupported)]
     public void Claude_GetThinkingSupport(string modelId, ThinkingSupport expected) =>
         Assert.AreEqual(expected, ClaudeProvider.GetThinkingSupportFor(modelId));
@@ -303,7 +303,7 @@ public class BuildRequestBodyThinkingTests
     public void ThinkingCapability_RoutesToProvider()
     {
         Assert.AreEqual(ThinkingSupport.Optional,
-            ThinkingCapability.GetSupport("Claude", "claude-sonnet-4-20250514"));
+            ThinkingCapability.GetSupport("Claude", "claude-sonnet-4-6"));
         Assert.AreEqual(ThinkingSupport.Optional,
             ThinkingCapability.GetSupport("OpenAI", "o3-mini"));
         Assert.AreEqual(ThinkingSupport.Required,

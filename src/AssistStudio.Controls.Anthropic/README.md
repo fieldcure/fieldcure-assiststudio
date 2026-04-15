@@ -34,12 +34,12 @@ var client = new AnthropicClient { ApiKey = "sk-..." };
 
 ChatPanel.UserMessageSubmitted += async (s, e) =>
 {
-    await using var handle = ChatPanel.BeginAnthropicTurn("Claude", "claude-sonnet-4-20250514");
+    await using var handle = ChatPanel.BeginAnthropicTurn("Claude", "claude-sonnet-4-6");
     var conv = ChatPanel.GetConversationAsAnthropicMessages();
 
     var stream = client.Messages.CreateStreaming(new()
     {
-        Model = "claude-sonnet-4-20250514",
+        Model = "claude-sonnet-4-6",
         System = conv.SystemPrompt is not null ? new(conv.SystemPrompt) : null,
         Messages = conv.Messages,
         MaxTokens = 4096,

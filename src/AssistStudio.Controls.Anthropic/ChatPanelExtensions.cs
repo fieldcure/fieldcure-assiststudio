@@ -15,7 +15,7 @@ public static class ChatPanelExtensions
     /// </summary>
     /// <param name="panel">The chat panel.</param>
     /// <param name="providerName">Display name (e.g., "Claude").</param>
-    /// <param name="modelId">Model identifier (e.g., "claude-sonnet-4-20250514").</param>
+    /// <param name="modelId">Model identifier (e.g., "claude-sonnet-4-6").</param>
     /// <returns>An <see cref="AssistantTurnHandle"/> for the new turn.</returns>
     public static AssistantTurnHandle BeginAnthropicTurn(
         this ChatPanel panel, string? providerName = null, string? modelId = null)

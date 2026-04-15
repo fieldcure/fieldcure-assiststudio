@@ -29,7 +29,7 @@ public sealed partial class ChatPanel
     /// throws <see cref="InvalidOperationException"/>.
     /// </summary>
     /// <param name="providerName">Display name of the provider (e.g., "Claude").</param>
-    /// <param name="modelId">Model identifier (e.g., "claude-sonnet-4-20250514").</param>
+    /// <param name="modelId">Model identifier (e.g., "claude-sonnet-4-6").</param>
     /// <param name="parentMessageId">Parent message ID for branching. Defaults to the last message.</param>
     /// <returns>An <see cref="AssistantTurnHandle"/> that must be disposed when the turn completes.</returns>
     public AssistantTurnHandle BeginAssistantTurn(
