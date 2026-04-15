@@ -27,9 +27,9 @@ public sealed partial class EmbeddingModelSelector : UserControl
     private static readonly (string Id, string Provider, string Label, string Meta)[] EmbeddingModels =
     [
         ("nomic-embed-text", "Ollama", "nomic-embed-text", "768d \u00b7 274MB"),
-        ("nomic-embed-text-v2-moe", "Ollama", "nomic-embed-text-v2-moe", "768d \u00b7 1.9GB \u00b7 \ub2e4\uad6d\uc5b4"),
-        ("bge-m3", "Ollama", "bge-m3", "1024d \u00b7 1.2GB \u00b7 \ub2e4\uad6d\uc5b4"),
-        ("qwen3-embedding:8b", "Ollama", "qwen3-embedding:8b", "4096d \u00b7 ~5GB \u00b7 32k ctx \u00b7 \ub2e4\uad6d\uc5b4"),
+        ("nomic-embed-text-v2-moe", "Ollama", "nomic-embed-text-v2-moe", "768d \u00b7 1.9GB"),
+        ("bge-m3", "Ollama", "bge-m3", "1024d \u00b7 1.2GB"),
+        ("qwen3-embedding:8b", "Ollama", "qwen3-embedding:8b", "4096d \u00b7 ~5GB \u00b7 32k ctx"),
         ("text-embedding-3-small", "OpenAI", "text-embedding-3-small", "1536d"),
         ("text-embedding-3-large", "OpenAI", "text-embedding-3-large", "3072d"),
     ];
@@ -233,7 +233,7 @@ public sealed partial class EmbeddingModelSelector : UserControl
             if (!string.IsNullOrEmpty(meta))
             {
                 var metaText = meta;
-                if (id is "nomic-embed-text-v2-moe" or "bge-m3" or "qwen3:4b")
+                if (id is "nomic-embed-text-v2-moe" or "bge-m3" or "qwen3-embedding:8b" or "qwen3:4b")
                     metaText += $" \u00b7 {multilingualText}";
 
                 content.Children.Add(new TextBlock
