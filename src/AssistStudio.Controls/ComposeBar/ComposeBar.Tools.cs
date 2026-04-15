@@ -92,14 +92,10 @@ public sealed partial class ComposeBar
         var enabledToolSet = EnabledToolNames?.ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var tool in tools.Where(IsVisibleTool))
         {
-            // Try localized name from resources (e.g., Tool_read_file → "파일 읽기")
-            var displayName = Res.GetString($"Tool_{tool.Name}") is { Length: > 0 } localized
-                ? localized
-                : tool.DisplayName;
-
+            // Tool names are technical identifiers, not localized.
             var cb = new CheckBox
             {
-                Content = displayName,
+                Content = tool.DisplayName,
                 IsChecked = enabledToolSet is null || enabledToolSet.Contains(tool.Name),
                 Tag = tool.Name,
                 MinWidth = 0,
