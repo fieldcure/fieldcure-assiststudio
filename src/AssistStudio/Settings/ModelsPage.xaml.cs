@@ -403,15 +403,10 @@ public sealed partial class ModelsPage : Page
         _ => null
     };
 
-    private static string L(string key)
-    {
-        try
-        {
-            var loader = new ResourceLoader();
-            return loader.GetString(key);
-        }
-        catch { return key; }
-    }
+    private static readonly ResourceLoader Res = new();
+
+    private static string L(string key) =>
+        Res.GetString(key) is { Length: > 0 } value ? value : key;
 
     #endregion
 }

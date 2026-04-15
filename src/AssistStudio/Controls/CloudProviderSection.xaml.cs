@@ -594,17 +594,10 @@ public sealed partial class CloudProviderSection : UserControl
         _ => provider
     };
 
-    private static readonly Lazy<ResourceLoader> _loader = new(() =>
-    {
-        try { return new ResourceLoader(); }
-        catch { return null!; }
-    });
+    private static readonly ResourceLoader Res = new();
 
-    private static string L(string key)
-    {
-        try { return _loader.Value?.GetString(key) ?? key; }
-        catch { return key; }
-    }
+    private static string L(string key) =>
+        Res.GetString(key) is { Length: > 0 } value ? value : key;
 
     #endregion
 }

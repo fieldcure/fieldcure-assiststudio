@@ -215,30 +215,22 @@ public sealed partial class CollapsibleSection : UserControl, INotifyPropertyCha
 
     #region Private Methods
 
-    /// <summary>
-    /// Loads a localized string by key, returning a fallback if loading fails.
-    /// </summary>
-    private static readonly Lazy<ResourceLoader> _loader = new(() =>
-    {
-        try { return new ResourceLoader(); }
-        catch { return null!; }
-    });
+    private static readonly ResourceLoader Res = new();
 
+    /// <summary>
+    /// Loads a localized string by key. Falls back to English defaults for known
+    /// tooltip keys, or to the key itself when no English fallback is defined.
+    /// </summary>
     private static string L(string key)
     {
-        try
+        var value = Res.GetString(key);
+        if (value is { Length: > 0 }) return value;
+        return key switch
         {
-            return _loader.Value?.GetString(key) ?? key;
-        }
-        catch
-        {
-            return key switch
-            {
-                "CollapsibleSection_CollapseTooltip" => "Collapse section",
-                "CollapsibleSection_ExpandTooltip" => "Expand section",
-                _ => key
-            };
-        }
+            "CollapsibleSection_CollapseTooltip" => "Collapse section",
+            "CollapsibleSection_ExpandTooltip" => "Expand section",
+            _ => key
+        };
     }
 
     /// <summary>
