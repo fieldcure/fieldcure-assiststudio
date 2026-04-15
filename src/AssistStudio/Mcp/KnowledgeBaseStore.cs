@@ -106,6 +106,12 @@ public static class KnowledgeBaseStore
             result.Add(kb);
         }
 
+        // Stable case-insensitive alphabetical order by display name so the
+        // Knowledge Bases page always lists KBs in a predictable order
+        // regardless of filesystem enumeration order (which is undefined on
+        // NTFS and varies between machines).
+        result.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
+
         return result;
     }
 
