@@ -712,6 +712,27 @@
   <data name="KB_ModelCurrent" xml:space="preserve">
     <value>(현재)</value>
   </data>
+  <data name="KB_ModelNotInstalled" xml:space="preserve">
+    <value>(설치 안 됨)</value>
+  </data>
+  <data name="KB_ModelMissingApiKey" xml:space="preserve">
+    <value>(API 키 없음)</value>
+  </data>
+  <data name="KB_ModelCurrentUnavailableWarning" xml:space="preserve">
+    <value>이 지식보관소는 현재 선택된 모델로 인덱싱되어 있습니다. 모델을 설치하거나, 다른 모델로 변경하세요. 모델 변경 시 전체 재인덱싱이 필요하며 OCR과 문맥화가 다시 실행됩니다 (시간과 비용 발생).</value>
+  </data>
+  <data name="KB_PreflightFailureTitle" xml:space="preserve">
+    <value>재인덱싱을 시작할 수 없습니다</value>
+  </data>
+  <data name="KB_PreflightEmbeddingUnavailable" xml:space="preserve">
+    <value>임베딩 모델 '{0}': {1}</value>
+  </data>
+  <data name="KB_PreflightContextualizerUnavailable" xml:space="preserve">
+    <value>문맥화 모델 '{0}': {1}</value>
+  </data>
+  <data name="KB_StatusModelUnavailable" xml:space="preserve">
+    <value>모델 사용 불가</value>
+  </data>
   <data name="KB_CancelIndexing" xml:space="preserve">
     <value>인덱싱 취소</value>
   </data>

@@ -143,7 +143,7 @@ public sealed partial class KnowledgeBasesPage : Page
 
         // --- Model Selection ---
         var modelSelector = new Controls.EmbeddingModelSelector();
-        modelSelector.Initialize();
+        await modelSelector.InitializeAsync();
         panel.Children.Add(modelSelector);
 
         dialog.Content = new ScrollViewer
@@ -308,7 +308,7 @@ public sealed partial class KnowledgeBasesPage : Page
             CurrentEmbeddingModel = kb.Embedding.Model,
             CurrentContextualizer = kb.Contextualizer.Model,
         };
-        modelSelector.Initialize();
+        await modelSelector.InitializeAsync();
         panel.Children.Add(modelSelector);
 
         // Warning
