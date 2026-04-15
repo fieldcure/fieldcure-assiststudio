@@ -80,6 +80,17 @@ public sealed partial class KnowledgeBasesPage : Page
         var panel = new StackPanel { Spacing = 12, MinWidth = 400, MaxWidth = 500 };
         var nameManuallyEdited = false;
 
+        // The "생성" / Create button needs BOTH at least one source folder
+        // AND an available model selection. Tracked separately so we can
+        // re-evaluate on either event (folder add / model radio click).
+        var hasFolder = false;
+        Controls.EmbeddingModelSelector? modelSelectorRef = null;
+        void RefreshCreateButton()
+        {
+            dialog.IsPrimaryButtonEnabled =
+                hasFolder && (modelSelectorRef?.IsCurrentSelectionAvailable ?? true);
+        }
+
         // --- Source Folders (first) ---
         var folderPanel = new StackPanel { Spacing = 4 };
         var folderHeader = new TextBlock { Text = _loader.GetString("KB_DialogSourceFolders"), Opacity = 0.8 };
@@ -119,7 +130,8 @@ public sealed partial class KnowledgeBasesPage : Page
                 return;
 
             folderList.Children.Add(BuildFolderRow(folder.Path, folderList));
-            dialog.IsPrimaryButtonEnabled = true;
+            hasFolder = true;
+            RefreshCreateButton();
 
             // Auto-fill name from first folder if not manually edited
             if (!nameManuallyEdited && folderList.Children.Count == 1)
@@ -146,6 +158,9 @@ public sealed partial class KnowledgeBasesPage : Page
         var modelSelector = new Controls.EmbeddingModelSelector();
         await modelSelector.InitializeAsync();
         panel.Children.Add(modelSelector);
+        modelSelectorRef = modelSelector;
+        modelSelector.SelectionChanged += (_, _) => RefreshCreateButton();
+        RefreshCreateButton();
 
         dialog.Content = new ScrollViewer
         {
@@ -392,6 +407,14 @@ public sealed partial class KnowledgeBasesPage : Page
                 MaxHeight = 600,
             },
         };
+
+        // Wire the "Save & Re-index" primary button to the selector's
+        // availability state so the user cannot trigger a run that would
+        // immediately fail pre-flight. The secondary "Save" button stays
+        // enabled — saving a config without re-indexing is always OK.
+        dialog.IsPrimaryButtonEnabled = modelSelector.IsCurrentSelectionAvailable;
+        modelSelector.SelectionChanged += (_, _) =>
+            dialog.IsPrimaryButtonEnabled = modelSelector.IsCurrentSelectionAvailable;
 
         var result = await dialog.ShowAsync();
         if (result == ContentDialogResult.None)
@@ -1029,6 +1052,13 @@ public sealed partial class KnowledgeBasesPage : Page
                     Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
                     Padding = new Thickness(6),
                     Content = new FontIcon { Glyph = "\uE72C", FontSize = 14 },
+                    // Disable the re-index button when the indexed-with
+                    // models are unreachable — the pre-flight check would
+                    // block the run anyway and the user already sees the
+                    // warning line above. "변경 확인" is still enabled
+                    // because check_changes is a read-only dry run that
+                    // does not depend on the embedding pipeline.
+                    IsEnabled = string.IsNullOrEmpty(item.ModelWarningText),
                 };
                 ToolTipService.SetToolTip(reindexBtn, new ToolTip
                 {

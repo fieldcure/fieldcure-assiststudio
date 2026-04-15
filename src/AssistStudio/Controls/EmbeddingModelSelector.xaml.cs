@@ -18,6 +18,27 @@ public sealed partial class EmbeddingModelSelector : UserControl
     private string _selectedEmbeddingId = "nomic-embed-text";
     private string _selectedContextualizerId = "";
 
+    /// <summary>
+    /// Per-model availability map populated by <see cref="InitializeAsync"/>.
+    /// <c>null</c> before initialization; <c>true</c> for reachable models,
+    /// <c>false</c> for unreachable ones. Used by
+    /// <see cref="IsCurrentSelectionAvailable"/> so the host dialog can
+    /// toggle its "Save &amp; Re-index" button in sync with user clicks.
+    /// </summary>
+    private IReadOnlyDictionary<string, bool>? _availability;
+
+    #endregion
+
+    #region Events
+
+    /// <summary>
+    /// Fired whenever the user picks a different embedding or contextualizer
+    /// radio. Callers (the KB settings dialog) listen for this to
+    /// re-evaluate <see cref="IsCurrentSelectionAvailable"/> and toggle
+    /// their "Save &amp; Re-index" button accordingly.
+    /// </summary>
+    public event EventHandler? SelectionChanged;
+
     #endregion
 
     #region Model Definitions
@@ -104,6 +125,29 @@ public sealed partial class EmbeddingModelSelector : UserControl
     public bool ContextualizerChanged =>
         CurrentContextualizer is not null && _selectedContextualizerId != CurrentContextualizer;
 
+    /// <summary>
+    /// Whether every currently-selected model (embedding + contextualizer)
+    /// is reachable according to the availability dictionary captured
+    /// during <see cref="InitializeAsync"/>. Returns <c>true</c> before
+    /// the async probe finishes — a caller should treat a pre-init state
+    /// as "proceed" and let the pre-flight check catch anything that
+    /// turned out wrong.
+    /// </summary>
+    public bool IsCurrentSelectionAvailable
+    {
+        get
+        {
+            if (_availability is null) return true;
+            if (_availability.TryGetValue(_selectedEmbeddingId, out var embOk) && !embOk)
+                return false;
+            if (!string.IsNullOrEmpty(_selectedContextualizerId)
+                && _availability.TryGetValue(_selectedContextualizerId, out var ctxOk)
+                && !ctxOk)
+                return false;
+            return true;
+        }
+    }
+
     #endregion
 
     #region Public Methods
@@ -141,6 +185,9 @@ public sealed partial class EmbeddingModelSelector : UserControl
         // Pre-compute availability once per catalog entry so BuildModelList
         // can stay synchronous. One checker instance is shared across both
         // lists so Ollama /api/tags and credential lookups only run once.
+        // The dict is cached as _availability so IsCurrentSelectionAvailable
+        // can answer the host dialog's button-enable check without re-
+        // probing on every radio click.
         var checker = new ModelAvailabilityChecker();
         var available = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
         foreach (var (id, provider, _, _) in EmbeddingModels)
@@ -153,6 +200,7 @@ public sealed partial class EmbeddingModelSelector : UserControl
             if (!string.IsNullOrEmpty(id) && !available.ContainsKey(id))
                 available[id] = await checker.IsAvailableAsync(MapProviderName(provider), id);
         }
+        _availability = available;
 
         BuildModelList(EmbeddingModelPanel, EmbeddingModels, embeddingDefault,
             "EmbeddingModel", available, labels, OnEmbeddingSelected);
@@ -212,21 +260,30 @@ public sealed partial class EmbeddingModelSelector : UserControl
     #region Event Handlers
 
     /// <summary>
-    /// Tracks the selected embedding model ID.
+    /// Tracks the selected embedding model ID and raises
+    /// <see cref="SelectionChanged"/> so the host can re-evaluate the
+    /// "Save &amp; Re-index" button's enabled state.
     /// </summary>
     private void OnEmbeddingSelected(object sender, RoutedEventArgs e)
     {
         if (sender is RadioButton radio && radio.Tag is string modelId)
+        {
             _selectedEmbeddingId = modelId;
+            SelectionChanged?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     /// <summary>
-    /// Tracks the selected contextualizer model ID.
+    /// Tracks the selected contextualizer model ID and raises
+    /// <see cref="SelectionChanged"/>.
     /// </summary>
     private void OnContextualizerSelected(object sender, RoutedEventArgs e)
     {
         if (sender is RadioButton radio && radio.Tag is string modelId)
+        {
             _selectedContextualizerId = modelId;
+            SelectionChanged?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     #endregion
