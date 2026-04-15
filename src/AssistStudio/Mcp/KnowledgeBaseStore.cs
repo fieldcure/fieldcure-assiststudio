@@ -158,14 +158,41 @@ public static class KnowledgeBaseStore
     }
 
     /// <summary>
-    /// Deletes a knowledge base folder entirely.
-    /// Caller must ensure exec process is stopped before calling this.
+    /// Deletes a knowledge base folder entirely, with a short retry loop
+    /// to ride out transient file locks from a just-cancelled exec
+    /// process or a serve process that is about to release its read-only
+    /// handle. Throws <see cref="IOException"/> if the folder is still
+    /// locked after the retries — callers should catch and surface the
+    /// error instead of crashing.
     /// </summary>
     public static void Delete(string kbId)
     {
         var kbPath = GetKbPath(kbId);
-        if (Directory.Exists(kbPath))
-            Directory.Delete(kbPath, recursive: true);
+        if (!Directory.Exists(kbPath))
+            return;
+
+        // File handles held by an exec or serve process will not release
+        // instantly — give them up to ~3 seconds before surfacing the
+        // lock to the caller. The loop is intentionally short so the UI
+        // does not hang on a genuinely stuck process.
+        const int maxAttempts = 6;
+        const int delayMs = 500;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                Directory.Delete(kbPath, recursive: true);
+                return;
+            }
+            catch (IOException) when (attempt < maxAttempts)
+            {
+                Thread.Sleep(delayMs);
+            }
+            catch (UnauthorizedAccessException) when (attempt < maxAttempts)
+            {
+                Thread.Sleep(delayMs);
+            }
+        }
     }
 
     /// <summary>

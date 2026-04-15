@@ -223,15 +223,40 @@ public sealed partial class KnowledgeBasesPage : Page
         var result = await dialog.ShowAsync();
         if (result != ContentDialogResult.Primary) return;
 
-        // Cancel exec if running
+        // Cancel exec if running. The cancel file is polled between
+        // chunks so a mid-OCR exec may take several seconds to notice
+        // and exit. We wait a short grace period here, and
+        // KnowledgeBaseStore.Delete retries up to 3 more seconds on top
+        // of that — if the process is genuinely stuck we surface the
+        // lock to the user instead of crashing.
         if (RagProcessManager.IsExecRunning(kbId))
         {
             RagProcessManager.CancelExec(kbId);
             await Task.Delay(2000);
         }
 
-        KnowledgeBaseStore.Delete(kbId);
-        LoggingService.LogInfo($"[KB] Deleted: {kbId}");
+        try
+        {
+            KnowledgeBaseStore.Delete(kbId);
+            LoggingService.LogInfo($"[KB] Deleted: {kbId}");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            LoggingService.LogWarning($"[KB] Delete failed (file locked): {kbId} — {ex.Message}");
+            var errorDialog = new ContentDialog
+            {
+                XamlRoot = XamlRoot,
+                Title = _loader.GetString("KB_DeleteFailedTitle") ?? "Cannot delete knowledge base",
+                Content = new TextBlock
+                {
+                    Text = _loader.GetString("KB_DeleteFailedMessage")
+                        ?? "The knowledge base files are still in use. Try again after indexing finishes, or restart the app if the issue persists.",
+                    TextWrapping = TextWrapping.Wrap,
+                },
+                CloseButtonText = "OK",
+            };
+            await errorDialog.ShowAsync();
+        }
 
         await RefreshListAsync();
     }

@@ -637,6 +637,12 @@
   <data name="KB_DeleteDialogMessage" xml:space="preserve">
     <value>This will permanently delete the knowledge base and its index. This cannot be undone.</value>
   </data>
+  <data name="KB_DeleteFailedTitle" xml:space="preserve">
+    <value>Cannot delete knowledge base</value>
+  </data>
+  <data name="KB_DeleteFailedMessage" xml:space="preserve">
+    <value>The files are still in use. Try again after indexing finishes, or restart the app if the issue persists.</value>
+  </data>
   <data name="KB_StatusReady" xml:space="preserve">
     <value>Ready</value>
   </data>
