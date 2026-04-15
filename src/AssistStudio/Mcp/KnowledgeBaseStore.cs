@@ -8,6 +8,34 @@ namespace AssistStudio.Mcp;
 /// CRUD operations for knowledge bases stored under
 /// <c>%LOCALAPPDATA%\FieldCure\Mcp.Rag\{kb-id}\</c>.
 /// </summary>
+/// <remarks>
+/// <para>
+/// <b>Backlog (post-v1.0):</b>
+/// </para>
+/// <list type="bullet">
+///   <item><description>
+///     <b>Unify KB listing via MCP</b> — the folder-scan guards in
+///     <see cref="ListAll"/> and <see cref="AnyExists"/> duplicate the
+///     logic that already lives in <c>MultiKbContext.ListKbs</c> on the
+///     RAG serve side (backup-folder rejection, id/folder match, etc.).
+///     Any new guard added to the RAG repo has to be mirrored here by
+///     hand. The right fix is to route listing through the MCP
+///     <c>list_knowledge_bases</c> tool so the logic lives in one place,
+///     but that is blocked on deciding how the Knowledge Bases page
+///     handles "serve not yet started" (lazy launch vs. spinner).
+///   </description></item>
+///   <item><description>
+///     <b>Naming inconsistency</b> — this class is <c>KnowledgeBaseStore</c>
+///     (matching the RAG repo's "knowledge base" / <c>kb-id</c> terminology),
+///     while the lifecycle service next door is
+///     <c>KnowledgeArchiveService</c> and the UI label is "지식보관소"
+///     ("knowledge archive"). Three different names for the same concept.
+///     Pick one (probably "Knowledge Base" for consistency with the RAG
+///     repo and MCP tool names) and rename everything in one sweep after
+///     v1.0 ships.
+///   </description></item>
+/// </list>
+/// </remarks>
 public static class KnowledgeBaseStore
 {
     #region Constants
@@ -28,6 +56,9 @@ public static class KnowledgeBaseStore
 
     /// <summary>
     /// Lists all knowledge bases by scanning for <c>config.json</c> in subdirectories.
+    /// Applies the same four guards as <c>MultiKbContext.ListKbs</c> on the
+    /// RAG serve side — see the class-level remarks for the backlog note on
+    /// unifying these.
     /// </summary>
     public static List<KnowledgeBase> ListAll()
     {
@@ -38,21 +69,41 @@ public static class KnowledgeBaseStore
 
         foreach (var dir in Directory.GetDirectories(BasePath))
         {
+            var folderName = Path.GetFileName(dir);
+
+            // Guard 1: skip prefix-marked folders (backups, tmp, hidden) silently.
+            if (folderName.StartsWith('.') || folderName.StartsWith('_'))
+                continue;
+
+            // Guard 2: config.json must exist.
             var configPath = Path.Combine(dir, ConfigFileName);
             if (!File.Exists(configPath))
                 continue;
 
+            // Guard 3: config.json must parse.
+            KnowledgeBase? kb;
             try
             {
                 var json = File.ReadAllText(configPath);
-                var kb = JsonSerializer.Deserialize(json, KnowledgeBaseJsonContext.Default.KnowledgeBase);
-                if (kb is not null)
-                    result.Add(kb);
+                kb = JsonSerializer.Deserialize(json, KnowledgeBaseJsonContext.Default.KnowledgeBase);
             }
             catch
             {
-                // Skip malformed config files
+                // Skip malformed config files (no logger available in static class).
+                continue;
             }
+
+            if (kb is null)
+                continue;
+
+            // Guard 4: folder name must match config.Id (case-insensitive).
+            // Mismatches are typically copy/backup folders created outside the app
+            // (e.g. "{kb-id}-backup-{timestamp}") that would otherwise show up as
+            // phantom duplicates with the same display name.
+            if (!string.Equals(folderName, kb.Id, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            result.Add(kb);
         }
 
         return result;
@@ -201,7 +252,9 @@ public static class KnowledgeBaseStore
     }
 
     /// <summary>
-    /// Returns true if any knowledge bases exist.
+    /// Returns true if any knowledge bases exist. Applies the same guards as
+    /// <see cref="ListAll"/> so a stray backup folder does not mask the
+    /// "no knowledge bases yet" onboarding state.
     /// </summary>
     public static bool AnyExists()
     {
@@ -210,8 +263,33 @@ public static class KnowledgeBaseStore
 
         foreach (var dir in Directory.GetDirectories(BasePath))
         {
-            if (File.Exists(Path.Combine(dir, ConfigFileName)))
-                return true;
+            var folderName = Path.GetFileName(dir);
+
+            if (folderName.StartsWith('.') || folderName.StartsWith('_'))
+                continue;
+
+            var configPath = Path.Combine(dir, ConfigFileName);
+            if (!File.Exists(configPath))
+                continue;
+
+            KnowledgeBase? kb;
+            try
+            {
+                var json = File.ReadAllText(configPath);
+                kb = JsonSerializer.Deserialize(json, KnowledgeBaseJsonContext.Default.KnowledgeBase);
+            }
+            catch
+            {
+                continue;
+            }
+
+            if (kb is null)
+                continue;
+
+            if (!string.Equals(folderName, kb.Id, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            return true;
         }
 
         return false;
