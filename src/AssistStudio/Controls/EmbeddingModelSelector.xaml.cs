@@ -27,8 +27,9 @@ public sealed partial class EmbeddingModelSelector : UserControl
     private static readonly (string Id, string Provider, string Label, string Meta)[] EmbeddingModels =
     [
         ("nomic-embed-text", "Ollama", "nomic-embed-text", "768d \u00b7 274MB"),
-        ("nomic-embed-text-v2-moe", "Ollama", "nomic-embed-text-v2-moe", "768d \u00b7 1.9GB"),
-        ("bge-m3", "Ollama", "bge-m3", "1024d \u00b7 1.2GB"),
+        ("nomic-embed-text-v2-moe", "Ollama", "nomic-embed-text-v2-moe", "768d \u00b7 1.9GB \u00b7 \ub2e4\uad6d\uc5b4"),
+        ("bge-m3", "Ollama", "bge-m3", "1024d \u00b7 1.2GB \u00b7 \ub2e4\uad6d\uc5b4"),
+        ("qwen3-embedding:8b", "Ollama", "qwen3-embedding:8b", "4096d \u00b7 ~5GB \u00b7 32k ctx \u00b7 \ub2e4\uad6d\uc5b4"),
         ("text-embedding-3-small", "OpenAI", "text-embedding-3-small", "1536d"),
         ("text-embedding-3-large", "OpenAI", "text-embedding-3-large", "3072d"),
     ];
@@ -42,7 +43,7 @@ public sealed partial class EmbeddingModelSelector : UserControl
         ("gemma3:4b", "Ollama", "gemma3:4b", "2.8GB"),
         ("qwen3:4b", "Ollama", "qwen3:4b", "2.7GB"),
         ("gpt-4o-mini", "OpenAI", "gpt-4o-mini", ""),
-        ("claude-haiku-4-5-20251001", "Claude", "claude-haiku-4-5-20251001", ""),
+        ("claude-haiku-4-6", "Claude", "claude-haiku-4-6", ""),
     ];
 
     /// <summary>
@@ -53,12 +54,13 @@ public sealed partial class EmbeddingModelSelector : UserControl
         ["nomic-embed-text"] = ("ollama", null),
         ["nomic-embed-text-v2-moe"] = ("ollama", null),
         ["bge-m3"] = ("ollama", null),
+        ["qwen3-embedding:8b"] = ("ollama", null),
         ["text-embedding-3-small"] = ("openai", "OpenAI"),
         ["text-embedding-3-large"] = ("openai", "OpenAI"),
         ["gemma3:4b"] = ("ollama", null),
         ["qwen3:4b"] = ("ollama", null),
         ["gpt-4o-mini"] = ("openai", "OpenAI"),
-        ["claude-haiku-4-5-20251001"] = ("anthropic", "Claude"),
+        ["claude-haiku-4-6"] = ("anthropic", "Claude"),
     };
 
     #endregion
