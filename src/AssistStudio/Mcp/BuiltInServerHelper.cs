@@ -316,7 +316,10 @@ public static class BuiltInServerHelper
         }
         catch (Exception ex)
         {
-            LoggingService.LogWarning($"[BuiltIn] Background update check failed: {ex.Message}");
+            LoggingService.LogWarning(
+                $"[BuiltIn] Background update check failed: {ex.GetType().FullName}: " +
+                $"{ex.Message}{(ex.InnerException is null ? "" : $" → {ex.InnerException.GetType().Name}: {ex.InnerException.Message}")}");
+            LoggingService.LogException(ex);
         }
     }
 
@@ -592,7 +595,9 @@ public static class BuiltInServerHelper
         }
         catch (Exception ex)
         {
-            LoggingService.LogWarning($"[BuiltIn] Failed to check latest version for {packageId}: {ex.Message}");
+            LoggingService.LogWarning(
+                $"[BuiltIn] Failed to check latest version for {packageId}: {ex.GetType().Name}: " +
+                $"{ex.Message}{(ex.InnerException is null ? "" : $" → {ex.InnerException.GetType().Name}: {ex.InnerException.Message}")}");
             return null;
         }
     }
@@ -781,11 +786,17 @@ public static class BuiltInServerHelper
     }
 
     /// <summary>
-    /// Safely creates a ResourceLoader, returning <c>null</c> if unavailable.
+    /// Safely creates a thread-safe WinUI 3 ResourceLoader, returning <c>null</c> if unavailable.
+    /// Uses <see cref="Microsoft.Windows.ApplicationModel.Resources.ResourceLoader"/> (Windows App SDK)
+    /// rather than the legacy <c>Windows.ApplicationModel.Resources.ResourceLoader</c>, whose
+    /// parameterless constructor calls <c>GetForCurrentView()</c> internally and throws a
+    /// <see cref="System.Runtime.InteropServices.COMException"/> when invoked from a thread
+    /// without a <c>CoreWindow</c> (i.e. any <see cref="Task.Run"/> context such as the
+    /// background update check).
     /// </summary>
-    private static Windows.ApplicationModel.Resources.ResourceLoader? TryGetResourceLoader()
+    private static Microsoft.Windows.ApplicationModel.Resources.ResourceLoader? TryGetResourceLoader()
     {
-        try { return new Windows.ApplicationModel.Resources.ResourceLoader(); }
+        try { return new Microsoft.Windows.ApplicationModel.Resources.ResourceLoader(); }
         catch { return null; }
     }
 
