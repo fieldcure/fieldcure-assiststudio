@@ -660,6 +660,13 @@ public sealed partial class KnowledgeBasesPage : Page
         var kbs = KnowledgeBaseStore.ListAll();
         _allItems.Clear();
 
+        // Shared availability service for this refresh pass. Creating one
+        // instance for the whole loop means the OllamaChecker's /api/tags
+        // probe runs once regardless of how many KBs are in the list, and
+        // PasswordVault lookups are cached per checker too.
+        var availabilityService = new ModelAvailabilityService();
+        var statusUnavailableLabel = _loader.GetString("KB_StatusModelUnavailable") ?? "Model unavailable";
+
         foreach (var kb in kbs)
         {
             // Model info line: "embedding-model · contextualizer-model" or just "embedding-model"
@@ -674,6 +681,18 @@ public sealed partial class KnowledgeBasesPage : Page
                 SourcePathsText = string.Join(", ", kb.SourcePaths),
                 ModelInfoText = modelInfo,
             };
+
+            // Probe the KB's configured models. Problems get collapsed
+            // into a single short warning line on the card — the user
+            // can open settings for the full detail view with per-model
+            // reasons. Read-only: this never mutates the KB config.
+            var problems = await availabilityService.CheckKbAsync(kb);
+            if (problems.Count > 0)
+            {
+                var detail = string.Join(", ",
+                    problems.Select(p => $"{p.ModelId} {p.Reason}"));
+                item.ModelWarningText = $"\u26a0 {statusUnavailableLabel}: {detail}";
+            }
 
             // Restore cached change-check results
             if (cachedChanges.TryGetValue(kb.Id, out var cached))
@@ -784,6 +803,21 @@ public sealed partial class KnowledgeBasesPage : Page
                     Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
                     Opacity = 0.45,
                     FontSize = 11,
+                });
+            }
+
+            // Row 4b: Model availability warning (only when a configured
+            // model is unreachable). Drawn in caution color so it stands
+            // out against the other caption rows.
+            if (!string.IsNullOrEmpty(item.ModelWarningText))
+            {
+                row.Children.Add(new TextBlock
+                {
+                    Text = item.ModelWarningText,
+                    Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                    FontSize = 11,
+                    Foreground = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"],
+                    TextWrapping = TextWrapping.Wrap,
                 });
             }
 
@@ -1175,6 +1209,15 @@ internal class KbViewModel
     public Visibility IsIndexing { get; set; } = Visibility.Collapsed;
     public double Progress { get; set; }
     public bool IsPromptStale { get; set; }
+
+    /// <summary>
+    /// Short, pre-formatted warning line shown under the model info row
+    /// when one or more of the KB's configured models is not reachable.
+    /// Null when everything is fine. Populated during
+    /// <see cref="KnowledgeBasesPage.RefreshListAsync"/> via
+    /// <see cref="AssistStudio.Mcp.ModelAvailability.ModelAvailabilityService"/>.
+    /// </summary>
+    public string? ModelWarningText { get; set; }
 
     /// <summary>Change detection results (populated after "Check changes" button click).</summary>
     public int ChangesAdded { get; set; }
