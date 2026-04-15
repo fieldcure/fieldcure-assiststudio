@@ -1,5 +1,6 @@
 using AssistStudio.Helpers;
 using AssistStudio.Mcp;
+using AssistStudio.Mcp.ModelAvailability;
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
@@ -169,7 +170,15 @@ public sealed partial class KnowledgeBasesPage : Page
             modelSelector.GetEmbeddingConfig(), modelSelector.GetContextualizerConfig());
         LoggingService.LogInfo($"[KB] Created: {kb.Name} ({kb.Id})");
 
-        RagProcessManager.StartExec(kb.Id);
+        var execResult = await RagProcessManager.StartExecAsync(kb.Id);
+        if (!await HandleStartExecResultAsync(execResult))
+        {
+            // Creation succeeded but initial indexing didn't start —
+            // leave the empty KB in place so the user can fix the
+            // configuration and hit re-index.
+            await RefreshListAsync();
+            return;
+        }
 
         var archiveService = new KnowledgeArchiveService(App.McpRegistry);
         await archiveService.EnsureConnectedAsync();
@@ -214,9 +223,20 @@ public sealed partial class KnowledgeBasesPage : Page
     /// <summary>
     /// Immediately starts incremental re-indexing (new/changed files only).
     /// </summary>
-    private void OnQuickReindexClicked(object sender, RoutedEventArgs e)
+    private async void OnQuickReindexClicked(object sender, RoutedEventArgs e)
     {
         if (sender is not Button btn || btn.Tag is not string kbId) return;
+
+        // Pre-flight first so we don't show a spinner for a run that will
+        // never start. If the models are reachable we proceed exactly as
+        // before (clear change cache, swap button for spinner, start
+        // polling). If not, HandleStartExecResultAsync surfaces the
+        // reason and we leave the KB row untouched.
+        var execResult = await RagProcessManager.StartExecAsync(kbId);
+        if (!await HandleStartExecResultAsync(execResult))
+            return;
+
+        LoggingService.LogInfo($"[KB] Quick re-index started: {kbId}");
 
         // Clear cached change-check results — they become stale after re-indexing
         var item = _allItems.FirstOrDefault(i => i.Id == kbId);
@@ -228,9 +248,6 @@ public sealed partial class KnowledgeBasesPage : Page
             item.ChangesDeleted = 0;
             item.ChangesFailed = 0;
         }
-
-        RagProcessManager.StartExec(kbId);
-        LoggingService.LogInfo($"[KB] Quick re-index started: {kbId}");
 
         // Replace entire button panel with a spinner
         if (btn.Parent is StackPanel buttonsPanel)
@@ -371,18 +388,74 @@ public sealed partial class KnowledgeBasesPage : Page
                 }
 
                 LoggingService.LogInfo($"[KB] Model changed, full re-index: {kbId}");
-                RagProcessManager.StartExec(kbId);
+                var execResult = await RagProcessManager.StartExecAsync(kbId);
+                if (!await HandleStartExecResultAsync(execResult))
+                {
+                    await RefreshListAsync();
+                    return;
+                }
             }
             else
             {
                 LoggingService.LogInfo($"[KB] Re-index started: {kbId}");
-                RagProcessManager.StartExec(kbId, force: true);
+                var execResult = await RagProcessManager.StartExecAsync(kbId, force: true);
+                if (!await HandleStartExecResultAsync(execResult))
+                {
+                    await RefreshListAsync();
+                    return;
+                }
             }
 
             _pollTimer.Start();
         }
 
         await RefreshListAsync();
+    }
+
+    /// <summary>
+    /// Shows a ContentDialog for a <see cref="StartExecResult"/> failure and
+    /// returns <c>true</c> if the caller should continue (success) or
+    /// <c>false</c> if exec did not start. Pre-flight failures list every
+    /// unavailable model with the specific reason so the user can fix the
+    /// exact problem without having to read log files.
+    /// </summary>
+    private async Task<bool> HandleStartExecResultAsync(StartExecResult result)
+    {
+        if (result.IsSuccess) return true;
+
+        var title = _loader.GetString("KB_PreflightFailureTitle") ?? "Cannot start re-indexing";
+        string body;
+
+        if (result.Outcome == StartExecOutcome.PreflightFailed && result.Problems is { Count: > 0 })
+        {
+            var embedTemplate = _loader.GetString("KB_PreflightEmbeddingUnavailable") ?? "Embedding model '{0}': {1}";
+            var ctxTemplate = _loader.GetString("KB_PreflightContextualizerUnavailable") ?? "Contextualizer model '{0}': {1}";
+            var lines = result.Problems.Select(p =>
+                string.Format(
+                    p.Role == KbModelRole.Embedding ? embedTemplate : ctxTemplate,
+                    p.ModelId, p.Reason));
+            body = string.Join("\n", lines);
+        }
+        else
+        {
+            body = result.ErrorMessage ?? result.Outcome.ToString();
+        }
+
+        LoggingService.LogWarning($"[KB] StartExec surfaced failure to user: {title} — {body}");
+
+        var dialog = new ContentDialog
+        {
+            Title = title,
+            Content = new TextBlock
+            {
+                Text = body,
+                TextWrapping = TextWrapping.Wrap,
+            },
+            CloseButtonText = "OK",
+            XamlRoot = XamlRoot,
+        };
+        await dialog.ShowAsync();
+        return false;
     }
 
     /// <summary>
