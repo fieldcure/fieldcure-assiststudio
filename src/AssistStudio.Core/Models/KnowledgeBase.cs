@@ -28,6 +28,32 @@ public sealed class KnowledgeBase
 
     /// <summary>Custom system prompt for chunk contextualization. Null = built-in default.</summary>
     public string? SystemPrompt { get; set; }
+
+    /// <summary>
+    /// Snapshot of the embedding and contextualizer configuration that was
+    /// in effect at the last re-index launch, used to keep the Knowledge
+    /// Bases page card display stable when the user edits the top-level
+    /// <see cref="Embedding"/> / <see cref="Contextualizer"/> fields but
+    /// saves without re-indexing. Null for freshly-created KBs that have
+    /// never been indexed yet. Populated by the host app right before
+    /// calling <c>StartExecAsync</c>; ignored by the RAG exec.
+    /// </summary>
+    public IndexedWithSnapshot? IndexedWith { get; set; }
+}
+
+/// <summary>
+/// The embedding and contextualizer configuration that was active at the
+/// last re-index launch. Stored inside <see cref="KnowledgeBase.IndexedWith"/>
+/// so the UI can show what the index was actually built with, even after
+/// the user edits the top-level fields without triggering a re-index.
+/// </summary>
+public sealed class IndexedWithSnapshot
+{
+    /// <summary>Embedding provider settings that were active at the last re-index launch.</summary>
+    public KbProviderConfig Embedding { get; set; } = new();
+
+    /// <summary>Contextualizer provider settings that were active at the last re-index launch.</summary>
+    public KbProviderConfig Contextualizer { get; set; } = new();
 }
 
 /// <summary>

@@ -715,9 +715,6 @@
   <data name="KB_ModelNotInstalled" xml:space="preserve">
     <value>(설치 안 됨)</value>
   </data>
-  <data name="KB_SettingsDialogTitleWithIndex" xml:space="preserve">
-    <value>{0} 설정 (인덱싱: {1})</value>
-  </data>
   <data name="KB_PreflightFailureTitle" xml:space="preserve">
     <value>재인덱싱을 시작할 수 없습니다</value>
   </data>
@@ -735,9 +732,6 @@
   </data>
   <data name="KB_FolderUsedWarning" xml:space="preserve">
     <value>이 폴더는 {0}에서도 사용 중입니다.</value>
-  </data>
-  <data name="KB_SettingsDialogTitle" xml:space="preserve">
-    <value>{0} 설정</value>
   </data>
   <data name="KB_SaveAndReindex" xml:space="preserve">
     <value>저장 후 재인덱싱</value>

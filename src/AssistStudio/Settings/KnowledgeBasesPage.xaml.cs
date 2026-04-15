@@ -170,6 +170,7 @@ public sealed partial class KnowledgeBasesPage : Page
             modelSelector.GetEmbeddingConfig(), modelSelector.GetContextualizerConfig());
         LoggingService.LogInfo($"[KB] Created: {kb.Name} ({kb.Id})");
 
+        SnapshotIndexedWith(kb);
         var execResult = await RagProcessManager.StartExecAsync(kb.Id);
         if (!await HandleStartExecResultAsync(execResult))
         {
@@ -226,6 +227,13 @@ public sealed partial class KnowledgeBasesPage : Page
     private async void OnQuickReindexClicked(object sender, RoutedEventArgs e)
     {
         if (sender is not Button btn || btn.Tag is not string kbId) return;
+
+        // Snapshot the current model config into IndexedWith before launch
+        // so the card continues to show the right "what the index was built
+        // with" label if the user opens settings and edits anything mid-run.
+        var kbForSnapshot = KnowledgeBaseStore.ListAll().FirstOrDefault(k => k.Id == kbId);
+        if (kbForSnapshot is not null)
+            SnapshotIndexedWith(kbForSnapshot);
 
         // Pre-flight first so we don't show a spinner for a run that will
         // never start. If the models are reachable we proceed exactly as
@@ -320,10 +328,14 @@ public sealed partial class KnowledgeBasesPage : Page
         panel.Children.Add(nameBox);
 
         // --- Model Selection ---
+        // Pre-select the models from IndexedWith (the snapshot captured at
+        // the last re-index launch) so the radios match what is actually
+        // in the DB. Fall back to the top-level fields for brand new KBs
+        // and for legacy configs that predate IndexedWith.
         var modelSelector = new Controls.EmbeddingModelSelector
         {
-            CurrentEmbeddingModel = kb.Embedding.Model,
-            CurrentContextualizer = kb.Contextualizer.Model,
+            CurrentEmbeddingModel = kb.IndexedWith?.Embedding.Model ?? kb.Embedding.Model,
+            CurrentContextualizer = kb.IndexedWith?.Contextualizer.Model ?? kb.Contextualizer.Model,
         };
         await modelSelector.InitializeAsync();
         panel.Children.Add(modelSelector);
@@ -338,21 +350,37 @@ public sealed partial class KnowledgeBasesPage : Page
         };
         panel.Children.Add(warning);
 
-        // Build the title with the "indexed with" hint so users can see
-        // at a glance which models were used for the current index, even
-        // if those models are no longer reachable. Format:
-        //   "kb-3 설정 (인덱싱: qwen3-embedding:8b · qwen3:4b)"
-        // Skip the suffix when the contextualizer is disabled.
-        var indexedWithModels = kb.Embedding.Model;
-        if (!string.IsNullOrEmpty(kb.Contextualizer.Model))
-            indexedWithModels += $" \u00b7 {kb.Contextualizer.Model}";
-        var titleFormat = _loader.GetString("KB_SettingsDialogTitleWithIndex") ?? "{0} \u00b7 ({1})";
-        var dialogTitle = string.Format(titleFormat, kb.Name, indexedWithModels);
+        // Vertical title: KB name in the normal dialog title font, with
+        // a smaller "indexed with" caption directly under it. Shows the
+        // snapshot captured at the last re-index launch (IndexedWith) so
+        // the line reflects what is actually in the DB, not whatever the
+        // user just selected in the form. Caption is omitted entirely
+        // for brand new KBs that have never been indexed.
+        var indexedEmbeddingModel = kb.IndexedWith?.Embedding.Model ?? kb.Embedding.Model;
+        var indexedContextualizerModel = kb.IndexedWith?.Contextualizer.Model ?? kb.Contextualizer.Model;
+        var indexedCaption = indexedEmbeddingModel;
+        if (!string.IsNullOrEmpty(indexedContextualizerModel))
+            indexedCaption += $" \u00b7 {indexedContextualizerModel}";
+
+        var titlePanel = new StackPanel { Spacing = 2 };
+        titlePanel.Children.Add(new TextBlock
+        {
+            Text = kb.Name,
+        });
+        if (!string.IsNullOrEmpty(indexedCaption) && kb.IndexedWith is not null)
+        {
+            titlePanel.Children.Add(new TextBlock
+            {
+                Text = indexedCaption,
+                Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                Opacity = 0.6,
+            });
+        }
 
         var dialog = new ContentDialog
         {
             XamlRoot = XamlRoot,
-            Title = dialogTitle,
+            Title = titlePanel,
             PrimaryButtonText = _loader.GetString("KB_SaveAndReindex"),
             SecondaryButtonText = _loader.GetString("KB_Save"),
             CloseButtonText = _loader.GetString("Dialog_Cancel"),
@@ -399,6 +427,7 @@ public sealed partial class KnowledgeBasesPage : Page
                 }
 
                 LoggingService.LogInfo($"[KB] Model changed, full re-index: {kbId}");
+                SnapshotIndexedWith(kb);
                 var execResult = await RagProcessManager.StartExecAsync(kbId);
                 if (!await HandleStartExecResultAsync(execResult))
                 {
@@ -409,6 +438,7 @@ public sealed partial class KnowledgeBasesPage : Page
             else
             {
                 LoggingService.LogInfo($"[KB] Re-index started: {kbId}");
+                SnapshotIndexedWith(kb);
                 var execResult = await RagProcessManager.StartExecAsync(kbId, force: true);
                 if (!await HandleStartExecResultAsync(execResult))
                 {
@@ -421,6 +451,39 @@ public sealed partial class KnowledgeBasesPage : Page
         }
 
         await RefreshListAsync();
+    }
+
+    /// <summary>
+    /// Captures the KB's current embedding + contextualizer configuration
+    /// into <see cref="KnowledgeBase.IndexedWith"/> and persists the KB,
+    /// so the list page card can keep showing "what the index was built
+    /// with" even after the user edits the top-level fields via "Save
+    /// only". Called right before every re-index launch — the snapshot
+    /// represents the configuration the exec process is about to run
+    /// against.
+    /// </summary>
+    private static void SnapshotIndexedWith(KnowledgeBase kb)
+    {
+        kb.IndexedWith = new IndexedWithSnapshot
+        {
+            Embedding = new KbProviderConfig
+            {
+                Provider = kb.Embedding.Provider,
+                Model = kb.Embedding.Model,
+                BaseUrl = kb.Embedding.BaseUrl,
+                ApiKeyPreset = kb.Embedding.ApiKeyPreset,
+                Dimension = kb.Embedding.Dimension,
+            },
+            Contextualizer = new KbProviderConfig
+            {
+                Provider = kb.Contextualizer.Provider,
+                Model = kb.Contextualizer.Model,
+                BaseUrl = kb.Contextualizer.BaseUrl,
+                ApiKeyPreset = kb.Contextualizer.ApiKeyPreset,
+                Dimension = kb.Contextualizer.Dimension,
+            },
+        };
+        KnowledgeBaseStore.Update(kb);
     }
 
     /// <summary>
@@ -686,10 +749,16 @@ public sealed partial class KnowledgeBasesPage : Page
 
         foreach (var kb in kbs)
         {
-            // Model info line: "embedding-model · contextualizer-model" or just "embedding-model"
-            var modelInfo = kb.Embedding.Model;
-            if (!string.IsNullOrEmpty(kb.Contextualizer.Model))
-                modelInfo += $" \u00b7 {kb.Contextualizer.Model}";
+            // Model info line shows what the DB was actually indexed with,
+            // not the top-level fields (which may have been edited since
+            // via "Save only" without a re-index). IndexedWith is the
+            // snapshot captured at the last re-index launch; fall back to
+            // the top-level fields for brand new KBs.
+            var cardEmbeddingModel = kb.IndexedWith?.Embedding.Model ?? kb.Embedding.Model;
+            var cardContextualizerModel = kb.IndexedWith?.Contextualizer.Model ?? kb.Contextualizer.Model;
+            var modelInfo = cardEmbeddingModel;
+            if (!string.IsNullOrEmpty(cardContextualizerModel))
+                modelInfo += $" \u00b7 {cardContextualizerModel}";
 
             var item = new KbViewModel
             {
@@ -700,8 +769,16 @@ public sealed partial class KnowledgeBasesPage : Page
             };
 
             // State report only: which models are currently unreachable.
-            // No reason strings — that would be a guess at best.
-            var problems = await availabilityChecker.CheckKbAsync(kb);
+            // Checked against the IndexedWith snapshot when present so the
+            // warning line matches the model ids shown above it.
+            var kbForCheck = kb.IndexedWith is null ? kb : new KnowledgeBase
+            {
+                Id = kb.Id,
+                Name = kb.Name,
+                Embedding = kb.IndexedWith.Embedding,
+                Contextualizer = kb.IndexedWith.Contextualizer,
+            };
+            var problems = await availabilityChecker.CheckKbAsync(kbForCheck);
             if (problems.Count > 0)
             {
                 var ids = string.Join(", ", problems.Select(p => p.ModelId));

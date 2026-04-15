@@ -715,9 +715,6 @@
   <data name="KB_ModelNotInstalled" xml:space="preserve">
     <value>(not installed)</value>
   </data>
-  <data name="KB_SettingsDialogTitleWithIndex" xml:space="preserve">
-    <value>{0} settings (indexed with: {1})</value>
-  </data>
   <data name="KB_PreflightFailureTitle" xml:space="preserve">
     <value>Cannot start re-indexing</value>
   </data>
@@ -735,9 +732,6 @@
   </data>
   <data name="KB_FolderUsedWarning" xml:space="preserve">
     <value>This folder is also used in: {0}</value>
-  </data>
-  <data name="KB_SettingsDialogTitle" xml:space="preserve">
-    <value>{0} settings</value>
   </data>
   <data name="KB_SaveAndReindex" xml:space="preserve">
     <value>Save &amp; Re-index</value>

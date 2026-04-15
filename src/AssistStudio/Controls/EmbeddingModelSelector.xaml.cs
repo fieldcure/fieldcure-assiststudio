@@ -110,7 +110,7 @@ public sealed partial class EmbeddingModelSelector : UserControl
 
     /// <summary>
     /// Builds the model radio button lists and decorates unreachable
-    /// models with a "(설치 안 됨)" badge. The read-only notification
+    /// models with a "not installed" caption badge. The read-only
     /// principle: the UI reports the current state and lets the user
     /// act on it. Radios stay clickable regardless of availability —
     /// a false negative from the probe (Ollama daemon just restarted,
@@ -235,7 +235,7 @@ public sealed partial class EmbeddingModelSelector : UserControl
 
     /// <summary>
     /// Builds a grouped radio button list for model selection. Models that
-    /// are currently unreachable get a "(설치 안 됨)" badge next to their
+    /// are currently unreachable get a "not installed" badge next to their
     /// label but remain enabled and selectable — the badge is a fact
     /// report, not a gate. The current selection is shown via the radio
     /// dot itself; any higher-level "this is what your KB was indexed
@@ -307,8 +307,9 @@ public sealed partial class EmbeddingModelSelector : UserControl
                 });
             }
 
-            // "(설치 안 됨)" fact badge. Caution color so it reads as a
-            // soft warning without demanding action.
+            // "not installed" fact badge, pulled from the localization
+            // resource. Caution color so it reads as a soft warning
+            // without demanding action.
             if (!isAvailable)
             {
                 content.Children.Add(new TextBlock
