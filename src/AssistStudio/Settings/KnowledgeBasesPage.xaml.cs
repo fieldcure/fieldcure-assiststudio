@@ -243,22 +243,67 @@ public sealed partial class KnowledgeBasesPage : Page
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             LoggingService.LogWarning($"[KB] Delete failed (file locked): {kbId} — {ex.Message}");
-            var errorDialog = new ContentDialog
-            {
-                XamlRoot = XamlRoot,
-                Title = _loader.GetString("KB_DeleteFailedTitle") ?? "Cannot delete knowledge base",
-                Content = new TextBlock
-                {
-                    Text = _loader.GetString("KB_DeleteFailedMessage")
-                        ?? "The knowledge base files are still in use. Try again after indexing finishes, or restart the app if the issue persists.",
-                    TextWrapping = TextWrapping.Wrap,
-                },
-                CloseButtonText = "OK",
-            };
-            await errorDialog.ShowAsync();
+            await ShowDeleteFailedDialogAsync(kbId);
         }
 
         await RefreshListAsync();
+    }
+
+    /// <summary>
+    /// Surfaces a context-aware delete-failed dialog. If the KB is still
+    /// indexing we tell the user that specifically and show the current
+    /// file progress, because that is the actionable piece of info —
+    /// wait for indexing to finish, then retry. If the lock is not from
+    /// an active exec (e.g. serve is still holding a read handle) we
+    /// fall back to the generic "files still in use" message.
+    /// </summary>
+    private async Task ShowDeleteFailedDialogAsync(string kbId)
+    {
+        var title = _loader.GetString("KB_DeleteFailedTitle") ?? "Cannot delete knowledge base";
+
+        var body = new StackPanel { Spacing = 8 };
+
+        var progress = RagProcessManager.GetProgress(kbId);
+        if (progress is not null)
+        {
+            // KB is currently being indexed — name the actual cause.
+            body.Children.Add(new TextBlock
+            {
+                Text = _loader.GetString("KB_DeleteFailedIndexingMessage")
+                    ?? "This knowledge base is currently being indexed. Try again after indexing finishes.",
+                TextWrapping = TextWrapping.Wrap,
+            });
+
+            // Progress line matches the format the KB card uses so the
+            // user can correlate "N / M files processed" with what they
+            // see on the list page.
+            var progressTemplate = _loader.GetString("KB_DeleteFailedIndexingProgress")
+                ?? "Progress: {0} / {1} files";
+            body.Children.Add(new TextBlock
+            {
+                Text = string.Format(progressTemplate, progress.Current, progress.Total),
+                Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                Opacity = 0.7,
+            });
+        }
+        else
+        {
+            body.Children.Add(new TextBlock
+            {
+                Text = _loader.GetString("KB_DeleteFailedMessage")
+                    ?? "The knowledge base files are still in use. Try again after indexing finishes, or restart the app if the issue persists.",
+                TextWrapping = TextWrapping.Wrap,
+            });
+        }
+
+        var errorDialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = title,
+            Content = body,
+            CloseButtonText = "OK",
+        };
+        await errorDialog.ShowAsync();
     }
 
     /// <summary>

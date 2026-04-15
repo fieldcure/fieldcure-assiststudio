@@ -643,6 +643,12 @@
   <data name="KB_DeleteFailedMessage" xml:space="preserve">
     <value>The files are still in use. Try again after indexing finishes, or restart the app if the issue persists.</value>
   </data>
+  <data name="KB_DeleteFailedIndexingMessage" xml:space="preserve">
+    <value>This knowledge base is currently being indexed. Try again after indexing finishes.</value>
+  </data>
+  <data name="KB_DeleteFailedIndexingProgress" xml:space="preserve">
+    <value>Progress: {0} / {1} files</value>
+  </data>
   <data name="KB_StatusReady" xml:space="preserve">
     <value>Ready</value>
   </data>
