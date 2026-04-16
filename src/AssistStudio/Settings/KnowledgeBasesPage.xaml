@@ -12,6 +12,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -49,8 +50,16 @@
                         QuerySubmitted="OnSearchQuerySubmitted"
                         TextChanged="OnSearchTextChanged" />
 
+        <!-- Match summary bar -->
+        <TextBlock x:Name="MatchSummaryText"
+                   Grid.Row="2"
+                   Visibility="Collapsed"
+                   Style="{StaticResource CaptionTextBlockStyle}"
+                   Margin="20,8,20,0"
+                   TextTrimming="CharacterEllipsis" />
+
         <!-- Content -->
-        <ScrollViewer Grid.Row="2" Padding="20,12">
+        <ScrollViewer Grid.Row="3" Padding="20,12">
             <StackPanel Spacing="0" Padding="0,0,0,24" MaxWidth="700" HorizontalAlignment="Left">
 
                 <!-- KB list (also used for shimmer placeholders during load) -->

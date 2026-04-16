@@ -685,6 +685,15 @@
   <data name="KB_ChangesFailed" xml:space="preserve">
     <value>실패</value>
   </data>
+  <data name="KB_NoMatches" xml:space="preserve">
+    <value>이 지식보관소에 매치 없음</value>
+  </data>
+  <data name="KB_MatchSummary_Prefix" xml:space="preserve">
+    <value>매치</value>
+  </data>
+  <data name="KB_MatchSummary_None" xml:space="preserve">
+    <value>매치 없음</value>
+  </data>
   <data name="KB_Checking" xml:space="preserve">
     <value>확인 중...</value>
   </data>
@@ -1431,6 +1440,6 @@
     <value>스케줄 검색...</value>
   </data>
   <data name="KB_SearchBox.PlaceholderText" xml:space="preserve">
-    <value>지식 저장소 검색...</value>
+    <value>청크 검색...</value>
   </data>
 </root>

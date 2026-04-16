@@ -685,6 +685,15 @@
   <data name="KB_ChangesFailed" xml:space="preserve">
     <value>Failed</value>
   </data>
+  <data name="KB_NoMatches" xml:space="preserve">
+    <value>No matches in this knowledge base</value>
+  </data>
+  <data name="KB_MatchSummary_Prefix" xml:space="preserve">
+    <value>Matches</value>
+  </data>
+  <data name="KB_MatchSummary_None" xml:space="preserve">
+    <value>No matches</value>
+  </data>
   <data name="KB_Checking" xml:space="preserve">
     <value>Checking...</value>
   </data>
@@ -1431,6 +1440,6 @@
     <value>Search schedules...</value>
   </data>
   <data name="KB_SearchBox.PlaceholderText" xml:space="preserve">
-    <value>Search knowledge bases...</value>
+    <value>Search chunks...</value>
   </data>
 </root>

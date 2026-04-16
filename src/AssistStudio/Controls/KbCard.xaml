@@ -112,5 +112,26 @@
             </StackPanel>
         </Grid>
 
+        <!-- Inline search match area -->
+        <StackPanel x:Name="MatchPanel" Visibility="Collapsed" Spacing="4"
+                    Margin="0,10,0,0">
+            <Rectangle Height="1"
+                       Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+            <!-- Shimmer placeholders during search -->
+            <StackPanel x:Name="MatchShimmerPanel" Visibility="Collapsed" Spacing="6"
+                        Margin="0,6,0,0" />
+
+            <!-- "No matches" state -->
+            <TextBlock x:Name="NoMatchText"
+                       Visibility="Collapsed"
+                       Style="{ThemeResource CaptionTextBlockStyle}"
+                       Opacity="0.5"
+                       Margin="0,4,0,0" />
+
+            <!-- Actual match results -->
+            <StackPanel x:Name="MatchResultsPanel" Spacing="2" />
+        </StackPanel>
+
     </StackPanel>
 </UserControl>

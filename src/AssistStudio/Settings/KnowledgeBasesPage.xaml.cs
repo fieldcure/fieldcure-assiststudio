@@ -25,9 +25,13 @@ public sealed partial class KnowledgeBasesPage : Page
     #region Fields
 
     private readonly DispatcherTimer _pollTimer;
+    private readonly DispatcherTimer _searchDebounceTimer;
     private readonly List<KbViewModel> _allItems = [];
+    private readonly List<Controls.KbCard> _liveCards = [];
+    private readonly Dictionary<string, int> _matchCountsByKbId = [];
     private readonly ResourceLoader _loader = new();
     private string _searchQuery = "";
+    private Task? _ragReadyTask;
 
     #endregion
 
@@ -42,6 +46,9 @@ public sealed partial class KnowledgeBasesPage : Page
 
         _pollTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
         _pollTimer.Tick += OnPollTick;
+
+        _searchDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+        _searchDebounceTimer.Tick += OnSearchDebounceTick;
     }
 
     #endregion
@@ -52,6 +59,11 @@ public sealed partial class KnowledgeBasesPage : Page
     protected override async void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+
+        // Must be assigned BEFORE RefreshListAsync so cards created during
+        // the refresh pick up a non-null RagReadyTask.
+        _ragReadyTask = new KnowledgeBaseService(App.McpRegistry).EnsureConnectedAsync();
+
         await RefreshListAsync();
     }
 
@@ -60,6 +72,8 @@ public sealed partial class KnowledgeBasesPage : Page
     {
         base.OnNavigatedFrom(e);
         _pollTimer.Stop();
+        _searchDebounceTimer.Stop();
+        ReleaseLiveCards();
     }
 
     #endregion
@@ -627,23 +641,58 @@ public sealed partial class KnowledgeBasesPage : Page
     }
 
     /// <summary>
-    /// Handles search query submission.
+    /// Treats Enter as "apply now" — bypasses the debounce timer.
     /// </summary>
     private void OnSearchQuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
     {
-        _searchQuery = args.QueryText?.Trim() ?? "";
-        ApplyFilter();
+        _searchDebounceTimer.Stop();
+        _searchQuery = sender.Text?.Trim() ?? "";
+        PropagateSearchQuery();
     }
 
     /// <summary>
-    /// Handles search text changes for live filtering.
+    /// Starts the debounce timer on user input.
     /// </summary>
     private void OnSearchTextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
     {
-        if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
+        if (args.Reason != AutoSuggestionBoxTextChangeReason.UserInput) return;
+
+        _searchQuery = sender.Text?.Trim() ?? "";
+        sender.ItemsSource = null;
+
+        _searchDebounceTimer.Stop();
+
+        if (string.IsNullOrEmpty(_searchQuery))
         {
-            _searchQuery = sender.Text?.Trim() ?? "";
-            ApplyFilter();
+            PropagateSearchQuery();
+        }
+        else
+        {
+            _searchDebounceTimer.Start();
+        }
+    }
+
+    /// <summary>
+    /// Fires after the 250ms debounce interval.
+    /// </summary>
+    private void OnSearchDebounceTick(object? sender, object e)
+    {
+        _searchDebounceTimer.Stop();
+        PropagateSearchQuery();
+    }
+
+    /// <summary>
+    /// Pushes the current search query to every live KbCard.
+    /// </summary>
+    private void PropagateSearchQuery()
+    {
+        foreach (var c in _liveCards)
+            c.SearchQuery = _searchQuery;
+
+        if (string.IsNullOrEmpty(_searchQuery))
+        {
+            _matchCountsByKbId.Clear();
+            UpdateMatchSummary();
         }
     }
 
@@ -951,23 +1000,18 @@ public sealed partial class KnowledgeBasesPage : Page
     }
 
     /// <summary>
-    /// Applies the current search filter and updates the UI.
+    /// Rebuilds the card list UI. Cards are always shown (no filtering);
+    /// chunk search results appear inline within each card.
     /// </summary>
     private void ApplyFilter()
     {
-        var filtered = string.IsNullOrEmpty(_searchQuery)
-            ? _allItems
-            : _allItems.Where(i =>
-                i.Name.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase)
-                || i.SourcePathsText.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase))
-              .ToList();
-
         CounterText.Text = _allItems.Count.ToString();
 
+        ReleaseLiveCards();
         KbList.ItemsSource = null;
         var panel = new StackPanel { Spacing = 0 };
 
-        for (int idx = 0; idx < filtered.Count; idx++)
+        for (int idx = 0; idx < _allItems.Count; idx++)
         {
             if (idx > 0)
             {
@@ -979,21 +1023,82 @@ public sealed partial class KnowledgeBasesPage : Page
                 });
             }
 
-            var card = new Controls.KbCard { ViewModel = filtered[idx] };
+            var card = new Controls.KbCard { ViewModel = _allItems[idx] };
             card.DeleteRequested += OnDeleteRequested;
             card.SettingsRequested += OnSettingsRequested;
             card.ReindexRequested += OnReindexRequested;
             card.CancelIndexRequested += OnCancelIndexRequested;
             card.CheckChangesRequested += OnCheckChangesRequested;
+            card.MatchCountChanged += OnCardMatchCountChanged;
+            card.RagReadyTask = _ragReadyTask;
+            card.SearchQuery = _searchQuery;
+            _liveCards.Add(card);
             panel.Children.Add(card);
         }
 
         KbList.ItemsSource = new[] { panel };
 
-        var hasItems = filtered.Count > 0;
-        EmptyPanel.Visibility = _allItems.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        var hasItems = _allItems.Count > 0;
+        EmptyPanel.Visibility = hasItems ? Visibility.Collapsed : Visibility.Visible;
         HintDivider.Visibility = hasItems ? Visibility.Visible : Visibility.Collapsed;
         HintText.Visibility = hasItems ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>
+    /// Unsubscribes from all live cards and clears tracking state.
+    /// </summary>
+    private void ReleaseLiveCards()
+    {
+        foreach (var c in _liveCards)
+            c.MatchCountChanged -= OnCardMatchCountChanged;
+        _liveCards.Clear();
+        _matchCountsByKbId.Clear();
+        UpdateMatchSummary();
+    }
+
+    /// <summary>
+    /// Aggregates per-card match counts and refreshes the summary bar.
+    /// </summary>
+    private void OnCardMatchCountChanged(object? sender, int count)
+    {
+        if (sender is not Controls.KbCard card || card.ViewModel is null) return;
+
+        var id = card.ViewModel.Id;
+        if (count < 0) _matchCountsByKbId.Remove(id);
+        else _matchCountsByKbId[id] = count;
+
+        UpdateMatchSummary();
+    }
+
+    /// <summary>
+    /// Updates the match summary text below the search box.
+    /// </summary>
+    private void UpdateMatchSummary()
+    {
+        if (string.IsNullOrEmpty(_searchQuery))
+        {
+            MatchSummaryText.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        MatchSummaryText.Visibility = Visibility.Visible;
+
+        var hitsByName = _allItems
+            .Where(kb => _matchCountsByKbId.TryGetValue(kb.Id, out var c) && c > 0)
+            .Select(kb => $"{kb.Name} ({_matchCountsByKbId[kb.Id]})")
+            .ToList();
+
+        if (hitsByName.Count == 0)
+        {
+            MatchSummaryText.Text = _loader.GetString("KB_MatchSummary_None") ?? "No matches";
+            MatchSummaryText.Opacity = 0.5;
+        }
+        else
+        {
+            var prefix = _loader.GetString("KB_MatchSummary_Prefix") ?? "Matches";
+            MatchSummaryText.Text = $"{prefix}: {string.Join(" \u00b7 ", hitsByName)}";
+            MatchSummaryText.Opacity = 0.8;
+        }
     }
 
     /// <summary>
