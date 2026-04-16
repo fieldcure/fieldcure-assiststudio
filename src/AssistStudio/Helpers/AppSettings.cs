@@ -54,6 +54,7 @@ public static class AppSettings
 
     /// <summary>
     /// Gets or sets the application theme name ("Light", "Dark", or "System").
+    /// Setting this property persists the value and raises <see cref="ThemeChanged"/>.
     /// </summary>
     public static string Theme
     {
@@ -63,6 +64,15 @@ public static class AppSettings
             Settings.Values["Theme"] = value;
             ThemeChanged?.Invoke(null, value);
         }
+    }
+
+    /// <summary>
+    /// Persists the theme value without raising <see cref="ThemeChanged"/>.
+    /// Used by <see cref="ThemeSettingsService"/> which manages its own event.
+    /// </summary>
+    internal static void SetThemeSilent(string theme)
+    {
+        Settings.Values["Theme"] = theme;
     }
 
     /// <summary>

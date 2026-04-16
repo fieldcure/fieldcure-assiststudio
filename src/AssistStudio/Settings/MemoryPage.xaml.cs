@@ -1,4 +1,5 @@
-﻿using AssistStudio.Mcp;
+﻿using AssistStudio.Controls.Dialogs;
+using AssistStudio.Mcp;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
@@ -248,7 +249,7 @@ public sealed partial class MemoryPage : Page
             content = "Are you sure you want to clear all memories?";
         }
 
-        var dialog = new ContentDialog
+        var dialog = new ThemedContentDialog
         {
             Title = title,
             Content = content,

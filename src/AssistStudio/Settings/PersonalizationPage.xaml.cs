@@ -51,7 +51,12 @@ public sealed partial class PersonalizationPage : Page
     {
         if (ThemeRadioButtons.SelectedItem is RadioButton rb && rb.Tag is string theme)
         {
-            AppSettings.Theme = theme;
+            ThemeSettingsService.RootTheme = theme switch
+            {
+                "Light" => Microsoft.UI.Xaml.ElementTheme.Light,
+                "Dark" => Microsoft.UI.Xaml.ElementTheme.Dark,
+                _ => Microsoft.UI.Xaml.ElementTheme.Default,
+            };
         }
     }
 

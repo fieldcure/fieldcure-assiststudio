@@ -1,3 +1,4 @@
+using AssistStudio.Controls.Dialogs;
 using AssistStudio.Helpers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -287,7 +288,7 @@ public sealed partial class SchedulePage : Page
         if (sender is not Button btn || btn.Tag is not ScheduleItem item)
             return;
 
-        var dialog = new ContentDialog
+        var dialog = new ThemedContentDialog
         {
             Title = _deleteConfirmTitle,
             Content = string.Format(_deleteConfirmContent, item.Name),
@@ -304,7 +305,7 @@ public sealed partial class SchedulePage : Page
 
         if (!success && !string.IsNullOrWhiteSpace(error))
         {
-            var errorDialog = new ContentDialog
+            var errorDialog = new ThemedContentDialog
             {
                 Title = _errorTitle,
                 Content = error,
@@ -337,7 +338,7 @@ public sealed partial class SchedulePage : Page
 
                 if (!string.IsNullOrWhiteSpace(error))
                 {
-                    var errorDialog = new ContentDialog
+                    var errorDialog = new ThemedContentDialog
                     {
                         Title = "Error",
                         Content = error,

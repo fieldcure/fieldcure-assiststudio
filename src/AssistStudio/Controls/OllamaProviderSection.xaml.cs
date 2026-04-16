@@ -1,4 +1,4 @@
-using AssistStudio.Dialogs;
+using AssistStudio.Controls.Dialogs;
 using AssistStudio.Helpers;
 using FieldCure.Ai.Providers;
 using FieldCure.Ai.Providers.Models;

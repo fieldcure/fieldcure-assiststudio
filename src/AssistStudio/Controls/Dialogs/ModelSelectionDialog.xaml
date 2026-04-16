@@ -1,9 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <local:ThemedContentDialog
-    x:Class="AssistStudio.Dialogs.ModelSelectionDialog"
+    x:Class="AssistStudio.Controls.Dialogs.ModelSelectionDialog"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:AssistStudio.Dialogs"
+    xmlns:local="using:AssistStudio.Controls.Dialogs"
     xmlns:controls="using:AssistStudio.Controls"
     x:Uid="ModelDialog"
     Title="Ollama Models"

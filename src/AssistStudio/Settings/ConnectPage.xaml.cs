@@ -1,5 +1,5 @@
 ﻿using AssistStudio.Controls;
-using AssistStudio.Dialogs;
+using AssistStudio.Controls.Dialogs;
 using AssistStudio.Helpers;
 using AssistStudio.Mcp;
 using FieldCure.AssistStudio.Models;

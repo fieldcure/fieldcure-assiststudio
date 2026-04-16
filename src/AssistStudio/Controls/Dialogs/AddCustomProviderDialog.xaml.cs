@@ -1,7 +1,7 @@
-using FieldCure.Ai.Providers.Models;
+﻿using FieldCure.Ai.Providers.Models;
 using Microsoft.UI.Xaml.Controls;
 
-namespace AssistStudio.Dialogs;
+namespace AssistStudio.Controls.Dialogs;
 
 /// <summary>
 /// Dialog for adding or editing a custom OpenAI-compatible provider.

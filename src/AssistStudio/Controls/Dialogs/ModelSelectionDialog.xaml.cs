@@ -5,7 +5,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 
-namespace AssistStudio.Dialogs;
+namespace AssistStudio.Controls.Dialogs;
 
 /// <summary>
 /// Dialog for browsing, pulling, and deleting Ollama models.

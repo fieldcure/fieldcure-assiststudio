@@ -1,11 +1,10 @@
-﻿using AssistStudio.Dialogs;
+﻿using AssistStudio.Controls.Dialogs;
 using AssistStudio.Helpers;
 using AssistStudio.Mcp;
 using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Markup;
 using Microsoft.UI.Xaml.Navigation;
 using Microsoft.Windows.ApplicationModel.Resources;

@@ -1,8 +1,7 @@
-﻿using AssistStudio.Dialogs;
+﻿using AssistStudio.Controls.Dialogs;
 using AssistStudio.Helpers;
 using AssistStudio.Modules.ViewModels;
 using FieldCure.AssistStudio.Controls;
-using Microsoft.UI;
 using Microsoft.UI.Input;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
@@ -71,12 +70,12 @@ public sealed partial class MainWindow : Window
             GetPresets = AppSettings.BuildOrderedPresetItems,
         };
 
-        // Wire settings events → ViewModel
-        AppSettings.ThemeChanged += (_, theme) =>
+        // Wire theme events → ViewModel (ThemeSettingsService handles window-level updates)
+        ThemeSettingsService.OnThemeChanged += (_, _) =>
         {
-            LoggingService.LogInfo($"[Settings] ThemeChanged → pushing to {ViewModel.Tabs.Count} tabs: {theme}");
-            ApplyAppTheme(theme);
-            ViewModel.ApplyThemeToAll(theme);
+            var themeName = AppSettings.Theme;
+            LoggingService.LogInfo($"[Settings] ThemeChanged → pushing to {ViewModel.Tabs.Count} tabs: {themeName}");
+            ViewModel.ApplyThemeToAll(themeName);
         };
         // Debounce preset refreshes — ModelsPage fires PresetsChanged on every
         // combo/toggle change, so we wait 1 s after the last fire before refreshing.
@@ -212,60 +211,12 @@ public sealed partial class MainWindow : Window
     #region First Activation and Theme
 
     /// <summary>
-    /// Handles the first window activation to apply the saved theme.
+    /// Handles the first window activation to initialize the theme via <see cref="ThemeSettingsService"/>.
     /// </summary>
     private void OnFirstActivated(object sender, WindowActivatedEventArgs args)
     {
         Activated -= OnFirstActivated;
-        LoggingService.LogInfo($"[App] First activation — theme: {AppSettings.Theme}");
-        ApplyAppTheme(AppSettings.Theme);
-    }
-
-    /// <summary>
-    /// Applies the specified theme string to the content root and title bar colors.
-    /// </summary>
-    private void ApplyAppTheme(string theme)
-    {
-        if (Content is FrameworkElement root)
-        {
-            root.RequestedTheme = theme switch
-            {
-                "Light" => ElementTheme.Light,
-                "Dark" => ElementTheme.Dark,
-                _ => ElementTheme.Default,
-            };
-        }
-
-        if (_appWindow?.TitleBar is { } titleBar)
-        {
-            var transparent = Colors.Transparent;
-            titleBar.BackgroundColor = transparent;
-            titleBar.ButtonBackgroundColor = transparent;
-            titleBar.InactiveBackgroundColor = transparent;
-            titleBar.ButtonInactiveBackgroundColor = transparent;
-
-            var isDark = theme == "Dark" ||
-                (theme != "Light" && Application.Current.RequestedTheme == ApplicationTheme.Dark);
-
-            var foreground = isDark ? Colors.White : Colors.Black;
-            var hoverBg = isDark
-                ? Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF)
-                : Color.FromArgb(0x33, 0x00, 0x00, 0x00);
-            var pressedBg = isDark
-                ? Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF)
-                : Color.FromArgb(0x66, 0x00, 0x00, 0x00);
-            var inactiveFg = isDark
-                ? Color.FromArgb(0x99, 0xFF, 0xFF, 0xFF)
-                : Color.FromArgb(0x99, 0x00, 0x00, 0x00);
-
-            titleBar.ForegroundColor = foreground;
-            titleBar.ButtonForegroundColor = foreground;
-            titleBar.ButtonHoverForegroundColor = foreground;
-            titleBar.ButtonHoverBackgroundColor = hoverBg;
-            titleBar.ButtonPressedForegroundColor = foreground;
-            titleBar.ButtonPressedBackgroundColor = pressedBg;
-            titleBar.ButtonInactiveForegroundColor = inactiveFg;
-        }
+        ThemeSettingsService.Initialize();
     }
 
     #endregion

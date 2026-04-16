@@ -1,3 +1,4 @@
+using AssistStudio.Controls.Dialogs;
 using AssistStudio.Helpers;
 using AssistStudio.Mcp;
 using AssistStudio.Mcp.ModelAvailability;
@@ -67,7 +68,7 @@ public sealed partial class KnowledgeBasesPage : Page
     /// </summary>
     private async void OnCreateClicked(object sender, RoutedEventArgs e)
     {
-        var dialog = new ContentDialog
+        var dialog = new ThemedContentDialog
         {
             XamlRoot = XamlRoot,
             Title = _loader.GetString("KB_CreateDialogTitle"),
@@ -210,7 +211,7 @@ public sealed partial class KnowledgeBasesPage : Page
     {
         if (sender is not Button btn || btn.Tag is not string kbId) return;
 
-        var dialog = new ContentDialog
+        var dialog = new ThemedContentDialog
         {
             XamlRoot = XamlRoot,
             Title = _loader.GetString("KB_DeleteDialogTitle"),
@@ -296,7 +297,7 @@ public sealed partial class KnowledgeBasesPage : Page
             });
         }
 
-        var errorDialog = new ContentDialog
+        var errorDialog = new ThemedContentDialog
         {
             XamlRoot = XamlRoot,
             Title = title,
@@ -462,7 +463,7 @@ public sealed partial class KnowledgeBasesPage : Page
             });
         }
 
-        var dialog = new ContentDialog
+        var dialog = new ThemedContentDialog
         {
             XamlRoot = XamlRoot,
             Title = titlePanel,
@@ -617,7 +618,7 @@ public sealed partial class KnowledgeBasesPage : Page
 
         LoggingService.LogWarning($"[KB] StartExec surfaced failure to user: {title} — {body}");
 
-        var dialog = new ContentDialog
+        var dialog = new ThemedContentDialog
         {
             Title = title,
             Content = new TextBlock

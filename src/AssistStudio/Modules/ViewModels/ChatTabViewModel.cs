@@ -1,4 +1,4 @@
-﻿using AssistStudio.Dialogs;
+﻿using AssistStudio.Controls.Dialogs;
 using AssistStudio.Helpers;
 using AssistStudio.Mcp;
 using AssistStudio.Tools;

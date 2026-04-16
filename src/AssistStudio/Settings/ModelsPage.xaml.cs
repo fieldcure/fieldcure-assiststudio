@@ -1,5 +1,5 @@
 using AssistStudio.Controls;
-using AssistStudio.Dialogs;
+using AssistStudio.Controls.Dialogs;
 using AssistStudio.Helpers;
 using FieldCure.Ai.Providers;
 using FieldCure.Ai.Providers.Models;
@@ -346,7 +346,7 @@ public sealed partial class ModelsPage : Page
     {
         if (sender is not Button { Tag: string configId }) return;
 
-        var dialog = new ContentDialog
+        var dialog = new ThemedContentDialog
         {
             Title = L("Models_DeleteCustomProviderConfirmTitle"),
             Content = L("Models_DeleteCustomProviderConfirmMessage"),
