@@ -1,6 +1,5 @@
 using AssistStudio.Mcp.ModelAvailability;
 using FieldCure.AssistStudio.Models;
-using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.ApplicationModel.Resources;
 
@@ -8,7 +7,7 @@ namespace AssistStudio.Controls;
 
 /// <summary>
 /// Reusable model selection control for embedding and chunk contextualization.
-/// Used in KB creation and re-indexing dialogs.
+/// Uses ComboBox with ItemTemplate for compact display.
 /// </summary>
 public sealed partial class EmbeddingModelSelector : UserControl
 {
@@ -17,13 +16,12 @@ public sealed partial class EmbeddingModelSelector : UserControl
     private readonly ResourceLoader _loader = new();
     private string _selectedEmbeddingId = "nomic-embed-text";
     private string _selectedContextualizerId = "";
+    private List<ModelOption> _embeddingOptions = [];
+    private List<ModelOption> _contextualizerOptions = [];
+    private bool _isInitializing;
 
     /// <summary>
     /// Per-model availability map populated by <see cref="InitializeAsync"/>.
-    /// <c>null</c> before initialization; <c>true</c> for reachable models,
-    /// <c>false</c> for unreachable ones. Used by
-    /// <see cref="IsCurrentSelectionAvailable"/> so the host dialog can
-    /// toggle its "Save &amp; Re-index" button in sync with user clicks.
     /// </summary>
     private IReadOnlyDictionary<string, bool>? _availability;
 
@@ -32,10 +30,7 @@ public sealed partial class EmbeddingModelSelector : UserControl
     #region Events
 
     /// <summary>
-    /// Fired whenever the user picks a different embedding or contextualizer
-    /// radio. Callers (the KB settings dialog) listen for this to
-    /// re-evaluate <see cref="IsCurrentSelectionAvailable"/> and toggle
-    /// their "Save &amp; Re-index" button accordingly.
+    /// Fired whenever the user picks a different embedding or contextualizer model.
     /// </summary>
     public event EventHandler? SelectionChanged;
 
@@ -43,34 +38,24 @@ public sealed partial class EmbeddingModelSelector : UserControl
 
     #region Model Definitions
 
-    /// <summary>
-    /// Available embedding models grouped by provider.
-    /// </summary>
-    private static readonly (string Id, string Provider, string Label, string Meta)[] EmbeddingModels =
+    private static readonly (string Id, string Provider, string Label, string Meta, bool IsMultilingual)[] EmbeddingModels =
     [
-        ("nomic-embed-text", "Ollama", "nomic-embed-text", "768d \u00b7 274MB"),
-        ("nomic-embed-text-v2-moe", "Ollama", "nomic-embed-text-v2-moe", "768d \u00b7 1.9GB"),
-        ("bge-m3", "Ollama", "bge-m3", "1024d \u00b7 1.2GB"),
-        ("qwen3-embedding:8b", "Ollama", "qwen3-embedding:8b", "4096d \u00b7 ~5GB \u00b7 32k ctx"),
-        ("text-embedding-3-small", "OpenAI", "text-embedding-3-small", "1536d"),
-        ("text-embedding-3-large", "OpenAI", "text-embedding-3-large", "3072d"),
+        ("nomic-embed-text", "Ollama", "nomic-embed-text", "768d \u00b7 274MB", false),
+        ("nomic-embed-text-v2-moe", "Ollama", "nomic-embed-text-v2-moe", "768d \u00b7 1.9GB", true),
+        ("bge-m3", "Ollama", "bge-m3", "1024d \u00b7 1.2GB", true),
+        ("qwen3-embedding:8b", "Ollama", "qwen3-embedding:8b", "4096d \u00b7 ~5GB \u00b7 32k ctx", true),
+        ("text-embedding-3-small", "OpenAI", "text-embedding-3-small", "1536d", false),
+        ("text-embedding-3-large", "OpenAI", "text-embedding-3-large", "3072d", false),
     ];
 
-    /// <summary>
-    /// Available contextualizer models grouped by provider. Empty Id = disabled.
-    /// </summary>
-    private static readonly (string Id, string Provider, string Label, string Meta)[] ContextualizerModels =
+    private static readonly (string Id, string Provider, string Label, string Meta, bool IsMultilingual)[] ContextualizerModels =
     [
-        ("", "", "disabled", ""),
-        ("gemma3:4b", "Ollama", "gemma3:4b", "2.8GB"),
-        ("qwen3:4b", "Ollama", "qwen3:4b", "2.7GB"),
-        ("gpt-4o-mini", "OpenAI", "gpt-4o-mini", ""),
-        ("claude-haiku-4-6", "Claude", "claude-haiku-4-6", ""),
+        ("gemma3:4b", "Ollama", "gemma3:4b", "2.8GB", false),
+        ("qwen3:4b", "Ollama", "qwen3:4b", "2.7GB", true),
+        ("gpt-4o-mini", "OpenAI", "gpt-4o-mini", "", false),
+        ("claude-haiku-4-6", "Claude", "claude-haiku-4-6", "", false),
     ];
 
-    /// <summary>
-    /// Maps model ID to provider and API key preset for <see cref="KbProviderConfig"/> construction.
-    /// </summary>
     private static readonly Dictionary<string, (string Provider, string? ApiKeyPreset)> ProviderMap = new()
     {
         ["nomic-embed-text"] = ("ollama", null),
@@ -102,14 +87,12 @@ public sealed partial class EmbeddingModelSelector : UserControl
     #region Public Properties
 
     /// <summary>
-    /// Model ID to pre-select and mark as "(current)" in re-indexing mode.
-    /// Null in creation mode.
+    /// Model ID to pre-select in re-indexing mode. Null in creation mode.
     /// </summary>
     public string? CurrentEmbeddingModel { get; set; }
 
     /// <summary>
-    /// Contextualizer ID to pre-select and mark as "(current)" in re-indexing mode.
-    /// Null in creation mode.
+    /// Contextualizer ID to pre-select in re-indexing mode. Null in creation mode.
     /// </summary>
     public string? CurrentContextualizer { get; set; }
 
@@ -126,12 +109,7 @@ public sealed partial class EmbeddingModelSelector : UserControl
         CurrentContextualizer is not null && _selectedContextualizerId != CurrentContextualizer;
 
     /// <summary>
-    /// Whether every currently-selected model (embedding + contextualizer)
-    /// is reachable according to the availability dictionary captured
-    /// during <see cref="InitializeAsync"/>. Returns <c>true</c> before
-    /// the async probe finishes — a caller should treat a pre-init state
-    /// as "proceed" and let the pre-flight check catch anything that
-    /// turned out wrong.
+    /// Whether every currently-selected model is reachable.
     /// </summary>
     public bool IsCurrentSelectionAvailable
     {
@@ -148,90 +126,82 @@ public sealed partial class EmbeddingModelSelector : UserControl
         }
     }
 
+    /// <summary>
+    /// Whether the selected embedding model is a local model (Ollama)
+    /// that may benefit from deferred indexing.
+    /// </summary>
+    public bool IsSelectedEmbeddingLocal =>
+        ProviderMap.TryGetValue(_selectedEmbeddingId, out var info) && info.Provider == "ollama";
+
     #endregion
 
     #region Public Methods
 
     /// <summary>
-    /// Builds the model radio button lists and decorates unreachable
-    /// models with a "not installed" caption badge. The read-only
-    /// principle: the UI reports the current state and lets the user
-    /// act on it. Radios stay clickable regardless of availability —
-    /// a false negative from the probe (Ollama daemon just restarted,
-    /// network blip) should never lock the user out of a selection.
-    ///
-    /// The user's current selection is signaled by the radio dot and
-    /// by the dialog title (set by the caller in re-indexing mode) —
-    /// no redundant "(current)" text next to the model, no warning
-    /// box telling the user what to do. Call after setting Current*
-    /// properties.
+    /// Builds the model ComboBox lists and probes model availability.
+    /// Call after setting <see cref="CurrentEmbeddingModel"/> and
+    /// <see cref="CurrentContextualizer"/>.
     /// </summary>
     public async Task InitializeAsync()
     {
-        EmbeddingHeader.Text = _loader.GetString("KB_DialogEmbeddingModel");
-        ContextualizerHeader.Text = _loader.GetString("KB_DialogContextualizer");
-
-        var embeddingDefault = CurrentEmbeddingModel ?? "nomic-embed-text";
-        _selectedEmbeddingId = embeddingDefault;
-
-        var contextualizerDefault = CurrentContextualizer ?? "";
-        _selectedContextualizerId = contextualizerDefault;
-
-        var labels = new ModelListLabels(
-            Multilingual: _loader.GetString("Connect_Multilingual"),
-            Disabled: _loader.GetString("KB_DialogContextDisabled") ?? "Disabled",
-            NotInstalled: _loader.GetString("KB_ModelNotInstalled") ?? "(not installed)");
-
-        // Pre-compute availability once per catalog entry so BuildModelList
-        // can stay synchronous. One checker instance is shared across both
-        // lists so Ollama /api/tags and credential lookups only run once.
-        // The dict is cached as _availability so IsCurrentSelectionAvailable
-        // can answer the host dialog's button-enable check without re-
-        // probing on every radio click.
-        var checker = new ModelAvailabilityChecker();
-        var available = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (id, provider, _, _) in EmbeddingModels)
+        _isInitializing = true;
+        try
         {
-            if (!available.ContainsKey(id))
-                available[id] = await checker.IsAvailableAsync(MapProviderName(provider), id);
+            EmbeddingHeader.Text = _loader.GetString("KB_DialogEmbeddingModel");
+            ContextualizerToggle.Header = _loader.GetString("KB_DialogContextualizer");
+            ContextualizerToggle.OnContent = _loader.GetString("KB_ContextualizerToggleOn");
+            ContextualizerToggle.OffContent = _loader.GetString("KB_ContextualizerToggleOff");
+
+            var embeddingDefault = CurrentEmbeddingModel ?? "nomic-embed-text";
+            _selectedEmbeddingId = embeddingDefault;
+
+            var contextualizerDefault = CurrentContextualizer ?? "";
+            _selectedContextualizerId = contextualizerDefault;
+
+            var multilingualLabel = _loader.GetString("Connect_Multilingual");
+            var notInstalledLabel = _loader.GetString("KB_ModelNotInstalled") ?? "(not installed)";
+
+            var checker = new ModelAvailabilityChecker();
+            var available = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var (id, provider, _, _, _) in EmbeddingModels)
+            {
+                if (!available.ContainsKey(id))
+                    available[id] = await checker.IsAvailableAsync(MapProviderName(provider), id);
+            }
+            foreach (var (id, provider, _, _, _) in ContextualizerModels)
+            {
+                if (!available.ContainsKey(id))
+                    available[id] = await checker.IsAvailableAsync(MapProviderName(provider), id);
+            }
+            _availability = available;
+
+            _embeddingOptions = BuildModelOptions(EmbeddingModels, available, multilingualLabel, notInstalledLabel);
+            _contextualizerOptions = BuildModelOptions(ContextualizerModels, available, multilingualLabel, notInstalledLabel);
+
+            EmbeddingCombo.ItemsSource = _embeddingOptions;
+            EmbeddingCombo.SelectedItem = _embeddingOptions.FirstOrDefault(o => o.Id == embeddingDefault)
+                ?? _embeddingOptions.FirstOrDefault();
+
+            ContextualizerCombo.ItemsSource = _contextualizerOptions;
+
+            var hasContextualizer = !string.IsNullOrEmpty(contextualizerDefault);
+            ContextualizerToggle.IsOn = hasContextualizer;
+            ContextualizerCombo.IsEnabled = hasContextualizer;
+
+            if (hasContextualizer)
+            {
+                ContextualizerCombo.SelectedItem = _contextualizerOptions.FirstOrDefault(o => o.Id == contextualizerDefault)
+                    ?? _contextualizerOptions.FirstOrDefault();
+            }
+
+            UpdateMetaText();
         }
-        foreach (var (id, provider, _, _) in ContextualizerModels)
+        finally
         {
-            if (!string.IsNullOrEmpty(id) && !available.ContainsKey(id))
-                available[id] = await checker.IsAvailableAsync(MapProviderName(provider), id);
+            _isInitializing = false;
         }
-        _availability = available;
-
-        BuildModelList(EmbeddingModelPanel, EmbeddingModels, embeddingDefault,
-            "EmbeddingModel", available, labels, OnEmbeddingSelected);
-
-        BuildModelList(ContextualizerPanel, ContextualizerModels, contextualizerDefault,
-            "Contextualizer", available, labels, OnContextualizerSelected);
     }
-
-    /// <summary>
-    /// Normalizes the catalog's display-cased provider label (e.g. "Ollama",
-    /// "OpenAI", "Claude") to the lowercase provider key the checker
-    /// expects (<c>ollama</c>, <c>openai</c>, <c>anthropic</c>).
-    /// </summary>
-    private static string MapProviderName(string displayProvider) => displayProvider switch
-    {
-        "Ollama" => "ollama",
-        "OpenAI" => "openai",
-        "Claude" => "anthropic",
-        _ => displayProvider.ToLowerInvariant(),
-    };
-
-    /// <summary>
-    /// Localized labels used by <see cref="BuildModelList"/>. Trimmed to
-    /// the three strings that still survive after the simplification
-    /// (multilingual tag, contextualizer placeholder, not-installed badge).
-    /// </summary>
-    private sealed record ModelListLabels(
-        string Multilingual,
-        string Disabled,
-        string NotInstalled);
-
 
     /// <summary>
     /// Returns the selected embedding model as a <see cref="KbProviderConfig"/>.
@@ -259,130 +229,108 @@ public sealed partial class EmbeddingModelSelector : UserControl
 
     #region Event Handlers
 
-    /// <summary>
-    /// Tracks the selected embedding model ID and raises
-    /// <see cref="SelectionChanged"/> so the host can re-evaluate the
-    /// "Save &amp; Re-index" button's enabled state.
-    /// </summary>
-    private void OnEmbeddingSelected(object sender, RoutedEventArgs e)
+    private void OnEmbeddingComboChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (sender is RadioButton radio && radio.Tag is string modelId)
+        if (_isInitializing) return;
+        if (EmbeddingCombo.SelectedItem is ModelOption option)
         {
-            _selectedEmbeddingId = modelId;
+            _selectedEmbeddingId = option.Id;
+            UpdateMetaText();
             SelectionChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 
-    /// <summary>
-    /// Tracks the selected contextualizer model ID and raises
-    /// <see cref="SelectionChanged"/>.
-    /// </summary>
-    private void OnContextualizerSelected(object sender, RoutedEventArgs e)
+    private void OnContextualizerComboChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (sender is RadioButton radio && radio.Tag is string modelId)
+        if (_isInitializing) return;
+        if (ContextualizerCombo.SelectedItem is ModelOption option)
         {
-            _selectedContextualizerId = modelId;
+            _selectedContextualizerId = option.Id;
+            UpdateMetaText();
             SelectionChanged?.Invoke(this, EventArgs.Empty);
         }
+    }
+
+    private void OnContextualizerToggled(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    {
+        if (_isInitializing) return;
+
+        var isOn = ContextualizerToggle.IsOn;
+        ContextualizerCombo.IsEnabled = isOn;
+
+        if (isOn)
+        {
+            if (ContextualizerCombo.SelectedItem is ModelOption option)
+                _selectedContextualizerId = option.Id;
+            else if (_contextualizerOptions.Count > 0)
+            {
+                ContextualizerCombo.SelectedItem = _contextualizerOptions[0];
+                _selectedContextualizerId = _contextualizerOptions[0].Id;
+            }
+        }
+        else
+        {
+            _selectedContextualizerId = "";
+        }
+
+        UpdateMetaText();
+        SelectionChanged?.Invoke(this, EventArgs.Empty);
     }
 
     #endregion
 
     #region Private Methods
 
-    /// <summary>
-    /// Builds a grouped radio button list for model selection. Models that
-    /// are currently unreachable get a "not installed" badge next to their
-    /// label but remain enabled and selectable — the badge is a fact
-    /// report, not a gate. The current selection is shown via the radio
-    /// dot itself; any higher-level "this is what your KB was indexed
-    /// with" framing lives in the dialog title set by the caller.
-    /// </summary>
-    private static void BuildModelList(
-        StackPanel panel,
-        (string Id, string Provider, string Label, string Meta)[] models,
-        string selectedId,
-        string groupName,
-        IReadOnlyDictionary<string, bool> available,
-        ModelListLabels labels,
-        RoutedEventHandler onChanged)
+    private static string MapProviderName(string displayProvider) => displayProvider switch
     {
-        var lastProvider = "";
+        "Ollama" => "ollama",
+        "OpenAI" => "openai",
+        "Claude" => "anthropic",
+        _ => displayProvider.ToLowerInvariant(),
+    };
 
-        foreach (var (id, provider, label, meta) in models)
+    private static List<ModelOption> BuildModelOptions(
+        (string Id, string Provider, string Label, string Meta, bool IsMultilingual)[] catalog,
+        IReadOnlyDictionary<string, bool> available,
+        string multilingualLabel,
+        string notInstalledLabel)
+    {
+        var options = new List<ModelOption>();
+
+        foreach (var (id, provider, label, meta, isMultilingual) in catalog)
         {
-            // Provider group header
-            if (!string.IsNullOrEmpty(provider) && provider != lastProvider)
+            var metaText = meta;
+            if (isMultilingual && !string.IsNullOrEmpty(multilingualLabel))
+                metaText += string.IsNullOrEmpty(metaText) ? multilingualLabel : $" \u00b7 {multilingualLabel}";
+
+            var isAvailable = !available.TryGetValue(id, out var ok) || ok;
+
+            options.Add(new ModelOption
             {
-                lastProvider = provider;
-                panel.Children.Add(new TextBlock
-                {
-                    Text = provider,
-                    Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-                    Opacity = 0.6,
-                    Margin = new Thickness(0, panel.Children.Count > 0 ? 8 : 0, 0, 2),
-                });
-            }
-
-            var isPlaceholder = string.IsNullOrEmpty(id);
-            var isAvailable = isPlaceholder
-                || !available.TryGetValue(id, out var ok)
-                || ok;
-
-            var isCurrentlySelected = isPlaceholder
-                ? string.IsNullOrEmpty(selectedId)
-                : selectedId == id;
-
-            var radio = new RadioButton
-            {
-                GroupName = groupName,
-                Tag = id,
-                IsChecked = isCurrentlySelected,
-                Margin = new Thickness(0),
-            };
-
-            var content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-            content.Children.Add(new TextBlock
-            {
-                Text = isPlaceholder ? labels.Disabled : label,
-                VerticalAlignment = VerticalAlignment.Center,
+                Id = id,
+                Provider = provider,
+                Label = label,
+                Meta = metaText,
+                IsAvailable = isAvailable,
+                StatusText = isAvailable ? "" : notInstalledLabel,
+                IsLocal = MapProviderName(provider) == "ollama",
             });
-
-            // Meta info (dimensions, size, multilingual)
-            if (!string.IsNullOrEmpty(meta))
-            {
-                var metaText = meta;
-                if (id is "nomic-embed-text-v2-moe" or "bge-m3" or "qwen3-embedding:8b" or "qwen3:4b")
-                    metaText += $" \u00b7 {labels.Multilingual}";
-
-                content.Children.Add(new TextBlock
-                {
-                    Text = metaText,
-                    Opacity = 0.5,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-                });
-            }
-
-            // "not installed" fact badge, pulled from the localization
-            // resource. Caution color so it reads as a soft warning
-            // without demanding action.
-            if (!isAvailable)
-            {
-                content.Children.Add(new TextBlock
-                {
-                    Text = labels.NotInstalled,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-                    Foreground = (Microsoft.UI.Xaml.Media.Brush)
-                        Application.Current.Resources["SystemFillColorCautionBrush"],
-                });
-            }
-
-            radio.Content = content;
-            radio.Checked += onChanged;
-            panel.Children.Add(radio);
         }
+
+        return options;
+    }
+
+    private void UpdateMetaText()
+    {
+        if (EmbeddingCombo.SelectedItem is ModelOption emb)
+            EmbeddingMetaText.Text = emb.Meta;
+        else
+            EmbeddingMetaText.Text = "";
+
+        if (ContextualizerToggle.IsOn && ContextualizerCombo.SelectedItem is ModelOption ctx)
+            ContextualizerMetaText.Text = ctx.Meta;
+        else
+            ContextualizerMetaText.Text = "";
     }
 
     #endregion

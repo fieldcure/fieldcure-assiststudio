@@ -76,6 +76,36 @@
             </Button>
         </Grid>
 
+        <!-- Deferred state: Index now / Cancel scheduled -->
+        <Grid x:Name="DeferredPanel" Margin="0,6,0,0" Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <Button x:Name="IndexNowButton"
+                    Style="{ThemeResource SubtleButtonStyle}"
+                    Padding="8,4,8,4"
+                    FontSize="12"
+                    Click="IndexNowButton_Click" />
+
+            <Button x:Name="CancelDeferredButton" Grid.Column="1"
+                    Style="{ThemeResource SubtleButtonStyle}"
+                    Padding="8,4,8,4"
+                    FontSize="12"
+                    Margin="8,0,0,0"
+                    Click="CancelDeferredButton_Click" />
+
+            <Button x:Name="DeferredDeleteButton" Grid.Column="3"
+                    Style="{ThemeResource SubtleButtonStyle}"
+                    Padding="6"
+                    Click="DeleteButton_Click">
+                <FontIcon Glyph="&#xE74D;" FontSize="14" />
+            </Button>
+        </Grid>
+
         <!-- Idle state: Action buttons -->
         <Grid x:Name="ActionPanel" Margin="0,6,0,0" Visibility="Collapsed">
             <Grid.ColumnDefinitions>

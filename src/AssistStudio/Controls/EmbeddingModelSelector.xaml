@@ -2,19 +2,72 @@
 <UserControl
     x:Class="AssistStudio.Controls.EmbeddingModelSelector"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:AssistStudio.Controls">
+
+    <UserControl.Resources>
+        <DataTemplate x:Key="ModelOptionTemplate" x:DataType="local:ModelOption">
+            <Grid ColumnSpacing="8" Padding="2,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Provider badge -->
+                <Border Grid.Column="0"
+                        Background="{ThemeResource SubtleFillColorTertiaryBrush}"
+                        CornerRadius="4" Padding="6,2"
+                        VerticalAlignment="Center">
+                    <TextBlock Text="{x:Bind Provider}"
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               Opacity="0.7" />
+                </Border>
+
+                <!-- Model name + meta -->
+                <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center">
+                    <TextBlock Text="{x:Bind Label}"
+                               Style="{StaticResource BodyStrongTextBlockStyle}" />
+                    <TextBlock Text="{x:Bind Meta}"
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               Opacity="0.7" />
+                </StackPanel>
+
+                <!-- Not-installed badge -->
+                <TextBlock Grid.Column="2"
+                           Text="{x:Bind StatusText}"
+                           Style="{StaticResource CaptionTextBlockStyle}"
+                           Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                           VerticalAlignment="Center" />
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
 
     <StackPanel Spacing="12">
         <!-- Embedding model -->
         <StackPanel Spacing="4">
             <TextBlock x:Name="EmbeddingHeader" Opacity="0.8" />
-            <StackPanel x:Name="EmbeddingModelPanel" Spacing="6" />
+            <ComboBox x:Name="EmbeddingCombo"
+                      HorizontalAlignment="Stretch"
+                      ItemTemplate="{StaticResource ModelOptionTemplate}"
+                      SelectionChanged="OnEmbeddingComboChanged" />
+            <TextBlock x:Name="EmbeddingMetaText"
+                       Style="{StaticResource CaptionTextBlockStyle}"
+                       Opacity="0.6" />
         </StackPanel>
 
         <!-- Chunk contextualization -->
         <StackPanel Spacing="4">
-            <TextBlock x:Name="ContextualizerHeader" Opacity="0.8" />
-            <StackPanel x:Name="ContextualizerPanel" Spacing="6" />
+            <ToggleSwitch x:Name="ContextualizerToggle"
+                          Toggled="OnContextualizerToggled" />
+            <ComboBox x:Name="ContextualizerCombo"
+                      HorizontalAlignment="Stretch"
+                      IsEnabled="False"
+                      ItemTemplate="{StaticResource ModelOptionTemplate}"
+                      SelectionChanged="OnContextualizerComboChanged" />
+            <TextBlock x:Name="ContextualizerMetaText"
+                       Style="{StaticResource CaptionTextBlockStyle}"
+                       Opacity="0.6" />
         </StackPanel>
     </StackPanel>
 </UserControl>

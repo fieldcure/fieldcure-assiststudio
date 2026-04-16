@@ -184,6 +184,51 @@ public sealed partial class KnowledgeBasesPage : Page
         modelSelector.SelectionChanged += (_, _) => RefreshCreateButton();
         RefreshCreateButton();
 
+        // --- Indexing Timing ---
+        var timingHeader = new TextBlock
+        {
+            Text = _loader.GetString("KB_IndexTiming"),
+            Opacity = 0.8,
+            Margin = new Thickness(0, 4, 0, 0),
+        };
+        panel.Children.Add(timingHeader);
+
+        var timingRadios = new RadioButtons { Margin = new Thickness(0, 4, 0, 0) };
+        timingRadios.Items.Add(_loader.GetString("KB_IndexNow"));
+        timingRadios.Items.Add(_loader.GetString("KB_IndexOnClose"));
+        timingRadios.SelectedIndex = 0;
+        panel.Children.Add(timingRadios);
+
+        var timingHint = new TextBlock
+        {
+            Text = _loader.GetString("KB_IndexDeferredHint"),
+            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+            Opacity = 0.6,
+            TextWrapping = TextWrapping.Wrap,
+            Visibility = Visibility.Collapsed,
+        };
+        panel.Children.Add(timingHint);
+
+        var userOverrodeTiming = false;
+        timingRadios.SelectionChanged += (_, _) => { userOverrodeTiming = true; };
+
+        modelSelector.SelectionChanged += (_, _) =>
+        {
+            if (userOverrodeTiming) return;
+            timingRadios.SelectedIndex = modelSelector.IsSelectedEmbeddingLocal ? 1 : 0;
+            userOverrodeTiming = false;
+            timingHint.Visibility = modelSelector.IsSelectedEmbeddingLocal
+                ? Visibility.Visible : Visibility.Collapsed;
+        };
+
+        // Set initial default
+        if (modelSelector.IsSelectedEmbeddingLocal)
+        {
+            timingRadios.SelectedIndex = 1;
+            timingHint.Visibility = Visibility.Visible;
+            userOverrodeTiming = false;
+        }
+
         dialog.Content = new ScrollViewer
         {
             Content = panel,
@@ -212,6 +257,25 @@ public sealed partial class KnowledgeBasesPage : Page
         LoggingService.LogInfo($"[KB] Created: {kb.Name} ({kb.Id})");
 
         SnapshotIndexedWith(kb);
+
+        var isDeferred = timingRadios.SelectedIndex == 1;
+        if (isDeferred)
+        {
+            DeferredQueueStore.Add(kb.Id);
+            LoggingService.LogInfo($"[KB] Deferred indexing scheduled: {kb.Name} ({kb.Id})");
+            await AppendKbItemAsync(kb);
+
+            var appendedItem = _allItems.FirstOrDefault(i => i.Id == kb.Id);
+            if (appendedItem is not null)
+            {
+                appendedItem.IsDeferredIndexing = true;
+                appendedItem.StatusText = _loader.GetString("KB_StatusScheduled") ?? "Scheduled";
+                appendedItem.StatusBrush = new SolidColorBrush(Microsoft.UI.Colors.DodgerBlue);
+            }
+            ApplyFilter();
+            return;
+        }
+
         var execResult = await RagProcessManager.StartExecAsync(kb.Id);
         if (!await HandleStartExecResultAsync(execResult))
         {
@@ -431,6 +495,49 @@ public sealed partial class KnowledgeBasesPage : Page
         await modelSelector.InitializeAsync();
         panel.Children.Add(modelSelector);
 
+        // --- Indexing Timing ---
+        var settingsTimingHeader = new TextBlock
+        {
+            Text = _loader.GetString("KB_IndexTiming"),
+            Opacity = 0.8,
+            Margin = new Thickness(0, 4, 0, 0),
+        };
+        panel.Children.Add(settingsTimingHeader);
+
+        var settingsTimingRadios = new RadioButtons { Margin = new Thickness(0, 4, 0, 0) };
+        settingsTimingRadios.Items.Add(_loader.GetString("KB_IndexNow"));
+        settingsTimingRadios.Items.Add(_loader.GetString("KB_IndexOnClose"));
+        settingsTimingRadios.SelectedIndex = 0;
+        panel.Children.Add(settingsTimingRadios);
+
+        var settingsTimingHint = new TextBlock
+        {
+            Text = _loader.GetString("KB_IndexDeferredHint"),
+            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+            Opacity = 0.6,
+            TextWrapping = TextWrapping.Wrap,
+            Visibility = modelSelector.IsSelectedEmbeddingLocal ? Visibility.Visible : Visibility.Collapsed,
+        };
+        panel.Children.Add(settingsTimingHint);
+
+        var settingsUserOverrodeTiming = false;
+        settingsTimingRadios.SelectionChanged += (_, _) => { settingsUserOverrodeTiming = true; };
+
+        modelSelector.SelectionChanged += (_, _) =>
+        {
+            if (settingsUserOverrodeTiming) return;
+            settingsTimingRadios.SelectedIndex = modelSelector.IsSelectedEmbeddingLocal ? 1 : 0;
+            settingsUserOverrodeTiming = false;
+            settingsTimingHint.Visibility = modelSelector.IsSelectedEmbeddingLocal
+                ? Visibility.Visible : Visibility.Collapsed;
+        };
+
+        if (modelSelector.IsSelectedEmbeddingLocal)
+        {
+            settingsTimingRadios.SelectedIndex = 1;
+            settingsUserOverrodeTiming = false;
+        }
+
         // Warning
         var warning = new TextBlock
         {
@@ -484,13 +591,18 @@ public sealed partial class KnowledgeBasesPage : Page
             },
         };
 
-        // Wire the "Save & Re-index" primary button to the selector's
-        // availability state so the user cannot trigger a run that would
-        // immediately fail pre-flight. The secondary "Save" button stays
-        // enabled — saving a config without re-indexing is always OK.
-        dialog.IsPrimaryButtonEnabled = modelSelector.IsCurrentSelectionAvailable;
-        modelSelector.SelectionChanged += (_, _) =>
-            dialog.IsPrimaryButtonEnabled = modelSelector.IsCurrentSelectionAvailable;
+        // Wire the primary button text and availability to timing selection.
+        void UpdateSettingsPrimaryButton()
+        {
+            var isDeferred = settingsTimingRadios.SelectedIndex == 1;
+            dialog.PrimaryButtonText = isDeferred
+                ? _loader.GetString("KB_SaveAndSchedule")
+                : _loader.GetString("KB_SaveAndReindex");
+            dialog.IsPrimaryButtonEnabled = isDeferred || modelSelector.IsCurrentSelectionAvailable;
+        }
+        UpdateSettingsPrimaryButton();
+        modelSelector.SelectionChanged += (_, _) => UpdateSettingsPrimaryButton();
+        settingsTimingRadios.SelectionChanged += (_, _) => UpdateSettingsPrimaryButton();
 
         var result = await dialog.ShowAsync();
         _isDialogOpen = false;
@@ -511,8 +623,6 @@ public sealed partial class KnowledgeBasesPage : Page
 
         if (result == ContentDialogResult.Primary)
         {
-            // Save & Re-index — use partial mode when only models changed
-            // to preserve OCR output; full re-index for source path changes
             SnapshotIndexedWith(kb);
 
             string? partial = null;
@@ -521,20 +631,30 @@ public sealed partial class KnowledgeBasesPage : Page
             else if (modelSelector.EmbeddingModelChanged)
                 partial = "embedding";
 
-            if (partial is not null)
-                LoggingService.LogInfo($"[KB] Partial re-index ({partial}): {kbId}");
-            else
-                LoggingService.LogInfo($"[KB] Re-index started: {kbId}");
-
-            var execResult = await RagProcessManager.StartExecAsync(
-                kbId, force: partial is null, partial: partial);
-            if (!await HandleStartExecResultAsync(execResult))
+            var isSettingsDeferred = settingsTimingRadios.SelectedIndex == 1;
+            if (isSettingsDeferred)
             {
-                await RefreshListAsync();
-                return;
+                DeferredQueueStore.Add(kb.Id, isReindex: true, partialMode: partial);
+                LoggingService.LogInfo($"[KB] Deferred re-index scheduled: {kb.Name} ({kbId})" +
+                    (partial is not null ? $" partial={partial}" : ""));
             }
+            else
+            {
+                if (partial is not null)
+                    LoggingService.LogInfo($"[KB] Partial re-index ({partial}): {kbId}");
+                else
+                    LoggingService.LogInfo($"[KB] Re-index started: {kbId}");
 
-            _pollTimer.Start();
+                var execResult = await RagProcessManager.StartExecAsync(
+                    kbId, force: partial is null, partial: partial);
+                if (!await HandleStartExecResultAsync(execResult))
+                {
+                    await RefreshListAsync();
+                    return;
+                }
+
+                _pollTimer.Start();
+            }
         }
 
         await RefreshListAsync();
@@ -959,8 +1079,38 @@ public sealed partial class KnowledgeBasesPage : Page
             }
 
             await UpdateItemStatusAsync(item);
+
+            // Reflect deferred queue state
+            var deferredEntry = DeferredQueueStore.Get(kb.Id);
+            if (deferredEntry is not null)
+            {
+                item.IsDeferredIndexing = true;
+                if (deferredEntry.LastError is not null)
+                {
+                    item.StatusText = (_loader.GetString("KB_StatusFailed") ?? "Failed")
+                        + $": {deferredEntry.LastError}";
+                    item.StatusBrush = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"];
+                }
+                else if (deferredEntry.StartedAt is not null)
+                {
+                    item.StatusText = _loader.GetString("KB_StatusIndexingBackground") ?? "Indexing (background)";
+                    item.StatusBrush = new SolidColorBrush(Microsoft.UI.Colors.DodgerBlue);
+                }
+                else
+                {
+                    item.StatusText = _loader.GetString("KB_StatusScheduled") ?? "Scheduled";
+                    item.StatusBrush = new SolidColorBrush(Microsoft.UI.Colors.DodgerBlue);
+                }
+            }
+
             _allItems.Add(item);
         }
+
+        // Clean up orphaned deferred entries for deleted KBs
+        var existingIds = new HashSet<string>(kbs.Select(k => k.Id));
+        var deferredEntries = DeferredQueueStore.List();
+        foreach (var orphan in deferredEntries.Where(e => !existingIds.Contains(e.KbId)))
+            DeferredQueueStore.Remove(orphan.KbId);
 
         // Start polling if any KB is indexing
         if (_allItems.Any(i => i.IsIndexing == Visibility.Visible))
@@ -1026,6 +1176,8 @@ public sealed partial class KnowledgeBasesPage : Page
             card.ReindexRequested += OnReindexRequested;
             card.CancelIndexRequested += OnCancelIndexRequested;
             card.CheckChangesRequested += OnCheckChangesRequested;
+            card.IndexNowRequested += OnIndexNowRequested;
+            card.CancelDeferredRequested += OnCancelDeferredRequested;
             card.MatchCountChanged += OnCardMatchCountChanged;
             card.RagReadyTask = _ragReadyTask;
             card.SearchQuery = _searchQuery;
@@ -1285,6 +1437,52 @@ public sealed partial class KnowledgeBasesPage : Page
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// Handles "Index now" on a deferred KB — removes from queue, starts exec immediately.
+    /// </summary>
+    private async void OnIndexNowRequested(object? sender, string kbId)
+    {
+        var entry = DeferredQueueStore.Get(kbId);
+        DeferredQueueStore.Remove(kbId);
+
+        var item = _allItems.FirstOrDefault(i => i.Id == kbId);
+        if (item is not null)
+            item.IsDeferredIndexing = false;
+
+        var execResult = await RagProcessManager.StartExecAsync(
+            kbId,
+            force: entry is { IsReindex: true, PartialMode: null },
+            partial: entry?.PartialMode);
+        if (!await HandleStartExecResultAsync(execResult))
+        {
+            ApplyFilter();
+            return;
+        }
+
+        LoggingService.LogInfo($"[KB] Deferred → immediate indexing: {kbId}");
+        _pollTimer.Start();
+        ApplyFilter();
+    }
+
+    /// <summary>
+    /// Handles "Cancel scheduled" on a deferred KB — removes from queue without indexing.
+    /// </summary>
+    private void OnCancelDeferredRequested(object? sender, string kbId)
+    {
+        DeferredQueueStore.Remove(kbId);
+
+        var item = _allItems.FirstOrDefault(i => i.Id == kbId);
+        if (item is not null)
+        {
+            item.IsDeferredIndexing = false;
+            item.StatusText = _loader.GetString("KB_StatusNoIndex") ?? "No index";
+            item.StatusBrush = new SolidColorBrush(Microsoft.UI.Colors.Gray);
+        }
+
+        LoggingService.LogInfo($"[KB] Deferred indexing cancelled: {kbId}");
+        ApplyFilter();
     }
 
     /// <summary>

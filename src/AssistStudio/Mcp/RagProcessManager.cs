@@ -111,6 +111,41 @@ public static class RagProcessManager
     /// </summary>
     public static KbIndexingStatus? GetProgress(string kbId) =>
         KnowledgeBaseStore.GetIndexingStatus(kbId);
+
+    /// <summary>
+    /// Spawns a detached orchestrator process that consumes the deferred
+    /// queue sequentially. Returns once the child process is launched —
+    /// the orchestrator continues running after AssistStudio exits.
+    /// </summary>
+    public static void StartQueueOrchestrator()
+    {
+        var exePath = BuiltInServerHelper.GetServerExePath(BuiltInServerHelper.RagKey);
+        if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath))
+        {
+            LoggingService.LogError($"[RAG] exec-queue failed — executable not found: {exePath}");
+            return;
+        }
+
+        var queuePath = DeferredQueueStore.QueueFilePath;
+        var args = $"exec-queue --queue-file \"{queuePath}\"";
+
+        LoggingService.LogInfo($"[RAG] Starting exec-queue orchestrator: {exePath} {args}");
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = exePath,
+                Arguments = args,
+                CreateNoWindow = true,
+                UseShellExecute = false,
+            });
+        }
+        catch (Exception ex)
+        {
+            LoggingService.LogError($"[RAG] Failed to start exec-queue: {ex.Message}");
+        }
+    }
 }
 
 /// <summary>

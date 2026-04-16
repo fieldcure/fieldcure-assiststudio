@@ -769,6 +769,54 @@
   <data name="KB_Settings" xml:space="preserve">
     <value>Settings</value>
   </data>
+  <data name="KB_IndexTiming" xml:space="preserve">
+    <value>Indexing</value>
+  </data>
+  <data name="KB_IndexNow" xml:space="preserve">
+    <value>Start indexing now</value>
+  </data>
+  <data name="KB_IndexOnClose" xml:space="preserve">
+    <value>Start when AssistStudio closes</value>
+  </data>
+  <data name="KB_IndexDeferredHint" xml:space="preserve">
+    <value>Local models can slow down your workflow while indexing. Deferring until app close lets you keep working.</value>
+  </data>
+  <data name="KB_StatusScheduled" xml:space="preserve">
+    <value>Scheduled</value>
+  </data>
+  <data name="KB_IndexNowButton" xml:space="preserve">
+    <value>Index now</value>
+  </data>
+  <data name="KB_CancelScheduled" xml:space="preserve">
+    <value>Cancel scheduled</value>
+  </data>
+  <data name="KB_DeferredCloseTitle" xml:space="preserve">
+    <value>Pending Indexing</value>
+  </data>
+  <data name="KB_DeferredCloseMessage" xml:space="preserve">
+    <value>{0} knowledge base(s) are scheduled for indexing.</value>
+  </data>
+  <data name="KB_DeferredCloseStart" xml:space="preserve">
+    <value>Start &amp; Exit</value>
+  </data>
+  <data name="KB_DeferredCloseSkip" xml:space="preserve">
+    <value>Exit without indexing</value>
+  </data>
+  <data name="KB_ContextualizerToggleOn" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="KB_ContextualizerToggleOff" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="KB_SaveAndSchedule" xml:space="preserve">
+    <value>Save &amp; Schedule</value>
+  </data>
+  <data name="KB_StatusFailed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="KB_StatusIndexingBackground" xml:space="preserve">
+    <value>Indexing (background)</value>
+  </data>
   <data name="Connect_RagKbPageHint" xml:space="preserve">
     <value>Create, re-index, and delete in the Knowledge Base page.</value>
   </data>

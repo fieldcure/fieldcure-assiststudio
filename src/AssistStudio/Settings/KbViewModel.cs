@@ -29,6 +29,7 @@ public sealed class KbViewModel : INotifyPropertyChanged
     private int _changesDeleted;
     private int _changesFailed;
     private bool? _changesChecked;
+    private bool _isDeferredIndexing;
 
     #endregion
 
@@ -133,6 +134,13 @@ public sealed class KbViewModel : INotifyPropertyChanged
     {
         get => _changesChecked;
         set => SetField(ref _changesChecked, value);
+    }
+
+    /// <summary>Whether this KB is in the deferred indexing queue.</summary>
+    public bool IsDeferredIndexing
+    {
+        get => _isDeferredIndexing;
+        set => SetField(ref _isDeferredIndexing, value);
     }
 
     #endregion

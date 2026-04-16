@@ -63,6 +63,12 @@ public sealed partial class KbCard : UserControl
     /// <summary>Raised when the user clicks the check changes button.</summary>
     public event EventHandler<string>? CheckChangesRequested;
 
+    /// <summary>Raised when the user clicks "Index now" on a deferred KB.</summary>
+    public event EventHandler<string>? IndexNowRequested;
+
+    /// <summary>Raised when the user clicks "Cancel scheduled" on a deferred KB.</summary>
+    public event EventHandler<string>? CancelDeferredRequested;
+
     /// <summary>Raised when a search completes or clears. Value is match count (-1 = cleared).</summary>
     public event EventHandler<int>? MatchCountChanged;
 
@@ -174,15 +180,24 @@ public sealed partial class KbCard : UserControl
             ModelWarningText.Visibility = Visibility.Collapsed;
         }
 
-        // Indexing vs idle state
+        // Indexing vs deferred vs idle state
         var isIndexing = vm.IsIndexing == Visibility.Visible;
+        var isDeferred = vm.IsDeferredIndexing && !isIndexing;
+
         IndexingPanel.Visibility = isIndexing ? Visibility.Visible : Visibility.Collapsed;
-        ActionPanel.Visibility = isIndexing ? Visibility.Collapsed : Visibility.Visible;
+        DeferredPanel.Visibility = isDeferred ? Visibility.Visible : Visibility.Collapsed;
+        ActionPanel.Visibility = (isIndexing || isDeferred) ? Visibility.Collapsed : Visibility.Visible;
 
         if (isIndexing)
         {
             IndexProgressBar.Value = vm.Progress;
             SetMouseToolTip(StopButton, _loader.GetString("KB_CancelIndexing") ?? "Cancel indexing");
+        }
+        else if (isDeferred)
+        {
+            IndexNowButton.Content = _loader.GetString("KB_IndexNowButton") ?? "Index now";
+            CancelDeferredButton.Content = _loader.GetString("KB_CancelScheduled") ?? "Cancel scheduled";
+            SetMouseToolTip(DeferredDeleteButton, _loader.GetString("KB_Delete/Content") ?? "Delete");
         }
         else
         {
@@ -411,6 +426,18 @@ public sealed partial class KbCard : UserControl
     {
         if (ViewModel is not null)
             CheckChangesRequested?.Invoke(this, ViewModel.Id);
+    }
+
+    private void IndexNowButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel is not null)
+            IndexNowRequested?.Invoke(this, ViewModel.Id);
+    }
+
+    private void CancelDeferredButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel is not null)
+            CancelDeferredRequested?.Invoke(this, ViewModel.Id);
     }
 
     #endregion

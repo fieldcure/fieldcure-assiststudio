@@ -1,5 +1,6 @@
 ﻿using AssistStudio.Controls.Dialogs;
 using AssistStudio.Helpers;
+using AssistStudio.Mcp;
 using AssistStudio.Modules.ViewModels;
 using FieldCure.AssistStudio.Controls;
 using Microsoft.UI.Input;
@@ -625,6 +626,7 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private async Task CloseAppAsync()
     {
+        if (!await HandleDeferredQueueOnCloseAsync()) return;
         _appWindow!.Hide();
         await ConversationManager.FlushAutoSaveAsync();
         await ShutdownMcpServersAsync();
@@ -706,6 +708,7 @@ public sealed partial class MainWindow : Window
 
         if (dirtyTabs.Count == 0)
         {
+            if (!await HandleDeferredQueueOnCloseAsync()) return;
             _appWindow!.Hide();
             await ConversationManager.FlushAutoSaveAsync();
             await ShutdownMcpServersAsync();
@@ -745,12 +748,61 @@ public sealed partial class MainWindow : Window
             }
         }
 
+        if (!await HandleDeferredQueueOnCloseAsync()) return;
         _appWindow!.Hide();
         await ConversationManager.FlushAutoSaveAsync();
         await ShutdownMcpServersAsync();
         ChatPanel.CleanupTempMedia();
         LoggingService.LogInfo("[App] Exiting process...");
         ExitProcess(0);
+    }
+
+    /// <summary>
+    /// Checks the deferred indexing queue and shows a confirmation dialog
+    /// if entries are waiting. Returns <c>true</c> to proceed with exit,
+    /// <c>false</c> to abort. On "Start &amp; Exit", spawns the orchestrator
+    /// process before returning.
+    /// </summary>
+    private async Task<bool> HandleDeferredQueueOnCloseAsync()
+    {
+        if (!DeferredQueueStore.HasEntries())
+            return true;
+
+        var entries = DeferredQueueStore.List();
+        var pendingCount = entries.Count(e => e.StartedAt is null && e.LastError is null);
+        if (pendingCount == 0)
+            return true;
+
+        var dialog = new ThemedContentDialog
+        {
+            Title = Res.GetString("KB_DeferredCloseTitle"),
+            Content = string.Format(Res.GetString("KB_DeferredCloseMessage"), pendingCount),
+            PrimaryButtonText = Res.GetString("KB_DeferredCloseStart"),
+            SecondaryButtonText = Res.GetString("KB_DeferredCloseSkip"),
+            CloseButtonText = Res.GetString("Dialog_Cancel"),
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = Content.XamlRoot,
+        };
+
+        var result = await dialog.ShowAsync();
+
+        if (result == ContentDialogResult.None)
+            return false;
+
+        if (result == ContentDialogResult.Primary)
+        {
+            try
+            {
+                RagProcessManager.StartQueueOrchestrator();
+                LoggingService.LogInfo($"[App] Deferred queue orchestrator spawned for {pendingCount} KB(s)");
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError($"[App] Failed to spawn orchestrator: {ex.Message}");
+            }
+        }
+
+        return true;
     }
 
     /// <summary>

@@ -769,6 +769,54 @@
   <data name="KB_Settings" xml:space="preserve">
     <value>설정</value>
   </data>
+  <data name="KB_IndexTiming" xml:space="preserve">
+    <value>인덱싱</value>
+  </data>
+  <data name="KB_IndexNow" xml:space="preserve">
+    <value>지금 인덱싱 시작</value>
+  </data>
+  <data name="KB_IndexOnClose" xml:space="preserve">
+    <value>AssistStudio 종료 시 시작</value>
+  </data>
+  <data name="KB_IndexDeferredHint" xml:space="preserve">
+    <value>로컬 모델은 인덱싱 중 시스템을 느리게 할 수 있습니다. 앱 종료 시로 지연하면 계속 작업할 수 있습니다.</value>
+  </data>
+  <data name="KB_StatusScheduled" xml:space="preserve">
+    <value>예약됨</value>
+  </data>
+  <data name="KB_IndexNowButton" xml:space="preserve">
+    <value>지금 인덱싱</value>
+  </data>
+  <data name="KB_CancelScheduled" xml:space="preserve">
+    <value>예약 취소</value>
+  </data>
+  <data name="KB_DeferredCloseTitle" xml:space="preserve">
+    <value>대기 중인 인덱싱</value>
+  </data>
+  <data name="KB_DeferredCloseMessage" xml:space="preserve">
+    <value>{0}개의 지식 기반이 인덱싱 예약되어 있습니다.</value>
+  </data>
+  <data name="KB_DeferredCloseStart" xml:space="preserve">
+    <value>시작 후 종료</value>
+  </data>
+  <data name="KB_DeferredCloseSkip" xml:space="preserve">
+    <value>인덱싱 없이 종료</value>
+  </data>
+  <data name="KB_ContextualizerToggleOn" xml:space="preserve">
+    <value>사용</value>
+  </data>
+  <data name="KB_ContextualizerToggleOff" xml:space="preserve">
+    <value>사용 안 함</value>
+  </data>
+  <data name="KB_SaveAndSchedule" xml:space="preserve">
+    <value>저장 후 예약</value>
+  </data>
+  <data name="KB_StatusFailed" xml:space="preserve">
+    <value>실패</value>
+  </data>
+  <data name="KB_StatusIndexingBackground" xml:space="preserve">
+    <value>인덱싱 중 (백그라운드)</value>
+  </data>
   <data name="Connect_RagKbPageHint" xml:space="preserve">
     <value>지식베이스 페이지에서 생성, 재인덱싱, 삭제할 수 있습니다.</value>
   </data>
