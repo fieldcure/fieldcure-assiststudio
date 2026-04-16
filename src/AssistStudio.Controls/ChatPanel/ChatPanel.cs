@@ -167,9 +167,9 @@ public sealed partial class ChatPanel : Control, IDisposable
     private TextBlock? _folderDisabledHint;
     private StackPanel? _folderList;
     private TextBlock? _folderEmpty;
-    private TextBlock? _archiveDisabledHint;
+    private TextBlock? _kbDisabledHint;
     private ComboBox? _kbSelector;
-    private TextBlock? _archiveEmpty;
+    private TextBlock? _kbEmpty;
 
     private bool _isConversationActive;
     private string? _greetingText;

@@ -1247,12 +1247,12 @@ public sealed partial class ChatPanel
             workspaceText = (workspaceText ?? "") + folderSection;
         }
 
-        // Knowledge Archive hint — if search_documents tool is available and a KB is selected
-        if (activeTools.Any(t => t.Name == "search_documents") && !string.IsNullOrEmpty(KnowledgeArchiveFolder))
+        // Knowledge Base hint — if search_documents tool is available and a KB is selected
+        if (activeTools.Any(t => t.Name == "search_documents") && !string.IsNullOrEmpty(KnowledgeBaseId))
         {
-            var kbId = KnowledgeArchiveFolder;
+            var kbId = KnowledgeBaseId;
             workspaceText = (workspaceText ?? "")
-                + $"\n\n## Knowledge Archive\nUse `search_documents` to find relevant information before answering."
+                + $"\n\n## Knowledge Base\nUse `search_documents` to find relevant information before answering."
                 + $"\nAlways pass kb_id=\"{kbId}\" when calling search_documents or get_document_chunk."
                 + "\nIf initial search returns no results, retry with a lower threshold (e.g., 0.1) or different query terms.";
         }

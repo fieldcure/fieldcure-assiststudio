@@ -57,15 +57,15 @@ Connect to external MCP servers to extend AI capabilities with custom tools:
 - **MCP Elicitation** — MCP servers can request user input via structured form fields
 - **Search tools** — Meta-tool for efficiently searching across large tool sets
 - **Sub-Agent delegation** — `delegate_task` tool for autonomous sub-agent execution with parallel dispatch and specialist routing (e.g., Web Search Specialist)
-- **Built-in servers** — Essentials, Filesystem, Knowledge Archive, and Outbox servers. Auto-installed and auto-updated via `dotnet tool` with per-tab instances and MCP Roots protocol
+- **Built-in servers** — Essentials, Filesystem, Knowledge Base, and Outbox servers. Auto-installed and auto-updated via `dotnet tool` with per-tab instances and MCP Roots protocol
 
-### Workspace Folders & Knowledge Archive
+### Workspace Folders & Knowledge Base
 
 - **Per-conversation folders** — Each conversation tab has its own set of workspace folders
-- **Title bar folder button** — Add/remove folders and manage Knowledge Archive from the folder flyout
-- **Knowledge Archive page** — Unified KB management with create/delete/settings dialog and embedding model selection
-- **Multi-KB support** — Multiple Knowledge Archives with shared RAG server and per-conversation KB selection
-- **Knowledge Archive (RAG)** — Index local documents for retrieval-augmented generation via `FieldCure.Mcp.Rag`
+- **Title bar folder button** — Add/remove folders and manage Knowledge Base from the folder flyout
+- **Knowledge Base page** — Unified KB management with create/delete/settings dialog and embedding model selection
+- **Multi-KB support** — Multiple Knowledge Bases with shared RAG server and per-conversation KB selection
+- **Knowledge Base (RAG)** — Index local documents for retrieval-augmented generation via `FieldCure.Mcp.Rag`
 - **System prompt injection** — Workspace folder paths, archive search hints, and persistent memory are automatically injected into the system prompt
 - **Tool CWD** — File and command tools operate within workspace folder context
 
@@ -73,7 +73,7 @@ Connect to external MCP servers to extend AI capabilities with custom tools:
 
 - **Essentials** — `read_file` with PDF/DOCX/XLSX/PPTX/HWPX support (up to 50 MB), `http_request`, web search (with search engine selection), `remember`/`forget` persistent memory, shell commands
 - **Filesystem** — Read, write, list, and search files within workspace folders (via MCP Filesystem)
-- **Knowledge Archive** — Index and search local documents for RAG (via MCP Rag)
+- **Knowledge Base** — Index and search local documents for RAG (via MCP Rag)
 - **Outbox** — Send messages via Slack, Telegram, Discord, Email (SMTP), and KakaoTalk
 - **Search Tools** — Find the right tool across large MCP tool sets
 - **Sub-Agent** — Delegate complex tasks to autonomous sub-agents with specialist routing
@@ -89,7 +89,7 @@ Connect to external MCP servers to extend AI capabilities with custom tools:
 - **Connect** — Add and manage MCP server connections (built-in and external) with search engine selection
 - **Models** — Configure providers, API keys, model selection, Ollama model pulling and login
 - **Profiles** — Create and manage system prompt profiles with tool bindings
-- **Knowledge Archive** — Create, configure, and manage Knowledge Archives with embedding model selection
+- **Knowledge Base** — Create, configure, and manage Knowledge Bases with embedding model selection
 - **Memory** — View and manage persistent memory entries (via Essentials MCP)
 - **Schedule** — Cron schedule management with bilingual (en/ko) human-readable descriptions
 - **Tasks** — Monitor and manage running background tasks

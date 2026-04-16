@@ -616,11 +616,11 @@
     <value>Connect</value>
   </data>
   <data name="Nav_KnowledgeBases.Content" xml:space="preserve">
-    <value>Knowledge Archive</value>
+    <value>Knowledge Base</value>
   </data>
-  <!-- Knowledge Archive Page -->
+  <!-- Knowledge Base Page -->
   <data name="KB_Title.Text" xml:space="preserve">
-    <value>Knowledge Archive</value>
+    <value>Knowledge Base</value>
   </data>
   <data name="KB_Create.Content" xml:space="preserve">
     <value>Create</value>
@@ -704,7 +704,7 @@
     <value>Delete</value>
   </data>
   <data name="KB_FooterHint.Text" xml:space="preserve">
-    <value>Knowledge bases are indexed in the background, even after the app is closed.</value>
+    <value>Knowledge bases continue indexing in the background after the app closes. Local embedding models may temporarily affect system responsiveness.</value>
   </data>
   <data name="KB_DialogName" xml:space="preserve">
     <value>Name</value>
@@ -770,7 +770,7 @@
     <value>Settings</value>
   </data>
   <data name="Connect_RagKbPageHint" xml:space="preserve">
-    <value>Create, re-index, and delete in the Knowledge Archive page.</value>
+    <value>Create, re-index, and delete in the Knowledge Base page.</value>
   </data>
   <!-- Connect Page -->
   <data name="Connect_Title.Text" xml:space="preserve">
@@ -1015,20 +1015,20 @@
   <data name="Models_RefreshStatus.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Check status</value>
   </data>
-  <!-- Knowledge Archive / Embedding -->
+  <!-- Knowledge Base / Embedding -->
   <data name="AppTasks_EmbeddingTitle.Text" xml:space="preserve">
     <value>Embedding</value>
   </data>
   <data name="AppTasks_EmbeddingDescription.Text" xml:space="preserve">
-    <value>Used for Knowledge Archive document indexing and search. Requires an OpenAI-compatible embedding API (Ollama, OpenAI, etc.)</value>
+    <value>Used for Knowledge Base document indexing and search. Requires an OpenAI-compatible embedding API (Ollama, OpenAI, etc.)</value>
   </data>
   <data name="AppTasks_EmbeddingProvider.Header" xml:space="preserve">
     <value>Embedding provider</value>
   </data>
-  <data name="Connect_AddArchiveFolder" xml:space="preserve">
-    <value>Add Archive Folder</value>
+  <data name="Connect_AddKbFolder" xml:space="preserve">
+    <value>Add KB Folder</value>
   </data>
-  <data name="Connect_KnowledgeArchiveDescription" xml:space="preserve">
+  <data name="Connect_KnowledgeBaseDescription" xml:space="preserve">
     <value>Reference documents for semantic search.</value>
   </data>
   <data name="Connect_RagActiveInstances" xml:space="preserve">
@@ -1049,22 +1049,22 @@
   <data name="Connect_Reindex" xml:space="preserve">
     <value>Re-index all documents</value>
   </data>
-  <data name="Connect_KnowledgeArchiveTitle" xml:space="preserve">
-    <value>Knowledge Archive</value>
+  <data name="Connect_KnowledgeBaseTitle" xml:space="preserve">
+    <value>Knowledge Base</value>
   </data>
-  <data name="Connect_KnowledgeArchiveIndexing" xml:space="preserve">
+  <data name="Connect_KnowledgeBaseIndexing" xml:space="preserve">
     <value>Indexing documents…</value>
   </data>
-  <data name="Connect_KnowledgeArchiveReindexing" xml:space="preserve">
+  <data name="Connect_KnowledgeBaseReindexing" xml:space="preserve">
     <value>Re-indexing documents…</value>
   </data>
-  <data name="Connect_KnowledgeArchiveReady" xml:space="preserve">
-    <value>Knowledge Archive — Ready</value>
+  <data name="Connect_KnowledgeBaseReady" xml:space="preserve">
+    <value>Knowledge Base — Ready</value>
   </data>
-  <data name="Connect_KnowledgeArchiveFailed" xml:space="preserve">
-    <value>Knowledge Archive — Failed</value>
+  <data name="Connect_KnowledgeBaseFailed" xml:space="preserve">
+    <value>Knowledge Base — Failed</value>
   </data>
-  <data name="Connect_KnowledgeArchiveCancelled" xml:space="preserve">
+  <data name="Connect_KnowledgeBaseCancelled" xml:space="preserve">
     <value>Indexing cancelled.</value>
   </data>
   <data name="Connect_EmbeddingModelHint" xml:space="preserve">
@@ -1440,6 +1440,6 @@
     <value>Search schedules...</value>
   </data>
   <data name="KB_SearchBox.PlaceholderText" xml:space="preserve">
-    <value>Keyword search chunks...</value>
+    <value>Search documents...</value>
   </data>
 </root>

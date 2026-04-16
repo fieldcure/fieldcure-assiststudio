@@ -173,40 +173,40 @@ public sealed partial class ChatPanel
         DependencyProperty.Register(nameof(IsWorkspaceEnabled), typeof(bool), typeof(ChatPanel),
             new PropertyMetadata(true, OnIsWorkspaceEnabledChanged));
 
-    /// <summary>Identifies the <see cref="KnowledgeArchiveFolder"/> dependency property.</summary>
-    public static readonly DependencyProperty KnowledgeArchiveFolderProperty =
-        DependencyProperty.Register(nameof(KnowledgeArchiveFolder), typeof(string), typeof(ChatPanel),
-            new PropertyMetadata(null, OnKnowledgeArchiveFolderChanged));
+    /// <summary>Identifies the <see cref="KnowledgeBaseId"/> dependency property.</summary>
+    public static readonly DependencyProperty KnowledgeBaseIdProperty =
+        DependencyProperty.Register(nameof(KnowledgeBaseId), typeof(string), typeof(ChatPanel),
+            new PropertyMetadata(null, OnKnowledgeBaseIdChanged));
 
-    private static void OnKnowledgeArchiveFolderChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    private static void OnKnowledgeBaseIdChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is ChatPanel panel)
             panel.UpdateFolderButtonBadge();
     }
 
-    /// <summary>Identifies the <see cref="IsKnowledgeArchiveEnabled"/> dependency property.</summary>
-    public static readonly DependencyProperty IsKnowledgeArchiveEnabledProperty =
-        DependencyProperty.Register(nameof(IsKnowledgeArchiveEnabled), typeof(bool), typeof(ChatPanel),
+    /// <summary>Identifies the <see cref="IsKnowledgeBaseEnabled"/> dependency property.</summary>
+    public static readonly DependencyProperty IsKnowledgeBaseEnabledProperty =
+        DependencyProperty.Register(nameof(IsKnowledgeBaseEnabled), typeof(bool), typeof(ChatPanel),
             new PropertyMetadata(false));
 
-    /// <summary>Identifies the <see cref="IsArchiveIndexing"/> dependency property.</summary>
-    public static readonly DependencyProperty IsArchiveIndexingProperty =
-        DependencyProperty.Register(nameof(IsArchiveIndexing), typeof(bool), typeof(ChatPanel),
+    /// <summary>Identifies the <see cref="IsKbIndexing"/> dependency property.</summary>
+    public static readonly DependencyProperty IsKbIndexingProperty =
+        DependencyProperty.Register(nameof(IsKbIndexing), typeof(bool), typeof(ChatPanel),
             new PropertyMetadata(false));
 
-    /// <summary>Identifies the <see cref="ArchiveIndexingProgress"/> dependency property.</summary>
-    public static readonly DependencyProperty ArchiveIndexingProgressProperty =
-        DependencyProperty.Register(nameof(ArchiveIndexingProgress), typeof(double), typeof(ChatPanel),
+    /// <summary>Identifies the <see cref="KbIndexingProgress"/> dependency property.</summary>
+    public static readonly DependencyProperty KbIndexingProgressProperty =
+        DependencyProperty.Register(nameof(KbIndexingProgress), typeof(double), typeof(ChatPanel),
             new PropertyMetadata(0.0));
 
-    /// <summary>Identifies the <see cref="ArchiveIndexingText"/> dependency property.</summary>
-    public static readonly DependencyProperty ArchiveIndexingTextProperty =
-        DependencyProperty.Register(nameof(ArchiveIndexingText), typeof(string), typeof(ChatPanel),
+    /// <summary>Identifies the <see cref="KbIndexingText"/> dependency property.</summary>
+    public static readonly DependencyProperty KbIndexingTextProperty =
+        DependencyProperty.Register(nameof(KbIndexingText), typeof(string), typeof(ChatPanel),
             new PropertyMetadata(""));
 
-    /// <summary>Identifies the <see cref="IsArchiveLocked"/> dependency property.</summary>
-    public static readonly DependencyProperty IsArchiveLockedProperty =
-        DependencyProperty.Register(nameof(IsArchiveLocked), typeof(bool), typeof(ChatPanel),
+    /// <summary>Identifies the <see cref="IsKbLocked"/> dependency property.</summary>
+    public static readonly DependencyProperty IsKbLockedProperty =
+        DependencyProperty.Register(nameof(IsKbLocked), typeof(bool), typeof(ChatPanel),
             new PropertyMetadata(false));
 
     /// <summary>Identifies the <see cref="ChatZoomFactor"/> dependency property.</summary>
@@ -668,60 +668,60 @@ public sealed partial class ChatPanel
     }
 
     /// <summary>
-    /// Gets or sets the Knowledge Archive folder path for the current conversation.
-    /// Single folder — each conversation has at most one archive folder.
+    /// Gets or sets the Knowledge Base folder path for the current conversation.
+    /// Single folder — each conversation has at most one knowledge base.
     /// </summary>
-    public string? KnowledgeArchiveFolder
+    public string? KnowledgeBaseId
     {
-        get => (string?)GetValue(KnowledgeArchiveFolderProperty);
-        set => SetValue(KnowledgeArchiveFolderProperty, value);
+        get => (string?)GetValue(KnowledgeBaseIdProperty);
+        set => SetValue(KnowledgeBaseIdProperty, value);
     }
 
     /// <summary>
-    /// Gets or sets whether the Knowledge Archive capability is enabled in the current profile.
+    /// Gets or sets whether the Knowledge Base capability is enabled in the current profile.
     /// </summary>
-    public bool IsKnowledgeArchiveEnabled
+    public bool IsKnowledgeBaseEnabled
     {
-        get => (bool)GetValue(IsKnowledgeArchiveEnabledProperty);
-        set => SetValue(IsKnowledgeArchiveEnabledProperty, value);
+        get => (bool)GetValue(IsKnowledgeBaseEnabledProperty);
+        set => SetValue(IsKnowledgeBaseEnabledProperty, value);
     }
 
     /// <summary>
-    /// Gets or sets whether the Knowledge Archive is currently indexing.
+    /// Gets or sets whether the Knowledge Base is currently indexing.
     /// Controls visibility of the progress ring in the title bar and progress bar in the flyout.
     /// </summary>
-    public bool IsArchiveIndexing
+    public bool IsKbIndexing
     {
-        get => (bool)GetValue(IsArchiveIndexingProperty);
-        set => SetValue(IsArchiveIndexingProperty, value);
+        get => (bool)GetValue(IsKbIndexingProperty);
+        set => SetValue(IsKbIndexingProperty, value);
     }
 
     /// <summary>
     /// Gets or sets the indexing progress as a percentage (0–100).
     /// </summary>
-    public double ArchiveIndexingProgress
+    public double KbIndexingProgress
     {
-        get => (double)GetValue(ArchiveIndexingProgressProperty);
-        set => SetValue(ArchiveIndexingProgressProperty, value);
+        get => (double)GetValue(KbIndexingProgressProperty);
+        set => SetValue(KbIndexingProgressProperty, value);
     }
 
     /// <summary>
     /// Gets or sets the indexing status text (e.g., "3/10 files...").
     /// </summary>
-    public string ArchiveIndexingText
+    public string KbIndexingText
     {
-        get => (string)GetValue(ArchiveIndexingTextProperty);
-        set => SetValue(ArchiveIndexingTextProperty, value);
+        get => (string)GetValue(KbIndexingTextProperty);
+        set => SetValue(KbIndexingTextProperty, value);
     }
 
     /// <summary>
-    /// Gets or sets whether the Knowledge Archive folder is locked by another process.
+    /// Gets or sets whether the Knowledge Base folder is locked by another process.
     /// When true, shows a lock icon and hides the reindex button.
     /// </summary>
-    public bool IsArchiveLocked
+    public bool IsKbLocked
     {
-        get => (bool)GetValue(IsArchiveLockedProperty);
-        set => SetValue(IsArchiveLockedProperty, value);
+        get => (bool)GetValue(IsKbLockedProperty);
+        set => SetValue(IsKbLockedProperty, value);
     }
 
     /// <summary>
@@ -899,10 +899,10 @@ public sealed partial class ChatPanel
     public event EventHandler? WorkspaceFolderAddRequested;
 
     /// <summary>
-    /// Occurs when the user sets or removes the Knowledge Archive folder via the flyout.
+    /// Occurs when the user sets or removes the Knowledge Base folder via the flyout.
     /// The event argument is the folder path (null to remove).
     /// </summary>
-    public event EventHandler<string?>? KnowledgeArchiveFolderChanged;
+    public event EventHandler<string?>? KnowledgeBaseIdChanged;
 
     /// <summary>
     /// Callback that returns the list of available knowledge bases for the KB selector.
@@ -969,9 +969,9 @@ public sealed partial class ChatPanel
         _folderDisabledHint = null;
         _folderList = null;
         _folderEmpty = null;
-        _archiveDisabledHint = null;
+        _kbDisabledHint = null;
         _kbSelector = null;
-        _archiveEmpty = null;
+        _kbEmpty = null;
 
         // Get template parts
         _rootGrid = GetTemplateChild("PART_RootGrid") as Grid;

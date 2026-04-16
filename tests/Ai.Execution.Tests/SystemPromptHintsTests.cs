@@ -14,7 +14,7 @@ public sealed class SystemPromptHintsTests
         Assert.IsTrue(hint.Contains("kb_id=\"test-kb-123\""));
         Assert.IsTrue(hint.Contains("search_documents"));
         Assert.IsTrue(hint.Contains("get_document_chunk"));
-        Assert.IsTrue(hint.Contains("Knowledge Archive"));
+        Assert.IsTrue(hint.Contains("Knowledge Base"));
     }
 
     [TestMethod]

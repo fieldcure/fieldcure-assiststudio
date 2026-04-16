@@ -74,7 +74,7 @@
 ### Changed
 - `Profile.Text` renamed to `Profile.SystemPrompt` for clarity (`JsonPropertyName("Text")` preserved for backward compatibility)
 - `DocumentParsers` migrated to independent NuGet package (`FieldCure.DocumentParsers` 0.3.x)
-- `IAssistTool` logging enhanced for Knowledge Archive lifecycle and tool execution
+- `IAssistTool` logging enhanced for Knowledge Base lifecycle and tool execution
 
 ### Fixed
 - MCP tool schemas normalized for Gemini API compatibility (strip unsupported keywords)

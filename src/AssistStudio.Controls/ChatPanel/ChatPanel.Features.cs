@@ -254,9 +254,9 @@ public sealed partial class ChatPanel
             _folderDisabledHint = FindDescendantByName<TextBlock>(root, "PART_FolderDisabledHint");
             _folderList = FindDescendantByName<StackPanel>(root, "PART_FolderList");
             _folderEmpty = FindDescendantByName<TextBlock>(root, "PART_FolderEmpty");
-            _archiveDisabledHint = FindDescendantByName<TextBlock>(root, "PART_ArchiveDisabledHint");
+            _kbDisabledHint = FindDescendantByName<TextBlock>(root, "PART_KbDisabledHint");
             _kbSelector = FindDescendantByName<ComboBox>(root, "PART_KbSelector");
-            _archiveEmpty = FindDescendantByName<TextBlock>(root, "PART_ArchiveEmpty");
+            _kbEmpty = FindDescendantByName<TextBlock>(root, "PART_KbEmpty");
 
             // Localize flyout text (x:Uid doesn't work in ControlTemplate)
             LocalizeFlyoutText(root);
@@ -270,13 +270,13 @@ public sealed partial class ChatPanel
                 {
                     if (_kbSelector.SelectedItem is KbItem selected)
                     {
-                        KnowledgeArchiveFolder = selected.Id;
-                        KnowledgeArchiveFolderChanged?.Invoke(this, selected.Id);
+                        KnowledgeBaseId = selected.Id;
+                        KnowledgeBaseIdChanged?.Invoke(this, selected.Id);
                     }
                     else
                     {
-                        KnowledgeArchiveFolder = null;
-                        KnowledgeArchiveFolderChanged?.Invoke(this, null);
+                        KnowledgeBaseId = null;
+                        KnowledgeBaseIdChanged?.Invoke(this, null);
                     }
                 };
             }
@@ -298,7 +298,7 @@ public sealed partial class ChatPanel
     }
 
     /// <summary>
-    /// Updates the folder flyout content based on current workspace folders and knowledge archive state.
+    /// Updates the folder flyout content based on current workspace folders and knowledge base state.
     /// Called on every Flyout.Opening event.
     /// </summary>
     private void PopulateFolderFlyout()
@@ -367,9 +367,9 @@ public sealed partial class ChatPanel
             _folderList.Children.Add(row);
         }
 
-        // Archive section — KB selector (always visible, hint when profile doesn't enable RAG)
-        var archiveEnabled = IsKnowledgeArchiveEnabled;
-        var selectedKbId = KnowledgeArchiveFolder; // stores KB ID
+        // KB section — KB selector (always visible, hint when profile doesn't enable RAG)
+        var kbEnabled = IsKnowledgeBaseEnabled;
+        var selectedKbId = KnowledgeBaseId; // stores KB ID
 
         if (_kbSelector is not null)
         {
@@ -387,14 +387,14 @@ public sealed partial class ChatPanel
                     _kbSelector.SelectedItem = match;
             }
 
-            if (_archiveEmpty is not null)
-                _archiveEmpty.Visibility = kbItems.Count == 0
+            if (_kbEmpty is not null)
+                _kbEmpty.Visibility = kbItems.Count == 0
                     ? Visibility.Visible : Visibility.Collapsed;
         }
 
         // Hint when profile doesn't have RAG enabled (but KB is selected)
-        if (_archiveDisabledHint is not null)
-            _archiveDisabledHint.Visibility = !archiveEnabled && !string.IsNullOrEmpty(selectedKbId)
+        if (_kbDisabledHint is not null)
+            _kbDisabledHint.Visibility = !kbEnabled && !string.IsNullOrEmpty(selectedKbId)
                 ? Visibility.Visible : Visibility.Collapsed;
     }
 
@@ -405,7 +405,7 @@ public sealed partial class ChatPanel
     {
         SetText(root, "PART_FolderHeaderText", "Folder_Header", "Workspace Folders");
         SetText(root, "PART_FolderAddButtonText", "Folder_AddButton", "Add Folder");
-        SetText(root, "PART_ArchiveHeaderText", "Folder_ArchiveHeader", "Knowledge Archive");
+        SetText(root, "PART_KbHeaderText", "Folder_KbHeader", "Knowledge Base");
 
         // Elements inside Collapsed parents aren't in the visual tree yet,
         // so search within the referenced PART_ elements directly.
@@ -413,10 +413,10 @@ public sealed partial class ChatPanel
             _folderEmpty.Text = Res.GetString("Folder_Empty") ?? "(empty)";
         if (_folderDisabledHint is not null)
             _folderDisabledHint.Text = Res.GetString("Folder_DisabledHint") ?? "Enable Workspace in your profile to use these folders.";
-        if (_archiveDisabledHint is not null)
-            _archiveDisabledHint.Text = Res.GetString("Folder_ArchiveDisabledHint") ?? "Current profile does not have Knowledge Archive enabled.";
-        if (_archiveEmpty is not null)
-            _archiveEmpty.Text = Res.GetString("Folder_ArchiveNoKbs") ?? "No knowledge bases. Create one in Settings.";
+        if (_kbDisabledHint is not null)
+            _kbDisabledHint.Text = Res.GetString("Folder_KbDisabledHint") ?? "Current profile does not have Knowledge Base enabled.";
+        if (_kbEmpty is not null)
+            _kbEmpty.Text = Res.GetString("Folder_KbNoKbs") ?? "No knowledge bases. Create one in Settings.";
         if (_kbSelector is not null)
             _kbSelector.PlaceholderText = Res.GetString("Folder_KbPlaceholder") ?? "Select knowledge base";
 
@@ -454,7 +454,7 @@ public sealed partial class ChatPanel
     private void UpdateFolderButtonBadge()
     {
         var hasFolders = (WorkspaceFolders?.Count ?? 0) > 0
-            || !string.IsNullOrEmpty(KnowledgeArchiveFolder);
+            || !string.IsNullOrEmpty(KnowledgeBaseId);
 
         VisualStateManager.GoToState(this, hasFolders ? "HasFolders" : "NoFolders", true);
     }
@@ -469,10 +469,10 @@ public sealed partial class ChatPanel
 
     /// <summary>
     /// Updates the indexing progress UI elements in the flyout and title bar.
-    /// Call this after changing <see cref="IsArchiveIndexing"/>, <see cref="ArchiveIndexingProgress"/>,
-    /// or <see cref="ArchiveIndexingText"/>.
+    /// Call this after changing <see cref="IsKbIndexing"/>, <see cref="KbIndexingProgress"/>,
+    /// or <see cref="KbIndexingText"/>.
     /// </summary>
-    public void UpdateArchiveProgressUI()
+    public void UpdateKbProgressUI()
     {
         // Indexing progress is now managed by the KB Settings page.
         // This method is kept for API compatibility but is a no-op.

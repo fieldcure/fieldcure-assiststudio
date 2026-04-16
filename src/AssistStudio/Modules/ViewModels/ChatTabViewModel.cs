@@ -77,7 +77,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     private IReadOnlyList<string> _parentEnabledServers = [];
 
     /// <summary>
-    /// Cached Knowledge Archive folder (kb_id) from UI thread for thread-safe access
+    /// Cached Knowledge Base folder (kb_id) from UI thread for thread-safe access
     /// by <see cref="SubAgentTool.BuildContextHints"/> which runs on ThreadPool.
     /// Updated in <see cref="ResolveTools"/>.
     /// </summary>
@@ -397,16 +397,16 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             && ragSavedConfig.Folders.Count > 0)
         {
             // Folders[0] stores the KB ID in the new multi-KB model
-            panel.KnowledgeArchiveFolder = ragSavedConfig.Folders[0];
+            panel.KnowledgeBaseId = ragSavedConfig.Folders[0];
         }
 
         // Set workspace capability based on profile
         var filesystemServerId = $"builtin_{BuiltInServerHelper.FilesystemKey}";
         panel.IsWorkspaceEnabled = SelectedProfile?.EnabledServers.Contains(filesystemServerId) ?? false;
 
-        // Set Knowledge Archive capability based on profile
+        // Set Knowledge Base capability based on profile
         var ragServerId = $"builtin_{BuiltInServerHelper.RagKey}";
-        panel.IsKnowledgeArchiveEnabled = SelectedProfile?.EnabledServers.Contains(ragServerId) ?? false;
+        panel.IsKnowledgeBaseEnabled = SelectedProfile?.EnabledServers.Contains(ragServerId) ?? false;
 
         // Memory text is now fetched from Essentials MCP at send time (PrepareToolsForSendAsync)
 
@@ -545,7 +545,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Gets the built-in server configurations for this conversation (workspace folders, archive folder).
+    /// Gets the built-in server configurations for this conversation (workspace folders, knowledge base).
     /// Used when saving the conversation to .astx file.
     /// </summary>
     public Dictionary<string, BuiltInServerConfig>? GetBuiltInServers() => _builtInServers;
@@ -744,9 +744,9 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                     await ConnectFilesystemAsync(folders);
             }
 
-            // Knowledge Archive capability (shared server — no per-tab connect/disconnect)
+            // Knowledge Base capability (shared server — no per-tab connect/disconnect)
             var ragServerId = $"builtin_{BuiltInServerHelper.RagKey}";
-            Panel.IsKnowledgeArchiveEnabled = profile.EnabledServers.Contains(ragServerId);
+            Panel.IsKnowledgeBaseEnabled = profile.EnabledServers.Contains(ragServerId);
         }
 
         // Resolve tools from both built-in and MCP sources
@@ -866,7 +866,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// Saves the selected KB ID to conversation data. RAG is a shared server —
     /// no per-tab connect/disconnect needed.
     /// </summary>
-    public void OnKnowledgeArchiveFolderChanged(object? _sender, string? kbId)
+    public void OnKnowledgeBaseIdChanged(object? _sender, string? kbId)
     {
         _builtInServers ??= [];
 
@@ -1033,7 +1033,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 
         // Cache values for thread-safe access by SubAgent (runs on ThreadPool)
         _parentEnabledServers = [.. enabledServerIds];
-        _cachedKbId = Panel?.KnowledgeArchiveFolder;
+        _cachedKbId = Panel?.KnowledgeBaseId;
 
         // Sub-Agent tool — always available (works without tools for text-only tasks)
         tools.Add(GetOrCreateSubAgentTool());

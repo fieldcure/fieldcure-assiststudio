@@ -8,7 +8,7 @@
 
 - **Tool Orchestration** — `ToolCallExecutor` with confirmation handler and parallel execution, `ToolResolver` for built-in/MCP tool merge
 - **Specialist Agents** — `ISpecialist` interface for domain-specific sub-agent routing (e.g., Web Search Specialist)
-- **Knowledge Archive** — `KnowledgeBase` model for multi-KB metadata persistence
+- **Knowledge Base** — `KnowledgeBase` model for multi-KB metadata persistence
 - **Workspace Context** — `IWorkspaceContext` for dynamic system prompt injection
 - **MCP Server Management** — Built-in server lifecycle (install, update, connect) via `BuiltInServerHelper`
 - **RAG Support** — `IContextProvider` retrieves `ContextChunk`s for queries

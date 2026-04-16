@@ -393,10 +393,10 @@ public static class AppSettings
             IsBuiltIn = true,
             EnabledServers = ["builtin_essentials", "builtin_filesystem", "builtin_rag", "builtin_runner"],
             SystemPrompt =
-                "You are a helpful assistant with access to a knowledge archive. " +
-                "When the question may relate to indexed content, search the archive first using search_documents. " +
-                "Cite the source document when providing information from the archive. " +
-                "If the archive has no relevant results, say so and answer from your general knowledge."
+                "You are a helpful assistant with access to a knowledge base. " +
+                "When the question may relate to indexed content, search the knowledge base first using search_documents. " +
+                "Cite the source document when providing information from the knowledge base. " +
+                "If the knowledge base has no relevant results, say so and answer from your general knowledge."
         }
     ];
 

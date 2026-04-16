@@ -40,7 +40,7 @@
                 <!-- 2. Workspace Folders (Filesystem) — info-only placeholder -->
                 <controls:McpServerCard x:Name="FilesystemCard" />
 
-                <!-- 3. Knowledge Archive (RAG) — info-only placeholder -->
+                <!-- 3. Knowledge Base (RAG) — info-only placeholder -->
                 <controls:McpServerCard x:Name="RagCard" />
 
                 <!-- 4. Outbox — info-only placeholder -->

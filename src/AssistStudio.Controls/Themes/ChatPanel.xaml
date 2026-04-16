@@ -124,15 +124,15 @@
                                                            Fill="{ThemeResource DividerStrokeColorDefaultBrush}"
                                                            Opacity="0.3" Margin="0,8,0,4" />
 
-                                                <!-- Knowledge Archive header -->
-                                                <TextBlock x:Name="PART_ArchiveHeaderText"
-                                                           Text="Knowledge Archive"
+                                                <!-- Knowledge Base header -->
+                                                <TextBlock x:Name="PART_KbHeaderText"
+                                                           Text="Knowledge Base"
                                                            FontWeight="SemiBold"
                                                            Margin="0,0,0,4" />
 
-                                                <!-- Archive disabled hint -->
-                                                <TextBlock x:Name="PART_ArchiveDisabledHint"
-                                                           Text="Enable Knowledge Archive in your profile."
+                                                <!-- KB disabled hint -->
+                                                <TextBlock x:Name="PART_KbDisabledHint"
+                                                           Text="Enable Knowledge Base in your profile."
                                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                                            FontSize="12" TextWrapping="Wrap"
                                                            Margin="0,0,0,4" Visibility="Collapsed" />
@@ -144,7 +144,7 @@
                                                           DisplayMemberPath="Name" />
 
                                                 <!-- No KBs hint -->
-                                                <TextBlock x:Name="PART_ArchiveEmpty"
+                                                <TextBlock x:Name="PART_KbEmpty"
                                                            Text="No knowledge bases. Create one in Settings."
                                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                                            FontSize="12" Margin="0,4,0,0"

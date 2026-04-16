@@ -12,10 +12,10 @@
 - **Extended Thinking** — Collapsible thinking/reasoning blocks with visual left-bar styling. Auto-collapses when streaming completes.
 - **Conversation Branching** — Tree-based message editing. Edit any user message to create a new branch. Navigate between branches with the ◀ 1/2 ▶ navigator in message footers.
 - **Code Copy-to-Clipboard** — One-click copy button on every rendered code block.
-- **Folder Flyout** — XAML-based folder management flyout with workspace folders and Knowledge Archive controls. `{ThemeResource}` bindings for automatic light/dark theme support.
+- **Folder Flyout** — XAML-based folder management flyout with workspace folders and Knowledge Base controls. `{ThemeResource}` bindings for automatic light/dark theme support.
 - **Multimedia Rendering** — MCP image, audio, and video content blocks rendered inline with native controls.
 - **Image Hover Toolbar** — Zoom (popover viewer), save (`FileSavePicker`), and copy buttons on hover over inline images.
-- **Knowledge Archive Selector** — `ComposeBar` flyout for per-conversation KB selection with `kb_id` system prompt hint injection.
+- **Knowledge Base Selector** — `ComposeBar` flyout for per-conversation KB selection with `kb_id` system prompt hint injection.
 - **Tool Approval** — Inline `ToolApprovalPanel` for user confirmation before tool execution, with expandable JSON arguments preview, user instruction input field, and MCP server name badge.
 - **MCP Elicitation** — `ToolElicitationPanel` for MCP server user-input requests with multi-field selection and batch submit.
 - **Tool Block Details** — Expandable tool blocks showing arguments, result, and execution duration with interleave rendering.
@@ -97,9 +97,9 @@ The main control. Provides message list (WebView2), input area, streaming, attac
 | `IsReadOnly` | `bool` | Read-only conversation view |
 | `WorkspaceFolders` | `IList<string>` | Workspace folder paths for the current tab |
 | `IsWorkspaceEnabled` | `bool` | Enable/disable workspace folder features |
-| `KnowledgeArchiveFolder` | `string` | Knowledge Archive folder path (kb_id) for the current conversation |
-| `IsKnowledgeArchiveEnabled` | `bool` | Whether Knowledge Archive is enabled in the current profile |
-| `IsArchiveIndexing` | `bool` | Whether the Knowledge Archive is currently indexing |
+| `KnowledgeArchiveFolder` | `string` | Knowledge Base folder path (kb_id) for the current conversation |
+| `IsKnowledgeArchiveEnabled` | `bool` | Whether Knowledge Base is enabled in the current profile |
+| `IsArchiveIndexing` | `bool` | Whether the Knowledge Base is currently indexing |
 | `ArchiveIndexingProgress` | `double` | Indexing progress (0–100) |
 | `ArchiveIndexingText` | `string` | Current indexing file name for tooltip display |
 | `IsArchiveLocked` | `bool` | Whether the archive folder is locked by another process |

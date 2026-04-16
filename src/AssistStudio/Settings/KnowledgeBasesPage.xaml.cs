@@ -32,6 +32,7 @@ public sealed partial class KnowledgeBasesPage : Page
     private readonly ResourceLoader _loader = new();
     private string _searchQuery = "";
     private Task? _ragReadyTask;
+    private bool _isDialogOpen;
 
     #endregion
 
@@ -86,6 +87,8 @@ public sealed partial class KnowledgeBasesPage : Page
     /// </summary>
     private async void OnCreateClicked(object sender, RoutedEventArgs e)
     {
+        if (_isDialogOpen) return;
+        _isDialogOpen = true;
         var dialog = new ThemedContentDialog
         {
             XamlRoot = XamlRoot,
@@ -189,6 +192,7 @@ public sealed partial class KnowledgeBasesPage : Page
         };
 
         var result = await dialog.ShowAsync();
+        _isDialogOpen = false;
         if (result != ContentDialogResult.Primary)
             return;
 
@@ -227,6 +231,8 @@ public sealed partial class KnowledgeBasesPage : Page
     /// </summary>
     private async void OnDeleteRequested(object? sender, string kbId)
     {
+        if (_isDialogOpen) return;
+        _isDialogOpen = true;
         var dialog = new ThemedContentDialog
         {
             XamlRoot = XamlRoot,
@@ -238,6 +244,7 @@ public sealed partial class KnowledgeBasesPage : Page
         };
 
         var result = await dialog.ShowAsync();
+        _isDialogOpen = false;
         if (result != ContentDialogResult.Primary) return;
 
         if (RagProcessManager.IsExecRunning(kbId))
@@ -317,7 +324,9 @@ public sealed partial class KnowledgeBasesPage : Page
             Content = body,
             CloseButtonText = "OK",
         };
+        _isDialogOpen = true;
         await errorDialog.ShowAsync();
+        _isDialogOpen = false;
     }
 
     /// <summary>
@@ -354,6 +363,8 @@ public sealed partial class KnowledgeBasesPage : Page
     /// </summary>
     private async void OnSettingsRequested(object? sender, string kbId)
     {
+        if (_isDialogOpen) return;
+        _isDialogOpen = true;
 
         var allKbs = KnowledgeBaseStore.ListAll();
         var kb = allKbs.FirstOrDefault(k => k.Id == kbId);
@@ -482,6 +493,7 @@ public sealed partial class KnowledgeBasesPage : Page
             dialog.IsPrimaryButtonEnabled = modelSelector.IsCurrentSelectionAvailable;
 
         var result = await dialog.ShowAsync();
+        _isDialogOpen = false;
         if (result == ContentDialogResult.None)
             return;
 
@@ -610,7 +622,9 @@ public sealed partial class KnowledgeBasesPage : Page
             CloseButtonText = "OK",
             XamlRoot = XamlRoot,
         };
+        _isDialogOpen = true;
         await dialog.ShowAsync();
+        _isDialogOpen = false;
         return false;
     }
 

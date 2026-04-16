@@ -33,7 +33,7 @@ public sealed class SubAgentTool : IAssistTool
     /// </summary>
     /// <param name="executor">Sub-agent executor for isolated LLM sessions.</param>
     /// <param name="kbIdProvider">
-    /// Returns the current conversation's Knowledge Archive folder (kb_id),
+    /// Returns the current conversation's Knowledge Base folder (kb_id),
     /// or <c>null</c> if no KB is selected.
     /// </param>
     /// <param name="registry">Registry of built-in specialists for auto-approve lookup.</param>

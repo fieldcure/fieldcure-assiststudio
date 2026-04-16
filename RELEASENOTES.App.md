@@ -29,7 +29,7 @@
 - **Sub-Agent delegation** — `delegate_task` tool for autonomous sub-agent execution with parallel dispatch and specialist routing
 - **Web Search Specialist** — dedicated search agent with `ISpecialist` architecture and external search MCP compatibility
 - **Schedule page** — cron schedule management UI with bilingual cron descriptor (en/ko) and one-time schedule display
-- **Knowledge Archive page** — unified KB management with create/delete/settings dialog, `EmbeddingModelSelector`, progress/stop UI
+- **Knowledge Base page** — unified KB management with create/delete/settings dialog, `EmbeddingModelSelector`, progress/stop UI
 - **Media persistence** — images, audio, and video saved in `.astd` files via `MediaStore` with per-conversation media directory
 - **Image compression** — automatic JPEG compression and resize before sending to providers (`ImageCompressor` via SkiaSharp)
 - **Memory → Essentials MCP** — memory tools migrated from in-process virtual server to Essentials MCP; system prompt injection via `list_memories`
@@ -143,12 +143,12 @@
 ## [0.10.0] - 2026-03-24
 
 ### Added
-- Knowledge Archive (RAG) built-in MCP server with per-tab folder management
-- Knowledge Archive folder flyout with set/re-index/remove controls
+- Knowledge Base (RAG) built-in MCP server with per-tab folder management
+- Knowledge Base folder flyout with set/re-index/remove controls
 - Per-tab RAG server lifecycle (connect, index, disconnect)
-- Knowledge Archive system prompt hint with `search_documents` instruction
+- Knowledge Base system prompt hint with `search_documents` instruction
 - Embedding model selection with RadioButtons and auto-select
-- `.astd` conversation persistence for Knowledge Archive folder and built-in server configs
+- `.astd` conversation persistence for Knowledge Base folder and built-in server configs
 
 ### Changed
 - Folder flyout redesigned as XAML-based with proper light/dark theme support

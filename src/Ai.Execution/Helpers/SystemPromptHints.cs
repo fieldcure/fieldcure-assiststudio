@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using FieldCure.Ai.Execution.Models;
 
 namespace FieldCure.Ai.Execution.Helpers;
@@ -10,13 +10,13 @@ namespace FieldCure.Ai.Execution.Helpers;
 public static class SystemPromptHints
 {
     /// <summary>
-    /// Builds a RAG knowledge archive hint for the system prompt.
+    /// Builds a RAG knowledge base hint for the system prompt.
     /// Identical wording to ChatPanel's kb_id injection.
     /// </summary>
     public static string BuildRagHint(string kbId) =>
         $"""
 
-        ## Knowledge Archive
+        ## Knowledge Base
         Use `search_documents` to find relevant information before answering.
         Always pass kb_id="{kbId}" when calling search_documents or get_document_chunk.
         If initial search returns no results, retry with a lower threshold (e.g., 0.1) or different query terms.

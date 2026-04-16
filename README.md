@@ -34,7 +34,7 @@ AssistStudio is two things:
 ### Tools & Agents
 - **Tool / Function Calling** — Define tools with `IAssistTool`. `ToolCallExecutor` orchestrates execution with confirmation flow and parallel execution.
 - **MCP Integration** — Connect to MCP servers (Stdio / HTTP) to aggregate tools. `McpToolAdapter` bridges MCP tools to `IAssistTool`.
-- **Built-in MCP Servers** — Essentials (12–16 tools), Filesystem, Knowledge Archive (RAG), and Outbox — auto-installed and auto-updated via `dotnet tool`.
+- **Built-in MCP Servers** — Essentials (12–16 tools), Filesystem, Knowledge Base (RAG), and Outbox — auto-installed and auto-updated via `dotnet tool`.
 - **Sub-Agent Delegation** — `delegate_task` tool for autonomous sub-agent execution with parallel dispatch. `ISpecialist` interface for domain-specific routing (e.g., Web Search Specialist).
 
 ### UI & Media
@@ -47,7 +47,7 @@ AssistStudio is two things:
 ### Data & Persistence
 - **Conversation Persistence** — Save and load conversations in `.astx` (ZIP archive) format with full branching tree and media persistence.
 - **Profiles & Presets** — Save provider configurations as presets; switch system prompts and tool selections with profiles.
-- **Knowledge Archive** — Multi-KB management with embedding model selection and per-conversation KB selector.
+- **Knowledge Base** — Multi-KB management with embedding model selection and per-conversation KB selector.
 - **Schedule** — Cron schedule management with bilingual (en/ko) human-readable descriptions.
 - **Workspace Context** — `IWorkspaceContext` for dynamic system prompt injection based on app state.
 - **Structured Logging** — `DiagnosticLogger` with pluggable `OnException`, `OnWarning`, `OnInfo` callbacks.
@@ -280,7 +280,7 @@ The workspace app bundles MCP servers that are auto-installed and managed:
 
 - **Essentials** ([`FieldCure.Mcp.Essentials`](https://www.nuget.org/packages/FieldCure.Mcp.Essentials)) — 12–16 tools: HTTP client, web search (Bing/Serper/SerpApi/Tavily + category search for news/images/scholar/patents), web/document fetching, shell commands, JavaScript sandbox, environment info, file I/O, persistent memory (`remember`/`forget`).
 - **Filesystem** ([`FieldCure.Mcp.Filesystem`](https://www.nuget.org/packages/FieldCure.Mcp.Filesystem)) — Secure file operations within workspace folders. Per-tab instances with MCP Roots protocol for dynamic folder updates.
-- **Knowledge Archive** ([`FieldCure.Mcp.Rag`](https://www.nuget.org/packages/FieldCure.Mcp.Rag)) — Multi-KB document indexing and search for RAG. Shared server with `kb_id` parameter, per-conversation KB selection, and embedding model configuration.
+- **Knowledge Base** ([`FieldCure.Mcp.Rag`](https://www.nuget.org/packages/FieldCure.Mcp.Rag)) — Multi-KB document indexing and search for RAG. Shared server with `kb_id` parameter, per-conversation KB selection, and embedding model configuration.
 - **Outbox** ([`FieldCure.Mcp.Outbox`](https://www.nuget.org/packages/FieldCure.Mcp.Outbox)) — Send messages via Slack, Telegram, Discord, Email (SMTP), and KakaoTalk. Shared instance across all tabs.
 - **BuiltInServerHelper** — Auto-installs and auto-updates built-in servers to latest NuGet version via `dotnet tool` on app startup. Read-only tools (read, list, search) skip user approval.
 

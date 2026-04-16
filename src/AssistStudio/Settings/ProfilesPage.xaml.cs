@@ -565,7 +565,7 @@ public sealed partial class ProfilesPage : Page
             });
         }
 
-        // Knowledge Archive (RAG)
+        // Knowledge Base (RAG)
         {
             var ragId = $"builtin_{BuiltInServerHelper.RagKey}";
             var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };

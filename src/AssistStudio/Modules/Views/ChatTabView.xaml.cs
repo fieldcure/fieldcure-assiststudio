@@ -88,7 +88,7 @@ public sealed partial class ChatTabView : UserControl
         Panel.BranchChanged += vm.OnBranchChanged;
         Panel.WorkspaceFoldersChanged += vm.OnWorkspaceFoldersChanged;
         Panel.WorkspaceFolderAddRequested += OnWorkspaceFolderAddRequested;
-        Panel.KnowledgeArchiveFolderChanged += vm.OnKnowledgeArchiveFolderChanged;
+        Panel.KnowledgeBaseIdChanged += vm.OnKnowledgeBaseIdChanged;
         Panel.KbItemsProvider = () =>
             Mcp.KnowledgeBaseStore.ListAll()
                 .Select(kb => new FieldCure.AssistStudio.Controls.KbItem { Id = kb.Id, Name = kb.Name })
@@ -108,7 +108,7 @@ public sealed partial class ChatTabView : UserControl
         Panel.BranchChanged -= vm.OnBranchChanged;
         Panel.WorkspaceFoldersChanged -= vm.OnWorkspaceFoldersChanged;
         Panel.WorkspaceFolderAddRequested -= OnWorkspaceFolderAddRequested;
-        Panel.KnowledgeArchiveFolderChanged -= vm.OnKnowledgeArchiveFolderChanged;
+        Panel.KnowledgeBaseIdChanged -= vm.OnKnowledgeBaseIdChanged;
         Panel.KbItemsProvider = null;
     }
 
@@ -141,7 +141,7 @@ public sealed partial class ChatTabView : UserControl
         }
     }
 
-    // Knowledge Archive folder picker removed — KB selection is now via ComboBox in flyout.
+    // Knowledge Base folder picker removed — KB selection is now via ComboBox in flyout.
 
     #endregion
 }

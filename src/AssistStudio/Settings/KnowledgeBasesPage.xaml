@@ -27,7 +27,7 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <TextBlock x:Uid="KB_Title" Text="Knowledge Archive"
+            <TextBlock x:Uid="KB_Title" Text="Knowledge Base"
                        Grid.Column="0"
                        Style="{StaticResource TitleTextBlockStyle}" />
 

@@ -33,7 +33,7 @@ public sealed class KnowledgeBaseService
     {
         if (!KnowledgeBaseStore.AnyExists())
         {
-            LoggingService.LogInfo("[KnowledgeArchive] Skipped — no knowledge bases exist");
+            LoggingService.LogInfo("[KB] Skipped — no knowledge bases exist");
             return;
         }
 
@@ -46,20 +46,20 @@ public sealed class KnowledgeBaseService
             ragConfig.IsEnabled = true;
             builtIn[BuiltInServerHelper.RagKey] = ragConfig;
             AppSettings.BuiltInServers = builtIn;
-            LoggingService.LogInfo("[KnowledgeArchive] Auto-enabled RAG server (KBs exist)");
+            LoggingService.LogInfo("[KB] Auto-enabled RAG server (KBs exist)");
         }
 
-        LoggingService.LogInfo("[KnowledgeArchive] Connecting shared RAG serve…");
+        LoggingService.LogInfo("[KB] Connecting shared RAG serve…");
         await _registry.ConnectBuiltInAsync(BuiltInServerHelper.RagKey, ragConfig);
 
         var connection = _registry.GetBuiltInConnection(BuiltInServerHelper.RagKey);
         if (connection?.IsConnected == true)
         {
-            LoggingService.LogInfo($"[KnowledgeArchive] Connected — tools: {string.Join(", ", connection.Tools.Select(t => t.Name))}");
+            LoggingService.LogInfo($"[KB] Connected — tools: {string.Join(", ", connection.Tools.Select(t => t.Name))}");
         }
         else
         {
-            LoggingService.LogWarning("[KnowledgeArchive] Connection failed");
+            LoggingService.LogWarning("[KB] Connection failed");
         }
     }
 

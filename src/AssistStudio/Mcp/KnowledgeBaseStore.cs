@@ -25,14 +25,8 @@ namespace AssistStudio.Mcp;
 ///     handles "serve not yet started" (lazy launch vs. spinner).
 ///   </description></item>
 ///   <item><description>
-///     <b>Naming inconsistency</b> — this class is <c>KnowledgeBaseStore</c>
-///     (matching the RAG repo's "knowledge base" / <c>kb-id</c> terminology),
-///     while the lifecycle service next door is
-///     <c>KnowledgeArchiveService</c> and the UI label is "지식보관소"
-///     ("knowledge archive"). Three different names for the same concept.
-///     Pick one (probably "Knowledge Base" for consistency with the RAG
-///     repo and MCP tool names) and rename everything in one sweep after
-///     v1.0 ships.
+///     <b>Naming</b> — unified to "Knowledge Base" / "지식베이스" across
+///     UI labels, code identifiers, and resource keys.
 ///   </description></item>
 /// </list>
 /// </remarks>

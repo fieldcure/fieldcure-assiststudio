@@ -68,7 +68,7 @@ public static class BuiltInServerHelper
     public const string FilesystemDisplayName = "Workspace Folders";
 
     /// <summary>Display name for the RAG server.</summary>
-    public const string RagDisplayName = "Knowledge Archive";
+    public const string RagDisplayName = "Knowledge Base";
 
     /// <summary>Config dictionary key for the Outbox server.</summary>
     public const string OutboxKey = "outbox";

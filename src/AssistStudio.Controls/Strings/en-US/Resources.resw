@@ -248,22 +248,22 @@ Add them in Profile settings.</value>
   <data name="Folder_DisabledHint" xml:space="preserve">
     <value>Read and write files in these folders.</value>
   </data>
-  <data name="Folder_ArchiveHeader" xml:space="preserve">
-    <value>Knowledge Archive</value>
+  <data name="Folder_KbHeader" xml:space="preserve">
+    <value>Knowledge Base</value>
   </data>
-  <data name="Folder_SetArchive" xml:space="preserve">
+  <data name="Folder_SetKb" xml:space="preserve">
     <value>Set Folder</value>
   </data>
-  <data name="Folder_ArchiveDisabledHint" xml:space="preserve">
-    <value>Current profile does not have Knowledge Archive enabled.</value>
+  <data name="Folder_KbDisabledHint" xml:space="preserve">
+    <value>Current profile does not have Knowledge Base enabled.</value>
   </data>
-  <data name="Folder_ReindexArchive" xml:space="preserve">
+  <data name="Folder_ReindexKb" xml:space="preserve">
     <value>Re-index documents</value>
   </data>
-  <data name="Folder_CancelIndexing" xml:space="preserve">
+  <data name="Folder_CancelKbIndexing" xml:space="preserve">
     <value>Cancel indexing</value>
   </data>
-  <data name="Folder_ArchiveNoKbs" xml:space="preserve">
+  <data name="Folder_KbNoKbs" xml:space="preserve">
     <value>No knowledge bases. Create one in Settings.</value>
   </data>
   <data name="Folder_KbPlaceholder" xml:space="preserve">
@@ -284,16 +284,16 @@ Add them in Profile settings.</value>
   <data name="FolderFlyout_DisabledHint.Text" xml:space="preserve">
     <value>Read and write files in these folders.</value>
   </data>
-  <data name="FolderFlyout_ArchiveHeader.Text" xml:space="preserve">
-    <value>Knowledge Archive</value>
+  <data name="FolderFlyout_KbHeader.Text" xml:space="preserve">
+    <value>Knowledge Base</value>
   </data>
-  <data name="FolderFlyout_SetArchive.Text" xml:space="preserve">
+  <data name="FolderFlyout_SetKb.Text" xml:space="preserve">
     <value>Set Folder</value>
   </data>
-  <data name="FolderFlyout_ArchiveDisabledHint.Text" xml:space="preserve">
+  <data name="FolderFlyout_KbDisabledHint.Text" xml:space="preserve">
     <value>Search documents in these folders.</value>
   </data>
-  <data name="FolderFlyout_ArchiveEmpty.Text" xml:space="preserve">
+  <data name="FolderFlyout_KbEmpty.Text" xml:space="preserve">
     <value>(empty)</value>
   </data>
 </root>
