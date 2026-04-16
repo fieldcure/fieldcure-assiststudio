@@ -1,5 +1,6 @@
-using Anthropic;
+﻿using Anthropic;
 using Anthropic.Models.Messages;
+using AnthropicSdkSample.Controls;
 using FieldCure.AssistStudio.Controls;
 using FieldCure.AssistStudio.Controls.Anthropic;
 using FieldCure.AssistStudio.Controls.Helpers;
@@ -157,33 +158,14 @@ public sealed partial class MainWindow : Window
     /// <summary>Shows a dialog to collect the API key from the user.</summary>
     private async Task<string?> PromptForApiKeyAsync()
     {
-        var panel = new StackPanel { Spacing = 8 };
-        var input = new TextBox
+        var dialog = new ApiKeyPromptDialog
         {
-            PlaceholderText = "sk-ant-api03-...",
-            AcceptsReturn = false,
-        };
-        panel.Children.Add(input);
-        panel.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock
-        {
-            Text = "Your key is stored securely in Windows Credential Manager (DPAPI-encrypted) and never leaves this device.",
-            TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
-            Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
-            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-        });
-
-        var dialog = new ContentDialog
-        {
-            Title = "Enter Anthropic API Key",
-            Content = panel,
-            PrimaryButtonText = "Save",
-            CloseButtonText = "Exit",
-            DefaultButton = ContentDialogButton.Primary,
             XamlRoot = Content.XamlRoot,
+            RequestedTheme = ((FrameworkElement)Content).ActualTheme,
         };
 
         var result = await dialog.ShowAsync();
-        return result == ContentDialogResult.Primary ? input.Text : null;
+        return result == ContentDialogResult.Primary ? dialog.ApiKey : null;
     }
 
     #endregion
