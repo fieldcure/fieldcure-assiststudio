@@ -184,7 +184,10 @@ public sealed partial class KnowledgeBasesPage : Page
 
         var name = nameBox.Text.Trim();
         if (string.IsNullOrEmpty(name))
-            name = GenerateKbName(sourcePaths);
+            name = IOPath.GetFileName(sourcePaths[0].TrimEnd(IOPath.DirectorySeparatorChar));
+        if (string.IsNullOrWhiteSpace(name))
+            name = "Untitled";
+        name = EnsureUniqueName(name);
 
         var kb = KnowledgeBaseStore.Create(name, sourcePaths,
             modelSelector.GetEmbeddingConfig(), modelSelector.GetContextualizerConfig());
@@ -1053,25 +1056,26 @@ public sealed partial class KnowledgeBasesPage : Page
             .ToList();
 
     /// <summary>
-    /// Generates a KB name from the first source folder path,
-    /// with deduplication suffix if needed.
+    /// Returns <paramref name="candidate"/> as-is if unique among existing KB names,
+    /// otherwise appends " (2)", " (3)", etc. until a free slot is found.
     /// </summary>
-    private static string GenerateKbName(IReadOnlyList<string> folderPaths)
+    private static string EnsureUniqueName(string candidate)
     {
-        if (folderPaths.Count == 0)
-            return "Untitled";
+        var existingNames = new HashSet<string>(
+            KnowledgeBaseStore.ListAll().Select(kb => kb.Name),
+            StringComparer.OrdinalIgnoreCase);
 
-        var baseName = IOPath.GetFileName(folderPaths[0].TrimEnd(IOPath.DirectorySeparatorChar));
-        if (string.IsNullOrWhiteSpace(baseName))
-            baseName = "Untitled";
+        if (!existingNames.Contains(candidate))
+            return candidate;
 
-        var existingNames = KnowledgeBaseStore.ListAll().Select(kb => kb.Name).ToList();
-        var name = baseName;
-        var counter = 2;
-        while (existingNames.Contains(name, StringComparer.OrdinalIgnoreCase))
-            name = $"{baseName} ({counter++})";
+        for (var i = 2; i < 1000; i++)
+        {
+            var attempt = $"{candidate} ({i})";
+            if (!existingNames.Contains(attempt))
+                return attempt;
+        }
 
-        return name;
+        return candidate;
     }
 
     /// <summary>
