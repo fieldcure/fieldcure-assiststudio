@@ -1,14 +1,14 @@
 using System.Text.Json;
-using AssistStudio.Mcp;
+using AssistStudio.Settings;
 using IOPath = System.IO.Path;
 
-namespace AssistStudio.Settings;
+namespace AssistStudio.Mcp;
 
 /// <summary>
 /// Searches chunks in knowledge bases via the built-in RAG MCP server's
 /// <c>search_documents</c> tool.
 /// </summary>
-internal sealed class KbSearchService
+internal sealed class KnowledgeBaseSearchService
 {
     /// <summary>
     /// Searches chunks in the given knowledge base.

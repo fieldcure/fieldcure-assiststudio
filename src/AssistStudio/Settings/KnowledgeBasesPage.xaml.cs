@@ -499,40 +499,27 @@ public sealed partial class KnowledgeBasesPage : Page
 
         if (result == ContentDialogResult.Primary)
         {
-            // Save & Re-index
-            var modelChanged = modelSelector.EmbeddingModelChanged || modelSelector.ContextualizerChanged;
-            if (modelChanged)
-            {
-                var dbPath = IOPath.Combine(KnowledgeBaseStore.GetKbPath(kbId), "rag.db");
-                try
-                {
-                    if (File.Exists(dbPath))
-                        File.Delete(dbPath);
-                }
-                catch (IOException ex)
-                {
-                    LoggingService.LogWarning($"[KB] Could not delete rag.db (in use?): {ex.Message}");
-                }
+            // Save & Re-index — use partial mode when only models changed
+            // to preserve OCR output; full re-index for source path changes
+            SnapshotIndexedWith(kb);
 
-                LoggingService.LogInfo($"[KB] Model changed, full re-index: {kbId}");
-                SnapshotIndexedWith(kb);
-                var execResult = await RagProcessManager.StartExecAsync(kbId);
-                if (!await HandleStartExecResultAsync(execResult))
-                {
-                    await RefreshListAsync();
-                    return;
-                }
-            }
+            string? partial = null;
+            if (modelSelector.ContextualizerChanged)
+                partial = "contextualization";
+            else if (modelSelector.EmbeddingModelChanged)
+                partial = "embedding";
+
+            if (partial is not null)
+                LoggingService.LogInfo($"[KB] Partial re-index ({partial}): {kbId}");
             else
-            {
                 LoggingService.LogInfo($"[KB] Re-index started: {kbId}");
-                SnapshotIndexedWith(kb);
-                var execResult = await RagProcessManager.StartExecAsync(kbId, force: true);
-                if (!await HandleStartExecResultAsync(execResult))
-                {
-                    await RefreshListAsync();
-                    return;
-                }
+
+            var execResult = await RagProcessManager.StartExecAsync(
+                kbId, force: partial is null, partial: partial);
+            if (!await HandleStartExecResultAsync(execResult))
+            {
+                await RefreshListAsync();
+                return;
             }
 
             _pollTimer.Start();
@@ -1193,11 +1180,11 @@ public sealed partial class KnowledgeBasesPage : Page
             var argsJson = JsonSerializer.Serialize(new { kb_id = kbId });
             var args = JsonDocument.Parse(argsJson).RootElement;
             await connection.CallToolWithProgressAsync("unload_kb", args, null);
+            LoggingService.LogInfo($"[KB] unload_kb succeeded: {kbId}");
         }
-        catch
+        catch (Exception ex)
         {
-            // If unload fails, fall through to delete — the old retry
-            // loop in KnowledgeBaseStore.Delete handles residual locks.
+            LoggingService.LogWarning($"[KB] unload_kb failed: {kbId} — {ex.Message}");
         }
     }
 

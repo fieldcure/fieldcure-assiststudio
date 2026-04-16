@@ -1440,6 +1440,6 @@
     <value>스케줄 검색...</value>
   </data>
   <data name="KB_SearchBox.PlaceholderText" xml:space="preserve">
-    <value>청크 검색...</value>
+    <value>키워드로 청크 검색...</value>
   </data>
 </root>

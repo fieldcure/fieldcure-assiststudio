@@ -1440,6 +1440,6 @@
     <value>Search schedules...</value>
   </data>
   <data name="KB_SearchBox.PlaceholderText" xml:space="preserve">
-    <value>Search chunks...</value>
+    <value>Keyword search chunks...</value>
   </data>
 </root>

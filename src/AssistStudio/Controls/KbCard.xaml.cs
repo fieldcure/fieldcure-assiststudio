@@ -41,7 +41,7 @@ public sealed partial class KbCard : UserControl
     #region Fields
 
     private readonly ResourceLoader _loader = new();
-    private readonly KbSearchService _searchService = new();
+    private readonly Mcp.KnowledgeBaseSearchService _searchService = new();
     private CancellationTokenSource? _searchCts;
 
     #endregion

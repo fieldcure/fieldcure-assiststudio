@@ -18,7 +18,7 @@ public static class RagProcessManager
     /// </summary>
     /// <param name="kbId">Knowledge base ID.</param>
     /// <param name="force">If true, re-indexes all files regardless of hash.</param>
-    public static async Task<StartExecResult> StartExecAsync(string kbId, bool force = false)
+    public static async Task<StartExecResult> StartExecAsync(string kbId, bool force = false, string? partial = null)
     {
         // Load the KB config from the filesystem. ListAll is cheap enough
         // for pre-flight — the guards in there prevent backup folders from
@@ -58,6 +58,7 @@ public static class RagProcessManager
         var kbPath = KnowledgeBaseStore.GetKbPath(kbId);
         var args = $"exec --path \"{kbPath}\"";
         if (force) args += " --force";
+        if (!string.IsNullOrEmpty(partial)) args += $" --partial {partial}";
 
         LoggingService.LogInfo($"[RAG] Starting exec: {exePath} {args}");
 

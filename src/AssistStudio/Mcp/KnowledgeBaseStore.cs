@@ -171,11 +171,9 @@ public static class KnowledgeBaseStore
         if (!Directory.Exists(kbPath))
             return;
 
-        // File handles held by an exec or serve process will not release
-        // instantly — give them up to ~3 seconds before surfacing the
-        // lock to the caller. The loop is intentionally short so the UI
-        // does not hang on a genuinely stuck process.
-        const int maxAttempts = 6;
+        // File handles held by serve may not release instantly after
+        // unload_kb — give up to ~5 seconds before surfacing the lock.
+        const int maxAttempts = 10;
         const int delayMs = 500;
         for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
