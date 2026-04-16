@@ -227,7 +227,6 @@ public sealed partial class KnowledgeBasesPage : Page
     /// </summary>
     private async void OnDeleteRequested(object? sender, string kbId)
     {
-
         var dialog = new ThemedContentDialog
         {
             XamlRoot = XamlRoot,
@@ -241,17 +240,14 @@ public sealed partial class KnowledgeBasesPage : Page
         var result = await dialog.ShowAsync();
         if (result != ContentDialogResult.Primary) return;
 
-        // Cancel exec if running. The cancel file is polled between
-        // chunks so a mid-OCR exec may take several seconds to notice
-        // and exit. We wait a short grace period here, and
-        // KnowledgeBaseStore.Delete retries up to 3 more seconds on top
-        // of that — if the process is genuinely stuck we surface the
-        // lock to the user instead of crashing.
         if (RagProcessManager.IsExecRunning(kbId))
         {
             RagProcessManager.CancelExec(kbId);
             await Task.Delay(2000);
         }
+
+        // Release serve's SQLite handle before deleting files on disk.
+        await UnloadKbAsync(kbId);
 
         try
         {
@@ -1181,6 +1177,28 @@ public sealed partial class KnowledgeBasesPage : Page
         }
 
         return candidate;
+    }
+
+    /// <summary>
+    /// Asks the RAG serve to release all handles for a KB so its files can be deleted.
+    /// Idempotent — safe even if the KB was never loaded or serve is not connected.
+    /// </summary>
+    private static async Task UnloadKbAsync(string kbId)
+    {
+        try
+        {
+            var connection = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.RagKey);
+            if (connection?.IsConnected != true) return;
+
+            var argsJson = JsonSerializer.Serialize(new { kb_id = kbId });
+            var args = JsonDocument.Parse(argsJson).RootElement;
+            await connection.CallToolWithProgressAsync("unload_kb", args, null);
+        }
+        catch
+        {
+            // If unload fails, fall through to delete — the old retry
+            // loop in KnowledgeBaseStore.Delete handles residual locks.
+        }
     }
 
     /// <summary>
