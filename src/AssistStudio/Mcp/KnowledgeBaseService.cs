@@ -1,4 +1,4 @@
-using AssistStudio.Helpers;
+﻿using AssistStudio.Helpers;
 
 namespace AssistStudio.Mcp;
 
@@ -6,7 +6,7 @@ namespace AssistStudio.Mcp;
 /// Orchestrates the shared RAG MCP server lifecycle.
 /// Connects the multi-KB serve process on app startup when KBs exist.
 /// </summary>
-public sealed class KnowledgeArchiveService
+public sealed class KnowledgeBaseService
 {
     #region Fields
 
@@ -16,7 +16,7 @@ public sealed class KnowledgeArchiveService
 
     #region Constructor
 
-    public KnowledgeArchiveService(McpServerRegistry registry)
+    public KnowledgeBaseService(McpServerRegistry registry)
     {
         _registry = registry;
     }
