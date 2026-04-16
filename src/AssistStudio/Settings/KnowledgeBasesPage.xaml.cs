@@ -194,26 +194,22 @@ public sealed partial class KnowledgeBasesPage : Page
         var execResult = await RagProcessManager.StartExecAsync(kb.Id);
         if (!await HandleStartExecResultAsync(execResult))
         {
-            // Creation succeeded but initial indexing didn't start —
-            // leave the empty KB in place so the user can fix the
-            // configuration and hit re-index.
-            await RefreshListAsync();
+            await AppendKbItemAsync(kb);
             return;
         }
 
         var kbService = new KnowledgeBaseService(App.McpRegistry);
         await kbService.EnsureConnectedAsync();
 
-        await RefreshListAsync();
+        await AppendKbItemAsync(kb);
         _pollTimer.Start();
     }
 
     /// <summary>
-    /// Deletes a knowledge base after confirmation.
+    /// Handles delete request from a <see cref="Controls.KbCard"/>.
     /// </summary>
-    private async void OnDeleteClicked(object sender, RoutedEventArgs e)
+    private async void OnDeleteRequested(object? sender, string kbId)
     {
-        if (sender is not Button btn || btn.Tag is not string kbId) return;
 
         var dialog = new ThemedContentDialog
         {
@@ -312,31 +308,20 @@ public sealed partial class KnowledgeBasesPage : Page
     }
 
     /// <summary>
-    /// Immediately starts incremental re-indexing (new/changed files only).
+    /// Handles re-index request from a <see cref="Controls.KbCard"/>.
     /// </summary>
-    private async void OnQuickReindexClicked(object sender, RoutedEventArgs e)
+    private async void OnReindexRequested(object? sender, string kbId)
     {
-        if (sender is not Button btn || btn.Tag is not string kbId) return;
-
-        // Snapshot the current model config into IndexedWith before launch
-        // so the card continues to show the right "what the index was built
-        // with" label if the user opens settings and edits anything mid-run.
         var kbForSnapshot = KnowledgeBaseStore.ListAll().FirstOrDefault(k => k.Id == kbId);
         if (kbForSnapshot is not null)
             SnapshotIndexedWith(kbForSnapshot);
 
-        // Pre-flight first so we don't show a spinner for a run that will
-        // never start. If the models are reachable we proceed exactly as
-        // before (clear change cache, swap button for spinner, start
-        // polling). If not, HandleStartExecResultAsync surfaces the
-        // reason and we leave the KB row untouched.
         var execResult = await RagProcessManager.StartExecAsync(kbId);
         if (!await HandleStartExecResultAsync(execResult))
             return;
 
         LoggingService.LogInfo($"[KB] Quick re-index started: {kbId}");
 
-        // Clear cached change-check results — they become stale after re-indexing
         var item = _allItems.FirstOrDefault(i => i.Id == kbId);
         if (item is not null)
         {
@@ -347,23 +332,15 @@ public sealed partial class KnowledgeBasesPage : Page
             item.ChangesFailed = 0;
         }
 
-        // Replace entire button panel with a spinner
-        if (btn.Parent is StackPanel buttonsPanel)
-        {
-            buttonsPanel.Children.Clear();
-            buttonsPanel.Children.Add(new ProgressRing { Width = 16, Height = 16, IsActive = true });
-        }
-
         _pollTimer.Start();
+        ApplyFilter();
     }
 
     /// <summary>
-    /// Opens the KB settings dialog for editing folders, name, and models.
-    /// Primary = Save &amp; Re-index, Secondary = Save only.
+    /// Handles settings request from a <see cref="Controls.KbCard"/>.
     /// </summary>
-    private async void OnSettingsClicked(object sender, RoutedEventArgs e)
+    private async void OnSettingsRequested(object? sender, string kbId)
     {
-        if (sender is not Button btn || btn.Tag is not string kbId) return;
 
         var allKbs = KnowledgeBaseStore.ListAll();
         var kb = allKbs.FirstOrDefault(k => k.Id == kbId);
@@ -638,17 +615,12 @@ public sealed partial class KnowledgeBasesPage : Page
     }
 
     /// <summary>
-    /// Cancels an in-progress indexing operation and disables the button.
+    /// Handles cancel-index request from a <see cref="Controls.KbCard"/>.
     /// </summary>
-    private void OnCancelIndexClicked(object sender, RoutedEventArgs e)
+    private void OnCancelIndexRequested(object? sender, string kbId)
     {
-        if (sender is not Button btn || btn.Tag is not string kbId) return;
-
         RagProcessManager.CancelExec(kbId);
         LoggingService.LogInfo($"[KB] Indexing cancelled: {kbId}");
-
-        btn.IsEnabled = false;
-        btn.Content = new ProgressRing { Width = 14, Height = 14, IsActive = true };
     }
 
     /// <summary>
@@ -951,6 +923,31 @@ public sealed partial class KnowledgeBasesPage : Page
     }
 
     /// <summary>
+    /// Adds a single newly-created KB to the in-memory list and refreshes the
+    /// UI without re-querying every existing KB's status and model availability.
+    /// </summary>
+    private async Task AppendKbItemAsync(KnowledgeBase kb)
+    {
+        var cardEmbeddingModel = kb.IndexedWith?.Embedding.Model ?? kb.Embedding.Model;
+        var cardContextualizerModel = kb.IndexedWith?.Contextualizer.Model ?? kb.Contextualizer.Model;
+        var modelInfo = cardEmbeddingModel;
+        if (!string.IsNullOrEmpty(cardContextualizerModel))
+            modelInfo += $" \u00b7 {cardContextualizerModel}";
+
+        var item = new KbViewModel
+        {
+            Id = kb.Id,
+            Name = kb.Name,
+            SourcePathsText = string.Join(", ", kb.SourcePaths),
+            ModelInfoText = modelInfo,
+        };
+
+        await UpdateItemStatusAsync(item);
+        _allItems.Add(item);
+        ApplyFilter();
+    }
+
+    /// <summary>
     /// Applies the current search filter and updates the UI.
     /// </summary>
     private void ApplyFilter()
@@ -962,18 +959,13 @@ public sealed partial class KnowledgeBasesPage : Page
                 || i.SourcePathsText.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase))
               .ToList();
 
-        // Update counter
         CounterText.Text = _allItems.Count.ToString();
 
-        // Build flat list UI
         KbList.ItemsSource = null;
         var panel = new StackPanel { Spacing = 0 };
 
         for (int idx = 0; idx < filtered.Count; idx++)
         {
-            var item = filtered[idx];
-
-            // Divider between items
             if (idx > 0)
             {
                 panel.Children.Add(new Rectangle
@@ -984,236 +976,17 @@ public sealed partial class KnowledgeBasesPage : Page
                 });
             }
 
-            var row = new StackPanel { Spacing = 2, Padding = new Thickness(0, 4, 0, 4) };
-
-            // Row 1: Name + Status
-            var headerRow = new Grid();
-            headerRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            headerRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-            headerRow.Children.Add(new TextBlock
-            {
-                Text = item.Name,
-                Style = (Style)Application.Current.Resources["BodyStrongTextBlockStyle"],
-            });
-
-            var statusText = new TextBlock
-            {
-                Text = item.StatusText,
-                Foreground = item.StatusBrush,
-                VerticalAlignment = VerticalAlignment.Center,
-            };
-            Grid.SetColumn(statusText, 1);
-            headerRow.Children.Add(statusText);
-            row.Children.Add(headerRow);
-
-            // Row 2: Stats
-            if (!string.IsNullOrEmpty(item.StatsText))
-            {
-                row.Children.Add(new TextBlock
-                {
-                    Text = item.StatsText,
-                    Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-                    Opacity = 0.6,
-                });
-            }
-
-            // Row 3: Source paths
-            row.Children.Add(new TextBlock
-            {
-                Text = item.SourcePathsText,
-                Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-                Opacity = 0.5,
-                TextTrimming = TextTrimming.CharacterEllipsis,
-            });
-
-            // Row 4: Model info
-            if (!string.IsNullOrEmpty(item.ModelInfoText))
-            {
-                row.Children.Add(new TextBlock
-                {
-                    Text = item.ModelInfoText,
-                    Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-                    Opacity = 0.45,
-                    FontSize = 11,
-                });
-            }
-
-            // Row 4b: Model availability warning (only when a configured
-            // model is unreachable). Drawn in caution color so it stands
-            // out against the other caption rows.
-            if (!string.IsNullOrEmpty(item.ModelWarningText))
-            {
-                row.Children.Add(new TextBlock
-                {
-                    Text = item.ModelWarningText,
-                    Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-                    FontSize = 11,
-                    Foreground = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"],
-                    TextWrapping = TextWrapping.Wrap,
-                });
-            }
-
-            // Row 5: Progress bar + stop (indexing) or action buttons
-            if (item.IsIndexing == Visibility.Visible)
-            {
-                var progressRow = new Grid { Margin = new Thickness(0, 6, 0, 0) };
-                progressRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                progressRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-                var progressBar = new ProgressBar
-                {
-                    Value = item.Progress,
-                    Maximum = 100,
-                    VerticalAlignment = VerticalAlignment.Center,
-                };
-                Grid.SetColumn(progressBar, 0);
-                progressRow.Children.Add(progressBar);
-
-                var stopBtn = new Button
-                {
-                    Tag = item.Id,
-                    Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
-                    Padding = new Thickness(6),
-                    Content = new FontIcon { Glyph = "\uE71A", FontSize = 14 },
-                    Margin = new Thickness(8, 0, 0, 0),
-                };
-                ToolTipService.SetToolTip(stopBtn, new ToolTip
-                {
-                    Content = _loader.GetString("KB_CancelIndexing") ?? "Cancel indexing",
-                    Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
-                });
-                stopBtn.Click += OnCancelIndexClicked;
-                Grid.SetColumn(stopBtn, 1);
-                progressRow.Children.Add(stopBtn);
-
-                row.Children.Add(progressRow);
-            }
-            else
-            {
-                // Change summary bar (shown after check_changes)
-                if (item.ChangesChecked == true)
-                {
-                    if (item.ChangesAdded == 0 && item.ChangesModified == 0 && item.ChangesDeleted == 0 && item.ChangesFailed == 0)
-                    {
-                        row.Children.Add(new TextBlock
-                        {
-                            Text = _loader.GetString("KB_NoChanges") ?? "No changes",
-                            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-                            Opacity = 0.5,
-                            Margin = new Thickness(0, 4, 0, 0),
-                        });
-                    }
-                    else
-                    {
-                        var changeParts = new List<string>();
-                        if (item.ChangesAdded > 0)
-                            changeParts.Add($"+ {(_loader.GetString("KB_ChangesAdded") ?? "Added")} {item.ChangesAdded}");
-                        if (item.ChangesModified > 0)
-                            changeParts.Add($"~ {(_loader.GetString("KB_ChangesModified") ?? "Modified")} {item.ChangesModified}");
-                        if (item.ChangesDeleted > 0)
-                            changeParts.Add($"- {(_loader.GetString("KB_ChangesDeleted") ?? "Deleted")} {item.ChangesDeleted}");
-                        if (item.ChangesFailed > 0)
-                            changeParts.Add($"! {(_loader.GetString("KB_ChangesFailed") ?? "Failed")} {item.ChangesFailed}");
-
-                        row.Children.Add(new TextBlock
-                        {
-                            Text = string.Join("    ", changeParts),
-                            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-                            Foreground = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"],
-                            Margin = new Thickness(0, 4, 0, 0),
-                        });
-                    }
-                }
-
-                // Action buttons row: [Check changes] ... [Settings] [Re-index] [Delete]
-                var actionRow = new Grid { Margin = new Thickness(0, 6, 0, 0) };
-                actionRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-                actionRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                actionRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-                var checkBtn = new Button
-                {
-                    Tag = item.Id,
-                    Content = _loader.GetString("KB_CheckChanges") ?? "Check changes",
-                    Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
-                    Padding = new Thickness(8, 4, 8, 4),
-                    FontSize = 12,
-                };
-                checkBtn.Click += OnCheckChangesClicked;
-                Grid.SetColumn(checkBtn, 0);
-                actionRow.Children.Add(checkBtn);
-
-                var buttons = new StackPanel
-                {
-                    Orientation = Orientation.Horizontal,
-                    Spacing = 8,
-                };
-
-                var settingsBtn = new Button
-                {
-                    Tag = item.Id,
-                    Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
-                    Padding = new Thickness(6),
-                    Content = new FontIcon { Glyph = "\uE70F", FontSize = 14 },
-                };
-                ToolTipService.SetToolTip(settingsBtn, new ToolTip
-                {
-                    Content = _loader.GetString("KB_Settings") ?? "Settings",
-                    Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
-                });
-                settingsBtn.Click += OnSettingsClicked;
-                buttons.Children.Add(settingsBtn);
-
-                var reindexBtn = new Button
-                {
-                    Tag = item.Id,
-                    Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
-                    Padding = new Thickness(6),
-                    Content = new FontIcon { Glyph = "\uE72C", FontSize = 14 },
-                    // Disable the re-index button when the indexed-with
-                    // models are unreachable — the pre-flight check would
-                    // block the run anyway and the user already sees the
-                    // warning line above. "변경 확인" is still enabled
-                    // because check_changes is a read-only dry run that
-                    // does not depend on the embedding pipeline.
-                    IsEnabled = string.IsNullOrEmpty(item.ModelWarningText),
-                };
-                ToolTipService.SetToolTip(reindexBtn, new ToolTip
-                {
-                    Content = _loader.GetString("KB_Reindex/Content") ?? "Re-index",
-                    Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
-                });
-                reindexBtn.Click += OnQuickReindexClicked;
-                buttons.Children.Add(reindexBtn);
-
-                var deleteBtn = new Button
-                {
-                    Tag = item.Id,
-                    Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
-                    Padding = new Thickness(6),
-                    Content = new FontIcon { Glyph = "\uE74D", FontSize = 14 },
-                };
-                ToolTipService.SetToolTip(deleteBtn, new ToolTip
-                {
-                    Content = _loader.GetString("KB_Delete/Content") ?? "Delete",
-                    Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
-                });
-                deleteBtn.Click += OnDeleteClicked;
-                buttons.Children.Add(deleteBtn);
-
-                Grid.SetColumn(buttons, 2);
-                actionRow.Children.Add(buttons);
-
-                row.Children.Add(actionRow);
-            }
-
-            panel.Children.Add(row);
+            var card = new Controls.KbCard { ViewModel = filtered[idx] };
+            card.DeleteRequested += OnDeleteRequested;
+            card.SettingsRequested += OnSettingsRequested;
+            card.ReindexRequested += OnReindexRequested;
+            card.CancelIndexRequested += OnCancelIndexRequested;
+            card.CheckChangesRequested += OnCheckChangesRequested;
+            panel.Children.Add(card);
         }
 
         KbList.ItemsSource = new[] { panel };
 
-        // Show/hide states
         var hasItems = filtered.Count > 0;
         EmptyPanel.Visibility = _allItems.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         HintDivider.Visibility = hasItems ? Visibility.Visible : Visibility.Collapsed;
@@ -1387,28 +1160,12 @@ public sealed partial class KnowledgeBasesPage : Page
     }
 
     /// <summary>
-    /// Handles the "Check changes" button click — calls check_changes and updates the KB card.
+    /// Handles check-changes request from a <see cref="Controls.KbCard"/>.
     /// </summary>
-    private async void OnCheckChangesClicked(object sender, RoutedEventArgs e)
+    private async void OnCheckChangesRequested(object? sender, string kbId)
     {
-        if (sender is not Button btn || btn.Tag is not string kbId) return;
-
         var item = _allItems.FirstOrDefault(i => i.Id == kbId);
         if (item is null) return;
-
-        // Show loading state
-        var originalContent = btn.Content;
-        btn.IsEnabled = false;
-        btn.Content = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 6,
-            Children =
-            {
-                new ProgressRing { IsActive = true, Width = 12, Height = 12 },
-                new TextBlock { Text = _loader.GetString("KB_Checking") ?? "Checking...", FontSize = 12 },
-            },
-        };
 
         var result = await CheckChangesAsync(kbId);
         if (result is not null)
@@ -1417,6 +1174,7 @@ public sealed partial class KnowledgeBasesPage : Page
             item.ChangesAdded = result.Added;
             item.ChangesModified = result.Modified;
             item.ChangesDeleted = result.Deleted;
+            item.ChangesFailed = result.Failed;
 
             if (!result.IsClean)
             {
@@ -1424,45 +1182,8 @@ public sealed partial class KnowledgeBasesPage : Page
                 item.StatusBrush = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"];
             }
         }
-
-        // Restore button
-        btn.Content = originalContent;
-        btn.IsEnabled = true;
-        ApplyFilter();
     }
 
     #endregion
 }
 
-/// <summary>
-/// View model for a knowledge base item in the list.
-/// </summary>
-internal class KbViewModel
-{
-    public string Id { get; set; } = "";
-    public string Name { get; set; } = "";
-    public string SourcePathsText { get; set; } = "";
-    public string ModelInfoText { get; set; } = "";
-    public string StatusText { get; set; } = "";
-    public Brush StatusBrush { get; set; } = new SolidColorBrush(Colors.Gray);
-    public string StatsText { get; set; } = "";
-    public Visibility IsIndexing { get; set; } = Visibility.Collapsed;
-    public double Progress { get; set; }
-    public bool IsPromptStale { get; set; }
-
-    /// <summary>
-    /// Short, pre-formatted warning line shown under the model info row
-    /// when one or more of the KB's configured models is not reachable.
-    /// Null when everything is fine. Populated during
-    /// <see cref="KnowledgeBasesPage.RefreshListAsync"/> via
-    /// <see cref="AssistStudio.Mcp.ModelAvailability.ModelAvailabilityService"/>.
-    /// </summary>
-    public string? ModelWarningText { get; set; }
-
-    /// <summary>Change detection results (populated after "Check changes" button click).</summary>
-    public int ChangesAdded { get; set; }
-    public int ChangesModified { get; set; }
-    public int ChangesDeleted { get; set; }
-    public int ChangesFailed { get; set; }
-    public bool? ChangesChecked { get; set; }
-}
