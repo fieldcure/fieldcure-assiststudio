@@ -206,6 +206,12 @@
   <data name="Memory_Counter" xml:space="preserve">
     <value>{0} / {1} entries</value>
   </data>
+  <data name="Memory_Connecting" xml:space="preserve">
+    <value>Connecting to memory service…</value>
+  </data>
+  <data name="Memory_ClearAllTitle" xml:space="preserve">
+    <value>Clear All</value>
+  </data>
   <data name="Memory_DeleteTooltip" xml:space="preserve">
     <value>Delete</value>
   </data>

@@ -16,8 +16,8 @@ public sealed partial class MemoryPage : Page
 {
     private static readonly ResourceLoader Res = new();
 
-    private string _deleteTooltip = "Delete";
-    private string _connectingText = "Connecting to Essentials server...";
+    private string _deleteTooltip = "";
+    private string _connectingText = "";
 
     public MemoryPage()
     {
@@ -33,13 +33,8 @@ public sealed partial class MemoryPage : Page
 
     private void LoadLocalizedStrings()
     {
-        try
-        {
-            _deleteTooltip = Res.GetString("Memory_DeleteTooltip") is { Length: > 0 } s ? s : "Delete";
-            _connectingText = Res.GetString("Memory_Connecting") is { Length: > 0 } s2 ? s2 : _connectingText;
-        }
-        catch { /* fallback defaults */ }
-
+        _deleteTooltip = Res.GetString("Memory_DeleteTooltip");
+        _connectingText = Res.GetString("Memory_Connecting");
         ConnectingText.Text = _connectingText;
     }
 
@@ -236,18 +231,8 @@ public sealed partial class MemoryPage : Page
 
     private async void OnClearAllClicked(object sender, RoutedEventArgs e)
     {
-        string title, content;
-        try
-        {
-            title = Res.GetString("Memory_ClearAll") is { Length: > 0 } t ? t : "Clear All";
-            content = Res.GetString("Memory_ClearConfirm") is { Length: > 0 } c
-                ? c : "Are you sure you want to clear all memories?";
-        }
-        catch
-        {
-            title = "Clear All";
-            content = "Are you sure you want to clear all memories?";
-        }
+        var title = Res.GetString("Memory_ClearAllTitle");
+        var content = Res.GetString("Memory_ClearConfirm");
 
         var dialog = new ThemedContentDialog
         {

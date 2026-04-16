@@ -206,6 +206,12 @@
   <data name="Memory_Counter" xml:space="preserve">
     <value>{0} / {1}개</value>
   </data>
+  <data name="Memory_Connecting" xml:space="preserve">
+    <value>메모리 서비스에 연결 중…</value>
+  </data>
+  <data name="Memory_ClearAllTitle" xml:space="preserve">
+    <value>전체 삭제</value>
+  </data>
   <data name="Memory_DeleteTooltip" xml:space="preserve">
     <value>삭제</value>
   </data>
