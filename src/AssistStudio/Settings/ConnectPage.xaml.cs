@@ -29,6 +29,9 @@ public sealed partial class ConnectPage : Page
 
     #region Constructor
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ConnectPage"/> class.
+    /// </summary>
     public ConnectPage()
     {
         InitializeComponent();
@@ -76,6 +79,9 @@ public sealed partial class ConnectPage : Page
 
     #region Event Handlers
 
+    /// <summary>
+    /// Opens the server configuration dialog and adds a new MCP server.
+    /// </summary>
     private async void AddServerButton_Click(object sender, RoutedEventArgs e)
     {
         var config = await ShowServerDialogAsync(null);
@@ -103,6 +109,9 @@ public sealed partial class ConnectPage : Page
         }
     }
 
+    /// <summary>
+    /// Detects importable MCP config sources and shows the import dialog.
+    /// </summary>
     private async void ImportButton_Click(object sender, RoutedEventArgs e)
     {
         var sources = McpConfigImporter.DetectSources();
@@ -119,6 +128,9 @@ public sealed partial class ConnectPage : Page
         await ShowImportDialogAsync(sources);
     }
 
+    /// <summary>
+    /// Handles enable/disable toggle on an MCP server card.
+    /// </summary>
     private async void OnCardEnableToggled(object? sender, McpServerConnection connection)
     {
         if (_registry is null) return;
@@ -148,6 +160,9 @@ public sealed partial class ConnectPage : Page
         await SaveAndRefreshAsync();
     }
 
+    /// <summary>
+    /// Opens the edit dialog for an MCP server and applies changes.
+    /// </summary>
     private async void OnCardEditRequested(object? sender, McpServerConnection connection)
     {
         if (_registry is null) return;
@@ -208,6 +223,9 @@ public sealed partial class ConnectPage : Page
         }
     }
 
+    /// <summary>
+    /// Reconnects a disconnected MCP server.
+    /// </summary>
     private async void OnCardReconnectRequested(object? sender, McpServerConnection connection)
     {
         if (_registry is null) return;
@@ -225,6 +243,9 @@ public sealed partial class ConnectPage : Page
         RefreshServerList();
     }
 
+    /// <summary>
+    /// Removes an MCP server and cleans up its vault entries.
+    /// </summary>
     private async void OnCardDeleteRequested(object? sender, McpServerConnection connection)
     {
         if (_registry is null) return;
@@ -255,6 +276,9 @@ public sealed partial class ConnectPage : Page
 
     #region UI Building
 
+    /// <summary>
+    /// Rebuilds the server list UI from the current registry state.
+    /// </summary>
     private void RefreshServerList()
     {
         if (_registry is null)
@@ -573,6 +597,9 @@ public sealed partial class ConnectPage : Page
         return config;
     }
 
+    /// <summary>
+    /// Shows a dialog for selecting which external MCP configs to import.
+    /// </summary>
     private async Task ShowImportDialogAsync(IReadOnlyList<ImportSource> sources)
     {
         var serversLabel = _loader.GetString("Connect_Servers");
@@ -641,6 +668,9 @@ public sealed partial class ConnectPage : Page
 
     #region Private Methods
 
+    /// <summary>
+    /// Persists current MCP server configs and refreshes the UI.
+    /// </summary>
     private async Task SaveAndRefreshAsync()
     {
         if (_registry is null) return;
@@ -654,6 +684,9 @@ public sealed partial class ConnectPage : Page
         RefreshServerList();
     }
 
+    /// <summary>
+    /// Connects all enabled but disconnected servers in the background.
+    /// </summary>
     private async Task ConnectPendingServersAsync()
     {
         if (_registry is null) return;
@@ -670,6 +703,9 @@ public sealed partial class ConnectPage : Page
         DispatcherQueue.TryEnqueue(RefreshServerList);
     }
 
+    /// <summary>
+    /// Compares two argument lists for equality.
+    /// </summary>
     private static bool ArgsEqual(List<string>? a, List<string>? b)
     {
         if (a is null && b is null) return true;

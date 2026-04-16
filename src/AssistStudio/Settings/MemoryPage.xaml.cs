@@ -19,6 +19,9 @@ public sealed partial class MemoryPage : Page
     private string _deleteTooltip = "";
     private string _connectingText = "";
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MemoryPage"/> class.
+    /// </summary>
     public MemoryPage()
     {
         InitializeComponent();
@@ -31,6 +34,9 @@ public sealed partial class MemoryPage : Page
         _ = LoadMemoriesAsync();
     }
 
+    /// <summary>
+    /// Loads localized UI strings from the resource file.
+    /// </summary>
     private void LoadLocalizedStrings()
     {
         _deleteTooltip = Res.GetString("Memory_DeleteTooltip");
@@ -38,6 +44,9 @@ public sealed partial class MemoryPage : Page
         ConnectingText.Text = _connectingText;
     }
 
+    /// <summary>
+    /// Loads memories from the Essentials MCP server, waiting for connection if needed.
+    /// </summary>
     private async Task LoadMemoriesAsync(string? query = null)
     {
         var conn = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.EssentialsKey);
@@ -57,6 +66,9 @@ public sealed partial class MemoryPage : Page
         await RefreshListAsync(conn, query);
     }
 
+    /// <summary>
+    /// Polls for the Essentials MCP server connection up to 10 seconds.
+    /// </summary>
     private async Task<McpServerConnection?> WaitForEssentialsAsync()
     {
         // Poll for connection (max 10 seconds)
@@ -74,6 +86,9 @@ public sealed partial class MemoryPage : Page
         return null;
     }
 
+    /// <summary>
+    /// Fetches and renders the memory list from the given connection.
+    /// </summary>
     private async Task RefreshListAsync(McpServerConnection conn, string? query = null)
     {
         try
@@ -177,6 +192,9 @@ public sealed partial class MemoryPage : Page
         }
     }
 
+    /// <summary>
+    /// Switches the UI to the "connecting" state.
+    /// </summary>
     private void ShowConnecting()
     {
         MemoryList.ItemsSource = null;
@@ -188,6 +206,9 @@ public sealed partial class MemoryPage : Page
         CounterText.Text = "";
     }
 
+    /// <summary>
+    /// Switches the UI to the "empty" state.
+    /// </summary>
     private void ShowEmpty()
     {
         MemoryList.ItemsSource = null;
@@ -199,11 +220,17 @@ public sealed partial class MemoryPage : Page
         CounterText.Text = "";
     }
 
+    /// <summary>
+    /// Handles search query submission to filter memories.
+    /// </summary>
     private void OnSearchQuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
     {
         _ = LoadMemoriesAsync(args.QueryText);
     }
 
+    /// <summary>
+    /// Resets the list when the search box is cleared.
+    /// </summary>
     private void OnSearchTextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
     {
         if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput && string.IsNullOrWhiteSpace(sender.Text))
@@ -212,6 +239,9 @@ public sealed partial class MemoryPage : Page
         }
     }
 
+    /// <summary>
+    /// Deletes a single memory entry via the Essentials MCP server.
+    /// </summary>
     private async void OnDeleteClicked(object sender, RoutedEventArgs e)
     {
         if (sender is not Button btn || btn.Tag is not string key)
@@ -229,6 +259,9 @@ public sealed partial class MemoryPage : Page
         catch { /* best effort */ }
     }
 
+    /// <summary>
+    /// Confirms and deletes all memory entries.
+    /// </summary>
     private async void OnClearAllClicked(object sender, RoutedEventArgs e)
     {
         var title = Res.GetString("Memory_ClearAllTitle");

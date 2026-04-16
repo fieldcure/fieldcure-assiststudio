@@ -1,4 +1,4 @@
-using AssistStudio.Controls.Dialogs;
+﻿using AssistStudio.Controls.Dialogs;
 using AssistStudio.Helpers;
 using AssistStudio.Mcp;
 using AssistStudio.Mcp.ModelAvailability;
@@ -32,6 +32,9 @@ public sealed partial class KnowledgeBasesPage : Page
 
     #region Constructor
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="KnowledgeBasesPage"/> class.
+    /// </summary>
     public KnowledgeBasesPage()
     {
         InitializeComponent();
@@ -197,8 +200,8 @@ public sealed partial class KnowledgeBasesPage : Page
             return;
         }
 
-        var archiveService = new KnowledgeArchiveService(App.McpRegistry);
-        await archiveService.EnsureConnectedAsync();
+        var kbService = new KnowledgeBaseService(App.McpRegistry);
+        await kbService.EnsureConnectedAsync();
 
         await RefreshListAsync();
         _pollTimer.Start();

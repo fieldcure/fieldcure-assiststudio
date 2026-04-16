@@ -42,6 +42,9 @@ public sealed partial class TaskPresetSelector : UserControl
 
     #region Constructors
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TaskPresetSelector"/> class.
+    /// </summary>
     public TaskPresetSelector()
     {
         InitializeComponent();
@@ -92,6 +95,9 @@ public sealed partial class TaskPresetSelector : UserControl
 
     #region Private Methods
 
+    /// <summary>
+    /// Populates the preset combo box, selecting the given preset name.
+    /// </summary>
     private void PopulatePresetCombo(string selectedName)
     {
         PresetCombo.Items.Clear();
@@ -139,6 +145,9 @@ public sealed partial class TaskPresetSelector : UserControl
             PresetCombo.SelectedIndex = 0;
     }
 
+    /// <summary>
+    /// Parses a source tag string into an <see cref="AuxiliaryTaskSource"/> enum value.
+    /// </summary>
     private static AuxiliaryTaskSource ParseSource(string tag)
         => tag == "Specific" ? AuxiliaryTaskSource.Specific : AuxiliaryTaskSource.Inherit;
 
@@ -146,6 +155,9 @@ public sealed partial class TaskPresetSelector : UserControl
 
     #region Event Handlers
 
+    /// <summary>
+    /// Handles source radio button selection change.
+    /// </summary>
     private void OnSourceChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_suppressEvents) return;
@@ -159,6 +171,9 @@ public sealed partial class TaskPresetSelector : UserControl
         }
     }
 
+    /// <summary>
+    /// Handles preset combo box selection change.
+    /// </summary>
     private void OnPresetChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_suppressEvents) return;

@@ -27,6 +27,9 @@ public sealed partial class ModelsPage : Page
 
     #region Constructor
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModelsPage"/> class.
+    /// </summary>
     public ModelsPage()
     {
         InitializeComponent();
@@ -174,6 +177,9 @@ public sealed partial class ModelsPage : Page
             string.IsNullOrEmpty(ollamaModel) ? null : ollamaModel, null);
     }
 
+    /// <summary>
+    /// Builds a sub-header string from model ID and status parts.
+    /// </summary>
     private static string BuildSubHeader(string? modelId, string? status)
     {
         var parts = new List<string>(2);
@@ -216,6 +222,9 @@ public sealed partial class ModelsPage : Page
 
     #region Ollama Deferred Check
 
+    /// <summary>
+    /// Delays briefly then ensures the Ollama section is loaded.
+    /// </summary>
     private async Task DelayedCheckOllamaAsync()
     {
         await Task.Delay(300);
@@ -393,6 +402,9 @@ public sealed partial class ModelsPage : Page
 
     #region Helpers
 
+    /// <summary>
+    /// Returns the collapsible section header for the given provider name.
+    /// </summary>
     private CollapsibleSection? GetHeaderForProvider(string provider) => provider switch
     {
         "Claude" => ClaudeHeader,
@@ -405,6 +417,9 @@ public sealed partial class ModelsPage : Page
 
     private static readonly ResourceLoader Res = new();
 
+    /// <summary>
+    /// Resolves a localized string, falling back to the key itself.
+    /// </summary>
     private static string L(string key) =>
         Res.GetString(key) is { Length: > 0 } value ? value : key;
 

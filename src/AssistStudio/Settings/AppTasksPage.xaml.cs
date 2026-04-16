@@ -21,6 +21,9 @@ public sealed partial class AppTasksPage : Page
 
     #region Constructors
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AppTasksPage"/> class.
+    /// </summary>
     public AppTasksPage()
     {
         InitializeComponent();
@@ -72,9 +75,15 @@ public sealed partial class AppTasksPage : Page
 
     #region Private Methods
 
+    /// <summary>
+    /// Parses a source string into an <see cref="AuxiliaryTaskSource"/> enum value.
+    /// </summary>
     private static AuxiliaryTaskSource ParseSource(string source)
         => source == "Specific" ? AuxiliaryTaskSource.Specific : AuxiliaryTaskSource.Inherit;
 
+    /// <summary>
+    /// Converts an <see cref="AuxiliaryTaskSource"/> enum value to its string representation.
+    /// </summary>
     private static string SourceToString(AuxiliaryTaskSource source)
         => source == AuxiliaryTaskSource.Specific ? "Specific" : "Inherit";
 
@@ -82,6 +91,9 @@ public sealed partial class AppTasksPage : Page
 
     #region Event Handlers
 
+    /// <summary>
+    /// Persists title task source and preset when changed.
+    /// </summary>
     private void OnTitleSettingsChanged(object? sender, EventArgs e)
     {
         if (_suppressEvents) return;
@@ -89,6 +101,9 @@ public sealed partial class AppTasksPage : Page
         AppSettings.TitlePreset = TitleSelector.PresetName;
     }
 
+    /// <summary>
+    /// Persists summary task source and preset when changed.
+    /// </summary>
     private void OnSummarySettingsChanged(object? sender, EventArgs e)
     {
         if (_suppressEvents) return;
@@ -96,6 +111,9 @@ public sealed partial class AppTasksPage : Page
         AppSettings.SummaryPreset = SummarySelector.PresetName;
     }
 
+    /// <summary>
+    /// Persists sub-agent task source and preset when changed.
+    /// </summary>
     private void OnSubAgentSettingsChanged(object? sender, EventArgs e)
     {
         if (_suppressEvents) return;
@@ -103,6 +121,9 @@ public sealed partial class AppTasksPage : Page
         AppSettings.SubAgentPreset = SubAgentSelector.PresetName;
     }
 
+    /// <summary>
+    /// Handles the auto-title toggle and updates panel visibility.
+    /// </summary>
     private void OnAutoTitleToggled(object sender, RoutedEventArgs e)
     {
         if (_suppressEvents) return;
@@ -110,6 +131,9 @@ public sealed partial class AppTasksPage : Page
         TitleDetailsPanel.Visibility = AutoTitleToggle.IsOn ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    /// <summary>
+    /// Handles the auto-summary toggle and updates panel visibility.
+    /// </summary>
     private void OnAutoSummaryToggled(object sender, RoutedEventArgs e)
     {
         if (_suppressEvents) return;
@@ -117,6 +141,9 @@ public sealed partial class AppTasksPage : Page
         SummaryDetailsPanel.Visibility = AutoSummaryToggle.IsOn ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    /// <summary>
+    /// Persists the max input tokens value when changed.
+    /// </summary>
     private void OnMaxInputTokensChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
         if (_suppressEvents || double.IsNaN(args.NewValue)) return;

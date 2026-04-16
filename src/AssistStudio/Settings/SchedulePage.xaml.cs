@@ -34,6 +34,9 @@ public sealed partial class SchedulePage : Page
 
     #region Constructors
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SchedulePage"/> class.
+    /// </summary>
     public SchedulePage()
     {
         InitializeComponent();
@@ -54,6 +57,9 @@ public sealed partial class SchedulePage : Page
 
     #region Private Methods
 
+    /// <summary>
+    /// Loads localized UI strings from the resource file.
+    /// </summary>
     private void LoadLocalizedStrings()
     {
         try
@@ -73,6 +79,9 @@ public sealed partial class SchedulePage : Page
         LoadingText.Text = _loadingText;
     }
 
+    /// <summary>
+    /// Loads all scheduled tasks from the Runner database.
+    /// </summary>
     private async Task LoadSchedulesAsync()
     {
         ShowLoading();
@@ -90,6 +99,9 @@ public sealed partial class SchedulePage : Page
         RenderList(_allItems);
     }
 
+    /// <summary>
+    /// Builds and displays the schedule item list UI.
+    /// </summary>
     private void RenderList(List<ScheduleItem> items)
     {
         if (items.Count == 0)
@@ -224,6 +236,9 @@ public sealed partial class SchedulePage : Page
         ScheduleList.ItemsSource = elements;
     }
 
+    /// <summary>
+    /// Filters the schedule list by name or description.
+    /// </summary>
     private void FilterItems(string? query)
     {
         if (string.IsNullOrWhiteSpace(query))
@@ -240,6 +255,9 @@ public sealed partial class SchedulePage : Page
         RenderList(filtered);
     }
 
+    /// <summary>
+    /// Switches the UI to the "loading" state.
+    /// </summary>
     private void ShowLoading()
     {
         ScheduleList.ItemsSource = null;
@@ -250,6 +268,9 @@ public sealed partial class SchedulePage : Page
         CounterText.Text = "";
     }
 
+    /// <summary>
+    /// Switches the UI to the "empty" state.
+    /// </summary>
     private void ShowEmpty()
     {
         ScheduleList.ItemsSource = null;
@@ -264,11 +285,17 @@ public sealed partial class SchedulePage : Page
 
     #region Event Handlers
 
+    /// <summary>
+    /// Handles search query submission to filter schedules.
+    /// </summary>
     private void OnSearchQuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
     {
         FilterItems(args.QueryText);
     }
 
+    /// <summary>
+    /// Resets the list when the search box is cleared.
+    /// </summary>
     private void OnSearchTextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
     {
         if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput && string.IsNullOrWhiteSpace(sender.Text))
@@ -277,12 +304,18 @@ public sealed partial class SchedulePage : Page
         }
     }
 
+    /// <summary>
+    /// Reloads the schedule list from the database.
+    /// </summary>
     private async void OnRefreshClicked(object sender, RoutedEventArgs e)
     {
         SearchBox.Text = "";
         await LoadSchedulesAsync();
     }
 
+    /// <summary>
+    /// Confirms and deletes a scheduled task.
+    /// </summary>
     private async void OnDeleteClicked(object sender, RoutedEventArgs e)
     {
         if (sender is not Button btn || btn.Tag is not ScheduleItem item)
@@ -318,6 +351,9 @@ public sealed partial class SchedulePage : Page
         await LoadSchedulesAsync();
     }
 
+    /// <summary>
+    /// Toggles a scheduled task's enabled state.
+    /// </summary>
     private async void OnToggled(object sender, RoutedEventArgs e)
     {
         if (_isUpdating) return;

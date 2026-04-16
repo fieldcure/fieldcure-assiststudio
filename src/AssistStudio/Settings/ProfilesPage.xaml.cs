@@ -265,6 +265,9 @@ public sealed partial class ProfilesPage : Page
         SaveAll();
     }
 
+    /// <summary>
+    /// Deletes the currently selected custom profile.
+    /// </summary>
     private void OnDeleteProfileClicked(object sender, RoutedEventArgs e)
     {
         if (ProfileCombo.SelectedItem is not Profile profile) return;
