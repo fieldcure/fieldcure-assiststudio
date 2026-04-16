@@ -1,4 +1,5 @@
-﻿using AssistStudio.Controls.Dialogs;
+﻿using AssistStudio.Controls;
+using AssistStudio.Controls.Dialogs;
 using AssistStudio.Helpers;
 using AssistStudio.Mcp;
 using AssistStudio.Mcp.ModelAvailability;
@@ -827,6 +828,47 @@ public sealed partial class KnowledgeBasesPage : Page
     #region Private Methods
 
     /// <summary>
+    /// Renders shimmer placeholder cards matching the expected item count.
+    /// </summary>
+    private void ShowShimmerCards(int count)
+    {
+        if (count == 0)
+        {
+            EmptyPanel.Visibility = Visibility.Visible;
+            HintDivider.Visibility = Visibility.Collapsed;
+            HintText.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        EmptyPanel.Visibility = Visibility.Collapsed;
+        HintDivider.Visibility = Visibility.Collapsed;
+        HintText.Visibility = Visibility.Collapsed;
+        CounterText.Text = count.ToString();
+
+        var panel = new StackPanel { Spacing = 0 };
+        for (var i = 0; i < count; i++)
+        {
+            if (i > 0)
+            {
+                panel.Children.Add(new Rectangle
+                {
+                    Height = 1,
+                    Fill = (Brush)Application.Current.Resources["DividerStrokeColorDefaultBrush"],
+                    Margin = new Thickness(0, 8, 0, 8),
+                });
+            }
+
+            var card = new StackPanel { Spacing = 6, Padding = new Thickness(0, 4, 0, 4) };
+            card.Children.Add(new Shimmer { Height = 16, Width = 180, HorizontalAlignment = HorizontalAlignment.Left });
+            card.Children.Add(new Shimmer { Height = 12, Width = 260, HorizontalAlignment = HorizontalAlignment.Left });
+            card.Children.Add(new Shimmer { Height = 12, Width = 320, HorizontalAlignment = HorizontalAlignment.Left });
+            panel.Children.Add(card);
+        }
+
+        KbList.ItemsSource = new[] { panel };
+    }
+
+    /// <summary>
     /// Refreshes the full KB list from disk, enriched with MCP index info when available.
     /// </summary>
     private async Task RefreshListAsync()
@@ -836,6 +878,9 @@ public sealed partial class KnowledgeBasesPage : Page
             .ToDictionary(i => i.Id, i => (i.ChangesAdded, i.ChangesModified, i.ChangesDeleted, i.ChangesFailed, i.ChangesChecked));
 
         var kbs = KnowledgeBaseStore.ListAll();
+
+        // Show shimmer placeholders matching the KB count
+        ShowShimmerCards(kbs.Count);
         _allItems.Clear();
 
         // Shared availability checker for this refresh pass. One instance
