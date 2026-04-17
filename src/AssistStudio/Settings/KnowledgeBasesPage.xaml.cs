@@ -316,9 +316,10 @@ public sealed partial class KnowledgeBasesPage : Page
         if (result != ContentDialogResult.Primary) return;
 
         // Logical deletion: remove config.json. Physical folder cleanup
-        // happens via prune-orphans at next app startup. Queue entries and
-        // serve cache are cleaned up lazily by the orchestrator/serve.
+        // happens via prune-orphans at next app startup. Serve cache is
+        // cleaned up lazily on next GetKb() call.
         KnowledgeBaseStore.Delete(kbId);
+        await CancelReindexAsync(kbId);
         LoggingService.LogInfo($"[KB] Deleted (config.json removed): {kbId}");
 
         if (App.Current is App app)
