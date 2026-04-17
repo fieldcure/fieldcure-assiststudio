@@ -1,85 +1,17 @@
 using System.Diagnostics;
 using AssistStudio.Helpers;
-using AssistStudio.Mcp.ModelAvailability;
 
 namespace AssistStudio.Mcp;
 
 /// <summary>
-/// Manages RAG exec processes (headless indexing) and cancel file lifecycle.
+/// Manages RAG orchestrator spawning and cancel file lifecycle.
+/// Indexing requests go through <c>start_reindex</c> MCP tool — this class
+/// only handles the deferred-sweep orchestrator spawn (app shutdown) and
+/// the <c>prune-orphans</c> CLI. <see cref="CancelExec"/> is still used to
+/// request graceful cancellation of a running indexing process.
 /// </summary>
 public static class RagProcessManager
 {
-    /// <summary>
-    /// Validates the KB's configured models against the availability service
-    /// and, if everything is reachable, launches the RAG exec process
-    /// detached. Returns a structured result so the caller can surface a
-    /// pre-flight failure in the UI instead of silently letting exec burn
-    /// an OCR run on a broken configuration.
-    /// </summary>
-    /// <param name="kbId">Knowledge base ID.</param>
-    /// <param name="force">If true, re-indexes all files regardless of hash.</param>
-    public static async Task<StartExecResult> StartExecAsync(string kbId, bool force = false, string? partial = null)
-    {
-        // Load the KB config from the filesystem. ListAll is cheap enough
-        // for pre-flight — the guards in there prevent backup folders from
-        // masquerading as real KBs, which matters for the model lookup
-        // below since a backup would otherwise answer "wrong" values.
-        var kb = KnowledgeBaseStore.ListAll().FirstOrDefault(k => k.Id == kbId);
-        if (kb is null)
-        {
-            LoggingService.LogError($"[RAG] exec aborted — KB not found: {kbId}");
-            return StartExecResult.NotFound(kbId);
-        }
-
-        // Pre-flight: ask the availability checker whether the configured
-        // models are currently reachable. If any model is down we bail
-        // out with a per-slot state-only message instead of spawning
-        // exec — the v1.4.2 2-commit pipeline would preserve OCR output
-        // on failure, but the user's time is still wasted if Stage 3 or
-        // Stage 4 blows up on every single chunk before the error
-        // surfaces in the index timing log.
-        var availabilityChecker = new ModelAvailabilityChecker();
-        var problems = await availabilityChecker.CheckKbAsync(kb);
-        if (problems.Count > 0)
-        {
-            LoggingService.LogWarning(
-                $"[RAG] exec aborted — pre-flight found {problems.Count} unreachable model(s) in {kbId}: " +
-                string.Join("; ", problems.Select(p => $"{p.Role} '{p.ModelId}'")));
-            return StartExecResult.PreflightFailed(problems);
-        }
-
-        var exePath = BuiltInServerHelper.GetServerExePath(BuiltInServerHelper.RagKey);
-        if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath))
-        {
-            LoggingService.LogError($"[RAG] exec failed — executable not found: {exePath}");
-            return StartExecResult.LaunchFailed("RAG executable not found. Run 'dotnet tool update FieldCure.Mcp.Rag'.");
-        }
-
-        var kbPath = KnowledgeBaseStore.GetKbPath(kbId);
-        var args = $"exec --path \"{kbPath}\"";
-        if (force) args += " --force";
-        if (!string.IsNullOrEmpty(partial)) args += $" --partial {partial}";
-
-        LoggingService.LogInfo($"[RAG] Starting exec: {exePath} {args}");
-
-        try
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = exePath,
-                Arguments = args,
-                CreateNoWindow = true,
-                UseShellExecute = false,
-            });
-            return StartExecResult.Success();
-        }
-        catch (Exception ex)
-        {
-            LoggingService.LogError($"[RAG] Failed to start exec: {ex.Message}");
-            return StartExecResult.LaunchFailed(ex.Message);
-        }
-    }
-
     /// <summary>
     /// Requests graceful cancellation of the exec process by creating a cancel file.
     /// The exec process checks for this file between chunks and exits with code 2.
@@ -117,7 +49,11 @@ public static class RagProcessManager
     /// queue sequentially. Returns once the child process is launched —
     /// the orchestrator continues running after AssistStudio exits.
     /// </summary>
-    public static void StartQueueOrchestrator()
+    /// <param name="sweepAll">
+    /// When true, passes <c>--sweep-all</c> so the orchestrator also
+    /// processes <c>deferred=true</c> entries. Used at app shutdown.
+    /// </param>
+    public static void StartQueueOrchestrator(bool sweepAll = false)
     {
         var exePath = BuiltInServerHelper.GetServerExePath(BuiltInServerHelper.RagKey);
         if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath))
@@ -128,6 +64,7 @@ public static class RagProcessManager
 
         var queuePath = DeferredQueueStore.QueueFilePath;
         var args = $"exec-queue --queue-file \"{queuePath}\"";
+        if (sweepAll) args += " --sweep-all";
 
         LoggingService.LogInfo($"[RAG] Starting exec-queue orchestrator: {exePath} {args}");
 
@@ -146,38 +83,37 @@ public static class RagProcessManager
             LoggingService.LogError($"[RAG] Failed to start exec-queue: {ex.Message}");
         }
     }
-}
 
-/// <summary>
-/// Outcome of a <see cref="RagProcessManager.StartExecAsync"/> call. Carries
-/// enough information for the caller to render a ContentDialog or similar
-/// surface without a second round-trip.
-/// </summary>
-public sealed record StartExecResult(
-    StartExecOutcome Outcome,
-    string? ErrorMessage,
-    IReadOnlyList<KbModelProblem>? Problems)
-{
-    public bool IsSuccess => Outcome == StartExecOutcome.Success;
+    /// <summary>
+    /// Spawns a detached <c>prune-orphans</c> process to clean up orphan KB folders.
+    /// Should be called at app startup <b>before</b> the RAG serve process starts,
+    /// to avoid SQLite handle contention.
+    /// </summary>
+    public static void StartPruneOrphans()
+    {
+        var exePath = BuiltInServerHelper.GetServerExePath(BuiltInServerHelper.RagKey);
+        if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath))
+            return;
 
-    public static StartExecResult Success() =>
-        new(StartExecOutcome.Success, null, null);
+        if (!KnowledgeBaseStore.AnyExists())
+            return;
 
-    public static StartExecResult NotFound(string kbId) =>
-        new(StartExecOutcome.KbNotFound, $"Knowledge base '{kbId}' not found.", null);
+        var args = $"prune-orphans --base-path \"{KnowledgeBaseStore.BasePath}\"";
+        LoggingService.LogInfo($"[RAG] Starting prune-orphans: {exePath} {args}");
 
-    public static StartExecResult PreflightFailed(IReadOnlyList<KbModelProblem> problems) =>
-        new(StartExecOutcome.PreflightFailed, null, problems);
-
-    public static StartExecResult LaunchFailed(string message) =>
-        new(StartExecOutcome.LaunchFailed, message, null);
-}
-
-/// <summary>Discrete failure categories for <see cref="StartExecResult"/>.</summary>
-public enum StartExecOutcome
-{
-    Success,
-    KbNotFound,
-    PreflightFailed,
-    LaunchFailed,
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = exePath,
+                Arguments = args,
+                CreateNoWindow = true,
+                UseShellExecute = false,
+            });
+        }
+        catch (Exception ex)
+        {
+            LoggingService.LogError($"[RAG] Failed to start prune-orphans: {ex.Message}");
+        }
+    }
 }

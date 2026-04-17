@@ -259,10 +259,15 @@ public sealed partial class KnowledgeBasesPage : Page
         SnapshotIndexedWith(kb);
 
         var isDeferred = timingRadios.SelectedIndex == 1;
+        var status = await StartReindexAsync(kb.Id, deferred: isDeferred);
+
         if (isDeferred)
         {
-            DeferredQueueStore.Add(kb.Id);
             LoggingService.LogInfo($"[KB] Deferred indexing scheduled: {kb.Name} ({kb.Id})");
+
+            if (App.Current is App app)
+                app.MainWindow?.DeferredThisSession.Add((kb.Id, kb.Name));
+
             await AppendKbItemAsync(kb);
 
             var appendedItem = _allItems.FirstOrDefault(i => i.Id == kb.Id);
@@ -276,8 +281,7 @@ public sealed partial class KnowledgeBasesPage : Page
             return;
         }
 
-        var execResult = await RagProcessManager.StartExecAsync(kb.Id);
-        if (!await HandleStartExecResultAsync(execResult))
+        if (!await HandleStartReindexResultAsync(status))
         {
             await AppendKbItemAsync(kb);
             return;
@@ -311,25 +315,14 @@ public sealed partial class KnowledgeBasesPage : Page
         _isDialogOpen = false;
         if (result != ContentDialogResult.Primary) return;
 
-        if (RagProcessManager.IsExecRunning(kbId))
-        {
-            RagProcessManager.CancelExec(kbId);
-            await Task.Delay(2000);
-        }
+        // Logical deletion: remove config.json. Physical folder cleanup
+        // happens via prune-orphans at next app startup. Queue entries and
+        // serve cache are cleaned up lazily by the orchestrator/serve.
+        KnowledgeBaseStore.Delete(kbId);
+        LoggingService.LogInfo($"[KB] Deleted (config.json removed): {kbId}");
 
-        // Release serve's SQLite handle before deleting files on disk.
-        await UnloadKbAsync(kbId);
-
-        try
-        {
-            KnowledgeBaseStore.Delete(kbId);
-            LoggingService.LogInfo($"[KB] Deleted: {kbId}");
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            LoggingService.LogWarning($"[KB] Delete failed (file locked): {kbId} — {ex.Message}");
-            await ShowDeleteFailedDialogAsync(kbId);
-        }
+        if (App.Current is App app)
+            app.MainWindow?.DeferredThisSession.RemoveAll(e => e.KbId == kbId);
 
         await RefreshListAsync();
     }
@@ -402,11 +395,11 @@ public sealed partial class KnowledgeBasesPage : Page
         if (kbForSnapshot is not null)
             SnapshotIndexedWith(kbForSnapshot);
 
-        var execResult = await RagProcessManager.StartExecAsync(kbId);
-        if (!await HandleStartExecResultAsync(execResult))
+        var status = await StartReindexAsync(kbId);
+        if (!await HandleStartReindexResultAsync(status))
             return;
 
-        LoggingService.LogInfo($"[KB] Quick re-index started: {kbId}");
+        LoggingService.LogInfo($"[KB] Quick re-index queued: {kbId}");
 
         var item = _allItems.FirstOrDefault(i => i.Id == kbId);
         if (item is not null)
@@ -632,26 +625,32 @@ public sealed partial class KnowledgeBasesPage : Page
                 partial = "embedding";
 
             var isSettingsDeferred = settingsTimingRadios.SelectedIndex == 1;
+            var reindexStatus = await StartReindexAsync(
+                kbId,
+                partialMode: partial,
+                force: partial is null,
+                deferred: isSettingsDeferred);
+
             if (isSettingsDeferred)
             {
-                DeferredQueueStore.Add(kb.Id, isReindex: true, partialMode: partial);
                 LoggingService.LogInfo($"[KB] Deferred re-index scheduled: {kb.Name} ({kbId})" +
                     (partial is not null ? $" partial={partial}" : ""));
+
+                if (App.Current is App app2)
+                    app2.MainWindow?.DeferredThisSession.Add((kbId, kb.Name));
             }
             else
             {
-                if (partial is not null)
-                    LoggingService.LogInfo($"[KB] Partial re-index ({partial}): {kbId}");
-                else
-                    LoggingService.LogInfo($"[KB] Re-index started: {kbId}");
-
-                var execResult = await RagProcessManager.StartExecAsync(
-                    kbId, force: partial is null, partial: partial);
-                if (!await HandleStartExecResultAsync(execResult))
+                if (!await HandleStartReindexResultAsync(reindexStatus))
                 {
                     await RefreshListAsync();
                     return;
                 }
+
+                if (partial is not null)
+                    LoggingService.LogInfo($"[KB] Partial re-index ({partial}) queued: {kbId}");
+                else
+                    LoggingService.LogInfo($"[KB] Re-index queued: {kbId}");
 
                 _pollTimer.Start();
             }
@@ -694,42 +693,86 @@ public sealed partial class KnowledgeBasesPage : Page
     }
 
     /// <summary>
-    /// Shows a ContentDialog for a <see cref="StartExecResult"/> failure and
-    /// returns <c>true</c> if the caller should continue (success) or
-    /// <c>false</c> if exec did not start. Pre-flight failures list every
-    /// unavailable model with the specific reason so the user can fix the
-    /// exact problem without having to read log files.
+    /// Calls the <c>start_reindex</c> MCP tool to queue an indexing request.
+    /// Returns the <c>status</c> string from the response, or <c>null</c> on failure.
     /// </summary>
-    private async Task<bool> HandleStartExecResultAsync(StartExecResult result)
+    private static async Task<string?> StartReindexAsync(
+        string kbId, string? partialMode = null, bool force = false, bool deferred = false)
     {
-        if (result.IsSuccess) return true;
+        var connection = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.RagKey);
+        if (connection?.IsConnected != true)
+        {
+            LoggingService.LogWarning($"[KB] start_reindex skipped — RAG server not connected");
+            return null;
+        }
+
+        try
+        {
+            var argsObj = new Dictionary<string, object?> { ["kb_id"] = kbId };
+            if (partialMode is not null) argsObj["partial_mode"] = partialMode;
+            if (force) argsObj["force"] = true;
+            if (deferred) argsObj["deferred"] = true;
+
+            var argsJson = JsonSerializer.Serialize(argsObj);
+            var args = JsonDocument.Parse(argsJson).RootElement;
+            var result = await connection.CallToolWithProgressAsync("start_reindex", args, null);
+
+            using var doc = JsonDocument.Parse(result);
+            var status = doc.RootElement.GetProperty("status").GetString();
+
+            LoggingService.LogInfo($"[KB] start_reindex({kbId}): status={status}" +
+                (partialMode is not null ? $", partial={partialMode}" : "") +
+                (deferred ? ", deferred" : "") +
+                (force ? ", force" : ""));
+
+            return status;
+        }
+        catch (Exception ex)
+        {
+            LoggingService.LogWarning($"[KB] start_reindex failed: {kbId} — {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Calls the <c>cancel_reindex</c> MCP tool to remove a pending queue entry.
+    /// Returns <c>true</c> if the entry was actually cancelled (or was already gone).
+    /// Returns <c>false</c> only when the MCP call itself failed (serve not connected, etc.).
+    /// </summary>
+    private static async Task<bool> CancelReindexAsync(string kbId)
+    {
+        var connection = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.RagKey);
+        if (connection?.IsConnected != true) return false;
+
+        try
+        {
+            var argsJson = JsonSerializer.Serialize(new { kb_id = kbId });
+            var args = JsonDocument.Parse(argsJson).RootElement;
+            var result = await connection.CallToolWithProgressAsync("cancel_reindex", args, null);
+            LoggingService.LogInfo($"[KB] cancel_reindex: {kbId} — {result}");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            LoggingService.LogWarning($"[KB] cancel_reindex failed: {kbId} — {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Shows a failure dialog for start_reindex and returns <c>true</c> if the
+    /// caller should continue (success) or <c>false</c> if indexing did not queue.
+    /// </summary>
+    private async Task<bool> HandleStartReindexResultAsync(string? status)
+    {
+        if (status is not null and not "not_found") return true;
 
         var title = _loader.GetString("KB_PreflightFailureTitle") ?? "Cannot start re-indexing";
-        string body;
+        var body = status == "not_found"
+            ? "Knowledge base not found."
+            : "RAG server is not connected.";
 
-        if (result.Outcome == StartExecOutcome.PreflightFailed && result.Problems is { Count: > 0 })
-        {
-            // State-only messaging: we report that the model cannot be
-            // reached, not why. Ollama might be off, the model might not
-            // be pulled, the network might be blocked — guessing the
-            // cause would push the user toward a specific fix that may
-            // not even be the right one.
-            var embedTemplate = _loader.GetString("KB_PreflightEmbeddingUnavailable")
-                ?? "Embedding model '{0}' is not available.";
-            var ctxTemplate = _loader.GetString("KB_PreflightContextualizerUnavailable")
-                ?? "Contextualizer model '{0}' is not available.";
-            var lines = result.Problems.Select(p =>
-                string.Format(
-                    p.Role == KbModelRole.Embedding ? embedTemplate : ctxTemplate,
-                    p.ModelId));
-            body = string.Join("\n", lines);
-        }
-        else
-        {
-            body = result.ErrorMessage ?? result.Outcome.ToString();
-        }
-
-        LoggingService.LogWarning($"[KB] StartExec surfaced failure to user: {title} — {body}");
+        LoggingService.LogWarning($"[KB] start_reindex surfaced failure to user: {title} — {body}");
 
         var dialog = new ThemedContentDialog
         {
@@ -1080,37 +1123,11 @@ public sealed partial class KnowledgeBasesPage : Page
 
             await UpdateItemStatusAsync(item);
 
-            // Reflect deferred queue state
-            var deferredEntry = DeferredQueueStore.Get(kb.Id);
-            if (deferredEntry is not null)
-            {
-                item.IsDeferredIndexing = true;
-                if (deferredEntry.LastError is not null)
-                {
-                    item.StatusText = (_loader.GetString("KB_StatusFailed") ?? "Failed")
-                        + $": {deferredEntry.LastError}";
-                    item.StatusBrush = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"];
-                }
-                else if (deferredEntry.StartedAt is not null)
-                {
-                    item.StatusText = _loader.GetString("KB_StatusIndexingBackground") ?? "Indexing (background)";
-                    item.StatusBrush = new SolidColorBrush(Microsoft.UI.Colors.DodgerBlue);
-                }
-                else
-                {
-                    item.StatusText = _loader.GetString("KB_StatusScheduled") ?? "Scheduled";
-                    item.StatusBrush = new SolidColorBrush(Microsoft.UI.Colors.DodgerBlue);
-                }
-            }
-
             _allItems.Add(item);
         }
 
-        // Clean up orphaned deferred entries for deleted KBs
-        var existingIds = new HashSet<string>(kbs.Select(k => k.Id));
-        var deferredEntries = DeferredQueueStore.List();
-        foreach (var orphan in deferredEntries.Where(e => !existingIds.Contains(e.KbId)))
-            DeferredQueueStore.Remove(orphan.KbId);
+        // Queue orphan cleanup is now handled lazily by the orchestrator
+        // (config.json missing → entry removed on next pickup).
 
         // Start polling if any KB is indexing
         if (_allItems.Any(i => i.IsIndexing == Visibility.Visible))
@@ -1333,28 +1350,6 @@ public sealed partial class KnowledgeBasesPage : Page
     }
 
     /// <summary>
-    /// Asks the RAG serve to release all handles for a KB so its files can be deleted.
-    /// Idempotent — safe even if the KB was never loaded or serve is not connected.
-    /// </summary>
-    private static async Task UnloadKbAsync(string kbId)
-    {
-        try
-        {
-            var connection = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.RagKey);
-            if (connection?.IsConnected != true) return;
-
-            var argsJson = JsonSerializer.Serialize(new { kb_id = kbId });
-            var args = JsonDocument.Parse(argsJson).RootElement;
-            await connection.CallToolWithProgressAsync("unload_kb", args, null);
-            LoggingService.LogInfo($"[KB] unload_kb succeeded: {kbId}");
-        }
-        catch (Exception ex)
-        {
-            LoggingService.LogWarning($"[KB] unload_kb failed: {kbId} — {ex.Message}");
-        }
-    }
-
-    /// <summary>
     /// Calls the <c>get_index_info</c> MCP tool on the RAG server for the given KB.
     /// Returns <c>null</c> when the RAG server is not connected (caller should fall back to SQLite).
     /// </summary>
@@ -1440,38 +1435,41 @@ public sealed partial class KnowledgeBasesPage : Page
     }
 
     /// <summary>
-    /// Handles "Index now" on a deferred KB — removes from queue, starts exec immediately.
+    /// Handles "Index now" on a deferred KB — calls start_reindex with deferred=false
+    /// which upgrades the existing deferred entry to immediate and spawns the orchestrator.
     /// </summary>
     private async void OnIndexNowRequested(object? sender, string kbId)
     {
-        var entry = DeferredQueueStore.Get(kbId);
-        DeferredQueueStore.Remove(kbId);
-
         var item = _allItems.FirstOrDefault(i => i.Id == kbId);
         if (item is not null)
             item.IsDeferredIndexing = false;
 
-        var execResult = await RagProcessManager.StartExecAsync(
-            kbId,
-            force: entry is { IsReindex: true, PartialMode: null },
-            partial: entry?.PartialMode);
-        if (!await HandleStartExecResultAsync(execResult))
+        var status = await StartReindexAsync(kbId, deferred: false);
+        if (!await HandleStartReindexResultAsync(status))
         {
             ApplyFilter();
             return;
         }
 
         LoggingService.LogInfo($"[KB] Deferred → immediate indexing: {kbId}");
+
+        if (App.Current is App app)
+            app.MainWindow?.DeferredThisSession.RemoveAll(e => e.KbId == kbId);
+
         _pollTimer.Start();
         ApplyFilter();
     }
 
     /// <summary>
-    /// Handles "Cancel scheduled" on a deferred KB — removes from queue without indexing.
+    /// Handles "Cancel scheduled" on a deferred KB — removes from queue via MCP.
     /// </summary>
-    private void OnCancelDeferredRequested(object? sender, string kbId)
+    private async void OnCancelDeferredRequested(object? sender, string kbId)
     {
-        DeferredQueueStore.Remove(kbId);
+        if (!await CancelReindexAsync(kbId))
+            return;
+
+        if (App.Current is App app)
+            app.MainWindow?.DeferredThisSession.RemoveAll(e => e.KbId == kbId);
 
         var item = _allItems.FirstOrDefault(i => i.Id == kbId);
         if (item is not null)

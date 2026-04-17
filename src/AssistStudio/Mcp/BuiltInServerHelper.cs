@@ -91,8 +91,8 @@ public static class BuiltInServerHelper
         "read_file", "read_multiple_files", "read_file_lines",
         "list_directory", "directory_tree",
         "search_files", "search_within_files", "get_file_info",
-        // RAG
-        "search_documents", "get_document_chunk", "get_index_info", "check_changes", "unload_kb",
+        // RAG (start_reindex is NOT read-only — requires confirmation)
+        "search_documents", "get_document_chunk", "get_index_info", "check_changes",
         // Outbox — add_channel opens a subprocess console for credential input
         "list_channels", "add_channel",
         // Runner

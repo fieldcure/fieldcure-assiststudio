@@ -152,39 +152,16 @@ public static class KnowledgeBaseStore
     }
 
     /// <summary>
-    /// Deletes a knowledge base folder entirely, with a short retry loop
-    /// to ride out transient file locks from a just-cancelled exec
-    /// process or a serve process that is about to release its read-only
-    /// handle. Throws <see cref="IOException"/> if the folder is still
-    /// locked after the retries — callers should catch and surface the
-    /// error instead of crashing.
+    /// Logically deletes a knowledge base by removing its config.json.
+    /// The physical folder is left behind for <c>prune-orphans</c> to clean up
+    /// at the next app startup (before serve acquires SQLite handles).
+    /// Queue cleanup and cache eviction happen lazily on the serve side.
     /// </summary>
     public static void Delete(string kbId)
     {
-        var kbPath = GetKbPath(kbId);
-        if (!Directory.Exists(kbPath))
-            return;
-
-        // File handles held by serve may not release instantly after
-        // unload_kb — give up to ~5 seconds before surfacing the lock.
-        const int maxAttempts = 10;
-        const int delayMs = 500;
-        for (var attempt = 1; attempt <= maxAttempts; attempt++)
-        {
-            try
-            {
-                Directory.Delete(kbPath, recursive: true);
-                return;
-            }
-            catch (IOException) when (attempt < maxAttempts)
-            {
-                Thread.Sleep(delayMs);
-            }
-            catch (UnauthorizedAccessException) when (attempt < maxAttempts)
-            {
-                Thread.Sleep(delayMs);
-            }
-        }
+        var configPath = Path.Combine(GetKbPath(kbId), ConfigFileName);
+        if (File.Exists(configPath))
+            File.Delete(configPath);
     }
 
     /// <summary>

@@ -234,6 +234,9 @@ public partial class App : Application
             try { await BuiltInServerHelper.InitializeToolsAsync(); }
             catch (Exception ex) { LoggingService.LogWarning($"[BuiltIn] Initialization failed: {ex.Message}"); }
 
+            // Clean up orphan KB folders before serve acquires SQLite handles
+            RagProcessManager.StartPruneOrphans();
+
             // Start built-in servers (filesystem is per-tab, skip here)
             var builtInConfigs = AppSettings.BuiltInServers;
             var builtInTasks = builtInConfigs

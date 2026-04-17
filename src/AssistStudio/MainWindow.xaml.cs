@@ -38,6 +38,14 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private bool _isClosing;
 
+    /// <summary>
+    /// Tracks KBs that had deferred indexing scheduled during this session.
+    /// Used by the shutdown dialog to decide whether to spawn the orchestrator.
+    /// Updated when <c>start_reindex(deferred=true)</c> succeeds (add) or
+    /// the user clicks "Index now" / deletes the KB (remove).
+    /// </summary>
+    internal readonly List<(string KbId, string KbName)> DeferredThisSession = [];
+
     #endregion
 
     #region Properties
@@ -765,13 +773,10 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private async Task<bool> HandleDeferredQueueOnCloseAsync()
     {
-        if (!DeferredQueueStore.HasEntries())
+        if (DeferredThisSession.Count == 0)
             return true;
 
-        var entries = DeferredQueueStore.List();
-        var pendingCount = entries.Count(e => e.StartedAt is null && e.LastError is null);
-        if (pendingCount == 0)
-            return true;
+        var pendingCount = DeferredThisSession.Count;
 
         var dialog = new ThemedContentDialog
         {
@@ -793,8 +798,8 @@ public sealed partial class MainWindow : Window
         {
             try
             {
-                RagProcessManager.StartQueueOrchestrator();
-                LoggingService.LogInfo($"[App] Deferred queue orchestrator spawned for {pendingCount} KB(s)");
+                RagProcessManager.StartQueueOrchestrator(sweepAll: true);
+                LoggingService.LogInfo($"[App] Deferred queue orchestrator (--sweep-all) spawned for {pendingCount} KB(s)");
             }
             catch (Exception ex)
             {
