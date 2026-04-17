@@ -1,4 +1,4 @@
-using AssistStudio.Helpers;
+﻿using AssistStudio.Helpers;
 using AssistStudio.Modules.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -13,7 +13,7 @@ namespace AssistStudio.Controls;
 /// Context menu flyout for tab headers, providing Close, Copy Path, and Rename actions.
 /// Attached per-TabViewItem; resolves the current tab from DataContext on each opening.
 /// </summary>
-internal sealed class TabContextFlyout : MenuFlyout
+internal sealed partial class TabContextFlyout : MenuFlyout
 {
     #region Fields
 

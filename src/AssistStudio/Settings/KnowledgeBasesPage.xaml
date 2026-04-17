@@ -38,8 +38,14 @@
                        Margin="0,0,12,0" />
 
             <Button x:Name="CreateButton" Grid.Column="3"
-                    x:Uid="KB_Create" Content="Create"
-                    Click="OnCreateClicked" />
+                    Click="OnCreateClicked"
+                    Style="{StaticResource SubtleButtonStyle}"
+                    Padding="8" MinWidth="0" MinHeight="0">
+                <ToolTipService.ToolTip>
+                    <ToolTip x:Uid="KB_CreateButtonTip" Placement="Mouse"/>
+                </ToolTipService.ToolTip>
+                <FontIcon Glyph="&#xE710;" FontSize="14" />
+            </Button>
         </Grid>
 
         <!-- Search box -->
