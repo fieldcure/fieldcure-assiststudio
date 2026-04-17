@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <UserControl
     x:Class="AssistStudio.Controls.EmbeddingModelSelector"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -20,7 +20,7 @@
                         CornerRadius="4" Padding="6,2"
                         VerticalAlignment="Center">
                     <TextBlock Text="{x:Bind Provider}"
-                               Style="{StaticResource CaptionTextBlockStyle}"
+                               Style="{StaticResource DescriptionTextBlockStyle}"
                                Opacity="0.7" />
                 </Border>
 
@@ -29,45 +29,48 @@
                     <TextBlock Text="{x:Bind Label}"
                                Style="{StaticResource BodyStrongTextBlockStyle}" />
                     <TextBlock Text="{x:Bind Meta}"
-                               Style="{StaticResource CaptionTextBlockStyle}"
+                               Visibility="{x:Bind MetaVisibility}"
+                               Style="{StaticResource DescriptionTextBlockStyle}"
                                Opacity="0.7" />
                 </StackPanel>
 
                 <!-- Not-installed badge -->
                 <TextBlock Grid.Column="2"
                            Text="{x:Bind StatusText}"
-                           Style="{StaticResource CaptionTextBlockStyle}"
+                           Style="{StaticResource DescriptionTextBlockStyle}"
                            Foreground="{ThemeResource SystemFillColorCautionBrush}"
                            VerticalAlignment="Center" />
             </Grid>
         </DataTemplate>
     </UserControl.Resources>
 
-    <StackPanel Spacing="12">
+    <StackPanel Spacing="{StaticResource CompactSpacing}">
         <!-- Embedding model -->
         <StackPanel Spacing="4">
-            <TextBlock x:Name="EmbeddingHeader" Opacity="0.8" />
             <ComboBox x:Name="EmbeddingCombo"
+                      x:Uid="EmbeddingModelSelector_EmbeddingCombo"
                       HorizontalAlignment="Stretch"
                       ItemTemplate="{StaticResource ModelOptionTemplate}"
                       SelectionChanged="OnEmbeddingComboChanged" />
             <TextBlock x:Name="EmbeddingMetaText"
-                       Style="{StaticResource CaptionTextBlockStyle}"
+                       Style="{StaticResource DescriptionTextBlockStyle}"
                        Opacity="0.6" />
         </StackPanel>
 
         <!-- Chunk contextualization -->
         <StackPanel Spacing="4">
             <ToggleSwitch x:Name="ContextualizerToggle"
+                          x:Uid="EmbeddingModelSelector_ContextualizerToggle"
                           Toggled="OnContextualizerToggled" />
             <ComboBox x:Name="ContextualizerCombo"
                       HorizontalAlignment="Stretch"
-                      IsEnabled="False"
+                      Visibility="Collapsed"
                       ItemTemplate="{StaticResource ModelOptionTemplate}"
                       SelectionChanged="OnContextualizerComboChanged" />
             <TextBlock x:Name="ContextualizerMetaText"
-                       Style="{StaticResource CaptionTextBlockStyle}"
-                       Opacity="0.6" />
+                       Style="{StaticResource DescriptionTextBlockStyle}"
+                       Opacity="0.6"
+                       Visibility="Collapsed" />
         </StackPanel>
     </StackPanel>
 </UserControl>

@@ -715,10 +715,10 @@
   <data name="KB_DialogAddFolder" xml:space="preserve">
     <value>Add Folder</value>
   </data>
-  <data name="KB_DialogEmbeddingModel" xml:space="preserve">
+  <data name="EmbeddingModelSelector_EmbeddingCombo.Header" xml:space="preserve">
     <value>Embedding Model</value>
   </data>
-  <data name="KB_DialogContextualizer" xml:space="preserve">
+  <data name="EmbeddingModelSelector_ContextualizerToggle.Header" xml:space="preserve">
     <value>Chunk contextualization</value>
   </data>
   <data name="KB_DialogContextDisabled" xml:space="preserve">
@@ -802,10 +802,10 @@
   <data name="KB_DeferredCloseSkip" xml:space="preserve">
     <value>Exit without indexing</value>
   </data>
-  <data name="KB_ContextualizerToggleOn" xml:space="preserve">
+  <data name="EmbeddingModelSelector_ContextualizerToggle.OnContent" xml:space="preserve">
     <value>On</value>
   </data>
-  <data name="KB_ContextualizerToggleOff" xml:space="preserve">
+  <data name="EmbeddingModelSelector_ContextualizerToggle.OffContent" xml:space="preserve">
     <value>Off</value>
   </data>
   <data name="KB_SaveAndSchedule" xml:space="preserve">
@@ -1489,5 +1489,68 @@
   </data>
   <data name="KB_SearchBox.PlaceholderText" xml:space="preserve">
     <value>Search documents...</value>
+  </data>
+  <data name="KbEditDialog_FoldersHeader.Text" xml:space="preserve">
+    <value>Source Folders</value>
+  </data>
+  <data name="KbEditDialog_AddFolderButton.Content" xml:space="preserve">
+    <value>Add Folder</value>
+  </data>
+  <data name="KbEditDialog_NameBox.Header" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="KbEditDialog_NameBox.PlaceholderText" xml:space="preserve">
+    <value>e.g., Project Docs</value>
+  </data>
+  <data name="KbEditDialog_NameHint.Text" xml:space="preserve">
+    <value>Auto-generated from folder name if empty</value>
+  </data>
+  <data name="KbEditDialog_TimingRadios.Header" xml:space="preserve">
+    <value>Indexing</value>
+  </data>
+  <data name="KbEditDialog_TimingNowRadio.Content" xml:space="preserve">
+    <value>Start indexing now</value>
+  </data>
+  <data name="KbEditDialog_TimingOnCloseRadio.Content" xml:space="preserve">
+    <value>Start when AssistStudio closes</value>
+  </data>
+  <data name="KbEditDialog_TimingHint.Text" xml:space="preserve">
+    <value>Local models can slow down your workflow while indexing. Deferring until app close lets you keep working.</value>
+  </data>
+  <data name="KbEditDialog_ReindexWarning.Text" xml:space="preserve">
+    <value>⚠️ Changing the model requires full re-indexing. The existing index will be deleted.</value>
+  </data>
+  <data name="KbCard_CheckChangesButton.Content" xml:space="preserve">
+    <value>Check changes</value>
+  </data>
+  <data name="KbCard_IndexNowButton.Content" xml:space="preserve">
+    <value>Index now</value>
+  </data>
+  <data name="KbCard_CancelDeferredButton.Content" xml:space="preserve">
+    <value>Cancel scheduled</value>
+  </data>
+  <data name="KbCard_SettingsButtonTip.Content" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="KbCard_ReindexButtonTip.Content" xml:space="preserve">
+    <value>Re-index...</value>
+  </data>
+  <data name="KbCard_ReindexNowItem.Text" xml:space="preserve">
+    <value>Re-index now</value>
+  </data>
+  <data name="KbCard_ReindexDeferredItem.Text" xml:space="preserve">
+    <value>Re-index when app closes</value>
+  </data>
+  <data name="KbCard_DeleteButtonTip.Content" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="KbCard_StopButtonTip.Content" xml:space="preserve">
+    <value>Cancel indexing</value>
+  </data>
+  <data name="KbCard_NoMatchText.Text" xml:space="preserve">
+    <value>No matches in this knowledge base</value>
+  </data>
+  <data name="KB_CreateButtonTip.Content" xml:space="preserve">
+    <value>Create knowledge base</value>
   </data>
 </root>

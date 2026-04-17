@@ -147,11 +147,6 @@ public sealed partial class EmbeddingModelSelector : UserControl
         _isInitializing = true;
         try
         {
-            EmbeddingHeader.Text = _loader.GetString("KB_DialogEmbeddingModel");
-            ContextualizerToggle.Header = _loader.GetString("KB_DialogContextualizer");
-            ContextualizerToggle.OnContent = _loader.GetString("KB_ContextualizerToggleOn");
-            ContextualizerToggle.OffContent = _loader.GetString("KB_ContextualizerToggleOff");
-
             var embeddingDefault = CurrentEmbeddingModel ?? "nomic-embed-text";
             _selectedEmbeddingId = embeddingDefault;
 
@@ -187,7 +182,7 @@ public sealed partial class EmbeddingModelSelector : UserControl
 
             var hasContextualizer = !string.IsNullOrEmpty(contextualizerDefault);
             ContextualizerToggle.IsOn = hasContextualizer;
-            ContextualizerCombo.IsEnabled = hasContextualizer;
+            SetContextualizerVisible(hasContextualizer);
 
             if (hasContextualizer)
             {
@@ -251,12 +246,18 @@ public sealed partial class EmbeddingModelSelector : UserControl
         }
     }
 
+    /// <summary>
+    /// Toggles the contextualizer combobox visibility and selection when the
+    /// user flips the Chunk contextualization switch. Off collapses the
+    /// combobox entirely (and clears the selected id); On restores it and
+    /// seeds a default selection if none exists.
+    /// </summary>
     private void OnContextualizerToggled(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
         if (_isInitializing) return;
 
         var isOn = ContextualizerToggle.IsOn;
-        ContextualizerCombo.IsEnabled = isOn;
+        SetContextualizerVisible(isOn);
 
         if (isOn)
         {
@@ -280,6 +281,18 @@ public sealed partial class EmbeddingModelSelector : UserControl
     #endregion
 
     #region Private Methods
+
+    /// <summary>
+    /// Shows or collapses both the contextualizer combobox and its meta
+    /// caption together, so the "Off" state hides the row entirely instead
+    /// of leaving a greyed-out empty combobox behind.
+    /// </summary>
+    private void SetContextualizerVisible(bool visible)
+    {
+        var v = visible ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
+        ContextualizerCombo.Visibility = v;
+        ContextualizerMetaText.Visibility = v;
+    }
 
     private static string MapProviderName(string displayProvider) => displayProvider switch
     {

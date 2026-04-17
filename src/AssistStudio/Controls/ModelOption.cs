@@ -18,6 +18,16 @@ public sealed class ModelOption
     /// <summary>Metadata line (e.g. "768d · 274MB · multilingual").</summary>
     public required string Meta { get; init; }
 
+    /// <summary>
+    /// Visibility for the meta TextBlock — <c>Collapsed</c> when
+    /// <see cref="Meta"/> is empty so the label row centers vertically
+    /// instead of reserving empty line height for meta.
+    /// </summary>
+    public Microsoft.UI.Xaml.Visibility MetaVisibility =>
+        string.IsNullOrEmpty(Meta)
+            ? Microsoft.UI.Xaml.Visibility.Collapsed
+            : Microsoft.UI.Xaml.Visibility.Visible;
+
     /// <summary>Whether the model was reachable at probe time.</summary>
     public bool IsAvailable { get; set; } = true;
 
