@@ -1,3 +1,4 @@
+using AssistStudio.Controls;
 using AssistStudio.Controls.Dialogs;
 using AssistStudio.Helpers;
 using Microsoft.UI.Xaml;
@@ -9,20 +10,22 @@ namespace AssistStudio.Settings;
 
 /// <summary>
 /// Settings page for viewing and managing scheduled tasks created by the Runner.
-/// Reads from the Runner's SQLite database and synchronizes changes with Windows Task Scheduler.
+/// Reads from the Runner's SQLite database and synchronizes changes with
+/// Windows Task Scheduler. Per-item rendering is delegated to
+/// <see cref="ScheduleCard"/>; the page only handles list orchestration
+/// and backend effects (SQLite + schtasks).
 /// </summary>
 public sealed partial class SchedulePage : Page
 {
-    private static readonly ResourceLoader Res = new();
-
     #region Fields
 
+    private static readonly ResourceLoader Res = new();
+
+    private readonly List<ScheduleCard> _liveCards = [];
     private List<ScheduleItem> _allItems = [];
     private bool _isUpdating;
 
     private string _deleteTooltip = "Delete";
-    private string _enableTooltip = "Enable";
-    private string _disableTooltip = "Disable";
     private string _loadingText = "Loading schedules...";
     private string _deleteConfirmTitle = "Delete Schedule";
     private string _deleteConfirmContent = "Are you sure you want to delete \"{0}\"?";
@@ -46,6 +49,7 @@ public sealed partial class SchedulePage : Page
 
     #region Overrides
 
+    /// <inheritdoc/>
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
@@ -53,26 +57,32 @@ public sealed partial class SchedulePage : Page
         _ = LoadSchedulesAsync();
     }
 
+    /// <inheritdoc/>
+    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    {
+        base.OnNavigatedFrom(e);
+        ReleaseLiveCards();
+    }
+
     #endregion
 
     #region Private Methods
 
     /// <summary>
-    /// Loads localized UI strings from the resource file.
+    /// Loads localized UI strings used for dialogs and the loading label.
+    /// Card-internal tooltips are loaded by the card itself.
     /// </summary>
     private void LoadLocalizedStrings()
     {
         try
         {
             _deleteTooltip = Res.GetString("Schedule_DeleteTooltip") is { Length: > 0 } s1 ? s1 : _deleteTooltip;
-            _enableTooltip = Res.GetString("Schedule_EnableTooltip") is { Length: > 0 } s2 ? s2 : _enableTooltip;
-            _disableTooltip = Res.GetString("Schedule_DisableTooltip") is { Length: > 0 } s3 ? s3 : _disableTooltip;
-            _loadingText = Res.GetString("Schedule_Loading") is { Length: > 0 } s4 ? s4 : _loadingText;
-            _deleteConfirmTitle = Res.GetString("Schedule_DeleteConfirmTitle") is { Length: > 0 } s6 ? s6 : _deleteConfirmTitle;
-            _deleteConfirmContent = Res.GetString("Schedule_DeleteConfirmContent") is { Length: > 0 } s7 ? s7 : _deleteConfirmContent;
-            _cancelText = Res.GetString("Common_Cancel") is { Length: > 0 } s8 ? s8 : _cancelText;
-            _errorTitle = Res.GetString("Common_Error") is { Length: > 0 } s9 ? s9 : _errorTitle;
-            _okText = Res.GetString("Common_OK") is { Length: > 0 } s10 ? s10 : _okText;
+            _loadingText = Res.GetString("Schedule_Loading") is { Length: > 0 } s2 ? s2 : _loadingText;
+            _deleteConfirmTitle = Res.GetString("Schedule_DeleteConfirmTitle") is { Length: > 0 } s3 ? s3 : _deleteConfirmTitle;
+            _deleteConfirmContent = Res.GetString("Schedule_DeleteConfirmContent") is { Length: > 0 } s4 ? s4 : _deleteConfirmContent;
+            _cancelText = Res.GetString("Common_Cancel") is { Length: > 0 } s5 ? s5 : _cancelText;
+            _errorTitle = Res.GetString("Common_Error") is { Length: > 0 } s6 ? s6 : _errorTitle;
+            _okText = Res.GetString("Common_OK") is { Length: > 0 } s7 ? s7 : _okText;
         }
         catch { /* fallback defaults */ }
 
@@ -80,7 +90,7 @@ public sealed partial class SchedulePage : Page
     }
 
     /// <summary>
-    /// Loads all scheduled tasks from the Runner database.
+    /// Loads all scheduled tasks from the Runner database and rebuilds the card list.
     /// </summary>
     private async Task LoadSchedulesAsync()
     {
@@ -100,7 +110,8 @@ public sealed partial class SchedulePage : Page
     }
 
     /// <summary>
-    /// Builds and displays the schedule item list UI.
+    /// Builds and displays the schedule card list. Each item becomes a
+    /// <see cref="ScheduleCard"/>; dividers are interleaved between them.
     /// </summary>
     private void RenderList(List<ScheduleItem> items)
     {
@@ -115,6 +126,8 @@ public sealed partial class SchedulePage : Page
         HintText.Visibility = Visibility.Visible;
         HintDivider.Visibility = Visibility.Visible;
         CounterText.Text = $"{items.Count}";
+
+        ReleaseLiveCards();
 
         var elements = new List<FrameworkElement>();
         var isFirst = true;
@@ -131,113 +144,33 @@ public sealed partial class SchedulePage : Page
             }
             isFirst = false;
 
-            var grid = new Grid
-            {
-                Padding = new Thickness(0, 10, 0, 10),
-                ColumnDefinitions =
-                {
-                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = GridLength.Auto },
-                    new ColumnDefinition { Width = GridLength.Auto },
-                },
-            };
-
-            // Column 0: task info
-            var infoPanel = new StackPanel { Spacing = 4 };
-
-            infoPanel.Children.Add(new TextBlock
-            {
-                Text = item.Name,
-                Style = (Style)Application.Current.Resources["BodyStrongTextBlockStyle"],
-            });
-
-            if (!string.IsNullOrWhiteSpace(item.Description))
-            {
-                infoPanel.Children.Add(new TextBlock
-                {
-                    Text = item.Description,
-                    TextWrapping = TextWrapping.Wrap,
-                    Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-                    Opacity = 0.7,
-                });
-            }
-
-            // Schedule (human-readable) + output channel info line
-            var detailParts = new List<string>();
-            if (item.ScheduleOnce.HasValue)
-            {
-                var local = item.ScheduleOnce.Value.ToLocalTime();
-                var suffix = local <= DateTimeOffset.Now ? " (\uc644\ub8cc)" : " (1\ud68c)";
-                detailParts.Add($"{local:yyyy-MM-dd HH:mm}{suffix}");
-            }
-            else if (!string.IsNullOrWhiteSpace(item.Schedule))
-                detailParts.Add(ScheduleHelper.DescribeCron(item.Schedule));
-            if (!string.IsNullOrWhiteSpace(item.OutputChannel))
-                detailParts.Add($"\u2192 {item.OutputChannel}");
-
-            if (detailParts.Count > 0)
-            {
-                infoPanel.Children.Add(new TextBlock
-                {
-                    Text = string.Join(" \u00B7 ", detailParts),
-                    Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-                    Opacity = 0.5,
-                });
-            }
-
-            Grid.SetColumn(infoPanel, 0);
-            grid.Children.Add(infoPanel);
-
-            // Column 1: toggle switch (disabled for completed one-time tasks)
-            var isOnceCompleted = item.ScheduleOnce.HasValue && item.ScheduleOnce.Value.ToLocalTime() <= DateTimeOffset.Now;
-            var toggle = new ToggleSwitch
-            {
-                IsOn = item.IsEnabled,
-                IsEnabled = !isOnceCompleted,
-                OnContent = "",
-                OffContent = "",
-                MinWidth = 0,
-                VerticalAlignment = VerticalAlignment.Center,
-                Tag = item.Id,
-                Margin = new Thickness(8, 0, 0, 0),
-            };
-            ToolTipService.SetToolTip(toggle, isOnceCompleted ? "" : item.IsEnabled ? _disableTooltip : _enableTooltip);
-            ToolTipService.SetPlacement(toggle, Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse);
-            if (!isOnceCompleted)
-                toggle.Toggled += OnToggled;
-            Grid.SetColumn(toggle, 1);
-            grid.Children.Add(toggle);
-
-            // Column 2: delete button (visible on hover)
-            var deleteButton = new Button
-            {
-                Content = new FontIcon { Glyph = "\uE74D", FontSize = 12 },
-                Padding = new Thickness(6),
-                MinWidth = 0,
-                MinHeight = 0,
-                Tag = item,
-                VerticalAlignment = VerticalAlignment.Center,
-                Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
-                Opacity = 0,
-                Margin = new Thickness(4, 0, 0, 0),
-            };
-            ToolTipService.SetToolTip(deleteButton, _deleteTooltip);
-            ToolTipService.SetPlacement(deleteButton, Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse);
-            deleteButton.Click += OnDeleteClicked;
-            Grid.SetColumn(deleteButton, 2);
-            grid.Children.Add(deleteButton);
-
-            grid.PointerEntered += (_, _) => deleteButton.Opacity = 1;
-            grid.PointerExited += (_, _) => deleteButton.Opacity = 0;
-
-            elements.Add(grid);
+            var card = new ScheduleCard { Item = item };
+            card.DeleteRequested += OnCardDeleteRequested;
+            card.ToggleRequested += OnCardToggleRequested;
+            _liveCards.Add(card);
+            elements.Add(card);
         }
 
         ScheduleList.ItemsSource = elements;
     }
 
     /// <summary>
-    /// Filters the schedule list by name or description.
+    /// Unsubscribes events from every live card and clears the tracking
+    /// list so instances can be garbage-collected.
+    /// </summary>
+    private void ReleaseLiveCards()
+    {
+        foreach (var c in _liveCards)
+        {
+            c.DeleteRequested -= OnCardDeleteRequested;
+            c.ToggleRequested -= OnCardToggleRequested;
+        }
+        _liveCards.Clear();
+    }
+
+    /// <summary>
+    /// Filters the schedule list by name or description. Empty query
+    /// restores the full list.
     /// </summary>
     private void FilterItems(string? query)
     {
@@ -261,6 +194,7 @@ public sealed partial class SchedulePage : Page
     private void ShowLoading()
     {
         ScheduleList.ItemsSource = null;
+        ReleaseLiveCards();
         LoadingPanel.Visibility = Visibility.Visible;
         EmptyPanel.Visibility = Visibility.Collapsed;
         HintText.Visibility = Visibility.Collapsed;
@@ -274,6 +208,7 @@ public sealed partial class SchedulePage : Page
     private void ShowEmpty()
     {
         ScheduleList.ItemsSource = null;
+        ReleaseLiveCards();
         LoadingPanel.Visibility = Visibility.Collapsed;
         EmptyPanel.Visibility = Visibility.Visible;
         HintText.Visibility = Visibility.Collapsed;
@@ -314,12 +249,14 @@ public sealed partial class SchedulePage : Page
     }
 
     /// <summary>
-    /// Confirms and deletes a scheduled task.
+    /// Handles a delete request from a <see cref="ScheduleCard"/>. Shows
+    /// confirmation, calls <see cref="ScheduleHelper.DeleteAsync"/>, and
+    /// reloads the list so the UI reflects the new state.
     /// </summary>
-    private async void OnDeleteClicked(object sender, RoutedEventArgs e)
+    private async void OnCardDeleteRequested(object? sender, string taskId)
     {
-        if (sender is not Button btn || btn.Tag is not ScheduleItem item)
-            return;
+        var item = _allItems.FirstOrDefault(i => i.Id == taskId);
+        if (item is null) return;
 
         var dialog = new ThemedContentDialog
         {
@@ -334,7 +271,7 @@ public sealed partial class SchedulePage : Page
         if (await dialog.ShowAsync() != ContentDialogResult.Primary)
             return;
 
-        var (success, error) = await ScheduleHelper.DeleteAsync(item.Id);
+        var (success, error) = await ScheduleHelper.DeleteAsync(taskId);
 
         if (!success && !string.IsNullOrWhiteSpace(error))
         {
@@ -352,48 +289,47 @@ public sealed partial class SchedulePage : Page
     }
 
     /// <summary>
-    /// Toggles a scheduled task's enabled state.
+    /// Handles a toggle request from a <see cref="ScheduleCard"/>. Calls
+    /// <see cref="ScheduleHelper.SetEnabledAsync"/>; on failure reverts
+    /// the card's visual state and surfaces the error.
     /// </summary>
-    private async void OnToggled(object sender, RoutedEventArgs e)
+    private async void OnCardToggleRequested(object? sender, (string TaskId, bool IsOn) args)
     {
         if (_isUpdating) return;
-        if (sender is not ToggleSwitch toggle || toggle.Tag is not string taskId)
-            return;
+        if (sender is not ScheduleCard card) return;
 
         _isUpdating = true;
-        toggle.IsEnabled = false;
+        card.SetToggleBusy(true);
 
         try
         {
-            var (success, error) = await ScheduleHelper.SetEnabledAsync(taskId, toggle.IsOn);
+            var (success, error) = await ScheduleHelper.SetEnabledAsync(args.TaskId, args.IsOn);
 
             if (!success)
             {
-                // Revert toggle on failure
-                toggle.IsOn = !toggle.IsOn;
+                // Revert to the previous visual state so the card matches
+                // the database truth instead of the user's failed intent.
+                card.RevertToggle(!args.IsOn);
 
                 if (!string.IsNullOrWhiteSpace(error))
                 {
                     var errorDialog = new ThemedContentDialog
                     {
-                        Title = "Error",
+                        Title = _errorTitle,
                         Content = error,
-                        CloseButtonText = "OK",
+                        CloseButtonText = _okText,
                         XamlRoot = XamlRoot,
                     };
                     await errorDialog.ShowAsync();
                 }
             }
 
-            // Update tooltip
-            ToolTipService.SetToolTip(toggle, toggle.IsOn ? _disableTooltip : _enableTooltip);
-
-            // Reload to reflect actual state
+            // Reload to reflect the authoritative database state. This
+            // rebuilds cards — the old card instance is discarded.
             await LoadSchedulesAsync();
         }
         finally
         {
-            toggle.IsEnabled = true;
             _isUpdating = false;
         }
     }
