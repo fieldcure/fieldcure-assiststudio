@@ -2,34 +2,31 @@
 using AssistStudio.Controls.Dialogs;
 using AssistStudio.Helpers;
 using AssistStudio.Mcp;
-using AssistStudio.Mcp.ModelAvailability;
 using FieldCure.AssistStudio.Models;
-using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using Microsoft.UI.Xaml.Shapes;
-using System.Text.Json;
-using IOPath = System.IO.Path;
 using Microsoft.Windows.ApplicationModel.Resources;
+using System.Text.Json;
 
 namespace AssistStudio.Settings;
 
 /// <summary>
 /// Settings page for managing knowledge bases (create, delete, re-index, monitor).
-/// Flat list style unified with Memory and Schedule pages.
+/// Flat list style unified with Memory and Schedule pages. Per-card lifecycle —
+/// each <see cref="KbCard"/> owns its own status loading and polling.
 /// </summary>
 public sealed partial class KnowledgeBasesPage : Page
 {
     #region Fields
 
-    private readonly DispatcherTimer _pollTimer;
     private readonly DispatcherTimer _searchDebounceTimer;
-    private readonly List<KbViewModel> _allItems = [];
-    private readonly List<Controls.KbCard> _liveCards = [];
+    private readonly List<KbCard> _liveCards = [];
     private readonly Dictionary<string, int> _matchCountsByKbId = [];
     private readonly ResourceLoader _loader = new();
+    private List<KnowledgeBase> _kbs = [];
     private string _searchQuery = "";
     private Task? _ragReadyTask;
     private bool _isDialogOpen;
@@ -44,9 +41,6 @@ public sealed partial class KnowledgeBasesPage : Page
     public KnowledgeBasesPage()
     {
         InitializeComponent();
-
-        _pollTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
-        _pollTimer.Tick += OnPollTick;
 
         _searchDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
         _searchDebounceTimer.Tick += OnSearchDebounceTick;
@@ -72,7 +66,6 @@ public sealed partial class KnowledgeBasesPage : Page
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         base.OnNavigatedFrom(e);
-        _pollTimer.Stop();
         _searchDebounceTimer.Stop();
         ReleaseLiveCards();
     }
@@ -89,176 +82,28 @@ public sealed partial class KnowledgeBasesPage : Page
     {
         if (_isDialogOpen) return;
         _isDialogOpen = true;
-        var dialog = new ThemedContentDialog
-        {
-            XamlRoot = XamlRoot,
-            Title = _loader.GetString("KB_CreateDialogTitle"),
-            PrimaryButtonText = _loader.GetString("KB_Create/Content"),
-            CloseButtonText = _loader.GetString("Dialog_Cancel"),
-            DefaultButton = ContentDialogButton.Primary,
-            IsPrimaryButtonEnabled = false,
-        };
 
-        var panel = new StackPanel { Spacing = 12, MinWidth = 400, MaxWidth = 500 };
-        var nameManuallyEdited = false;
-
-        // The "생성" / Create button needs BOTH at least one source folder
-        // AND an available model selection. Tracked separately so we can
-        // re-evaluate on either event (folder add / model radio click).
-        var hasFolder = false;
-        Controls.EmbeddingModelSelector? modelSelectorRef = null;
-        void RefreshCreateButton()
-        {
-            dialog.IsPrimaryButtonEnabled =
-                hasFolder && (modelSelectorRef?.IsCurrentSelectionAvailable ?? true);
-        }
-
-        // --- Source Folders (first) ---
-        var folderPanel = new StackPanel { Spacing = 4 };
-        var folderHeader = new TextBlock { Text = _loader.GetString("KB_DialogSourceFolders"), Opacity = 0.8 };
-        folderPanel.Children.Add(folderHeader);
-
-        var folderList = new StackPanel { Spacing = 4 };
-        folderPanel.Children.Add(folderList);
-
-        // --- Name (auto-generated) ---
-        var nameBox = new TextBox { Header = _loader.GetString("KB_DialogName"), PlaceholderText = "e.g., Project Docs" };
-        var nameHint = new TextBlock
-        {
-            Text = _loader.GetString("KB_DialogNameHint"),
-            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-            Opacity = 0.5,
-        };
-        nameBox.TextChanged += (_, _) => { if (nameBox.FocusState != FocusState.Unfocused) nameManuallyEdited = true; };
-
-        // Warning text for folder already used in another KB
-        var folderWarning = new TextBlock
-        {
-            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-            Foreground = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"],
-            TextWrapping = TextWrapping.Wrap,
-            Visibility = Visibility.Collapsed,
-        };
-
-        var addFolderButton = new Button { Content = _loader.GetString("KB_DialogAddFolder") };
-        addFolderButton.Click += async (s, args) =>
-        {
-            var folder = await PickFolderAsync();
-            if (folder is null) return;
-
-            // Skip if already in the list
-            var currentPaths = CollectFolderPaths(folderList);
-            if (currentPaths.Any(p => string.Equals(p, folder.Path, StringComparison.OrdinalIgnoreCase)))
-                return;
-
-            folderList.Children.Add(BuildFolderRow(folder.Path, folderList));
-            hasFolder = true;
-            RefreshCreateButton();
-
-            // Auto-fill name from first folder if not manually edited
-            if (!nameManuallyEdited && folderList.Children.Count == 1)
-                nameBox.Text = IOPath.GetFileName(folder.Path.TrimEnd(IOPath.DirectorySeparatorChar));
-
-            // Warn if folder is used in another KB
-            var existingKbs = KnowledgeBaseStore.ListAll();
-            var otherKb = existingKbs.FirstOrDefault(k =>
-                k.SourcePaths.Any(p => string.Equals(p, folder.Path, StringComparison.OrdinalIgnoreCase)));
-            if (otherKb is not null)
-            {
-                folderWarning.Text = string.Format(_loader.GetString("KB_FolderUsedWarning"), otherKb.Name);
-                folderWarning.Visibility = Visibility.Visible;
-            }
-        };
-        folderPanel.Children.Add(addFolderButton);
-        folderPanel.Children.Add(folderWarning);
-        panel.Children.Add(folderPanel);
-
-        panel.Children.Add(nameBox);
-        panel.Children.Add(nameHint);
-
-        // --- Model Selection ---
-        var modelSelector = new Controls.EmbeddingModelSelector();
-        await modelSelector.InitializeAsync();
-        panel.Children.Add(modelSelector);
-        modelSelectorRef = modelSelector;
-        modelSelector.SelectionChanged += (_, _) => RefreshCreateButton();
-        RefreshCreateButton();
-
-        // --- Indexing Timing ---
-        var timingHeader = new TextBlock
-        {
-            Text = _loader.GetString("KB_IndexTiming"),
-            Opacity = 0.8,
-            Margin = new Thickness(0, 4, 0, 0),
-        };
-        panel.Children.Add(timingHeader);
-
-        var timingRadios = new RadioButtons { Margin = new Thickness(0, 4, 0, 0) };
-        timingRadios.Items.Add(_loader.GetString("KB_IndexNow"));
-        timingRadios.Items.Add(_loader.GetString("KB_IndexOnClose"));
-        timingRadios.SelectedIndex = 0;
-        panel.Children.Add(timingRadios);
-
-        var timingHint = new TextBlock
-        {
-            Text = _loader.GetString("KB_IndexDeferredHint"),
-            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-            Opacity = 0.6,
-            TextWrapping = TextWrapping.Wrap,
-            Visibility = Visibility.Collapsed,
-        };
-        panel.Children.Add(timingHint);
-
-        var userOverrodeTiming = false;
-        timingRadios.SelectionChanged += (_, _) => { userOverrodeTiming = true; };
-
-        modelSelector.SelectionChanged += (_, _) =>
-        {
-            if (userOverrodeTiming) return;
-            timingRadios.SelectedIndex = modelSelector.IsSelectedEmbeddingLocal ? 1 : 0;
-            userOverrodeTiming = false;
-            timingHint.Visibility = modelSelector.IsSelectedEmbeddingLocal
-                ? Visibility.Visible : Visibility.Collapsed;
-        };
-
-        // Set initial default
-        if (modelSelector.IsSelectedEmbeddingLocal)
-        {
-            timingRadios.SelectedIndex = 1;
-            timingHint.Visibility = Visibility.Visible;
-            userOverrodeTiming = false;
-        }
-
-        dialog.Content = new ScrollViewer
-        {
-            Content = panel,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            MaxHeight = 600,
-        };
+        var dialog = new KbEditDialog { XamlRoot = XamlRoot };
+        await dialog.InitializeAsync();
 
         var result = await dialog.ShowAsync();
         _isDialogOpen = false;
         if (result != ContentDialogResult.Primary)
             return;
 
-        var sourcePaths = CollectFolderPaths(folderList);
+        var sourcePaths = dialog.SourcePaths;
         if (sourcePaths.Count == 0)
             return;
 
-        var name = nameBox.Text.Trim();
-        if (string.IsNullOrEmpty(name))
-            name = IOPath.GetFileName(sourcePaths[0].TrimEnd(IOPath.DirectorySeparatorChar));
-        if (string.IsNullOrWhiteSpace(name))
-            name = "Untitled";
-        name = EnsureUniqueName(name);
+        var name = EnsureUniqueName(dialog.KbName);
 
         var kb = KnowledgeBaseStore.Create(name, sourcePaths,
-            modelSelector.GetEmbeddingConfig(), modelSelector.GetContextualizerConfig());
+            dialog.EmbeddingConfig, dialog.ContextualizerConfig);
         LoggingService.LogInfo($"[KB] Created: {kb.Name} ({kb.Id})");
 
         SnapshotIndexedWith(kb);
 
-        var isDeferred = timingRadios.SelectedIndex == 1;
+        var isDeferred = dialog.IsDeferred;
         var status = await StartReindexAsync(kb.Id, deferred: isDeferred);
 
         if (isDeferred)
@@ -268,34 +113,25 @@ public sealed partial class KnowledgeBasesPage : Page
             if (App.Current is App app)
                 app.MainWindow?.DeferredThisSession.Add((kb.Id, kb.Name));
 
-            await AppendKbItemAsync(kb);
-
-            var appendedItem = _allItems.FirstOrDefault(i => i.Id == kb.Id);
-            if (appendedItem is not null)
-            {
-                appendedItem.IsDeferredIndexing = true;
-                appendedItem.StatusText = _loader.GetString("KB_StatusScheduled") ?? "Scheduled";
-                appendedItem.StatusBrush = new SolidColorBrush(Microsoft.UI.Colors.DodgerBlue);
-            }
-            ApplyFilter();
+            AppendKbCard(kb);
+            _liveCards.FirstOrDefault(c => c.KbId == kb.Id)?.MarkDeferredScheduled();
             return;
         }
 
         if (!await HandleStartReindexResultAsync(status))
         {
-            await AppendKbItemAsync(kb);
+            AppendKbCard(kb);
             return;
         }
 
         var kbService = new KnowledgeBaseService(App.McpRegistry);
         await kbService.EnsureConnectedAsync();
 
-        await AppendKbItemAsync(kb);
-        _pollTimer.Start();
+        AppendKbCard(kb);
     }
 
     /// <summary>
-    /// Handles delete request from a <see cref="Controls.KbCard"/>.
+    /// Handles delete request from a <see cref="KbCard"/>.
     /// </summary>
     private async void OnDeleteRequested(object? sender, string kbId)
     {
@@ -353,9 +189,6 @@ public sealed partial class KnowledgeBasesPage : Page
                 TextWrapping = TextWrapping.Wrap,
             });
 
-            // Progress line matches the format the KB card uses so the
-            // user can correlate "N / M files processed" with what they
-            // see on the list page.
             var progressTemplate = _loader.GetString("KB_DeleteFailedIndexingProgress")
                 ?? "Progress: {0} / {1} files";
             body.Children.Add(new TextBlock
@@ -388,7 +221,10 @@ public sealed partial class KnowledgeBasesPage : Page
     }
 
     /// <summary>
-    /// Handles re-index request from a <see cref="Controls.KbCard"/>.
+    /// Handles "Re-index now" from a <see cref="KbCard"/>. Snapshots the
+    /// current config into <c>IndexedWith</c>, fires <c>start_reindex</c>,
+    /// and asks the card to refresh — the card picks up the new
+    /// indexing state on its own from <c>get_index_info</c>.
     /// </summary>
     private async void OnReindexRequested(object? sender, string kbId)
     {
@@ -402,216 +238,61 @@ public sealed partial class KnowledgeBasesPage : Page
 
         LoggingService.LogInfo($"[KB] Quick re-index queued: {kbId}");
 
-        var item = _allItems.FirstOrDefault(i => i.Id == kbId);
-        if (item is not null)
-        {
-            item.ChangesChecked = null;
-            item.ChangesAdded = 0;
-            item.ChangesModified = 0;
-            item.ChangesDeleted = 0;
-            item.ChangesFailed = 0;
-        }
-
-        _pollTimer.Start();
-        ApplyFilter();
+        var card = _liveCards.FirstOrDefault(c => c.KbId == kbId);
+        if (card is not null)
+            await card.RefreshAsync();
     }
 
     /// <summary>
-    /// Handles settings request from a <see cref="Controls.KbCard"/>.
+    /// Handles "Re-index when app closes" from a <see cref="KbCard"/>.
+    /// Schedules a deferred re-index in the RAG queue and flips the card
+    /// into its "Scheduled" state so the status badge updates immediately.
+    /// </summary>
+    private async void OnReindexScheduledRequested(object? sender, string kbId)
+    {
+        var kb = KnowledgeBaseStore.ListAll().FirstOrDefault(k => k.Id == kbId);
+        if (kb is null) return;
+
+        SnapshotIndexedWith(kb);
+
+        var status = await StartReindexAsync(kbId, deferred: true);
+        if (!await HandleStartReindexResultAsync(status))
+            return;
+
+        LoggingService.LogInfo($"[KB] Deferred re-index scheduled: {kb.Name} ({kbId})");
+
+        if (App.Current is App app)
+            app.MainWindow?.DeferredThisSession.Add((kbId, kb.Name));
+
+        _liveCards.FirstOrDefault(c => c.KbId == kbId)?.MarkDeferredScheduled();
+    }
+
+    /// <summary>
+    /// Handles settings request from a <see cref="KbCard"/>.
     /// </summary>
     private async void OnSettingsRequested(object? sender, string kbId)
     {
         if (_isDialogOpen) return;
         _isDialogOpen = true;
 
-        var allKbs = KnowledgeBaseStore.ListAll();
-        var kb = allKbs.FirstOrDefault(k => k.Id == kbId);
+        var kb = KnowledgeBaseStore.ListAll().FirstOrDefault(k => k.Id == kbId);
         if (kb is null) return;
 
-        var panel = new StackPanel { Spacing = 12, MinWidth = 400, MaxWidth = 500 };
-
-        // --- Source Folders (editable) ---
-        var folderPanel = new StackPanel { Spacing = 4 };
-        var folderHeader = new TextBlock { Text = _loader.GetString("KB_DialogSourceFolders"), Opacity = 0.8 };
-        folderPanel.Children.Add(folderHeader);
-
-        var folderList = new StackPanel { Spacing = 4 };
-        foreach (var path in kb.SourcePaths)
-            folderList.Children.Add(BuildFolderRow(path, folderList));
-        folderPanel.Children.Add(folderList);
-
-        var folderWarning = new TextBlock
-        {
-            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-            Foreground = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"],
-            TextWrapping = TextWrapping.Wrap,
-            Visibility = Visibility.Collapsed,
-        };
-
-        var addFolderButton = new Button { Content = _loader.GetString("KB_DialogAddFolder") };
-        addFolderButton.Click += async (s, args) =>
-        {
-            var folder = await PickFolderAsync();
-            if (folder is null) return;
-
-            var currentPaths = CollectFolderPaths(folderList);
-            if (currentPaths.Any(p => string.Equals(p, folder.Path, StringComparison.OrdinalIgnoreCase)))
-                return;
-
-            folderList.Children.Add(BuildFolderRow(folder.Path, folderList));
-
-            var otherKb = allKbs.FirstOrDefault(k => k.Id != kbId &&
-                k.SourcePaths.Any(p => string.Equals(p, folder.Path, StringComparison.OrdinalIgnoreCase)));
-            if (otherKb is not null)
-            {
-                folderWarning.Text = string.Format(_loader.GetString("KB_FolderUsedWarning"), otherKb.Name);
-                folderWarning.Visibility = Visibility.Visible;
-            }
-        };
-        folderPanel.Children.Add(addFolderButton);
-        folderPanel.Children.Add(folderWarning);
-        panel.Children.Add(folderPanel);
-
-        // --- Name ---
-        var nameBox = new TextBox { Header = _loader.GetString("KB_DialogName"), Text = kb.Name };
-        panel.Children.Add(nameBox);
-
-        // --- Model Selection ---
-        // Pre-select the models from IndexedWith (the snapshot captured at
-        // the last re-index launch) so the radios match what is actually
-        // in the DB. Fall back to the top-level fields for brand new KBs
-        // and for legacy configs that predate IndexedWith.
-        var modelSelector = new Controls.EmbeddingModelSelector
-        {
-            CurrentEmbeddingModel = kb.IndexedWith?.Embedding.Model ?? kb.Embedding.Model,
-            CurrentContextualizer = kb.IndexedWith?.Contextualizer.Model ?? kb.Contextualizer.Model,
-        };
-        await modelSelector.InitializeAsync();
-        panel.Children.Add(modelSelector);
-
-        // --- Indexing Timing ---
-        var settingsTimingHeader = new TextBlock
-        {
-            Text = _loader.GetString("KB_IndexTiming"),
-            Opacity = 0.8,
-            Margin = new Thickness(0, 4, 0, 0),
-        };
-        panel.Children.Add(settingsTimingHeader);
-
-        var settingsTimingRadios = new RadioButtons { Margin = new Thickness(0, 4, 0, 0) };
-        settingsTimingRadios.Items.Add(_loader.GetString("KB_IndexNow"));
-        settingsTimingRadios.Items.Add(_loader.GetString("KB_IndexOnClose"));
-        settingsTimingRadios.SelectedIndex = 0;
-        panel.Children.Add(settingsTimingRadios);
-
-        var settingsTimingHint = new TextBlock
-        {
-            Text = _loader.GetString("KB_IndexDeferredHint"),
-            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-            Opacity = 0.6,
-            TextWrapping = TextWrapping.Wrap,
-            Visibility = modelSelector.IsSelectedEmbeddingLocal ? Visibility.Visible : Visibility.Collapsed,
-        };
-        panel.Children.Add(settingsTimingHint);
-
-        var settingsUserOverrodeTiming = false;
-        settingsTimingRadios.SelectionChanged += (_, _) => { settingsUserOverrodeTiming = true; };
-
-        modelSelector.SelectionChanged += (_, _) =>
-        {
-            if (settingsUserOverrodeTiming) return;
-            settingsTimingRadios.SelectedIndex = modelSelector.IsSelectedEmbeddingLocal ? 1 : 0;
-            settingsUserOverrodeTiming = false;
-            settingsTimingHint.Visibility = modelSelector.IsSelectedEmbeddingLocal
-                ? Visibility.Visible : Visibility.Collapsed;
-        };
-
-        if (modelSelector.IsSelectedEmbeddingLocal)
-        {
-            settingsTimingRadios.SelectedIndex = 1;
-            settingsUserOverrodeTiming = false;
-        }
-
-        // Warning
-        var warning = new TextBlock
-        {
-            Text = "\u26a0\ufe0f " + _loader.GetString("KB_ReindexWarning"),
-            TextWrapping = TextWrapping.Wrap,
-            Opacity = 0.7,
-            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-        };
-        panel.Children.Add(warning);
-
-        // Vertical title: KB name in the normal dialog title font, with
-        // a smaller "indexed with" caption directly under it. Shows the
-        // snapshot captured at the last re-index launch (IndexedWith) so
-        // the line reflects what is actually in the DB, not whatever the
-        // user just selected in the form. Caption is omitted entirely
-        // for brand new KBs that have never been indexed.
-        var indexedEmbeddingModel = kb.IndexedWith?.Embedding.Model ?? kb.Embedding.Model;
-        var indexedContextualizerModel = kb.IndexedWith?.Contextualizer.Model ?? kb.Contextualizer.Model;
-        var indexedCaption = indexedEmbeddingModel;
-        if (!string.IsNullOrEmpty(indexedContextualizerModel))
-            indexedCaption += $" \u00b7 {indexedContextualizerModel}";
-
-        var titlePanel = new StackPanel { Spacing = 2 };
-        titlePanel.Children.Add(new TextBlock
-        {
-            Text = kb.Name,
-        });
-        if (!string.IsNullOrEmpty(indexedCaption) && kb.IndexedWith is not null)
-        {
-            titlePanel.Children.Add(new TextBlock
-            {
-                Text = indexedCaption,
-                Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-                Opacity = 0.6,
-            });
-        }
-
-        var dialog = new ThemedContentDialog
-        {
-            XamlRoot = XamlRoot,
-            Title = titlePanel,
-            PrimaryButtonText = _loader.GetString("KB_SaveAndReindex"),
-            SecondaryButtonText = _loader.GetString("KB_Save"),
-            CloseButtonText = _loader.GetString("Dialog_Cancel"),
-            DefaultButton = ContentDialogButton.Primary,
-            Content = new ScrollViewer
-            {
-                Content = panel,
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                MaxHeight = 600,
-            },
-        };
-
-        // Wire the primary button text and availability to timing selection.
-        void UpdateSettingsPrimaryButton()
-        {
-            var isDeferred = settingsTimingRadios.SelectedIndex == 1;
-            dialog.PrimaryButtonText = isDeferred
-                ? _loader.GetString("KB_SaveAndSchedule")
-                : _loader.GetString("KB_SaveAndReindex");
-            dialog.IsPrimaryButtonEnabled = isDeferred || modelSelector.IsCurrentSelectionAvailable;
-        }
-        UpdateSettingsPrimaryButton();
-        modelSelector.SelectionChanged += (_, _) => UpdateSettingsPrimaryButton();
-        settingsTimingRadios.SelectionChanged += (_, _) => UpdateSettingsPrimaryButton();
+        var dialog = new KbEditDialog(kb) { XamlRoot = XamlRoot };
+        await dialog.InitializeAsync();
 
         var result = await dialog.ShowAsync();
         _isDialogOpen = false;
         if (result == ContentDialogResult.None)
             return;
 
-        // Collect updated values
-        var newPaths = CollectFolderPaths(folderList);
+        var newPaths = dialog.SourcePaths;
         if (newPaths.Count == 0) return;
 
-        var newName = nameBox.Text.Trim();
-        if (!string.IsNullOrEmpty(newName)) kb.Name = newName;
+        kb.Name = dialog.KbName;
         kb.SourcePaths = newPaths;
-        kb.Embedding = modelSelector.GetEmbeddingConfig();
-        kb.Contextualizer = modelSelector.GetContextualizerConfig();
+        kb.Embedding = dialog.EmbeddingConfig;
+        kb.Contextualizer = dialog.ContextualizerConfig;
         KnowledgeBaseStore.Update(kb);
         LoggingService.LogInfo($"[KB] Settings saved: {kb.Name} ({kbId})");
 
@@ -620,12 +301,12 @@ public sealed partial class KnowledgeBasesPage : Page
             SnapshotIndexedWith(kb);
 
             string? partial = null;
-            if (modelSelector.ContextualizerChanged)
+            if (dialog.ContextualizerChanged)
                 partial = "contextualization";
-            else if (modelSelector.EmbeddingModelChanged)
+            else if (dialog.EmbeddingModelChanged)
                 partial = "embedding";
 
-            var isSettingsDeferred = settingsTimingRadios.SelectedIndex == 1;
+            var isSettingsDeferred = dialog.IsDeferred;
             var reindexStatus = await StartReindexAsync(
                 kbId,
                 partialMode: partial,
@@ -640,13 +321,8 @@ public sealed partial class KnowledgeBasesPage : Page
                 if (App.Current is App app2)
                     app2.MainWindow?.DeferredThisSession.Add((kbId, kb.Name));
 
-                var item = _allItems.FirstOrDefault(i => i.Id == kbId);
-                if (item is not null)
-                {
-                    item.IsDeferredIndexing = true;
-                    item.StatusText = _loader.GetString("KB_StatusScheduled") ?? "Scheduled";
-                    item.StatusBrush = new SolidColorBrush(Microsoft.UI.Colors.DodgerBlue);
-                }
+                var deferredCard = _liveCards.FirstOrDefault(c => c.KbId == kbId);
+                deferredCard?.MarkDeferredScheduled();
             }
             else
             {
@@ -660,8 +336,6 @@ public sealed partial class KnowledgeBasesPage : Page
                     LoggingService.LogInfo($"[KB] Partial re-index ({partial}) queued: {kbId}");
                 else
                     LoggingService.LogInfo($"[KB] Re-index queued: {kbId}");
-
-                _pollTimer.Start();
             }
         }
 
@@ -801,7 +475,7 @@ public sealed partial class KnowledgeBasesPage : Page
     }
 
     /// <summary>
-    /// Handles cancel-index request from a <see cref="Controls.KbCard"/>.
+    /// Handles cancel-index request from a <see cref="KbCard"/>.
     /// </summary>
     private void OnCancelIndexRequested(object? sender, string kbId)
     {
@@ -851,7 +525,7 @@ public sealed partial class KnowledgeBasesPage : Page
     }
 
     /// <summary>
-    /// Pushes the current search query to every live KbCard.
+    /// Pushes the current search query to every live <see cref="KbCard"/>.
     /// </summary>
     private void PropagateSearchQuery()
     {
@@ -865,310 +539,32 @@ public sealed partial class KnowledgeBasesPage : Page
         }
     }
 
-    /// <summary>
-    /// Polls indexing status and updates the list.
-    /// Auto-runs change check when indexing completes.
-    /// </summary>
-    private async void OnPollTick(object? sender, object e)
-    {
-        var justFinished = new List<KbViewModel>();
-
-        foreach (var item in _allItems)
-        {
-            var wasIndexing = item.IsIndexing == Visibility.Visible;
-            await UpdateItemStatusAsync(item);
-            if (wasIndexing && item.IsIndexing == Visibility.Collapsed)
-                justFinished.Add(item);
-        }
-
-        // Auto-check changes for KBs that just finished indexing
-        foreach (var item in justFinished)
-        {
-            var result = await CheckChangesAsync(item.Id);
-            if (result is not null)
-            {
-                item.ChangesChecked = true;
-                item.ChangesAdded = result.Added;
-                item.ChangesModified = result.Modified;
-                item.ChangesDeleted = result.Deleted;
-                item.ChangesFailed = result.Failed;
-
-                if (!result.IsClean)
-                {
-                    item.StatusText = _loader.GetString("KB_StatusStale") ?? "Prompt stale";
-                    item.StatusBrush = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"];
-                }
-            }
-        }
-
-        ApplyFilter();
-
-        if (!_allItems.Any(i => i.IsIndexing == Visibility.Visible))
-            _pollTimer.Stop();
-    }
-
-    /// <summary>
-    /// Updates a single KB item's status via MCP <c>get_index_info</c>, falling back to SQLite.
-    /// </summary>
-    private async Task UpdateItemStatusAsync(KbViewModel item)
-    {
-        var info = await GetIndexInfoAsync(item.Id);
-
-        if (info is not null)
-        {
-            // MCP data available — build stats with optional failed count and date (skip date while indexing)
-            var statsBase = $"{info.TotalFiles} files, {info.TotalChunks} chunks";
-            if (info.FailedCount > 0)
-                statsBase += $" \u00b7 {info.FailedCount} failed";
-            if (!info.IsIndexing
-                && info.LastIndexedAt is not null
-                && DateTime.TryParse(info.LastIndexedAt, null, System.Globalization.DateTimeStyles.RoundtripKind, out var dt))
-            {
-                statsBase += $" \u00b7 {dt.ToLocalTime():yyyy-MM-dd HH:mm}";
-            }
-            item.StatsText = statsBase;
-            item.IsPromptStale = info.IsPromptStale;
-
-            if (info.IsIndexing)
-            {
-                // Clear change-check cache while indexing — results will be stale
-                item.ChangesChecked = null;
-                item.ChangesAdded = 0;
-                item.ChangesModified = 0;
-                item.ChangesDeleted = 0;
-                item.ChangesFailed = 0;
-
-                item.IsIndexing = Visibility.Visible;
-                item.Progress = info is { Current: not null, Total: > 0 }
-                    ? (double)info.Current.Value / info.Total.Value * 100 : 0;
-                var indexingLabel = _loader.GetString("KB_StatusIndexing") ?? "Indexing";
-                item.StatusText = info.Current is not null
-                    ? $"{indexingLabel} ({info.Current}/{info.Total})"
-                    : indexingLabel;
-                item.StatusBrush = new SolidColorBrush(Colors.DodgerBlue);
-            }
-            else if (info.IsPromptStale)
-            {
-                item.IsIndexing = Visibility.Collapsed;
-                item.Progress = 0;
-                item.StatusText = _loader.GetString("KB_StatusStale") ?? "Prompt stale";
-                item.StatusBrush = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"];
-            }
-            else if (info.TotalFiles > 0)
-            {
-                item.IsIndexing = Visibility.Collapsed;
-                item.Progress = 0;
-
-                // If cached change-check found dirty files, show stale status
-                if (item.ChangesChecked == true
-                    && (item.ChangesAdded > 0 || item.ChangesModified > 0 || item.ChangesDeleted > 0))
-                {
-                    item.StatusText = _loader.GetString("KB_StatusStale") ?? "Prompt stale";
-                    item.StatusBrush = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"];
-                }
-                else
-                {
-                    item.StatusText = _loader.GetString("KB_StatusReady") ?? "Ready";
-                    item.StatusBrush = new SolidColorBrush(Colors.Gray);
-                }
-            }
-            else
-            {
-                item.IsIndexing = Visibility.Collapsed;
-                item.Progress = 0;
-                item.StatusText = _loader.GetString("KB_StatusNoIndex") ?? "No index";
-                item.StatusBrush = new SolidColorBrush(Colors.Gray);
-                item.StatsText = "";
-            }
-        }
-        else
-        {
-            // Fallback: direct SQLite read
-            var status = KnowledgeBaseStore.GetIndexingStatus(item.Id);
-            if (status is not null)
-            {
-                item.IsIndexing = Visibility.Visible;
-                item.Progress = status.Total > 0
-                    ? (double)status.Current / status.Total * 100 : 0;
-                var indexingLabel = _loader.GetString("KB_StatusIndexing") ?? "Indexing";
-                item.StatusText = $"{indexingLabel} ({status.Current}/{status.Total})";
-                item.StatusBrush = new SolidColorBrush(Colors.DodgerBlue);
-            }
-            else
-            {
-                item.IsIndexing = Visibility.Collapsed;
-                item.Progress = 0;
-
-                var stats = KnowledgeBaseStore.GetStats(item.Id);
-                if (stats is not null)
-                {
-                    item.StatusText = _loader.GetString("KB_StatusReady") ?? "Ready";
-                    item.StatusBrush = new SolidColorBrush(Colors.Gray);
-                    item.StatsText = $"{stats.TotalFiles} files, {stats.TotalChunks} chunks";
-                }
-                else
-                {
-                    item.StatusText = _loader.GetString("KB_StatusNoIndex") ?? "No index";
-                    item.StatusBrush = new SolidColorBrush(Colors.Gray);
-                    item.StatsText = "";
-                }
-            }
-        }
-    }
-
     #endregion
 
     #region Private Methods
 
     /// <summary>
-    /// Renders shimmer placeholder cards matching the expected item count.
+    /// Refreshes the full KB list from disk, sorted alphabetically by name.
+    /// Synchronous — each card loads its own status independently once
+    /// attached.
     /// </summary>
-    private void ShowShimmerCards(int count)
+    private Task RefreshListAsync()
     {
-        if (count == 0)
-        {
-            EmptyPanel.Visibility = Visibility.Visible;
-            HintDivider.Visibility = Visibility.Collapsed;
-            HintText.Visibility = Visibility.Collapsed;
-            return;
-        }
-
-        EmptyPanel.Visibility = Visibility.Collapsed;
-        HintDivider.Visibility = Visibility.Collapsed;
-        HintText.Visibility = Visibility.Collapsed;
-        CounterText.Text = count.ToString();
-
-        var panel = new StackPanel { Spacing = 0 };
-        for (var i = 0; i < count; i++)
-        {
-            if (i > 0)
-            {
-                panel.Children.Add(new Rectangle
-                {
-                    Height = 1,
-                    Fill = (Brush)Application.Current.Resources["DividerStrokeColorDefaultBrush"],
-                    Margin = new Thickness(0, 8, 0, 8),
-                });
-            }
-
-            var card = new StackPanel { Spacing = 6, Padding = new Thickness(0, 4, 0, 4) };
-            card.Children.Add(new Shimmer { Height = 16, Width = 180, HorizontalAlignment = HorizontalAlignment.Left });
-            card.Children.Add(new Shimmer { Height = 12, Width = 260, HorizontalAlignment = HorizontalAlignment.Left });
-            card.Children.Add(new Shimmer { Height = 12, Width = 320, HorizontalAlignment = HorizontalAlignment.Left });
-            panel.Children.Add(card);
-        }
-
-        KbList.ItemsSource = new[] { panel };
-    }
-
-    /// <summary>
-    /// Refreshes the full KB list from disk, enriched with MCP index info when available.
-    /// </summary>
-    private async Task RefreshListAsync()
-    {
-        // Preserve cached change-check results across refreshes
-        var cachedChanges = _allItems.Where(i => i.ChangesChecked == true)
-            .ToDictionary(i => i.Id, i => (i.ChangesAdded, i.ChangesModified, i.ChangesDeleted, i.ChangesFailed, i.ChangesChecked));
-
-        var kbs = KnowledgeBaseStore.ListAll();
-
-        // Show shimmer placeholders matching the KB count
-        ShowShimmerCards(kbs.Count);
-        _allItems.Clear();
-
-        // Shared availability checker for this refresh pass. One instance
-        // for the whole loop means the Ollama /api/tags probe runs once
-        // regardless of how many KBs are in the list.
-        var availabilityChecker = new ModelAvailabilityChecker();
-        var statusUnavailableLabel = _loader.GetString("KB_StatusModelUnavailable") ?? "Model unavailable";
-
-        foreach (var kb in kbs)
-        {
-            // Model info line shows what the DB was actually indexed with,
-            // not the top-level fields (which may have been edited since
-            // via "Save only" without a re-index). IndexedWith is the
-            // snapshot captured at the last re-index launch; fall back to
-            // the top-level fields for brand new KBs.
-            var cardEmbeddingModel = kb.IndexedWith?.Embedding.Model ?? kb.Embedding.Model;
-            var cardContextualizerModel = kb.IndexedWith?.Contextualizer.Model ?? kb.Contextualizer.Model;
-            var modelInfo = cardEmbeddingModel;
-            if (!string.IsNullOrEmpty(cardContextualizerModel))
-                modelInfo += $" \u00b7 {cardContextualizerModel}";
-
-            var item = new KbViewModel
-            {
-                Id = kb.Id,
-                Name = kb.Name,
-                SourcePathsText = string.Join(", ", kb.SourcePaths),
-                ModelInfoText = modelInfo,
-            };
-
-            // State report only: which models are currently unreachable.
-            // Checked against the IndexedWith snapshot when present so the
-            // warning line matches the model ids shown above it.
-            var kbForCheck = kb.IndexedWith is null ? kb : new KnowledgeBase
-            {
-                Id = kb.Id,
-                Name = kb.Name,
-                Embedding = kb.IndexedWith.Embedding,
-                Contextualizer = kb.IndexedWith.Contextualizer,
-            };
-            var problems = await availabilityChecker.CheckKbAsync(kbForCheck);
-            if (problems.Count > 0)
-            {
-                var ids = string.Join(", ", problems.Select(p => p.ModelId));
-                item.ModelWarningText = $"\u26a0 {statusUnavailableLabel}: {ids}";
-            }
-
-            // Restore cached change-check results
-            if (cachedChanges.TryGetValue(kb.Id, out var cached))
-            {
-                item.ChangesAdded = cached.ChangesAdded;
-                item.ChangesModified = cached.ChangesModified;
-                item.ChangesDeleted = cached.ChangesDeleted;
-                item.ChangesFailed = cached.ChangesFailed;
-                item.ChangesChecked = cached.ChangesChecked;
-            }
-
-            await UpdateItemStatusAsync(item);
-
-            _allItems.Add(item);
-        }
-
-        // Queue orphan cleanup is now handled lazily by the orchestrator
-        // (config.json missing → entry removed on next pickup).
-
-        // Start polling if any KB is indexing
-        if (_allItems.Any(i => i.IsIndexing == Visibility.Visible))
-            _pollTimer.Start();
-        else
-            _pollTimer.Stop();
-
+        _kbs = [.. KnowledgeBaseStore.ListAll()
+            .OrderBy(k => k.Name, StringComparer.CurrentCultureIgnoreCase)];
         ApplyFilter();
+        return Task.CompletedTask;
     }
 
     /// <summary>
-    /// Adds a single newly-created KB to the in-memory list and refreshes the
-    /// UI without re-querying every existing KB's status and model availability.
+    /// Adds a single newly-created KB to the in-memory list, re-sorts, and
+    /// refreshes the card panel so the new card lands at its alphabetical
+    /// position. The new card loads its own status on attach.
     /// </summary>
-    private async Task AppendKbItemAsync(KnowledgeBase kb)
+    private void AppendKbCard(KnowledgeBase kb)
     {
-        var cardEmbeddingModel = kb.IndexedWith?.Embedding.Model ?? kb.Embedding.Model;
-        var cardContextualizerModel = kb.IndexedWith?.Contextualizer.Model ?? kb.Contextualizer.Model;
-        var modelInfo = cardEmbeddingModel;
-        if (!string.IsNullOrEmpty(cardContextualizerModel))
-            modelInfo += $" \u00b7 {cardContextualizerModel}";
-
-        var item = new KbViewModel
-        {
-            Id = kb.Id,
-            Name = kb.Name,
-            SourcePathsText = string.Join(", ", kb.SourcePaths),
-            ModelInfoText = modelInfo,
-        };
-
-        await UpdateItemStatusAsync(item);
-        _allItems.Add(item);
+        _kbs.Add(kb);
+        _kbs.Sort((a, b) => StringComparer.CurrentCultureIgnoreCase.Compare(a.Name, b.Name));
         ApplyFilter();
     }
 
@@ -1178,13 +574,13 @@ public sealed partial class KnowledgeBasesPage : Page
     /// </summary>
     private void ApplyFilter()
     {
-        CounterText.Text = _allItems.Count.ToString();
+        CounterText.Text = _kbs.Count.ToString();
 
         ReleaseLiveCards();
         KbList.ItemsSource = null;
         var panel = new StackPanel { Spacing = 0 };
 
-        for (int idx = 0; idx < _allItems.Count; idx++)
+        for (int idx = 0; idx < _kbs.Count; idx++)
         {
             if (idx > 0)
             {
@@ -1196,36 +592,53 @@ public sealed partial class KnowledgeBasesPage : Page
                 });
             }
 
-            var card = new Controls.KbCard { ViewModel = _allItems[idx] };
+            var kb = _kbs[idx];
+            var card = new KbCard
+            {
+                Kb = kb,
+                RagReadyTask = _ragReadyTask,
+                SearchQuery = _searchQuery,
+            };
             card.DeleteRequested += OnDeleteRequested;
             card.SettingsRequested += OnSettingsRequested;
             card.ReindexRequested += OnReindexRequested;
+            card.ReindexScheduledRequested += OnReindexScheduledRequested;
             card.CancelIndexRequested += OnCancelIndexRequested;
             card.CheckChangesRequested += OnCheckChangesRequested;
             card.IndexNowRequested += OnIndexNowRequested;
             card.CancelDeferredRequested += OnCancelDeferredRequested;
             card.MatchCountChanged += OnCardMatchCountChanged;
-            card.RagReadyTask = _ragReadyTask;
-            card.SearchQuery = _searchQuery;
             _liveCards.Add(card);
             panel.Children.Add(card);
         }
 
         KbList.ItemsSource = new[] { panel };
 
-        var hasItems = _allItems.Count > 0;
+        var hasItems = _kbs.Count > 0;
         EmptyPanel.Visibility = hasItems ? Visibility.Collapsed : Visibility.Visible;
         HintDivider.Visibility = hasItems ? Visibility.Visible : Visibility.Collapsed;
         HintText.Visibility = hasItems ? Visibility.Visible : Visibility.Collapsed;
     }
 
     /// <summary>
-    /// Unsubscribes from all live cards and clears tracking state.
+    /// Unsubscribes from all live cards and clears tracking state. Cards
+    /// stop their own poll timers on Unloaded — we just need to drop
+    /// references so they can be GC'd.
     /// </summary>
     private void ReleaseLiveCards()
     {
         foreach (var c in _liveCards)
+        {
+            c.DeleteRequested -= OnDeleteRequested;
+            c.SettingsRequested -= OnSettingsRequested;
+            c.ReindexRequested -= OnReindexRequested;
+            c.ReindexScheduledRequested -= OnReindexScheduledRequested;
+            c.CancelIndexRequested -= OnCancelIndexRequested;
+            c.CheckChangesRequested -= OnCheckChangesRequested;
+            c.IndexNowRequested -= OnIndexNowRequested;
+            c.CancelDeferredRequested -= OnCancelDeferredRequested;
             c.MatchCountChanged -= OnCardMatchCountChanged;
+        }
         _liveCards.Clear();
         _matchCountsByKbId.Clear();
         UpdateMatchSummary();
@@ -1236,9 +649,10 @@ public sealed partial class KnowledgeBasesPage : Page
     /// </summary>
     private void OnCardMatchCountChanged(object? sender, int count)
     {
-        if (sender is not Controls.KbCard card || card.ViewModel is null) return;
+        if (sender is not KbCard card) return;
+        var id = card.KbId;
+        if (id.Length == 0) return;
 
-        var id = card.ViewModel.Id;
         if (count < 0) _matchCountsByKbId.Remove(id);
         else _matchCountsByKbId[id] = count;
 
@@ -1258,7 +672,7 @@ public sealed partial class KnowledgeBasesPage : Page
 
         MatchSummaryText.Visibility = Visibility.Visible;
 
-        var hitsByName = _allItems
+        var hitsByName = _kbs
             .Where(kb => _matchCountsByKbId.TryGetValue(kb.Id, out var c) && c > 0)
             .Select(kb => $"{kb.Name} ({_matchCountsByKbId[kb.Id]})")
             .ToList();
@@ -1293,7 +707,8 @@ public sealed partial class KnowledgeBasesPage : Page
     }
 
     /// <summary>
-    /// Builds a folder row with path label and delete button.
+    /// Builds a folder row with path label and delete button. Used by the
+    /// delete-failed dialog body (still inline because it's a one-off UI).
     /// </summary>
     private static Grid BuildFolderRow(string path, StackPanel folderList)
     {
@@ -1326,7 +741,7 @@ public sealed partial class KnowledgeBasesPage : Page
     }
 
     /// <summary>
-    /// Collects folder paths from the folder list panel.
+    /// Collects folder paths from a folder list panel.
     /// </summary>
     private static List<string> CollectFolderPaths(StackPanel folderList) =>
         folderList.Children
@@ -1359,104 +774,19 @@ public sealed partial class KnowledgeBasesPage : Page
     }
 
     /// <summary>
-    /// Calls the <c>get_index_info</c> MCP tool on the RAG server for the given KB.
-    /// Returns <c>null</c> when the RAG server is not connected (caller should fall back to SQLite).
-    /// </summary>
-    private static async Task<IndexInfoResult?> GetIndexInfoAsync(string kbId)
-    {
-        var connection = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.RagKey);
-        if (connection?.IsConnected != true)
-            return null;
-
-        try
-        {
-            var argsJson = JsonSerializer.Serialize(new { kb_id = kbId });
-            var args = JsonDocument.Parse(argsJson).RootElement;
-            var result = await connection.CallToolWithProgressAsync("get_index_info", args, null);
-
-            using var doc = JsonDocument.Parse(result);
-            var root = doc.RootElement;
-
-            var totalFiles = root.GetProperty("total_files").GetInt32();
-            var totalChunks = root.GetProperty("total_chunks").GetInt32();
-            var isIndexing = root.GetProperty("is_indexing").GetBoolean();
-
-            int? current = null, total = null;
-            if (isIndexing && root.TryGetProperty("indexing_progress", out var prog) && prog.ValueKind == JsonValueKind.Object)
-            {
-                current = prog.GetProperty("current").GetInt32();
-                total = prog.GetProperty("total").GetInt32();
-            }
-
-            var isPromptStale = root.TryGetProperty("is_prompt_stale", out var stale) && stale.GetBoolean();
-            var lastIndexedAt = root.TryGetProperty("last_indexed_at", out var lai) ? lai.GetString() : null;
-            var failedCount = root.TryGetProperty("last_failed_count", out var fc) ? fc.GetInt32() : 0;
-
-            return new IndexInfoResult(totalFiles, totalChunks, isIndexing, current, total, isPromptStale, lastIndexedAt, failedCount);
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    /// <summary>Parsed result from the <c>get_index_info</c> MCP tool.</summary>
-    private sealed record IndexInfoResult(
-        int TotalFiles, int TotalChunks,
-        bool IsIndexing, int? Current, int? Total,
-        bool IsPromptStale, string? LastIndexedAt,
-        int FailedCount);
-
-    /// <summary>Parsed result from the <c>check_changes</c> MCP tool.</summary>
-    private sealed record ChangeCheckResult(
-        int Added, int Modified, int Deleted, int Failed, bool IsClean);
-
-    /// <summary>
-    /// Calls the <c>check_changes</c> MCP tool to compare filesystem against the index.
-    /// Returns <c>null</c> when the RAG server is not connected.
-    /// </summary>
-    private static async Task<ChangeCheckResult?> CheckChangesAsync(string kbId)
-    {
-        var connection = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.RagKey);
-        if (connection?.IsConnected != true)
-            return null;
-
-        try
-        {
-            var argsJson = JsonSerializer.Serialize(new { kb_id = kbId });
-            var args = JsonDocument.Parse(argsJson).RootElement;
-            var result = await connection.CallToolWithProgressAsync("check_changes", args, null);
-
-            using var doc = JsonDocument.Parse(result);
-            var root = doc.RootElement;
-
-            return new ChangeCheckResult(
-                root.GetProperty("added").GetInt32(),
-                root.GetProperty("modified").GetInt32(),
-                root.GetProperty("deleted").GetInt32(),
-                root.TryGetProperty("failed", out var fail) ? fail.GetInt32() : 0,
-                root.TryGetProperty("is_clean", out var clean) && clean.GetBoolean());
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// Handles "Index now" on a deferred KB — calls start_reindex with deferred=false
-    /// which upgrades the existing deferred entry to immediate and spawns the orchestrator.
+    /// Handles "Index now" on a deferred KB — upgrades the deferred
+    /// entry to immediate via <c>start_reindex</c> (deferred=false) and
+    /// nudges the card to re-pull its new state.
     /// </summary>
     private async void OnIndexNowRequested(object? sender, string kbId)
     {
-        var item = _allItems.FirstOrDefault(i => i.Id == kbId);
-        if (item is not null)
-            item.IsDeferredIndexing = false;
+        var card = _liveCards.FirstOrDefault(c => c.KbId == kbId);
+        card?.ClearDeferred();
 
         var status = await StartReindexAsync(kbId, deferred: false);
         if (!await HandleStartReindexResultAsync(status))
         {
-            ApplyFilter();
+            if (card is not null) await card.RefreshAsync();
             return;
         }
 
@@ -1465,12 +795,13 @@ public sealed partial class KnowledgeBasesPage : Page
         if (App.Current is App app)
             app.MainWindow?.DeferredThisSession.RemoveAll(e => e.KbId == kbId);
 
-        _pollTimer.Start();
-        ApplyFilter();
+        if (card is not null) await card.RefreshAsync();
     }
 
     /// <summary>
-    /// Handles "Cancel scheduled" on a deferred KB — removes from queue via MCP.
+    /// Handles "Cancel scheduled" on a deferred KB — removes it from the
+    /// queue via MCP, then refreshes the card so the status drops back
+    /// to whatever the server now reports (usually "No index").
     /// </summary>
     private async void OnCancelDeferredRequested(object? sender, string kbId)
     {
@@ -1480,43 +811,28 @@ public sealed partial class KnowledgeBasesPage : Page
         if (App.Current is App app)
             app.MainWindow?.DeferredThisSession.RemoveAll(e => e.KbId == kbId);
 
-        var item = _allItems.FirstOrDefault(i => i.Id == kbId);
-        if (item is not null)
+        var card = _liveCards.FirstOrDefault(c => c.KbId == kbId);
+        if (card is not null)
         {
-            item.IsDeferredIndexing = false;
-            item.StatusText = _loader.GetString("KB_StatusNoIndex") ?? "No index";
-            item.StatusBrush = new SolidColorBrush(Microsoft.UI.Colors.Gray);
+            card.ClearDeferred();
+            await card.RefreshAsync();
         }
 
         LoggingService.LogInfo($"[KB] Deferred indexing cancelled: {kbId}");
-        ApplyFilter();
     }
 
     /// <summary>
-    /// Handles check-changes request from a <see cref="Controls.KbCard"/>.
+    /// Handles check-changes request from a <see cref="KbCard"/>.
     /// </summary>
     private async void OnCheckChangesRequested(object? sender, string kbId)
     {
-        var item = _allItems.FirstOrDefault(i => i.Id == kbId);
-        if (item is null) return;
+        var card = _liveCards.FirstOrDefault(c => c.KbId == kbId);
+        if (card is null) return;
 
-        var result = await CheckChangesAsync(kbId);
+        var result = await KbMcpClient.CheckChangesAsync(kbId);
         if (result is not null)
-        {
-            item.ChangesChecked = true;
-            item.ChangesAdded = result.Added;
-            item.ChangesModified = result.Modified;
-            item.ChangesDeleted = result.Deleted;
-            item.ChangesFailed = result.Failed;
-
-            if (!result.IsClean)
-            {
-                item.StatusText = _loader.GetString("KB_StatusStale") ?? "Prompt stale";
-                item.StatusBrush = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"];
-            }
-        }
+            card.ApplyChangeCheckResult(result);
     }
 
     #endregion
 }
-

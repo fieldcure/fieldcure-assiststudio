@@ -1,26 +1,35 @@
-using System.ComponentModel;
+﻿using AssistStudio.Mcp;
 using AssistStudio.Settings;
+using FieldCure.AssistStudio.Models;
+using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.Windows.ApplicationModel.Resources;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 
 namespace AssistStudio.Controls;
 
 /// <summary>
-/// Card control that displays a knowledge base item with status, stats, and action buttons.
+/// Card that renders one knowledge base and owns its own status loading
+/// and polling. Takes a <see cref="KnowledgeBase"/> via <see cref="Kb"/>
+/// and fully manages its visual state — shimmer while loading the first
+/// <c>get_index_info</c> response, progress bar while indexing, idle
+/// actions once ready.
 /// </summary>
-public sealed partial class KbCard : UserControl
+public sealed partial class KbCard : UserControl, INotifyPropertyChanged
 {
     #region Dependency Properties
 
-    /// <summary>Identifies the <see cref="ViewModel"/> dependency property.</summary>
-    public static readonly DependencyProperty ViewModelProperty =
+    /// <summary>Identifies the <see cref="Kb"/> dependency property.</summary>
+    public static readonly DependencyProperty KbProperty =
         DependencyProperty.Register(
-            nameof(ViewModel),
-            typeof(KbViewModel),
+            nameof(Kb),
+            typeof(KnowledgeBase),
             typeof(KbCard),
-            new PropertyMetadata(null, OnViewModelChanged));
+            new PropertyMetadata(null, OnKbChanged));
 
     /// <summary>Identifies the <see cref="SearchQuery"/> dependency property.</summary>
     public static readonly DependencyProperty SearchQueryProperty =
@@ -35,14 +44,21 @@ public sealed partial class KbCard : UserControl
     #region Constants
 
     private const int MaxChunksPerCard = 3;
+    private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(5);
 
     #endregion
 
     #region Fields
 
     private readonly ResourceLoader _loader = new();
-    private readonly Mcp.KnowledgeBaseSearchService _searchService = new();
+    private readonly KnowledgeBaseSearchService _searchService = new();
+    private readonly KbViewModel _vm = new();
+    private DispatcherTimer? _pollTimer;
+    private CancellationTokenSource? _loadCts;
     private CancellationTokenSource? _searchCts;
+    private bool _isLoading;
+    private bool _isSearching;
+    private bool _isReindexFlyoutOpen;
 
     #endregion
 
@@ -54,13 +70,22 @@ public sealed partial class KbCard : UserControl
     /// <summary>Raised when the user clicks the settings button.</summary>
     public event EventHandler<string>? SettingsRequested;
 
-    /// <summary>Raised when the user clicks the re-index button.</summary>
+    /// <summary>
+    /// Raised when the user picks "Re-index now" from the flyout —
+    /// immediate indexing (queued by the RAG orchestrator, runs right away).
+    /// </summary>
     public event EventHandler<string>? ReindexRequested;
+
+    /// <summary>
+    /// Raised when the user picks "Re-index when app closes" — deferred
+    /// indexing, scheduled to run on app shutdown.
+    /// </summary>
+    public event EventHandler<string>? ReindexScheduledRequested;
 
     /// <summary>Raised when the user clicks the cancel/stop button.</summary>
     public event EventHandler<string>? CancelIndexRequested;
 
-    /// <summary>Raised when the user clicks the check changes button.</summary>
+    /// <summary>Raised when the user clicks the check-changes button.</summary>
     public event EventHandler<string>? CheckChangesRequested;
 
     /// <summary>Raised when the user clicks "Index now" on a deferred KB.</summary>
@@ -76,9 +101,22 @@ public sealed partial class KbCard : UserControl
 
     #region Constructor
 
+    /// <summary>Initializes a new <see cref="KbCard"/>.</summary>
     public KbCard()
     {
         InitializeComponent();
+        _vm.PropertyChanged += OnVmPropertyChanged;
+        Loaded += OnCardLoaded;
+        Unloaded += OnCardUnloaded;
+
+        // Re-index button's flyout: keep the action icons visible while
+        // the flyout is open even though it renders in a popup outside
+        // the card bounds (which would otherwise fire PointerExited).
+        if (ReindexButton.Flyout is { } flyout)
+        {
+            flyout.Opened += OnReindexFlyoutOpened;
+            flyout.Closed += OnReindexFlyoutClosed;
+        }
     }
 
     #endregion
@@ -86,17 +124,17 @@ public sealed partial class KbCard : UserControl
     #region Properties
 
     /// <summary>
-    /// Gets or sets the knowledge base view model to display.
+    /// The knowledge base this card represents. Setting it rebuilds the
+    /// static fields (name, source paths, model info) and, once the card
+    /// is loaded, kicks off a status refresh.
     /// </summary>
-    public KbViewModel? ViewModel
+    public KnowledgeBase? Kb
     {
-        get => (KbViewModel?)GetValue(ViewModelProperty);
-        set => SetValue(ViewModelProperty, value);
+        get => (KnowledgeBase?)GetValue(KbProperty);
+        set => SetValue(KbProperty, value);
     }
 
-    /// <summary>
-    /// Gets or sets the current search query. Non-empty triggers a chunk search.
-    /// </summary>
+    /// <summary>Current search query. Non-empty triggers a chunk search.</summary>
     public string SearchQuery
     {
         get => (string)GetValue(SearchQueryProperty);
@@ -104,111 +142,461 @@ public sealed partial class KbCard : UserControl
     }
 
     /// <summary>
-    /// Cached Task from <c>KnowledgeBaseService.EnsureConnectedAsync</c>.
-    /// Injected by the page so the search can wait for RAG serve startup.
+    /// Task from <see cref="KnowledgeBaseService.EnsureConnectedAsync"/>.
+    /// Injected by the page so searches can wait for RAG serve startup.
     /// </summary>
     public Task? RagReadyTask { get; set; }
 
     /// <summary>Most recent match count. -1 = not searched or cleared.</summary>
     public int LastMatchCount { get; private set; } = -1;
 
-    #endregion
+    /// <summary>Id of the KB this card is bound to, or empty if unbound.</summary>
+    public string KbId => Kb?.Id ?? "";
 
-    #region Private Methods
-
-    private static void OnViewModelChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    /// <summary>
+    /// <c>true</c> while the initial <c>get_index_info</c> call is in
+    /// flight. Drives the load-shimmer placeholders via x:Bind.
+    /// </summary>
+    public bool IsLoading
     {
-        if (d is not KbCard card) return;
-
-        if (e.OldValue is KbViewModel oldVm)
-            oldVm.PropertyChanged -= card.OnViewModelPropertyChanged;
-
-        if (e.NewValue is KbViewModel newVm)
-            newVm.PropertyChanged += card.OnViewModelPropertyChanged;
-
-        card.UpdateUI();
+        get => _isLoading;
+        private set => SetField(ref _isLoading, value);
     }
 
-    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    /// <summary>
+    /// <c>true</c> while a chunk search is in flight for this card.
+    /// Drives the match-panel shimmer via x:Bind.
+    /// </summary>
+    public bool IsSearching
+    {
+        get => _isSearching;
+        private set => SetField(ref _isSearching, value);
+    }
+
+    /// <summary>Fires whenever a bindable card property changes.</summary>
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    /// <summary>
+    /// Assigns <paramref name="value"/> and raises <see cref="PropertyChanged"/>
+    /// when the value changes. Backing helper for the card's own x:Bind
+    /// sources (view model changes flow through <see cref="KbViewModel"/>).
+    /// </summary>
+    private void SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
+    {
+        if (EqualityComparer<T>.Default.Equals(field, value)) return;
+        field = value;
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
+    /// <summary>
+    /// Flips the card into the "deferred scheduled" state: Index-now /
+    /// Cancel-scheduled buttons, "Scheduled" status label, blue color.
+    /// Called by the page right after a deferred re-index is scheduled
+    /// so the UI updates immediately, without waiting for a server poll.
+    /// </summary>
+    public void MarkDeferredScheduled()
+    {
+        _vm.IsDeferredIndexing = true;
+        _vm.StatusText = _loader.GetString("KB_StatusScheduled") ?? "Scheduled";
+        _vm.StatusBrush = new SolidColorBrush(Colors.DodgerBlue);
+    }
+
+    /// <summary>
+    /// Clears the deferred flag. Callers typically follow up with
+    /// <see cref="RefreshAsync"/> so the status label picks up the real
+    /// current state from the server.
+    /// </summary>
+    public void ClearDeferred()
+    {
+        _vm.IsDeferredIndexing = false;
+    }
+
+    #endregion
+
+    #region Kb Lifecycle
+
+    /// <summary>
+    /// Reacts to a new <see cref="Kb"/> value: repopulates the static
+    /// fields on the view model and, if the card is already attached to
+    /// the tree, kicks off an async status refresh.
+    /// </summary>
+    private static void OnKbChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is not KbCard card) return;
+        card.ApplyKbSnapshot();
+        if (card.IsLoaded && card.Kb is not null)
+            _ = card.StartLoadAsync();
+    }
+
+    /// <summary>
+    /// Copies the immediately-known fields from <see cref="Kb"/> onto the
+    /// view model. Status/stats/indexing progress stay untouched — those
+    /// come from MCP and are filled in by <see cref="StartLoadAsync"/>.
+    /// </summary>
+    private void ApplyKbSnapshot()
+    {
+        var kb = Kb;
+        if (kb is null)
+        {
+            _vm.Id = "";
+            _vm.Name = "";
+            _vm.SourcePathsText = "";
+            _vm.ModelInfoText = "";
+            return;
+        }
+
+        _vm.Id = kb.Id;
+        _vm.Name = kb.Name;
+        _vm.SourcePathsText = string.Join(", ", kb.SourcePaths);
+
+        // Model info line shows what the DB was actually indexed with
+        // (IndexedWith snapshot), not the current top-level fields which
+        // may have been edited via "Save only" without a re-index.
+        var embModel = kb.IndexedWith?.Embedding.Model ?? kb.Embedding.Model;
+        var ctxModel = kb.IndexedWith?.Contextualizer.Model ?? kb.Contextualizer.Model;
+        var modelInfo = embModel;
+        if (!string.IsNullOrEmpty(ctxModel))
+            modelInfo += $" \u00b7 {ctxModel}";
+        _vm.ModelInfoText = modelInfo;
+    }
+
+    private async void OnCardLoaded(object sender, RoutedEventArgs e)
+    {
+        if (Kb is null) return;
+        await StartLoadAsync();
+    }
+
+    private void OnCardUnloaded(object sender, RoutedEventArgs e)
+    {
+        _loadCts?.Cancel();
+        _searchCts?.Cancel();
+        StopPollTimer();
+    }
+
+    /// <summary>Reveals the idle action icons (Settings/Reindex/Delete) on hover.</summary>
+    private void OnCardPointerEntered(object sender, PointerRoutedEventArgs e)
+    {
+        ActionIconsPanel.Visibility = Visibility.Visible;
+    }
+
+    /// <summary>
+    /// Hides the idle action icons when the pointer leaves — unless the
+    /// re-index flyout is open. The flyout renders in a popup outside the
+    /// card's visual bounds, which would otherwise trigger a false exit
+    /// and hide the icon the user is about to click.
+    /// </summary>
+    private void OnCardPointerExited(object sender, PointerRoutedEventArgs e)
+    {
+        if (_isReindexFlyoutOpen) return;
+        ActionIconsPanel.Visibility = Visibility.Collapsed;
+    }
+
+    private void OnReindexFlyoutOpened(object? sender, object e)
+    {
+        _isReindexFlyoutOpen = true;
+        ActionIconsPanel.Visibility = Visibility.Visible;
+    }
+
+    private void OnReindexFlyoutClosed(object? sender, object e)
+    {
+        _isReindexFlyoutOpen = false;
+        // After close, the next PointerExited will hide the icons if the
+        // pointer has actually left the card bounds. No direct check here.
+    }
+
+    /// <summary>
+    /// Shows the shimmer overlay, fetches the KB's live status once, then
+    /// flips to the real content. Starts the poll timer if the KB turns
+    /// out to be actively indexing.
+    /// </summary>
+    public async Task StartLoadAsync()
+    {
+        // Cancel any in-flight predecessor and install ourselves as the
+        // "active" load. We intentionally do NOT gate the finally on
+        // ct.IsCancellationRequested — a transient Unloaded/Loaded cycle
+        // during WinUI's initial visual tree wiring can cancel our token
+        // without any follow-up load kicking off, which would leave the
+        // card stuck in shimmer state. Instead we check whether we're
+        // still the latest load (ReferenceEquals on _loadCts) and reset
+        // IsLoading in that case, regardless of cancellation.
+        _loadCts?.Cancel();
+        var myCts = new CancellationTokenSource();
+        _loadCts = myCts;
+
+        IsLoading = true;
+        try
+        {
+            await RefreshStatusAsync();
+        }
+        finally
+        {
+            if (ReferenceEquals(_loadCts, myCts))
+            {
+                IsLoading = false;
+                SyncPollTimer();
+                // Drop the field reference before disposing so later
+                // callers (OnCardUnloaded, a follow-up StartLoadAsync)
+                // don't call .Cancel() on a disposed CTS.
+                _loadCts = null;
+            }
+            myCts.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Public entry point for the page to nudge this card after an action
+    /// (re-index, cancel, etc.) that changes the server-side state.
+    /// Refreshes status and restarts/stops the poll timer accordingly.
+    /// </summary>
+    public async Task RefreshAsync()
+    {
+        await RefreshStatusAsync();
+        SyncPollTimer();
+    }
+
+    #endregion
+
+    #region Status Refresh
+
+    /// <summary>
+    /// Fetches <c>get_index_info</c> for this KB and applies the result
+    /// to the view model. Falls back to direct SQLite reads when the RAG
+    /// server is not connected.
+    /// </summary>
+    private async Task RefreshStatusAsync()
+    {
+        if (_vm.Id.Length == 0) return;
+
+        var info = await KbMcpClient.GetIndexInfoAsync(_vm.Id);
+
+        if (info is not null)
+        {
+            ApplyIndexInfo(info);
+            return;
+        }
+
+        // MCP disconnected — direct SQLite fallback.
+        var status = KnowledgeBaseStore.GetIndexingStatus(_vm.Id);
+        if (status is not null)
+        {
+            _vm.IsIndexing = Visibility.Visible;
+            _vm.Progress = status.Total > 0 ? (double)status.Current / status.Total * 100 : 0;
+            var indexingLabel = _loader.GetString("KB_StatusIndexing") ?? "Indexing";
+            _vm.StatusText = $"{indexingLabel} ({status.Current}/{status.Total})";
+            _vm.StatusBrush = new SolidColorBrush(Colors.DodgerBlue);
+            return;
+        }
+
+        _vm.IsIndexing = Visibility.Collapsed;
+        _vm.Progress = 0;
+
+        var stats = KnowledgeBaseStore.GetStats(_vm.Id);
+        if (stats is not null)
+        {
+            _vm.StatusText = _loader.GetString("KB_StatusReady") ?? "Ready";
+            _vm.StatusBrush = new SolidColorBrush(Colors.Gray);
+            _vm.StatsText = $"{stats.TotalFiles} files, {stats.TotalChunks} chunks";
+        }
+        else
+        {
+            _vm.StatusText = _loader.GetString("KB_StatusNoIndex") ?? "No index";
+            _vm.StatusBrush = new SolidColorBrush(Colors.Gray);
+            _vm.StatsText = "";
+        }
+    }
+
+    /// <summary>
+    /// Maps a parsed <see cref="IndexInfoResult"/> onto the view model
+    /// fields, picking the right status label + color for each state
+    /// (indexing in progress, stale prompt, ready, empty).
+    /// </summary>
+    private void ApplyIndexInfo(IndexInfoResult info)
+    {
+        var statsBase = $"{info.TotalFiles} files, {info.TotalChunks} chunks";
+        if (info.FailedCount > 0)
+            statsBase += $" \u00b7 {info.FailedCount} failed";
+        if (!info.IsIndexing
+            && info.LastIndexedAt is not null
+            && DateTime.TryParse(info.LastIndexedAt, null, System.Globalization.DateTimeStyles.RoundtripKind, out var dt))
+        {
+            statsBase += $" \u00b7 {dt.ToLocalTime():yyyy-MM-dd HH:mm}";
+        }
+        _vm.StatsText = statsBase;
+        _vm.IsPromptStale = info.IsPromptStale;
+
+        if (info.IsIndexing)
+        {
+            // Clear change-check cache while indexing — results will be stale.
+            _vm.ChangesChecked = null;
+            _vm.ChangesAdded = 0;
+            _vm.ChangesModified = 0;
+            _vm.ChangesDeleted = 0;
+            _vm.ChangesFailed = 0;
+
+            _vm.IsIndexing = Visibility.Visible;
+            _vm.Progress = info is { Current: not null, Total: > 0 }
+                ? (double)info.Current.Value / info.Total.Value * 100 : 0;
+            var indexingLabel = _loader.GetString("KB_StatusIndexing") ?? "Indexing";
+            _vm.StatusText = info.Current is not null
+                ? $"{indexingLabel} ({info.Current}/{info.Total})"
+                : indexingLabel;
+            _vm.StatusBrush = new SolidColorBrush(Colors.DodgerBlue);
+            return;
+        }
+
+        if (info.IsPromptStale)
+        {
+            _vm.IsIndexing = Visibility.Collapsed;
+            _vm.Progress = 0;
+            _vm.StatusText = _loader.GetString("KB_StatusStale") ?? "Prompt stale";
+            _vm.StatusBrush = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"];
+            return;
+        }
+
+        if (info.TotalFiles > 0)
+        {
+            _vm.IsIndexing = Visibility.Collapsed;
+            _vm.Progress = 0;
+
+            // Cached change-check dirty? Show stale status.
+            if (_vm.ChangesChecked == true
+                && (_vm.ChangesAdded > 0 || _vm.ChangesModified > 0 || _vm.ChangesDeleted > 0))
+            {
+                _vm.StatusText = _loader.GetString("KB_StatusStale") ?? "Prompt stale";
+                _vm.StatusBrush = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"];
+            }
+            else
+            {
+                _vm.StatusText = _loader.GetString("KB_StatusReady") ?? "Ready";
+                _vm.StatusBrush = new SolidColorBrush(Colors.Gray);
+            }
+            return;
+        }
+
+        _vm.IsIndexing = Visibility.Collapsed;
+        _vm.Progress = 0;
+        _vm.StatusText = _loader.GetString("KB_StatusNoIndex") ?? "No index";
+        _vm.StatusBrush = new SolidColorBrush(Colors.Gray);
+        _vm.StatsText = "";
+    }
+
+    #endregion
+
+    #region Poll Timer
+
+    /// <summary>
+    /// Starts the polling timer when the KB is actively indexing; stops
+    /// it otherwise. Safe to call repeatedly.
+    /// </summary>
+    private void SyncPollTimer()
+    {
+        if (_vm.IsIndexing == Visibility.Visible)
+            StartPollTimer();
+        else
+            StopPollTimer();
+    }
+
+    private void StartPollTimer()
+    {
+        if (_pollTimer is not null) return;
+        _pollTimer = new DispatcherTimer { Interval = PollInterval };
+        _pollTimer.Tick += OnPollTick;
+        _pollTimer.Start();
+    }
+
+    private void StopPollTimer()
+    {
+        if (_pollTimer is null) return;
+        _pollTimer.Tick -= OnPollTick;
+        _pollTimer.Stop();
+        _pollTimer = null;
+    }
+
+    /// <summary>
+    /// Re-pulls status on each poll tick. When the KB transitions from
+    /// indexing to idle we auto-run <c>check_changes</c> so the card
+    /// picks up any fresh dirt without requiring another click.
+    /// </summary>
+    private async void OnPollTick(object? sender, object e)
+    {
+        var wasIndexing = _vm.IsIndexing == Visibility.Visible;
+        await RefreshStatusAsync();
+        var justFinished = wasIndexing && _vm.IsIndexing == Visibility.Collapsed;
+
+        if (justFinished)
+        {
+            var result = await KbMcpClient.CheckChangesAsync(_vm.Id);
+            if (result is not null)
+            {
+                _vm.ChangesChecked = true;
+                _vm.ChangesAdded = result.Added;
+                _vm.ChangesModified = result.Modified;
+                _vm.ChangesDeleted = result.Deleted;
+                _vm.ChangesFailed = result.Failed;
+
+                if (!result.IsClean)
+                {
+                    _vm.StatusText = _loader.GetString("KB_StatusStale") ?? "Prompt stale";
+                    _vm.StatusBrush = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"];
+                }
+            }
+        }
+
+        SyncPollTimer();
+    }
+
+    #endregion
+
+    #region UI Binding
+
+    /// <summary>
+    /// Reflects view-model property changes back onto the visual tree.
+    /// Marshalled to the dispatcher because property changes may arrive
+    /// from poll-timer ticks running on the ThreadPool.
+    /// </summary>
+    private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         DispatcherQueue.TryEnqueue(UpdateUI);
     }
 
+    /// <summary>
+    /// Rebuilds the UI from the current view model. Called on every VM
+    /// property change — cheap because it only toggles visibility and
+    /// assigns strings.
+    /// </summary>
     private void UpdateUI()
     {
-        var vm = ViewModel;
-        if (vm is null) return;
+        // Simple text assignments — visibility for NameText/SourcePathsText
+        // /ModelInfoText is driven by the IsLoading x:Bind in XAML, so we
+        // only set Text here and let the binding swap the shimmer in/out.
+        NameText.Text = _vm.Name;
+        StatusText.Text = _vm.StatusText;
+        StatusText.Foreground = _vm.StatusBrush;
+        SourcePathsText.Text = _vm.SourcePathsText;
+        ModelInfoText.Text = _vm.ModelInfoText;
 
-        // Name + Status
-        NameText.Text = vm.Name;
-        StatusText.Text = vm.StatusText;
-        StatusText.Foreground = vm.StatusBrush;
+        StatsText.Text = _vm.StatsText;
 
-        // Stats
-        if (!string.IsNullOrEmpty(vm.StatsText))
-        {
-            StatsText.Text = vm.StatsText;
-            StatsText.Visibility = Visibility.Visible;
-        }
-        else
-        {
-            StatsText.Visibility = Visibility.Collapsed;
-        }
-
-        // Source paths
-        SourcePathsText.Text = vm.SourcePathsText;
-
-        // Model info
-        if (!string.IsNullOrEmpty(vm.ModelInfoText))
-        {
-            ModelInfoText.Text = vm.ModelInfoText;
-            ModelInfoText.Visibility = Visibility.Visible;
-        }
-        else
-        {
-            ModelInfoText.Visibility = Visibility.Collapsed;
-        }
-
-        // Model warning
-        if (!string.IsNullOrEmpty(vm.ModelWarningText))
-        {
-            ModelWarningText.Text = vm.ModelWarningText;
-            ModelWarningText.Visibility = Visibility.Visible;
-        }
-        else
-        {
-            ModelWarningText.Visibility = Visibility.Collapsed;
-        }
-
-        // Indexing vs deferred vs idle state
-        var isIndexing = vm.IsIndexing == Visibility.Visible;
-        var isDeferred = vm.IsDeferredIndexing && !isIndexing;
+        var isIndexing = _vm.IsIndexing == Visibility.Visible;
+        var isDeferred = _vm.IsDeferredIndexing && !isIndexing;
 
         IndexingPanel.Visibility = isIndexing ? Visibility.Visible : Visibility.Collapsed;
         DeferredPanel.Visibility = isDeferred ? Visibility.Visible : Visibility.Collapsed;
         ActionPanel.Visibility = (isIndexing || isDeferred) ? Visibility.Collapsed : Visibility.Visible;
 
         if (isIndexing)
-        {
-            IndexProgressBar.Value = vm.Progress;
-            SetMouseToolTip(StopButton, _loader.GetString("KB_CancelIndexing") ?? "Cancel indexing");
-        }
-        else if (isDeferred)
-        {
-            IndexNowButton.Content = _loader.GetString("KB_IndexNowButton") ?? "Index now";
-            CancelDeferredButton.Content = _loader.GetString("KB_CancelScheduled") ?? "Cancel scheduled";
-            SetMouseToolTip(DeferredDeleteButton, _loader.GetString("KB_Delete/Content") ?? "Delete");
-        }
-        else
-        {
-            UpdateChangeSummary(vm);
-            UpdateActionButtons(vm);
-        }
+            IndexProgressBar.Value = _vm.Progress;
+        else if (!isDeferred)
+            UpdateChangeSummary();
     }
 
-    private void UpdateChangeSummary(KbViewModel vm)
+    /// <summary>
+    /// Formats the change-check summary line. Hides the row entirely
+    /// when the user has not yet triggered a check.
+    /// </summary>
+    private void UpdateChangeSummary()
     {
-        if (vm.ChangesChecked != true)
+        if (_vm.ChangesChecked != true)
         {
             ChangeSummaryText.Visibility = Visibility.Collapsed;
             return;
@@ -216,49 +604,28 @@ public sealed partial class KbCard : UserControl
 
         ChangeSummaryText.Visibility = Visibility.Visible;
 
-        if (vm.ChangesAdded == 0 && vm.ChangesModified == 0
-            && vm.ChangesDeleted == 0 && vm.ChangesFailed == 0)
+        if (_vm.ChangesAdded == 0 && _vm.ChangesModified == 0
+            && _vm.ChangesDeleted == 0 && _vm.ChangesFailed == 0)
         {
             ChangeSummaryText.Text = _loader.GetString("KB_NoChanges") ?? "No changes";
             ChangeSummaryText.Opacity = 0.5;
             ChangeSummaryText.Foreground = (Brush)Application.Current.Resources["DefaultTextForegroundThemeBrush"];
+            return;
         }
-        else
-        {
-            var parts = new List<string>();
-            if (vm.ChangesAdded > 0)
-                parts.Add($"+ {(_loader.GetString("KB_ChangesAdded") ?? "Added")} {vm.ChangesAdded}");
-            if (vm.ChangesModified > 0)
-                parts.Add($"~ {(_loader.GetString("KB_ChangesModified") ?? "Modified")} {vm.ChangesModified}");
-            if (vm.ChangesDeleted > 0)
-                parts.Add($"- {(_loader.GetString("KB_ChangesDeleted") ?? "Deleted")} {vm.ChangesDeleted}");
-            if (vm.ChangesFailed > 0)
-                parts.Add($"! {(_loader.GetString("KB_ChangesFailed") ?? "Failed")} {vm.ChangesFailed}");
 
-            ChangeSummaryText.Text = string.Join("    ", parts);
-            ChangeSummaryText.Opacity = 1.0;
-            ChangeSummaryText.Foreground = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"];
-        }
-    }
+        var parts = new List<string>();
+        if (_vm.ChangesAdded > 0)
+            parts.Add($"+ {(_loader.GetString("KB_ChangesAdded") ?? "Added")} {_vm.ChangesAdded}");
+        if (_vm.ChangesModified > 0)
+            parts.Add($"~ {(_loader.GetString("KB_ChangesModified") ?? "Modified")} {_vm.ChangesModified}");
+        if (_vm.ChangesDeleted > 0)
+            parts.Add($"- {(_loader.GetString("KB_ChangesDeleted") ?? "Deleted")} {_vm.ChangesDeleted}");
+        if (_vm.ChangesFailed > 0)
+            parts.Add($"! {(_loader.GetString("KB_ChangesFailed") ?? "Failed")} {_vm.ChangesFailed}");
 
-    private void UpdateActionButtons(KbViewModel vm)
-    {
-        CheckChangesButton.Content = _loader.GetString("KB_CheckChanges") ?? "Check changes";
-
-        SetMouseToolTip(SettingsButton, _loader.GetString("KB_Settings") ?? "Settings");
-        SetMouseToolTip(ReindexButton, _loader.GetString("KB_Reindex/Content") ?? "Re-index");
-        SetMouseToolTip(DeleteButton, _loader.GetString("KB_Delete/Content") ?? "Delete");
-
-        ReindexButton.IsEnabled = string.IsNullOrEmpty(vm.ModelWarningText);
-    }
-
-    private static void SetMouseToolTip(FrameworkElement element, string text)
-    {
-        ToolTipService.SetToolTip(element, new ToolTip
-        {
-            Content = text,
-            Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
-        });
+        ChangeSummaryText.Text = string.Join("    ", parts);
+        ChangeSummaryText.Opacity = 1.0;
+        ChangeSummaryText.Foreground = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"];
     }
 
     #endregion
@@ -271,11 +638,16 @@ public sealed partial class KbCard : UserControl
             _ = card.RunSearchAsync((string)e.NewValue);
     }
 
+    /// <summary>
+    /// Runs a chunk search against this KB and renders match rows. An
+    /// empty query clears the match area. Previous in-flight search is
+    /// cancelled on every call.
+    /// </summary>
     private async Task RunSearchAsync(string query)
     {
         _searchCts?.Cancel();
 
-        if (string.IsNullOrWhiteSpace(query) || ViewModel is null)
+        if (string.IsNullOrWhiteSpace(query) || _vm.Id.Length == 0)
         {
             ClearMatches();
             return;
@@ -284,12 +656,12 @@ public sealed partial class KbCard : UserControl
         _searchCts = new CancellationTokenSource();
         var token = _searchCts.Token;
 
-        ShowShimmer();
+        ShowMatchShimmer();
 
         try
         {
             var hits = await _searchService
-                .SearchAsync(ViewModel.Id, query, MaxChunksPerCard, RagReadyTask, token)
+                .SearchAsync(_vm.Id, query, MaxChunksPerCard, RagReadyTask, token)
                 .ConfigureAwait(true);
 
             if (token.IsCancellationRequested) return;
@@ -302,27 +674,31 @@ public sealed partial class KbCard : UserControl
         }
     }
 
-    private void ShowShimmer()
+    /// <summary>
+    /// Shows the declarative match-shimmer panel while a search is
+    /// pending. The actual Shimmer elements live in XAML — this just
+    /// toggles visibility and clears any previous results.
+    /// </summary>
+    private void ShowMatchShimmer()
     {
         MatchPanel.Visibility = Visibility.Visible;
-        MatchShimmerPanel.Visibility = Visibility.Visible;
-        MatchShimmerPanel.Children.Clear();
-        MatchShimmerPanel.Children.Add(new Shimmer { Height = 14, Width = 280, HorizontalAlignment = HorizontalAlignment.Left });
-        MatchShimmerPanel.Children.Add(new Shimmer { Height = 14, Width = 240, HorizontalAlignment = HorizontalAlignment.Left });
-        MatchShimmerPanel.Children.Add(new Shimmer { Height = 14, Width = 180, HorizontalAlignment = HorizontalAlignment.Left });
+        IsSearching = true;
         NoMatchText.Visibility = Visibility.Collapsed;
         MatchResultsPanel.Children.Clear();
     }
 
+    /// <summary>
+    /// Hides the shimmer and renders match rows. An empty hit list
+    /// switches to the "no matches" caption instead.
+    /// </summary>
     private void RenderMatches(IReadOnlyList<ChunkMatchViewModel> hits)
     {
-        MatchShimmerPanel.Visibility = Visibility.Collapsed;
+        IsSearching = false;
         MatchResultsPanel.Children.Clear();
 
         if (hits.Count == 0)
         {
             MatchPanel.Visibility = Visibility.Visible;
-            NoMatchText.Text = _loader.GetString("KB_NoMatches") ?? "No matches in this knowledge base";
             NoMatchText.Visibility = Visibility.Visible;
         }
         else
@@ -331,59 +707,21 @@ public sealed partial class KbCard : UserControl
             NoMatchText.Visibility = Visibility.Collapsed;
 
             foreach (var hit in hits)
-            {
-                var row = new Grid { Padding = new Thickness(0, 3, 0, 3), ColumnSpacing = 8 };
-                row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-                var icon = new FontIcon { Glyph = "\uE8A5", FontSize = 12, Opacity = 0.6 };
-                icon.VerticalAlignment = VerticalAlignment.Top;
-                icon.Margin = new Thickness(0, 2, 0, 0);
-                row.Children.Add(icon);
-
-                var textPanel = new StackPanel { Spacing = 1 };
-                textPanel.Children.Add(new TextBlock
-                {
-                    Text = hit.SourceName,
-                    Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-                    FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-                });
-                textPanel.Children.Add(new TextBlock
-                {
-                    Text = hit.Snippet,
-                    Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-                    Opacity = 0.7,
-                    TextWrapping = TextWrapping.Wrap,
-                    MaxLines = 2,
-                    TextTrimming = TextTrimming.CharacterEllipsis,
-                });
-                Grid.SetColumn(textPanel, 1);
-                row.Children.Add(textPanel);
-
-                var scoreText = new TextBlock
-                {
-                    Text = hit.ScoreText,
-                    Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-                    Opacity = 0.5,
-                    VerticalAlignment = VerticalAlignment.Top,
-                    Margin = new Thickness(0, 2, 0, 0),
-                };
-                Grid.SetColumn(scoreText, 2);
-                row.Children.Add(scoreText);
-
-                MatchResultsPanel.Children.Add(row);
-            }
+                MatchResultsPanel.Children.Add(BuildMatchRow(hit));
         }
 
         LastMatchCount = hits.Count;
         MatchCountChanged?.Invoke(this, hits.Count);
     }
 
+    /// <summary>
+    /// Hides the entire match area. Called when the page's search query
+    /// clears out, so stale match rows don't linger on idle cards.
+    /// </summary>
     private void ClearMatches()
     {
         MatchPanel.Visibility = Visibility.Collapsed;
-        MatchShimmerPanel.Visibility = Visibility.Collapsed;
+        IsSearching = false;
         NoMatchText.Visibility = Visibility.Collapsed;
         MatchResultsPanel.Children.Clear();
 
@@ -394,50 +732,127 @@ public sealed partial class KbCard : UserControl
         }
     }
 
+    /// <summary>
+    /// Builds one match row: icon + source name + snippet + score. Done
+    /// in code because the row count is dynamic per hit.
+    /// </summary>
+    private static Grid BuildMatchRow(ChunkMatchViewModel hit)
+    {
+        var row = new Grid { Padding = new Thickness(0, 3, 0, 3), ColumnSpacing = 8 };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var icon = new FontIcon
+        {
+            Glyph = "\uE8A5",
+            FontSize = 12,
+            Opacity = 0.6,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(0, 2, 0, 0),
+        };
+        row.Children.Add(icon);
+
+        var textPanel = new StackPanel { Spacing = 1 };
+        textPanel.Children.Add(new TextBlock
+        {
+            Text = hit.SourceName,
+            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+        });
+        textPanel.Children.Add(new TextBlock
+        {
+            Text = hit.Snippet,
+            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+            Opacity = 0.7,
+            TextWrapping = TextWrapping.Wrap,
+            MaxLines = 2,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+        });
+        Grid.SetColumn(textPanel, 1);
+        row.Children.Add(textPanel);
+
+        var scoreText = new TextBlock
+        {
+            Text = hit.ScoreText,
+            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+            Opacity = 0.5,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(0, 2, 0, 0),
+        };
+        Grid.SetColumn(scoreText, 2);
+        row.Children.Add(scoreText);
+
+        return row;
+    }
+
     #endregion
 
-    #region Event Handlers
+    #region Button Handlers
 
     private void DeleteButton_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel is not null)
-            DeleteRequested?.Invoke(this, ViewModel.Id);
+        if (_vm.Id.Length > 0) DeleteRequested?.Invoke(this, _vm.Id);
     }
 
     private void SettingsButton_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel is not null)
-            SettingsRequested?.Invoke(this, ViewModel.Id);
+        if (_vm.Id.Length > 0) SettingsRequested?.Invoke(this, _vm.Id);
     }
 
-    private void ReindexButton_Click(object sender, RoutedEventArgs e)
+    private void OnReindexNowClicked(object sender, RoutedEventArgs e)
     {
-        if (ViewModel is not null)
-            ReindexRequested?.Invoke(this, ViewModel.Id);
+        if (_vm.Id.Length > 0) ReindexRequested?.Invoke(this, _vm.Id);
+    }
+
+    private void OnReindexDeferredClicked(object sender, RoutedEventArgs e)
+    {
+        if (_vm.Id.Length > 0) ReindexScheduledRequested?.Invoke(this, _vm.Id);
     }
 
     private void StopButton_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel is not null)
-            CancelIndexRequested?.Invoke(this, ViewModel.Id);
+        if (_vm.Id.Length > 0) CancelIndexRequested?.Invoke(this, _vm.Id);
     }
 
     private void CheckChangesButton_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel is not null)
-            CheckChangesRequested?.Invoke(this, ViewModel.Id);
+        if (_vm.Id.Length > 0) CheckChangesRequested?.Invoke(this, _vm.Id);
     }
 
     private void IndexNowButton_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel is not null)
-            IndexNowRequested?.Invoke(this, ViewModel.Id);
+        if (_vm.Id.Length > 0) IndexNowRequested?.Invoke(this, _vm.Id);
     }
 
     private void CancelDeferredButton_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel is not null)
-            CancelDeferredRequested?.Invoke(this, ViewModel.Id);
+        if (_vm.Id.Length > 0) CancelDeferredRequested?.Invoke(this, _vm.Id);
+    }
+
+    #endregion
+
+    #region Page-facing Mutators
+
+    /// <summary>
+    /// Applies the result of a page-initiated <c>check_changes</c> call
+    /// to this card's view model. The page keeps ownership of the MCP
+    /// call for that click so one shared error dialog stays in charge;
+    /// the card only needs the parsed values.
+    /// </summary>
+    public void ApplyChangeCheckResult(ChangeCheckResult result)
+    {
+        _vm.ChangesChecked = true;
+        _vm.ChangesAdded = result.Added;
+        _vm.ChangesModified = result.Modified;
+        _vm.ChangesDeleted = result.Deleted;
+        _vm.ChangesFailed = result.Failed;
+
+        if (!result.IsClean)
+        {
+            _vm.StatusText = _loader.GetString("KB_StatusStale") ?? "Prompt stale";
+            _vm.StatusBrush = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"];
+        }
     }
 
     #endregion

@@ -1,16 +1,19 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <UserControl
     x:Class="AssistStudio.Controls.KbCard"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:AssistStudio.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d">
+    mc:Ignorable="d"
+    PointerEntered="OnCardPointerEntered"
+    PointerExited="OnCardPointerExited">
 
-    <StackPanel Spacing="2" Padding="0,4,0,4">
+    <StackPanel Background="Transparent" Spacing="2" Padding="0,4,0,4">
 
-        <!-- Row 1: Name + Status -->
-        <Grid>
+        <!-- Row 1: Name + Status (real) -->
+        <Grid Visibility="{x:Bind IsLoading, Converter={StaticResource InverseBooleanToVisibilityConverter}, Mode=OneWay}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
@@ -22,33 +25,38 @@
             <TextBlock x:Name="StatusText" Grid.Column="1"
                        VerticalAlignment="Center" />
         </Grid>
+        <!-- Row 1 shimmer -->
+        <local:Shimmer Height="16" Width="180" HorizontalAlignment="Left"
+                       Visibility="{x:Bind IsLoading, Converter={StaticResource BooleanToVisibilityConverter}, Mode=OneWay}" />
 
-        <!-- Row 2: Stats (conditional) -->
+        <!-- Row 2: Stats (real) -->
         <TextBlock x:Name="StatsText"
                    Style="{ThemeResource CaptionTextBlockStyle}"
                    Opacity="0.6"
-                   Visibility="Collapsed" />
+                   Visibility="{x:Bind IsLoading, Converter={StaticResource InverseBooleanToVisibilityConverter}, Mode=OneWay}" />
+        <!-- Row 2 shimmer -->
+        <local:Shimmer Height="12" Width="220" HorizontalAlignment="Left"
+                       Visibility="{x:Bind IsLoading, Converter={StaticResource BooleanToVisibilityConverter}, Mode=OneWay}" />
 
-        <!-- Row 3: Source paths -->
+        <!-- Row 3: Source paths (real) -->
         <TextBlock x:Name="SourcePathsText"
                    Style="{ThemeResource CaptionTextBlockStyle}"
                    Opacity="0.5"
-                   TextTrimming="CharacterEllipsis" />
+                   TextTrimming="CharacterEllipsis"
+                   Visibility="{x:Bind IsLoading, Converter={StaticResource InverseBooleanToVisibilityConverter}, Mode=OneWay}" />
+        <!-- Row 3 shimmer -->
+        <local:Shimmer Height="12" Width="260" HorizontalAlignment="Left"
+                       Visibility="{x:Bind IsLoading, Converter={StaticResource BooleanToVisibilityConverter}, Mode=OneWay}" />
 
-        <!-- Row 4: Model info (conditional) -->
+        <!-- Row 4: Model info (real) -->
         <TextBlock x:Name="ModelInfoText"
                    Style="{ThemeResource CaptionTextBlockStyle}"
                    Opacity="0.45"
                    FontSize="11"
-                   Visibility="Collapsed" />
-
-        <!-- Row 4b: Model availability warning -->
-        <TextBlock x:Name="ModelWarningText"
-                   Style="{ThemeResource CaptionTextBlockStyle}"
-                   FontSize="11"
-                   Foreground="{ThemeResource SystemFillColorCautionBrush}"
-                   TextWrapping="Wrap"
-                   Visibility="Collapsed" />
+                   Visibility="{x:Bind IsLoading, Converter={StaticResource InverseBooleanToVisibilityConverter}, Mode=OneWay}" />
+        <!-- Row 4 shimmer -->
+        <local:Shimmer Height="12" Width="320" HorizontalAlignment="Left"
+                       Visibility="{x:Bind IsLoading, Converter={StaticResource BooleanToVisibilityConverter}, Mode=OneWay}" />
 
         <!-- Change summary (shown after check_changes, idle only) -->
         <TextBlock x:Name="ChangeSummaryText"
@@ -69,9 +77,11 @@
 
             <Button x:Name="StopButton" Grid.Column="1"
                     Style="{ThemeResource SubtleButtonStyle}"
-                    Padding="6"
-                    Margin="8,0,0,0"
+                    Padding="6" Margin="8,0,0,0"
                     Click="StopButton_Click">
+                <ToolTipService.ToolTip>
+                    <ToolTip x:Uid="KbCard_StopButtonTip" Placement="Mouse"/>
+                </ToolTipService.ToolTip>
                 <FontIcon Glyph="&#xE71A;" FontSize="14" />
             </Button>
         </Grid>
@@ -86,22 +96,24 @@
             </Grid.ColumnDefinitions>
 
             <Button x:Name="IndexNowButton"
+                    x:Uid="KbCard_IndexNowButton"
                     Style="{ThemeResource SubtleButtonStyle}"
-                    Padding="8,4,8,4"
-                    FontSize="12"
+                    Padding="8,4,8,4" FontSize="12"
                     Click="IndexNowButton_Click" />
 
             <Button x:Name="CancelDeferredButton" Grid.Column="1"
+                    x:Uid="KbCard_CancelDeferredButton"
                     Style="{ThemeResource SubtleButtonStyle}"
-                    Padding="8,4,8,4"
-                    FontSize="12"
-                    Margin="8,0,0,0"
+                    Padding="8,4,8,4" FontSize="12" Margin="8,0,0,0"
                     Click="CancelDeferredButton_Click" />
 
             <Button x:Name="DeferredDeleteButton" Grid.Column="3"
                     Style="{ThemeResource SubtleButtonStyle}"
                     Padding="6"
                     Click="DeleteButton_Click">
+                <ToolTipService.ToolTip>
+                    <ToolTip x:Uid="KbCard_DeleteButtonTip" Placement="Mouse"/>
+                </ToolTipService.ToolTip>
                 <FontIcon Glyph="&#xE74D;" FontSize="14" />
             </Button>
         </Grid>
@@ -115,28 +127,56 @@
             </Grid.ColumnDefinitions>
 
             <Button x:Name="CheckChangesButton"
+                    x:Uid="KbCard_CheckChangesButton"
                     Style="{ThemeResource SubtleButtonStyle}"
-                    Padding="8,4,8,4"
-                    FontSize="12"
+                    Padding="8,4,8,4" FontSize="12"
                     Click="CheckChangesButton_Click" />
 
-            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+            <StackPanel x:Name="ActionIconsPanel"
+                        Grid.Column="2" Orientation="Horizontal" Spacing="8"
+                        Visibility="Collapsed">
                 <Button x:Name="SettingsButton"
                         Style="{ThemeResource SubtleButtonStyle}"
                         Padding="6"
                         Click="SettingsButton_Click">
+                    <ToolTipService.ToolTip>
+                        <ToolTip x:Uid="KbCard_SettingsButtonTip" Placement="Mouse"/>
+                    </ToolTipService.ToolTip>
                     <FontIcon Glyph="&#xE70F;" FontSize="14" />
                 </Button>
                 <Button x:Name="ReindexButton"
                         Style="{ThemeResource SubtleButtonStyle}"
-                        Padding="6"
-                        Click="ReindexButton_Click">
+                        Padding="6">
+                    <ToolTipService.ToolTip>
+                        <ToolTip x:Uid="KbCard_ReindexButtonTip" Placement="Mouse"/>
+                    </ToolTipService.ToolTip>
                     <FontIcon Glyph="&#xE72C;" FontSize="14" />
+                    <Button.Flyout>
+                        <MenuFlyout Placement="Bottom">
+                            <MenuFlyoutItem x:Name="ReindexNowItem"
+                                            x:Uid="KbCard_ReindexNowItem"
+                                            Click="OnReindexNowClicked">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE72C;" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem x:Name="ReindexDeferredItem"
+                                            x:Uid="KbCard_ReindexDeferredItem"
+                                            Click="OnReindexDeferredClicked">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE823;" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                        </MenuFlyout>
+                    </Button.Flyout>
                 </Button>
                 <Button x:Name="DeleteButton"
                         Style="{ThemeResource SubtleButtonStyle}"
                         Padding="6"
                         Click="DeleteButton_Click">
+                    <ToolTipService.ToolTip>
+                        <ToolTip x:Uid="KbCard_DeleteButtonTip" Placement="Mouse"/>
+                    </ToolTipService.ToolTip>
                     <FontIcon Glyph="&#xE74D;" FontSize="14" />
                 </Button>
             </StackPanel>
@@ -148,14 +188,19 @@
             <Rectangle Height="1"
                        Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
 
-            <!-- Shimmer placeholders during search -->
-            <StackPanel x:Name="MatchShimmerPanel" Visibility="Collapsed" Spacing="6"
-                        Margin="0,6,0,0" />
+            <!-- Shimmer placeholders shown while a search is in flight -->
+            <StackPanel Spacing="6" Margin="0,6,0,0"
+                        Visibility="{x:Bind IsSearching, Converter={StaticResource BooleanToVisibilityConverter}, Mode=OneWay}">
+                <local:Shimmer Height="14" Width="280" HorizontalAlignment="Left"/>
+                <local:Shimmer Height="14" Width="240" HorizontalAlignment="Left"/>
+                <local:Shimmer Height="14" Width="180" HorizontalAlignment="Left"/>
+            </StackPanel>
 
             <!-- "No matches" state -->
             <TextBlock x:Name="NoMatchText"
+                       x:Uid="KbCard_NoMatchText"
                        Visibility="Collapsed"
-                       Style="{ThemeResource CaptionTextBlockStyle}"
+                       Style="{ThemeResource DescriptionTextBlockStyle}"
                        Opacity="0.5"
                        Margin="0,4,0,0" />
 
