@@ -234,6 +234,14 @@ public static class BuiltInServerHelper
             InjectRagApiKeys(mcpConfig.EnvironmentVariables);
         }
 
+        // Essentials reads search API keys from environment variables.
+        // Inject from PasswordVault so the selected paid engine works.
+        if (serverKey == EssentialsKey)
+        {
+            mcpConfig.EnvironmentVariables ??= new Dictionary<string, string>();
+            InjectEssentialsApiKeys(mcpConfig.EnvironmentVariables);
+        }
+
         return mcpConfig;
     }
 
@@ -807,6 +815,27 @@ public static class BuiltInServerHelper
     public static bool? GetRequiresConfirmation(string toolName)
     {
         return !ReadOnlyToolNames.Contains(toolName);
+    }
+
+    /// <summary>
+    /// Injects search API keys from PasswordVault into a dictionary for the Essentials process.
+    /// Essentials v2.0.0+ reads keys from environment variables instead of PasswordVault directly.
+    /// </summary>
+    private static void InjectEssentialsApiKeys(IDictionary<string, string> envVars)
+    {
+        (string vaultKey, string envVarName)[] mappings =
+        [
+            ("FieldCure:Essentials:SerperApiKey", "SERPER_API_KEY"),
+            ("FieldCure:Essentials:SerpApiApiKey", "SERPAPI_API_KEY"),
+            ("FieldCure:Essentials:TavilyApiKey", "TAVILY_API_KEY"),
+        ];
+
+        foreach (var (vaultKey, envVar) in mappings)
+        {
+            var key = PasswordVaultHelper.ReadDirectCredential(vaultKey);
+            if (!string.IsNullOrEmpty(key))
+                envVars[envVar] = key;
+        }
     }
 
     /// <summary>
