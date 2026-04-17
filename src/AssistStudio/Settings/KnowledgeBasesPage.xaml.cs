@@ -639,6 +639,14 @@ public sealed partial class KnowledgeBasesPage : Page
 
                 if (App.Current is App app2)
                     app2.MainWindow?.DeferredThisSession.Add((kbId, kb.Name));
+
+                var item = _allItems.FirstOrDefault(i => i.Id == kbId);
+                if (item is not null)
+                {
+                    item.IsDeferredIndexing = true;
+                    item.StatusText = _loader.GetString("KB_StatusScheduled") ?? "Scheduled";
+                    item.StatusBrush = new SolidColorBrush(Microsoft.UI.Colors.DodgerBlue);
+                }
             }
             else
             {
