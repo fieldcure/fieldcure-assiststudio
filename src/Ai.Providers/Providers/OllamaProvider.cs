@@ -24,6 +24,12 @@ public partial class OllamaProvider : IAiProvider, IDisposable
     /// <summary>Whether this instance owns (and should dispose) the HTTP client.</summary>
     private readonly bool _ownsHttpClient;
 
+    /// <summary>Duration to keep the model loaded in VRAM (Go duration format).</summary>
+    private readonly string _keepAlive;
+
+    /// <summary>Context window size in tokens.</summary>
+    private readonly int _numCtx;
+
     #endregion
 
     #region Properties
@@ -57,8 +63,9 @@ public partial class OllamaProvider : IAiProvider, IDisposable
     /// Initializes a new <see cref="OllamaProvider"/> with an internally managed <see cref="HttpClient"/>.
     /// </summary>
     public OllamaProvider(string model = "llama3.1", string baseUrl = "http://localhost:11434",
-        PdfCapability pdfCapability = PdfCapability.TextExtraction)
-        : this(new HttpClient(), model, baseUrl, ownsHttpClient: true, pdfCapability)
+        PdfCapability pdfCapability = PdfCapability.TextExtraction,
+        string keepAlive = "5m", int numCtx = 8192)
+        : this(new HttpClient(), model, baseUrl, ownsHttpClient: true, pdfCapability, keepAlive, numCtx)
     {
     }
 
@@ -75,11 +82,13 @@ public partial class OllamaProvider : IAiProvider, IDisposable
     /// Internal constructor that captures all dependencies.
     /// </summary>
     private OllamaProvider(HttpClient httpClient, string model, string baseUrl, bool ownsHttpClient,
-        PdfCapability pdfCapability)
+        PdfCapability pdfCapability, string keepAlive = "30m", int numCtx = 8192)
     {
         _httpClient = httpClient;
         _ownsHttpClient = ownsHttpClient;
         _baseUrl = baseUrl.TrimEnd('/');
+        _keepAlive = keepAlive;
+        _numCtx = numCtx;
         ModelId = model;
         PdfCapability = pdfCapability;
     }
@@ -433,10 +442,12 @@ public partial class OllamaProvider : IAiProvider, IDisposable
             ["model"] = ModelId,
             ["messages"] = messages,
             ["stream"] = stream,
+            ["keep_alive"] = _keepAlive,
             ["options"] = new JsonObject
             {
                 ["temperature"] = request.Temperature,
-                ["num_predict"] = request.MaxTokens
+                ["num_predict"] = request.MaxTokens,
+                ["num_ctx"] = _numCtx
             }
         };
 

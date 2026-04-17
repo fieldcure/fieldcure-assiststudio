@@ -111,6 +111,18 @@
                    SpinButtonPlacementMode="Inline"
                    SmallChange="1024" LargeChange="4096"
                    ValueChanged="OnMaxTokensChanged" />
+        <NumberBox x:Name="NumCtxBox"
+                   Header="Context window (tokens)"
+                   ToolTipService.ToolTip="Maximum context size the model will use. Ollama's default (2048) is too small for RAG. Check your model's supported max."
+                   Value="8192" Minimum="512" Maximum="131072"
+                   SpinButtonPlacementMode="Inline"
+                   SmallChange="1024" LargeChange="4096"
+                   ValueChanged="OnNumCtxChanged" />
+        <TextBox x:Name="KeepAliveBox"
+                 Header="Keep model loaded"
+                 ToolTipService.ToolTip="Duration to retain the model in VRAM after last use. Prevents cold-start delays. Use '-1' for permanent, '0' for immediate unload."
+                 PlaceholderText="5m"
+                 TextChanged="OnKeepAliveChanged" />
         <StackPanel Spacing="4">
             <TextBlock x:Uid="Models_PdfHandling" Text="PDF handling" FontSize="12" Opacity="0.7" />
             <ComboBox x:Name="PdfCombo"

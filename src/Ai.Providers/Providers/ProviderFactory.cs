@@ -66,8 +66,12 @@ public static class ProviderFactory
                 ? new OpenAiProvider(apiKey, pdfCapability: pdfCap)
                 : new OpenAiProvider(apiKey, model, pdfCapability: pdfCap),
             "Ollama" => string.IsNullOrEmpty(model)
-                ? new OllamaProvider(baseUrl: preset.BaseUrl ?? "http://localhost:11434", pdfCapability: pdfCap)
-                : new OllamaProvider(model, baseUrl: preset.BaseUrl ?? "http://localhost:11434", pdfCapability: pdfCap),
+                ? new OllamaProvider(
+                    baseUrl: preset.BaseUrl ?? "http://localhost:11434", pdfCapability: pdfCap,
+                    keepAlive: preset.KeepAlive ?? "5m", numCtx: preset.NumCtx ?? 8192)
+                : new OllamaProvider(
+                    model, baseUrl: preset.BaseUrl ?? "http://localhost:11434", pdfCapability: pdfCap,
+                    keepAlive: preset.KeepAlive ?? "5m", numCtx: preset.NumCtx ?? 8192),
             "Gemini" => string.IsNullOrEmpty(model)
                 ? new GeminiProvider(apiKey)
                 : new GeminiProvider(apiKey, model),

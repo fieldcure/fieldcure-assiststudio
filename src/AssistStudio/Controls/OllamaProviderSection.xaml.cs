@@ -81,6 +81,7 @@ public sealed partial class OllamaProviderSection : UserControl
             // Ollama has no fallback models — combo populated by LoadOllamaModelsAsync
             PopulatePdfCombo();
             PopulateMaxTokens();
+            PopulateOllamaOptions();
             PopulateThinkingToggle();
             UpdateThinkingState();
         }
@@ -487,6 +488,16 @@ public sealed partial class OllamaProviderSection : UserControl
             MaxTokensBox.Value = preset.MaxTokens;
     }
 
+    private void PopulateOllamaOptions()
+    {
+        var preset = FindPreset();
+        if (preset is not null)
+        {
+            NumCtxBox.Value = preset.NumCtx ?? 8192;
+            KeepAliveBox.Text = preset.KeepAlive ?? "5m";
+        }
+    }
+
     private void PopulateThinkingToggle()
     {
         ThinkingOverrideCombo.Items.Clear();
@@ -529,6 +540,27 @@ public sealed partial class OllamaProviderSection : UserControl
         var preset = FindPreset();
         if (preset is not null)
             preset.MaxTokens = (int)args.NewValue;
+        PersistPresets();
+    }
+
+    private void OnNumCtxChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+    {
+        if (_isPopulating || double.IsNaN(args.NewValue)) return;
+        var preset = FindPreset();
+        if (preset is not null)
+            preset.NumCtx = (int)args.NewValue;
+        PersistPresets();
+    }
+
+    private void OnKeepAliveChanged(object sender, TextChangedEventArgs args)
+    {
+        if (_isPopulating) return;
+        var preset = FindPreset();
+        if (preset is not null)
+        {
+            var text = KeepAliveBox.Text.Trim();
+            preset.KeepAlive = string.IsNullOrEmpty(text) ? null : text;
+        }
         PersistPresets();
     }
 

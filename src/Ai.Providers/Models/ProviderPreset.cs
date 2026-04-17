@@ -108,6 +108,19 @@ public partial class ProviderPreset : INotifyPropertyChanged
     public ThinkingOverride ThinkingOverride { get; set; } = ThinkingOverride.Auto;
 
     /// <summary>
+    /// Ollama-specific: duration to keep the model loaded in VRAM after the last request.
+    /// Go duration format ("30m", "1h", "-1" for permanent, "0" for immediate unload).
+    /// Null = Ollama built-in default (5m). Ignored for non-Ollama providers.
+    /// </summary>
+    public string? KeepAlive { get; set; }
+
+    /// <summary>
+    /// Ollama-specific: context window size in tokens.
+    /// Null = default 8192. Ignored for non-Ollama providers.
+    /// </summary>
+    public int? NumCtx { get; set; }
+
+    /// <summary>
     /// Whether this provider type requires an API key.
     /// </summary>
     [JsonIgnore]
