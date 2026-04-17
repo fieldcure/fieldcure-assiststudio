@@ -221,10 +221,17 @@ public static class BuiltInServerHelper
         }
 
         // Load environment variables from PasswordVault for built-in servers
-        // (RAG no longer uses env vars — config.json + PasswordVault presets instead)
-        if (serverKey != RagKey && config.EnvironmentVariableKeys is { Count: > 0 } keys)
+        if (config.EnvironmentVariableKeys is { Count: > 0 } keys)
         {
             mcpConfig.EnvironmentVariables = PasswordVaultHelper.LoadMcpEnvVars(mcpConfig.Id, keys);
+        }
+
+        // RAG reads API keys from environment variables (no longer from PasswordVault directly).
+        // Inject all known provider keys so any KB config can resolve its apiKeyPreset.
+        if (serverKey == RagKey)
+        {
+            mcpConfig.EnvironmentVariables ??= new Dictionary<string, string>();
+            InjectRagApiKeys(mcpConfig.EnvironmentVariables);
         }
 
         return mcpConfig;
@@ -800,6 +807,30 @@ public static class BuiltInServerHelper
     public static bool? GetRequiresConfirmation(string toolName)
     {
         return !ReadOnlyToolNames.Contains(toolName);
+    }
+
+    /// <summary>
+    /// Injects API keys from PasswordVault into a dictionary for the RAG process.
+    /// The RAG process resolves keys via environment variables instead of
+    /// accessing PasswordVault directly, keeping it platform-agnostic.
+    /// </summary>
+    private static void InjectRagApiKeys(IDictionary<string, string> envVars)
+    {
+        (string presetName, string envVarName)[] mappings =
+        [
+            ("OpenAI", "OPENAI_API_KEY"),
+            ("Claude", "ANTHROPIC_API_KEY"),
+            ("Gemini", "GEMINI_API_KEY"),
+            ("Voyage", "VOYAGE_API_KEY"),
+            ("Groq", "GROQ_API_KEY"),
+        ];
+
+        foreach (var (preset, envVar) in mappings)
+        {
+            var key = PasswordVaultHelper.LoadApiKey(preset);
+            if (!string.IsNullOrEmpty(key))
+                envVars[envVar] = key;
+        }
     }
 
     /// <summary>

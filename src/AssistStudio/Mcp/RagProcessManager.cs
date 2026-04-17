@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using AssistStudio.Helpers;
 
+#pragma warning disable CA1416 // PasswordVaultHelper uses Windows PasswordVault — AssistStudio is Windows-only
+
 namespace AssistStudio.Mcp;
 
 /// <summary>
@@ -70,13 +72,15 @@ public static class RagProcessManager
 
         try
         {
-            Process.Start(new ProcessStartInfo
+            var psi = new ProcessStartInfo
             {
                 FileName = exePath,
                 Arguments = args,
                 CreateNoWindow = true,
                 UseShellExecute = false,
-            });
+            };
+            InjectApiKeys(psi);
+            Process.Start(psi);
         }
         catch (Exception ex)
         {
@@ -114,6 +118,30 @@ public static class RagProcessManager
         catch (Exception ex)
         {
             LoggingService.LogError($"[RAG] Failed to start prune-orphans: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Injects API keys from AssistStudio's PasswordVault into the child process
+    /// environment. The RAG process reads these via <c>Environment.GetEnvironmentVariable</c>
+    /// instead of accessing PasswordVault directly, keeping it platform-agnostic.
+    /// </summary>
+    private static void InjectApiKeys(ProcessStartInfo psi)
+    {
+        (string presetName, string envVarName)[] mappings =
+        [
+            ("OpenAI", "OPENAI_API_KEY"),
+            ("Claude", "ANTHROPIC_API_KEY"),
+            ("Gemini", "GEMINI_API_KEY"),
+            ("Voyage", "VOYAGE_API_KEY"),
+            ("Groq", "GROQ_API_KEY"),
+        ];
+
+        foreach (var (preset, envVar) in mappings)
+        {
+            var key = PasswordVaultHelper.LoadApiKey(preset);
+            if (!string.IsNullOrEmpty(key))
+                psi.Environment[envVar] = key;
         }
     }
 }
