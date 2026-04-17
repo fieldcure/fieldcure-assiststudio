@@ -20,7 +20,7 @@ namespace AssistStudio.Helpers;
 public sealed class AuxiliaryProviderResolver : IAuxiliaryProviderResolver
 {
     /// <summary>Validation timeout for auxiliary providers.</summary>
-    static readonly TimeSpan ValidationTimeout = TimeSpan.FromSeconds(2);
+    static readonly TimeSpan ValidationTimeout = TimeSpan.FromSeconds(5);
 
     readonly Func<IList> _getAvailablePresets;
 
@@ -58,6 +58,20 @@ public sealed class AuxiliaryProviderResolver : IAuxiliaryProviderResolver
             foreach (var obj in presets)
             {
                 if (obj is ProviderPreset p && p.Name == requestedPresetName)
+                {
+                    preset = p;
+                    break;
+                }
+            }
+        }
+
+        if (preset is null)
+        {
+            // Fallback: check full (unfiltered) preset list in case the filtered
+            // list excluded the preset due to a reachability race condition.
+            foreach (var p in AppSettings.LoadPresets())
+            {
+                if (p.Name == requestedPresetName)
                 {
                     preset = p;
                     break;

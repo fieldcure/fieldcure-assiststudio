@@ -141,8 +141,8 @@ public sealed partial class ChatPanel
             };
 
             var titleResponse = await provider.CompleteAsync(titleRequest);
-            var title = (titleResponse.Content ?? "").Trim().Trim('"', '\'', '.').Trim();
-            if (string.IsNullOrEmpty(title))
+            var title = SanitizeTitle(titleResponse.Content);
+            if (string.IsNullOrEmpty(title) || title == "Untitled")
             {
                 title = userMsg.Content.Length > 40
                     ? userMsg.Content[..40].TrimEnd() + "\u2026"
@@ -161,6 +161,44 @@ public sealed partial class ChatPanel
                 : userMsg.Content;
             DispatcherQueue.TryEnqueue(() => TitleGenerated?.Invoke(this, fallback));
         }
+    }
+
+    /// <summary>
+    /// Extracts a clean single-line title from an LLM response.
+    /// Small models occasionally include extra content (markdown separators,
+    /// "Title:" prefixes, explanations) despite prompt instructions.
+    /// </summary>
+    private static string SanitizeTitle(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return "Untitled";
+
+        var firstLine = raw
+            .Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries)
+            .Select(l => l.Trim())
+            .FirstOrDefault(l =>
+                l.Length > 0 &&
+                !l.StartsWith("---") &&
+                !l.StartsWith("```"));
+
+        if (string.IsNullOrWhiteSpace(firstLine)) return "Untitled";
+
+        firstLine = firstLine.Trim('*', '_', '`', '#', ' ', '"', '\'', '.');
+
+        string[] prefixes = ["Title:", "title:", "제목:", "Subject:"];
+        foreach (var prefix in prefixes)
+        {
+            if (firstLine.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                firstLine = firstLine[prefix.Length..].Trim().Trim('*', '_', '"', '\'', '.');
+                break;
+            }
+        }
+
+        const int maxLength = 100;
+        if (firstLine.Length > maxLength)
+            firstLine = firstLine[..maxLength].TrimEnd() + "\u2026";
+
+        return string.IsNullOrWhiteSpace(firstLine) ? "Untitled" : firstLine;
     }
 
     /// <summary>
