@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 using AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
 
@@ -96,7 +97,11 @@ public static class ExternalDotnetToolUpdater
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8,
             };
+            psi.Environment["DOTNET_CLI_UI_LANGUAGE"] = "en";
+            psi.Environment["NO_COLOR"] = "1";
 
             using var proc = Process.Start(psi);
             if (proc is null) return map;
@@ -155,7 +160,11 @@ public static class ExternalDotnetToolUpdater
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8,
             };
+            psi.Environment["DOTNET_CLI_UI_LANGUAGE"] = "en";
+            psi.Environment["NO_COLOR"] = "1";
 
             using var proc = Process.Start(psi);
             if (proc is null) return;

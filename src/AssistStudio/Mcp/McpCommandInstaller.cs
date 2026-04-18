@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Text;
+using System.Text.RegularExpressions;
 using AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml;
@@ -117,11 +119,20 @@ public static class McpCommandInstaller
     /// returning <c>true</c> on success (caller continues the connection attempt).
     /// </summary>
     /// <remarks>
+    /// <para>
     /// The heuristic passes the command name as the NuGet package ID. This works for
-    /// packages that follow the "package id == tool command" convention, and fails
-    /// cleanly with a user-visible error for those that don't — the user can then
-    /// install manually with the correct package ID. We intentionally do not attempt
-    /// NuGet search or ambiguous-match resolution here to keep the flow predictable.
+    /// packages that follow the "package id == tool command" convention. For packages
+    /// where they differ (e.g. <c>FieldCure.Mcp.PublicData.Kr</c> has command
+    /// <c>fieldcure-mcp-publicdata-kr</c>), the user can enter the package ID and this
+    /// helper detects that the install succeeded but produced a different command name,
+    /// and surfaces a "mismatch" dialog pointing at the actual command.
+    /// </para>
+    /// <para>
+    /// <c>dotnet</c> CLI output is forced to English via <c>DOTNET_CLI_UI_LANGUAGE=en</c>
+    /// and UTF-8 via explicit stream encoding so we can reliably parse the "You can
+    /// invoke the tool…" line and so non-ASCII locale output does not end up mojibake
+    /// in the error dialog.
+    /// </para>
     /// </remarks>
     private static async Task<bool> InstallDotnetToolAsync(
         string command,
@@ -166,7 +177,15 @@ public static class McpCommandInstaller
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8,
             };
+            // Force English + UTF-8 CLI output so we can parse reliably and the error
+            // dialog never shows CP949/CP1252 mojibake when the user's system locale
+            // is non-English.
+            psi.Environment["DOTNET_CLI_UI_LANGUAGE"] = "en";
+            psi.Environment["NO_COLOR"] = "1";
+
             using var proc = Process.Start(psi);
             if (proc is not null)
             {
@@ -188,10 +207,39 @@ public static class McpCommandInstaller
             progressDialog.Hide();
         }
 
-        if (exitCode == 0 && await IsCommandOnPathAsync(command))
+        if (exitCode == 0)
         {
-            LoggingService.LogInfo($"[MCP] dotnet tool installed: {command}");
-            return true;
+            if (await IsCommandOnPathAsync(command))
+            {
+                LoggingService.LogInfo($"[MCP] dotnet tool installed: {command}");
+                return true;
+            }
+
+            // Install reported success but our command isn't on PATH. This usually means
+            // the user entered the NuGet package id, and the actual tool command differs
+            // (common for dotted package names). Parse the "You can invoke the tool…"
+            // line and tell the user which command to configure.
+            var actualCommand = ExtractInstalledCommand(stdout);
+            if (!string.IsNullOrEmpty(actualCommand)
+                && !actualCommand.Equals(command, StringComparison.OrdinalIgnoreCase)
+                && await IsCommandOnPathAsync(actualCommand))
+            {
+                LoggingService.LogWarning(
+                    $"[MCP] Install succeeded but command differs: entered='{command}', actual='{actualCommand}'");
+
+                var mismatchDialog = new ContentDialog
+                {
+                    Title = loader.GetString("Connect_InstallMismatchTitle"),
+                    Content = string.Format(
+                        loader.GetString("Connect_InstallMismatchMessage"),
+                        command,
+                        actualCommand),
+                    CloseButtonText = loader.GetString("Connect_InstallClose"),
+                    XamlRoot = xamlRoot,
+                };
+                await mismatchDialog.ShowAsync();
+                return false;
+            }
         }
 
         // Prefer stderr if present, fall back to stdout for CLI that report to stdout.
@@ -209,5 +257,20 @@ public static class McpCommandInstaller
         };
         await errorDialog.ShowAsync();
         return false;
+    }
+
+    /// <summary>
+    /// Pulls the tool command name out of <c>dotnet tool install</c>'s stdout.
+    /// Relies on the English output "You can invoke the tool using the following
+    /// command: &lt;cmd&gt;" (forced via <c>DOTNET_CLI_UI_LANGUAGE=en</c>).
+    /// </summary>
+    private static string? ExtractInstalledCommand(string stdout)
+    {
+        if (string.IsNullOrWhiteSpace(stdout)) return null;
+        var match = Regex.Match(
+            stdout,
+            @"following command:\s*(?<cmd>\S+)",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        return match.Success ? match.Groups["cmd"].Value : null;
     }
 }

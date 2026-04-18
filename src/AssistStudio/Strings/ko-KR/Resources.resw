@@ -955,6 +955,12 @@
   <data name="Connect_InstallClose" xml:space="preserve">
     <value>닫기</value>
   </data>
+  <data name="Connect_InstallMismatchTitle" xml:space="preserve">
+    <value>명령어 이름 불일치</value>
+  </data>
+  <data name="Connect_InstallMismatchMessage" xml:space="preserve">
+    <value>.NET 도구는 설치되었지만, 등록된 명령어는 '{0}'이(가) 아닌 '{1}'입니다. 서버 편집에서 명령어 필드를 '{1}'(으)로 수정한 뒤 다시 연결하세요.</value>
+  </data>
   <data name="BuiltIn_InstallSuccess" xml:space="preserve">
     <value>{0} v{1} 설치 완료</value>
   </data>
