@@ -188,7 +188,7 @@ public sealed partial class McpServerCard : UserControl
 
         if (!string.IsNullOrEmpty(version))
         {
-            VersionText.Text = $"v{version}";
+            VersionText.Text = $"v{StripBuildMetadata(version)}";
             VersionText.Visibility = Visibility.Visible;
         }
         else
@@ -249,6 +249,20 @@ public sealed partial class McpServerCard : UserControl
     {
         if (Connection is not null)
             DeleteRequested?.Invoke(this, Connection);
+    }
+
+    /// <summary>
+    /// Strips the SemVer 2.0 build-metadata suffix (<c>+&lt;sha&gt;</c>) that the
+    /// .NET SDK may auto-append to an MCP server's reported version. The commit
+    /// hash is diagnostic noise for end users. Well-behaved servers should already
+    /// strip this before sending, but we defend defensively here so badly-behaved
+    /// or third-party servers still render cleanly in the card.
+    /// </summary>
+    private static string StripBuildMetadata(string version)
+    {
+        if (string.IsNullOrEmpty(version)) return version;
+        var plus = version.IndexOf('+');
+        return plus > 0 ? version[..plus] : version;
     }
 
     #endregion
