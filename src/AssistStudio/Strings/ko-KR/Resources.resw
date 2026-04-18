@@ -921,7 +921,7 @@
     <value>활성 인스턴스 {0}개</value>
   </data>
   <data name="Connect_CommandHint" xml:space="preserve">
-    <value>패키지 러너(npx, uvx)나 실행 파일 경로를 사용하세요. NuGet .NET 도구는 처음 사용 시 자동으로 설치됩니다. dotnet run, cargo run 같은 빌드 래퍼는 매 시작이 5–10초 느려집니다.</value>
+    <value>도구 명령어(예: npx, uvx, 또는 NuGet .NET 도구 명령어)를 입력하세요. .NET 도구는 첫 사용 시 자동 설치되며 NuGet 패키지명은 별도로 입력받습니다. dotnet run, cargo run 같은 빌드 래퍼는 매 시작이 5–10초 느려집니다.</value>
   </data>
   <data name="Connect_BuiltInDuplicate" xml:space="preserve">
     <value>이 서버는 이미 내장 서버로 관리되고 있습니다.</value>
@@ -929,8 +929,11 @@
   <data name="Connect_InstallTitle" xml:space="preserve">
     <value>'{0}'을(를) 찾을 수 없습니다</value>
   </data>
-  <data name="Connect_InstallMessage" xml:space="preserve">
-    <value>명령어 '{0}'이(가) PATH에 없습니다. .NET 전역 도구로 설치를 시도할까요?</value>
+  <data name="Connect_InstallPackagePrompt" xml:space="preserve">
+    <value>.NET 전역 도구로 설치할 NuGet 패키지명을 입력하세요. (패키지명은 명령어와 다른 경우가 많습니다. 예: 명령어 'fieldcure-mcp-publicdata-kr'은 'FieldCure.Mcp.PublicData.Kr' 패키지에서 제공됩니다.)</value>
+  </data>
+  <data name="Connect_InstallPackagePlaceholder" xml:space="preserve">
+    <value>NuGet 패키지명</value>
   </data>
   <data name="Connect_InstallPrimary" xml:space="preserve">
     <value>설치</value>
@@ -948,18 +951,18 @@
     <value>설치 실패</value>
   </data>
   <data name="Connect_InstallFailedMessage" xml:space="preserve">
-    <value>'{0}'을(를) .NET 도구로 설치하지 못했습니다. 명령어 이름과 NuGet 패키지 ID가 다를 수 있으니 확인하세요.
+    <value>NuGet 패키지 '{0}'을(를) .NET 도구로 설치하지 못했습니다.
 
 {1}</value>
   </data>
+  <data name="Connect_InstallWrongPackageTitle" xml:space="preserve">
+    <value>패키지가 이 명령어를 제공하지 않습니다</value>
+  </data>
+  <data name="Connect_InstallWrongPackageMessage" xml:space="preserve">
+    <value>'{1}' 패키지는 성공적으로 설치됐지만 '{0}' 명령어를 제공하지 않습니다. 이 도구의 올바른 NuGet 패키지명을 다시 확인하세요.</value>
+  </data>
   <data name="Connect_InstallClose" xml:space="preserve">
     <value>닫기</value>
-  </data>
-  <data name="Connect_InstallMismatchTitle" xml:space="preserve">
-    <value>명령어 자동 교정</value>
-  </data>
-  <data name="Connect_InstallMismatchMessage" xml:space="preserve">
-    <value>'{0}'을(를) .NET 도구로 설치했고, 실제 명령어는 '{1}'입니다. 서버 설정의 명령어 필드가 자동으로 갱신되었습니다.</value>
   </data>
   <data name="BuiltIn_InstallSuccess" xml:space="preserve">
     <value>{0} v{1} 설치 완료</value>

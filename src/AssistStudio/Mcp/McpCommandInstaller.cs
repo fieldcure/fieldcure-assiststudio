@@ -11,7 +11,9 @@ namespace AssistStudio.Mcp;
 /// <summary>
 /// Pre-flight check for MCP stdio server commands. If the configured command is not
 /// resolvable on PATH (and is not a known package runner such as npx/uvx), offers to
-/// install it as a .NET global tool via <c>dotnet tool install -g</c>.
+/// install it as a .NET global tool via <c>dotnet tool install -g</c>. The install
+/// dialog asks for the NuGet package id separately — the server's <c>Command</c> field
+/// always holds the tool command name, never the package id.
 /// </summary>
 /// <remarks>
 /// Motivation: unlike <c>npx</c>/<c>uvx</c>, <c>dotnet</c> tools do not auto-install on
@@ -37,9 +39,14 @@ public static class McpCommandInstaller
     /// <summary>
     /// Returns <c>true</c> if the server's command is ready to launch — either it was
     /// already resolvable, or the user accepted and completed an installation. Returns
-    /// <c>false</c> if the user declined, or the installation failed.
+    /// <c>false</c> if the user declined, the installation failed, or the install
+    /// succeeded but did not produce the expected command on PATH (wrong package id).
     /// </summary>
-    /// <param name="config">The MCP server configuration to check.</param>
+    /// <param name="config">
+    /// The MCP server configuration to check. Its <see cref="McpServerConfig.Command"/>
+    /// is treated as the tool command name (never a package id) and is never mutated
+    /// by this helper.
+    /// </param>
     /// <param name="xamlRoot">
     /// Host <see cref="XamlRoot"/> used to present dialogs. May be <c>null</c> for
     /// background reconnect paths; in that case the check skips dialogs and just reports
@@ -66,10 +73,35 @@ public static class McpCommandInstaller
         if (xamlRoot is null) return false;
 
         var loader = new ResourceLoader();
+
+        // Build the install prompt. The dialog carries a TextBox so the user can supply
+        // the NuGet package id, which often differs from the tool command name (e.g.
+        // command `fieldcure-mcp-publicdata-kr` vs package `FieldCure.Mcp.PublicData.Kr`).
+        // We pre-seed it with the entered command as a best-effort default; user can
+        // overwrite before clicking Install.
+        var packageBox = new TextBox
+        {
+            Text = command,
+            PlaceholderText = loader.GetString("Connect_InstallPackagePlaceholder"),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+        };
+
         var installDialog = new ContentDialog
         {
             Title = string.Format(loader.GetString("Connect_InstallTitle"), command),
-            Content = string.Format(loader.GetString("Connect_InstallMessage"), command),
+            Content = new StackPanel
+            {
+                Spacing = 10,
+                Children =
+                {
+                    new TextBlock
+                    {
+                        Text = loader.GetString("Connect_InstallPackagePrompt"),
+                        TextWrapping = TextWrapping.Wrap,
+                    },
+                    packageBox,
+                },
+            },
             PrimaryButtonText = loader.GetString("Connect_InstallPrimary"),
             CloseButtonText = loader.GetString("Connect_InstallCancel"),
             DefaultButton = ContentDialogButton.Primary,
@@ -79,7 +111,10 @@ public static class McpCommandInstaller
         var choice = await installDialog.ShowAsync();
         if (choice != ContentDialogResult.Primary) return false;
 
-        return await InstallDotnetToolAsync(config, command, xamlRoot, loader);
+        var packageId = packageBox.Text?.Trim();
+        if (string.IsNullOrEmpty(packageId)) return false;
+
+        return await InstallDotnetToolAsync(command, packageId, xamlRoot, loader);
     }
 
     /// <summary>
@@ -112,19 +147,10 @@ public static class McpCommandInstaller
     }
 
     /// <summary>
-    /// Runs <c>dotnet tool install -g &lt;input&gt;</c> where <paramref name="input"/>
-    /// is whatever the user typed in the Command field. On success:
-    /// <list type="bullet">
-    /// <item>If the same string resolves on PATH, returns <c>true</c> unchanged.</item>
-    /// <item>Otherwise consults <c>dotnet tool list -g</c> to find the actual tool
-    /// command (handles the case where the user entered the package id instead of the
-    /// command). If a match is found, <paramref name="config"/>.<c>Command</c> is
-    /// rewritten to the real command, a notification informs the user of the correction,
-    /// and <c>true</c> is returned. Callers should persist the config after this helper
-    /// returns <c>true</c> since <c>Command</c> may have changed.</item>
-    /// </list>
-    /// On failure (exit code non-zero, or success but no resolvable command anywhere),
-    /// an error dialog is shown and <c>false</c> is returned.
+    /// Runs <c>dotnet tool install -g &lt;packageId&gt;</c> and verifies that
+    /// <paramref name="expectedCommand"/> becomes resolvable afterwards. The command
+    /// and package id are intentionally separate: the server config's <c>Command</c>
+    /// always names the tool command, while the package id is entered at install time.
     /// </summary>
     /// <remarks>
     /// <c>dotnet</c> CLI output is forced to English via <c>DOTNET_CLI_UI_LANGUAGE=en</c>
@@ -132,12 +158,13 @@ public static class McpCommandInstaller
     /// mojibake in the error dialog.
     /// </remarks>
     private static async Task<bool> InstallDotnetToolAsync(
-        McpServerConfig config,
-        string input,
+        string expectedCommand,
+        string packageId,
         XamlRoot xamlRoot,
         ResourceLoader loader)
     {
-        LoggingService.LogInfo($"[MCP] Installing dotnet tool: {input}");
+        LoggingService.LogInfo(
+            $"[MCP] Installing dotnet tool: package='{packageId}', expecting command='{expectedCommand}'");
 
         var progressDialog = new ContentDialog
         {
@@ -149,7 +176,7 @@ public static class McpCommandInstaller
                 {
                     new TextBlock
                     {
-                        Text = string.Format(loader.GetString("Connect_InstallingMessage"), input),
+                        Text = string.Format(loader.GetString("Connect_InstallingMessage"), packageId),
                         TextWrapping = TextWrapping.Wrap,
                     },
                     new ProgressBar { IsIndeterminate = true },
@@ -170,7 +197,7 @@ public static class McpCommandInstaller
             var psi = new ProcessStartInfo
             {
                 FileName = "dotnet",
-                Arguments = $"tool install -g {input}",
+                Arguments = $"tool install -g {packageId}",
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
@@ -197,80 +224,56 @@ public static class McpCommandInstaller
         catch (Exception ex)
         {
             stderr = ex.Message;
-            LoggingService.LogError($"[MCP] dotnet tool install failed for '{input}': {ex}");
+            LoggingService.LogError($"[MCP] dotnet tool install failed for '{packageId}': {ex}");
         }
         finally
         {
             progressDialog.Hide();
         }
 
-        if (exitCode == 0)
+        if (exitCode == 0 && await IsCommandOnPathAsync(expectedCommand))
         {
-            if (await IsCommandOnPathAsync(input))
-            {
-                LoggingService.LogInfo($"[MCP] dotnet tool installed: {input}");
-                return true;
-            }
-
-            // Install reported success but our command isn't on PATH. The user likely
-            // entered the NuGet package id (e.g. "FieldCure.Mcp.PublicData.Kr") whose
-            // actual tool command has a different shape ("fieldcure-mcp-publicdata-kr").
-            // Resolve the real command from `dotnet tool list -g` and auto-correct the
-            // server config so the user doesn't have to edit Command manually.
-            var actualCommand = await ResolveActualCommandAsync(input);
-            if (!string.IsNullOrEmpty(actualCommand)
-                && !actualCommand.Equals(input, StringComparison.OrdinalIgnoreCase)
-                && await IsCommandOnPathAsync(actualCommand))
-            {
-                LoggingService.LogInfo(
-                    $"[MCP] Auto-correcting command for '{config.Name}': '{input}' → '{actualCommand}'");
-                config.Command = actualCommand;
-
-                NotificationCenter.Instance.Post(
-                    InfoBarSeverity.Informational,
-                    loader.GetString("Connect_InstallMismatchTitle"),
-                    string.Format(loader.GetString("Connect_InstallMismatchMessage"), input, actualCommand),
-                    6000);
-
-                return true;
-            }
+            LoggingService.LogInfo(
+                $"[MCP] dotnet tool installed: package='{packageId}', command='{expectedCommand}'");
+            return true;
         }
 
-        // Prefer stderr if present, fall back to stdout for CLI that report to stdout.
+        // Two failure shapes, different messaging for the user:
+        //   (a) install failed outright (exit != 0) → show stderr detail
+        //   (b) install succeeded but the expected command still isn't on PATH
+        //       → the package id the user entered is wrong for this command
         var detail = !string.IsNullOrWhiteSpace(stderr) ? stderr.Trim() : stdout.Trim();
         LoggingService.LogWarning(
-            $"[MCP] dotnet tool install did not produce a runnable '{input}' " +
-            $"(exit={exitCode}): {detail}");
+            $"[MCP] dotnet tool install did not produce a runnable '{expectedCommand}' " +
+            $"(package='{packageId}', exit={exitCode}): {detail}");
+
+        string title;
+        string message;
+        if (exitCode == 0)
+        {
+            title = loader.GetString("Connect_InstallWrongPackageTitle");
+            message = string.Format(
+                loader.GetString("Connect_InstallWrongPackageMessage"),
+                expectedCommand,
+                packageId);
+        }
+        else
+        {
+            title = loader.GetString("Connect_InstallFailedTitle");
+            message = string.Format(
+                loader.GetString("Connect_InstallFailedMessage"),
+                packageId,
+                detail);
+        }
 
         var errorDialog = new ContentDialog
         {
-            Title = loader.GetString("Connect_InstallFailedTitle"),
-            Content = string.Format(loader.GetString("Connect_InstallFailedMessage"), input, detail),
+            Title = title,
+            Content = message,
             CloseButtonText = loader.GetString("Connect_InstallClose"),
             XamlRoot = xamlRoot,
         };
         await errorDialog.ShowAsync();
         return false;
-    }
-
-    /// <summary>
-    /// Looks up the actual tool command corresponding to <paramref name="input"/> in the
-    /// global tool catalog. The input can be either a command name already (in which
-    /// case it is returned unchanged) or a NuGet package id (in which case we return the
-    /// first command declared by that package). Returns <c>null</c> if neither form
-    /// matches any installed global tool.
-    /// </summary>
-    private static async Task<string?> ResolveActualCommandAsync(string input)
-    {
-        var map = await ExternalDotnetToolUpdater.GetGlobalToolCommandMapAsync();
-        if (map.Count == 0) return null;
-
-        // Input is already a known command?
-        var asCommand = map.Keys.FirstOrDefault(c => c.Equals(input, StringComparison.OrdinalIgnoreCase));
-        if (asCommand is not null) return asCommand;
-
-        // Input looks like a package id — find the command(s) registered by that package.
-        var asPackage = map.FirstOrDefault(kv => kv.Value.Equals(input, StringComparison.OrdinalIgnoreCase));
-        return asPackage.Key; // null if no match (default KeyValuePair)
     }
 }

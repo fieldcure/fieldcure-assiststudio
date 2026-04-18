@@ -921,7 +921,7 @@
     <value>{0} active instance(s)</value>
   </data>
   <data name="Connect_CommandHint" xml:space="preserve">
-    <value>Use a package runner (npx, uvx) or path to an executable. NuGet .NET tools are auto-installed on first use. Build wrappers like dotnet run or cargo run add 5–10s to every startup.</value>
+    <value>Enter the tool command (e.g. npx, uvx, or a NuGet .NET tool command). .NET tools are installed on first use — you'll be asked for the NuGet package id separately. Avoid build wrappers like dotnet run or cargo run; they add 5–10s to every startup.</value>
   </data>
   <data name="Connect_BuiltInDuplicate" xml:space="preserve">
     <value>This server is already managed as a built-in server.</value>
@@ -929,8 +929,11 @@
   <data name="Connect_InstallTitle" xml:space="preserve">
     <value>'{0}' not found</value>
   </data>
-  <data name="Connect_InstallMessage" xml:space="preserve">
-    <value>The command '{0}' was not found on PATH. Try installing it as a .NET global tool?</value>
+  <data name="Connect_InstallPackagePrompt" xml:space="preserve">
+    <value>Enter the NuGet package id to install as a .NET global tool. (The package id often differs from the tool command; e.g. command 'fieldcure-mcp-publicdata-kr' comes from package 'FieldCure.Mcp.PublicData.Kr'.)</value>
+  </data>
+  <data name="Connect_InstallPackagePlaceholder" xml:space="preserve">
+    <value>NuGet package id</value>
   </data>
   <data name="Connect_InstallPrimary" xml:space="preserve">
     <value>Install</value>
@@ -948,18 +951,18 @@
     <value>Install failed</value>
   </data>
   <data name="Connect_InstallFailedMessage" xml:space="preserve">
-    <value>Could not install '{0}' as a .NET tool. Verify the command name or the NuGet package ID — they may differ.
+    <value>Could not install NuGet package '{0}' as a .NET tool.
 
 {1}</value>
   </data>
+  <data name="Connect_InstallWrongPackageTitle" xml:space="preserve">
+    <value>Package does not provide this command</value>
+  </data>
+  <data name="Connect_InstallWrongPackageMessage" xml:space="preserve">
+    <value>Package '{1}' was installed successfully, but it does not register a '{0}' command. Check the correct NuGet package id for this tool.</value>
+  </data>
   <data name="Connect_InstallClose" xml:space="preserve">
     <value>Close</value>
-  </data>
-  <data name="Connect_InstallMismatchTitle" xml:space="preserve">
-    <value>Command auto-corrected</value>
-  </data>
-  <data name="Connect_InstallMismatchMessage" xml:space="preserve">
-    <value>Installed '{0}' as a .NET tool; its actual command is '{1}', which has been saved to this server's configuration.</value>
   </data>
   <data name="BuiltIn_InstallSuccess" xml:space="preserve">
     <value>{0} v{1} installed</value>
