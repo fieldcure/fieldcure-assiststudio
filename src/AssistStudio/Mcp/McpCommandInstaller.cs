@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Text;
-using System.Text.RegularExpressions;
 using AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml;
@@ -80,7 +79,7 @@ public static class McpCommandInstaller
         var choice = await installDialog.ShowAsync();
         if (choice != ContentDialogResult.Primary) return false;
 
-        return await InstallDotnetToolAsync(command, xamlRoot, loader);
+        return await InstallDotnetToolAsync(config, command, xamlRoot, loader);
     }
 
     /// <summary>
@@ -113,33 +112,32 @@ public static class McpCommandInstaller
     }
 
     /// <summary>
-    /// Runs <c>dotnet tool install -g &lt;command&gt;</c> and reports success via a
-    /// post-install PATH verification. The dialog shown here is a simple indeterminate
-    /// progress; success/failure is communicated via an error dialog on failure or by
-    /// returning <c>true</c> on success (caller continues the connection attempt).
+    /// Runs <c>dotnet tool install -g &lt;input&gt;</c> where <paramref name="input"/>
+    /// is whatever the user typed in the Command field. On success:
+    /// <list type="bullet">
+    /// <item>If the same string resolves on PATH, returns <c>true</c> unchanged.</item>
+    /// <item>Otherwise consults <c>dotnet tool list -g</c> to find the actual tool
+    /// command (handles the case where the user entered the package id instead of the
+    /// command). If a match is found, <paramref name="config"/>.<c>Command</c> is
+    /// rewritten to the real command, a notification informs the user of the correction,
+    /// and <c>true</c> is returned. Callers should persist the config after this helper
+    /// returns <c>true</c> since <c>Command</c> may have changed.</item>
+    /// </list>
+    /// On failure (exit code non-zero, or success but no resolvable command anywhere),
+    /// an error dialog is shown and <c>false</c> is returned.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// The heuristic passes the command name as the NuGet package ID. This works for
-    /// packages that follow the "package id == tool command" convention. For packages
-    /// where they differ (e.g. <c>FieldCure.Mcp.PublicData.Kr</c> has command
-    /// <c>fieldcure-mcp-publicdata-kr</c>), the user can enter the package ID and this
-    /// helper detects that the install succeeded but produced a different command name,
-    /// and surfaces a "mismatch" dialog pointing at the actual command.
-    /// </para>
-    /// <para>
     /// <c>dotnet</c> CLI output is forced to English via <c>DOTNET_CLI_UI_LANGUAGE=en</c>
-    /// and UTF-8 via explicit stream encoding so we can reliably parse the "You can
-    /// invoke the tool…" line and so non-ASCII locale output does not end up mojibake
-    /// in the error dialog.
-    /// </para>
+    /// and UTF-8 via explicit stream encoding so non-ASCII locale output does not end up
+    /// mojibake in the error dialog.
     /// </remarks>
     private static async Task<bool> InstallDotnetToolAsync(
-        string command,
+        McpServerConfig config,
+        string input,
         XamlRoot xamlRoot,
         ResourceLoader loader)
     {
-        LoggingService.LogInfo($"[MCP] Installing dotnet tool: {command}");
+        LoggingService.LogInfo($"[MCP] Installing dotnet tool: {input}");
 
         var progressDialog = new ContentDialog
         {
@@ -151,7 +149,7 @@ public static class McpCommandInstaller
                 {
                     new TextBlock
                     {
-                        Text = string.Format(loader.GetString("Connect_InstallingMessage"), command),
+                        Text = string.Format(loader.GetString("Connect_InstallingMessage"), input),
                         TextWrapping = TextWrapping.Wrap,
                     },
                     new ProgressBar { IsIndeterminate = true },
@@ -172,7 +170,7 @@ public static class McpCommandInstaller
             var psi = new ProcessStartInfo
             {
                 FileName = "dotnet",
-                Arguments = $"tool install -g {command}",
+                Arguments = $"tool install -g {input}",
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
@@ -180,9 +178,8 @@ public static class McpCommandInstaller
                 StandardOutputEncoding = Encoding.UTF8,
                 StandardErrorEncoding = Encoding.UTF8,
             };
-            // Force English + UTF-8 CLI output so we can parse reliably and the error
-            // dialog never shows CP949/CP1252 mojibake when the user's system locale
-            // is non-English.
+            // Force English + UTF-8 CLI output so the error dialog never shows mojibake
+            // when the user's system locale is non-English.
             psi.Environment["DOTNET_CLI_UI_LANGUAGE"] = "en";
             psi.Environment["NO_COLOR"] = "1";
 
@@ -200,7 +197,7 @@ public static class McpCommandInstaller
         catch (Exception ex)
         {
             stderr = ex.Message;
-            LoggingService.LogError($"[MCP] dotnet tool install failed for '{command}': {ex}");
+            LoggingService.LogError($"[MCP] dotnet tool install failed for '{input}': {ex}");
         }
         finally
         {
@@ -209,49 +206,46 @@ public static class McpCommandInstaller
 
         if (exitCode == 0)
         {
-            if (await IsCommandOnPathAsync(command))
+            if (await IsCommandOnPathAsync(input))
             {
-                LoggingService.LogInfo($"[MCP] dotnet tool installed: {command}");
+                LoggingService.LogInfo($"[MCP] dotnet tool installed: {input}");
                 return true;
             }
 
-            // Install reported success but our command isn't on PATH. This usually means
-            // the user entered the NuGet package id, and the actual tool command differs
-            // (common for dotted package names). Parse the "You can invoke the tool…"
-            // line and tell the user which command to configure.
-            var actualCommand = ExtractInstalledCommand(stdout);
+            // Install reported success but our command isn't on PATH. The user likely
+            // entered the NuGet package id (e.g. "FieldCure.Mcp.PublicData.Kr") whose
+            // actual tool command has a different shape ("fieldcure-mcp-publicdata-kr").
+            // Resolve the real command from `dotnet tool list -g` and auto-correct the
+            // server config so the user doesn't have to edit Command manually.
+            var actualCommand = await ResolveActualCommandAsync(input);
             if (!string.IsNullOrEmpty(actualCommand)
-                && !actualCommand.Equals(command, StringComparison.OrdinalIgnoreCase)
+                && !actualCommand.Equals(input, StringComparison.OrdinalIgnoreCase)
                 && await IsCommandOnPathAsync(actualCommand))
             {
-                LoggingService.LogWarning(
-                    $"[MCP] Install succeeded but command differs: entered='{command}', actual='{actualCommand}'");
+                LoggingService.LogInfo(
+                    $"[MCP] Auto-correcting command for '{config.Name}': '{input}' → '{actualCommand}'");
+                config.Command = actualCommand;
 
-                var mismatchDialog = new ContentDialog
-                {
-                    Title = loader.GetString("Connect_InstallMismatchTitle"),
-                    Content = string.Format(
-                        loader.GetString("Connect_InstallMismatchMessage"),
-                        command,
-                        actualCommand),
-                    CloseButtonText = loader.GetString("Connect_InstallClose"),
-                    XamlRoot = xamlRoot,
-                };
-                await mismatchDialog.ShowAsync();
-                return false;
+                NotificationCenter.Instance.Post(
+                    InfoBarSeverity.Informational,
+                    loader.GetString("Connect_InstallMismatchTitle"),
+                    string.Format(loader.GetString("Connect_InstallMismatchMessage"), input, actualCommand),
+                    6000);
+
+                return true;
             }
         }
 
         // Prefer stderr if present, fall back to stdout for CLI that report to stdout.
         var detail = !string.IsNullOrWhiteSpace(stderr) ? stderr.Trim() : stdout.Trim();
         LoggingService.LogWarning(
-            $"[MCP] dotnet tool install did not produce a runnable '{command}' " +
+            $"[MCP] dotnet tool install did not produce a runnable '{input}' " +
             $"(exit={exitCode}): {detail}");
 
         var errorDialog = new ContentDialog
         {
             Title = loader.GetString("Connect_InstallFailedTitle"),
-            Content = string.Format(loader.GetString("Connect_InstallFailedMessage"), command, detail),
+            Content = string.Format(loader.GetString("Connect_InstallFailedMessage"), input, detail),
             CloseButtonText = loader.GetString("Connect_InstallClose"),
             XamlRoot = xamlRoot,
         };
@@ -260,17 +254,23 @@ public static class McpCommandInstaller
     }
 
     /// <summary>
-    /// Pulls the tool command name out of <c>dotnet tool install</c>'s stdout.
-    /// Relies on the English output "You can invoke the tool using the following
-    /// command: &lt;cmd&gt;" (forced via <c>DOTNET_CLI_UI_LANGUAGE=en</c>).
+    /// Looks up the actual tool command corresponding to <paramref name="input"/> in the
+    /// global tool catalog. The input can be either a command name already (in which
+    /// case it is returned unchanged) or a NuGet package id (in which case we return the
+    /// first command declared by that package). Returns <c>null</c> if neither form
+    /// matches any installed global tool.
     /// </summary>
-    private static string? ExtractInstalledCommand(string stdout)
+    private static async Task<string?> ResolveActualCommandAsync(string input)
     {
-        if (string.IsNullOrWhiteSpace(stdout)) return null;
-        var match = Regex.Match(
-            stdout,
-            @"following command:\s*(?<cmd>\S+)",
-            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-        return match.Success ? match.Groups["cmd"].Value : null;
+        var map = await ExternalDotnetToolUpdater.GetGlobalToolCommandMapAsync();
+        if (map.Count == 0) return null;
+
+        // Input is already a known command?
+        var asCommand = map.Keys.FirstOrDefault(c => c.Equals(input, StringComparison.OrdinalIgnoreCase));
+        if (asCommand is not null) return asCommand;
+
+        // Input looks like a package id — find the command(s) registered by that package.
+        var asPackage = map.FirstOrDefault(kv => kv.Value.Equals(input, StringComparison.OrdinalIgnoreCase));
+        return asPackage.Key; // null if no match (default KeyValuePair)
     }
 }

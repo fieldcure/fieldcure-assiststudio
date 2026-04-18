@@ -79,11 +79,15 @@ public static class ExternalDotnetToolUpdater
     }
 
     /// <summary>
-    /// Runs <c>dotnet tool list -g</c> and builds a case-insensitive map from the first
-    /// command listed for each tool back to its NuGet package ID. Returns an empty map
-    /// on any error so callers can short-circuit the sweep.
+    /// Runs <c>dotnet tool list -g</c> and builds a case-insensitive map from each
+    /// command back to its NuGet package ID. Returns an empty map on any error so
+    /// callers can short-circuit the sweep.
     /// </summary>
-    private static async Task<Dictionary<string, string>> GetGlobalToolCommandMapAsync()
+    /// <remarks>
+    /// Shared with <see cref="McpCommandInstaller"/> (same assembly) so the pre-flight
+    /// installer can resolve an entered packageId back to the actual tool command.
+    /// </remarks>
+    internal static async Task<Dictionary<string, string>> GetGlobalToolCommandMapAsync()
     {
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 

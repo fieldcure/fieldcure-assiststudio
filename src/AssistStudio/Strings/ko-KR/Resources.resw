@@ -956,10 +956,10 @@
     <value>닫기</value>
   </data>
   <data name="Connect_InstallMismatchTitle" xml:space="preserve">
-    <value>명령어 이름 불일치</value>
+    <value>명령어 자동 교정</value>
   </data>
   <data name="Connect_InstallMismatchMessage" xml:space="preserve">
-    <value>.NET 도구는 설치되었지만, 등록된 명령어는 '{0}'이(가) 아닌 '{1}'입니다. 서버 편집에서 명령어 필드를 '{1}'(으)로 수정한 뒤 다시 연결하세요.</value>
+    <value>'{0}'을(를) .NET 도구로 설치했고, 실제 명령어는 '{1}'입니다. 서버 설정의 명령어 필드가 자동으로 갱신되었습니다.</value>
   </data>
   <data name="BuiltIn_InstallSuccess" xml:space="preserve">
     <value>{0} v{1} 설치 완료</value>

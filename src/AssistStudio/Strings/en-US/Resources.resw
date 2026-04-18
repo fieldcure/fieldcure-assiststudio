@@ -956,10 +956,10 @@
     <value>Close</value>
   </data>
   <data name="Connect_InstallMismatchTitle" xml:space="preserve">
-    <value>Command name mismatch</value>
+    <value>Command auto-corrected</value>
   </data>
   <data name="Connect_InstallMismatchMessage" xml:space="preserve">
-    <value>The .NET tool was installed, but the command it registered is '{1}', not '{0}'. Edit the server and set the Command field to '{1}', then reconnect.</value>
+    <value>Installed '{0}' as a .NET tool; its actual command is '{1}', which has been saved to this server's configuration.</value>
   </data>
   <data name="BuiltIn_InstallSuccess" xml:space="preserve">
     <value>{0} v{1} installed</value>

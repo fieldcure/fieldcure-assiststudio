@@ -96,6 +96,9 @@ public sealed partial class ConnectPage : Page
         {
             // Pre-flight: verify command is resolvable (or offer to install as dotnet tool).
             // Silently skips for non-stdio / known runners / already-on-PATH commands.
+            // Note: the helper may mutate config.Command (auto-correct after install
+            // if the entered string was a package id rather than a command), so the
+            // config is re-saved regardless of original command value.
             var ready = await McpCommandInstaller.EnsureCommandAvailableAsync(config, XamlRoot);
             if (!ready)
             {
@@ -105,6 +108,8 @@ public sealed partial class ConnectPage : Page
                 RefreshServerList();
                 return;
             }
+
+            await SaveAndRefreshAsync();
 
             try
             {
@@ -215,6 +220,8 @@ public sealed partial class ConnectPage : Page
         if (needsRestart)
         {
             // Pre-flight: the command may have been changed to something uninstalled.
+            // The helper may also auto-correct config.Command if the user entered a
+            // package id — persist any such change with another save.
             var ready = await McpCommandInstaller.EnsureCommandAvailableAsync(config, XamlRoot);
             if (!ready)
             {
@@ -223,6 +230,7 @@ public sealed partial class ConnectPage : Page
                 return;
             }
 
+            await SaveAndRefreshAsync();
             LoggingService.LogInfo($"[MCP] Restarting after edit: {config.Name}");
             try
             {
@@ -255,7 +263,8 @@ public sealed partial class ConnectPage : Page
 
         // Pre-flight: manual reconnect is a natural recovery point if an earlier spawn
         // failed because the command wasn't installed. Surface the install prompt here
-        // so the user can fix it without hunting through the edit dialog.
+        // so the user can fix it without hunting through the edit dialog. The helper
+        // may auto-correct connection.Config.Command after install, so re-save.
         var ready = await McpCommandInstaller.EnsureCommandAvailableAsync(connection.Config, XamlRoot);
         if (!ready)
         {
@@ -264,6 +273,8 @@ public sealed partial class ConnectPage : Page
             RefreshServerList();
             return;
         }
+
+        await SaveAndRefreshAsync();
 
         try
         {
