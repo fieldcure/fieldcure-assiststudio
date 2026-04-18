@@ -921,10 +921,39 @@
     <value>활성 인스턴스 {0}개</value>
   </data>
   <data name="Connect_CommandHint" xml:space="preserve">
-    <value>패키지 러너(npx, uvx)나 실행 파일 경로를 사용하세요. dotnet run, cargo run 같은 빌드 래퍼는 매 시작이 5–10초 느려집니다.</value>
+    <value>패키지 러너(npx, uvx)나 실행 파일 경로를 사용하세요. NuGet .NET 도구는 처음 사용 시 자동으로 설치됩니다. dotnet run, cargo run 같은 빌드 래퍼는 매 시작이 5–10초 느려집니다.</value>
   </data>
   <data name="Connect_BuiltInDuplicate" xml:space="preserve">
     <value>이 서버는 이미 내장 서버로 관리되고 있습니다.</value>
+  </data>
+  <data name="Connect_InstallTitle" xml:space="preserve">
+    <value>'{0}'을(를) 찾을 수 없습니다</value>
+  </data>
+  <data name="Connect_InstallMessage" xml:space="preserve">
+    <value>명령어 '{0}'이(가) PATH에 없습니다. .NET 전역 도구로 설치를 시도할까요?</value>
+  </data>
+  <data name="Connect_InstallPrimary" xml:space="preserve">
+    <value>설치</value>
+  </data>
+  <data name="Connect_InstallCancel" xml:space="preserve">
+    <value>취소</value>
+  </data>
+  <data name="Connect_InstallingTitle" xml:space="preserve">
+    <value>.NET 도구 설치 중</value>
+  </data>
+  <data name="Connect_InstallingMessage" xml:space="preserve">
+    <value>실행 중: dotnet tool install -g {0}</value>
+  </data>
+  <data name="Connect_InstallFailedTitle" xml:space="preserve">
+    <value>설치 실패</value>
+  </data>
+  <data name="Connect_InstallFailedMessage" xml:space="preserve">
+    <value>'{0}'을(를) .NET 도구로 설치하지 못했습니다. 명령어 이름과 NuGet 패키지 ID가 다를 수 있으니 확인하세요.
+
+{1}</value>
+  </data>
+  <data name="Connect_InstallClose" xml:space="preserve">
+    <value>닫기</value>
   </data>
   <data name="BuiltIn_InstallSuccess" xml:space="preserve">
     <value>{0} v{1} 설치 완료</value>

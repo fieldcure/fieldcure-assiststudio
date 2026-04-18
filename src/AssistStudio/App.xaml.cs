@@ -226,6 +226,16 @@ public partial class App : Application
             // independent of built-in server updates and can start immediately.
             var configs = await AppSettings.LoadMcpServersAsync();
             LoggingService.LogInfo($"[App] Initializing MCP servers ({configs.Count} configs)");
+
+            // Auto-update external servers installed as global .NET tools BEFORE
+            // connecting, so a newer binary is picked up and we avoid file-lock
+            // races against a running subprocess. Fire-and-forget via await: this
+            // is a parallel sweep and typically completes well under a second when
+            // tools are already at latest; network issues log a warning but do not
+            // block.
+            if (configs.Count > 0)
+                await ExternalDotnetToolUpdater.CheckAndUpdateAsync(configs);
+
             var externalTask = configs.Count > 0
                 ? McpRegistry.ConnectAllAsync(configs)
                 : Task.FromResult<IReadOnlyList<string>>([]);

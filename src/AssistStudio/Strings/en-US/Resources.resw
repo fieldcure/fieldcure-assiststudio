@@ -921,10 +921,39 @@
     <value>{0} active instance(s)</value>
   </data>
   <data name="Connect_CommandHint" xml:space="preserve">
-    <value>Use a package runner (npx, uvx) or path to an executable. Build wrappers like dotnet run or cargo run add 5–10s to every startup.</value>
+    <value>Use a package runner (npx, uvx) or path to an executable. NuGet .NET tools are auto-installed on first use. Build wrappers like dotnet run or cargo run add 5–10s to every startup.</value>
   </data>
   <data name="Connect_BuiltInDuplicate" xml:space="preserve">
     <value>This server is already managed as a built-in server.</value>
+  </data>
+  <data name="Connect_InstallTitle" xml:space="preserve">
+    <value>'{0}' not found</value>
+  </data>
+  <data name="Connect_InstallMessage" xml:space="preserve">
+    <value>The command '{0}' was not found on PATH. Try installing it as a .NET global tool?</value>
+  </data>
+  <data name="Connect_InstallPrimary" xml:space="preserve">
+    <value>Install</value>
+  </data>
+  <data name="Connect_InstallCancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Connect_InstallingTitle" xml:space="preserve">
+    <value>Installing .NET tool</value>
+  </data>
+  <data name="Connect_InstallingMessage" xml:space="preserve">
+    <value>Running: dotnet tool install -g {0}</value>
+  </data>
+  <data name="Connect_InstallFailedTitle" xml:space="preserve">
+    <value>Install failed</value>
+  </data>
+  <data name="Connect_InstallFailedMessage" xml:space="preserve">
+    <value>Could not install '{0}' as a .NET tool. Verify the command name or the NuGet package ID — they may differ.
+
+{1}</value>
+  </data>
+  <data name="Connect_InstallClose" xml:space="preserve">
+    <value>Close</value>
   </data>
   <data name="BuiltIn_InstallSuccess" xml:space="preserve">
     <value>{0} v{1} installed</value>

@@ -94,6 +94,18 @@ public sealed partial class ConnectPage : Page
         // Connect in background
         if (config.IsEnabled && _registry is not null)
         {
+            // Pre-flight: verify command is resolvable (or offer to install as dotnet tool).
+            // Silently skips for non-stdio / known runners / already-on-PATH commands.
+            var ready = await McpCommandInstaller.EnsureCommandAvailableAsync(config, XamlRoot);
+            if (!ready)
+            {
+                LoggingService.LogWarning(
+                    $"[MCP] Command pre-flight failed for '{config.Name}' (command='{config.Command}'); " +
+                    "skipping initial connect.");
+                RefreshServerList();
+                return;
+            }
+
             try
             {
                 var connection = _registry.Connections.FirstOrDefault(c => c.Config.Id == config.Id);
@@ -202,6 +214,15 @@ public sealed partial class ConnectPage : Page
         // Auto-restart if config changed (reconnect even if previously failed)
         if (needsRestart)
         {
+            // Pre-flight: the command may have been changed to something uninstalled.
+            var ready = await McpCommandInstaller.EnsureCommandAvailableAsync(config, XamlRoot);
+            if (!ready)
+            {
+                LoggingService.LogWarning(
+                    $"[MCP] Command pre-flight failed for '{config.Name}' after edit; skipping restart.");
+                return;
+            }
+
             LoggingService.LogInfo($"[MCP] Restarting after edit: {config.Name}");
             try
             {
@@ -231,6 +252,19 @@ public sealed partial class ConnectPage : Page
         if (_registry is null) return;
 
         LoggingService.LogInfo($"[MCP] Reconnect requested: {connection.Config.Name}");
+
+        // Pre-flight: manual reconnect is a natural recovery point if an earlier spawn
+        // failed because the command wasn't installed. Surface the install prompt here
+        // so the user can fix it without hunting through the edit dialog.
+        var ready = await McpCommandInstaller.EnsureCommandAvailableAsync(connection.Config, XamlRoot);
+        if (!ready)
+        {
+            LoggingService.LogWarning(
+                $"[MCP] Command pre-flight failed for '{connection.Config.Name}'; skipping manual reconnect.");
+            RefreshServerList();
+            return;
+        }
+
         try
         {
             await _registry.ReconnectAsync(connection);
