@@ -98,8 +98,16 @@ public sealed partial class ToolElicitationPanel : Control
     private string _submitLabel = "Submit";
     private string _promptTemplate = "{0} requires input";
 
-    /// <summary>Tracks the current text input value for string fields.</summary>
+    /// <summary>Tracks the current text input value for string fields (non-secret).</summary>
     private readonly Dictionary<string, TextBox> _textInputs = [];
+
+    /// <summary>
+    /// Tracks the current password input value for secret-looking string fields.
+    /// Secrets are identified by <see cref="LooksLikeSecret"/> (ADR-001: the MCP 1.2 SDK
+    /// does not support <c>format: "password"</c>, so the host applies a field-name /
+    /// title / description heuristic instead).
+    /// </summary>
+    private readonly Dictionary<string, PasswordBox> _passwordInputs = [];
 
     /// <summary>Tracks the selected option value for enum/boolean fields (multi-field mode).</summary>
     private readonly Dictionary<string, string> _selectedOptions = [];
@@ -184,7 +192,7 @@ public sealed partial class ToolElicitationPanel : Control
     private void OnSubmitClick(object sender, RoutedEventArgs e) =>
         SubmitAllFields();
 
-    /// <summary>Collects all field values (selected options + text inputs) and submits.</summary>
+    /// <summary>Collects all field values (selected options + text inputs + password inputs) and submits.</summary>
     private void SubmitAllFields()
     {
         var content = new Dictionary<string, object?>();
@@ -192,6 +200,8 @@ public sealed partial class ToolElicitationPanel : Control
             content[name] = value;
         foreach (var (name, textBox) in _textInputs)
             content[name] = textBox.Text;
+        foreach (var (name, passwordBox) in _passwordInputs)
+            content[name] = passwordBox.Password;
         Submitted?.Invoke(this, content);
     }
 
@@ -278,6 +288,7 @@ public sealed partial class ToolElicitationPanel : Control
         if (_fieldsPanel is null) return;
         _fieldsPanel.Children.Clear();
         _textInputs.Clear();
+        _passwordInputs.Clear();
         _selectedOptions.Clear();
 
         var fields = Fields;
@@ -324,8 +335,8 @@ public sealed partial class ToolElicitationPanel : Control
             }
         }
 
-        // Show Submit button if multi-field OR has string fields
-        UpdateSubmitVisibility(_isMultiField || _textInputs.Count > 0);
+        // Show Submit button if multi-field OR has string fields (TextBox or PasswordBox)
+        UpdateSubmitVisibility(_isMultiField || _textInputs.Count > 0 || _passwordInputs.Count > 0);
     }
 
     /// <summary>Renders an enum or boolean field as clickable option buttons.</summary>
@@ -407,10 +418,30 @@ public sealed partial class ToolElicitationPanel : Control
         return button;
     }
 
-    /// <summary>Renders a string field as a TextBox.</summary>
+    /// <summary>
+    /// Renders a string field. When the field looks like a secret (see <see cref="LooksLikeSecret"/>),
+    /// a <see cref="PasswordBox"/> is used so the value is masked on screen; otherwise a plain
+    /// <see cref="TextBox"/> is used.
+    /// </summary>
     private void RenderStringField(ElicitationFieldInfo field)
     {
         if (_fieldsPanel is null) return;
+
+        if (LooksLikeSecret(field))
+        {
+            var passwordBox = new PasswordBox
+            {
+                PlaceholderText = field.Description ?? field.Title ?? field.Name,
+                Password = field.DefaultValue ?? string.Empty,
+                PasswordRevealMode = PasswordRevealMode.Peek,
+                MaxLength = 500,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+            };
+
+            _passwordInputs[field.Name] = passwordBox;
+            _fieldsPanel.Children.Add(passwordBox);
+            return;
+        }
 
         var textBox = new TextBox
         {
@@ -424,6 +455,50 @@ public sealed partial class ToolElicitationPanel : Control
 
         _textInputs[field.Name] = textBox;
         _fieldsPanel.Children.Add(textBox);
+    }
+
+    /// <summary>
+    /// Heuristic for rendering a string field as a masked input. The MCP 1.2 SDK does
+    /// not support <c>format: "password"</c> on StringSchema (only email/uri/date/date-time),
+    /// so the host infers "looks like a secret" from the field metadata.
+    /// </summary>
+    /// <remarks>
+    /// A field is treated as a secret when either:
+    /// <list type="bullet">
+    /// <item>The <c>Name</c> matches a known secret pattern: <c>api_key</c>, <c>apikey</c>,
+    ///       <c>token</c>, <c>secret</c>, <c>password</c>, or ends with <c>_key</c>.</item>
+    /// <item>The <c>Title</c> or <c>Description</c> contains one of <c>"key"</c>, <c>"token"</c>,
+    ///       <c>"secret"</c>, or <c>"password"</c> (case-insensitive).</item>
+    /// </list>
+    /// Reconsidered once the MCP spec / SDK adds a canonical masked-input hint.
+    /// </remarks>
+    private static bool LooksLikeSecret(ElicitationFieldInfo field)
+    {
+        if (MatchesSecretName(field.Name)) return true;
+        if (ContainsSecretKeyword(field.Title)) return true;
+        if (ContainsSecretKeyword(field.Description)) return true;
+        return false;
+    }
+
+    /// <summary>Checks whether a field name matches a known secret pattern.</summary>
+    private static bool MatchesSecretName(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return false;
+        var normalized = name.Trim().ToLowerInvariant();
+        return normalized is "api_key" or "apikey" or "token" or "secret" or "password"
+               || normalized.EndsWith("_key", StringComparison.Ordinal)
+               || normalized.EndsWith("_token", StringComparison.Ordinal)
+               || normalized.EndsWith("_secret", StringComparison.Ordinal);
+    }
+
+    /// <summary>Checks whether free-text metadata contains a secret keyword.</summary>
+    private static bool ContainsSecretKeyword(string? text)
+    {
+        if (string.IsNullOrEmpty(text)) return false;
+        return text.Contains("key", StringComparison.OrdinalIgnoreCase)
+               || text.Contains("token", StringComparison.OrdinalIgnoreCase)
+               || text.Contains("secret", StringComparison.OrdinalIgnoreCase)
+               || text.Contains("password", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>Shows or hides the Submit button based on whether string fields exist.</summary>
