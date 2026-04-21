@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
-    <Version>0.16.0</Version>
+    <Version>0.17.0</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CA1416</NoWarn>
 
@@ -22,7 +22,7 @@
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;claude;openai;gemini;ollama;llm;provider;streaming</PackageTags>
-    <PackageReleaseNotes>v0.16.0: Fix stale .astd references to .astx and filter MRU by extension. Ai.Providers 0.3.0 → 0.4.0.</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.17.0: Add KnowledgeBase.IndexedWith snapshot (embedding + contextualizer config captured at last re-index) and new IndexedWithSnapshot class so KB cards stay stable when top-level fields are edited without re-indexing. Rebuild against Ai.Providers 0.5.0 (transitive DocumentParsers 2.x).</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

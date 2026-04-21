@@ -1,5 +1,16 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Core
 
+## v0.17.0 (2026-04-21)
+
+### Added
+- **`KnowledgeBase.IndexedWith`** (nullable) — snapshot of the embedding and contextualizer configuration captured at the last re-index launch, so Knowledge Bases page cards stay stable when the user edits the top-level fields without triggering a re-index.
+- **`IndexedWithSnapshot`** class — holds `Embedding` and `Contextualizer` `KbProviderConfig` values. Populated by the host app right before calling `StartExecAsync`; ignored by the RAG exec itself.
+
+### Changed
+- Rebuilt against **FieldCure.Ai.Providers 0.5.0** — picks up the transitive `FieldCure.DocumentParsers 2.x` upgrade. Core does not touch the relocated types directly.
+
+---
+
 ## v0.16.0 (2026-04-14)
 
 ### Fixed
