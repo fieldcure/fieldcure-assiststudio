@@ -9,7 +9,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
-    <Version>0.1.0</Version>
+    <Version>0.1.0-preview.1</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
     <!-- NuGet Package Metadata -->
@@ -22,6 +22,7 @@
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;chat;winui;anthropic;claude;controls</PackageTags>
+    <PackageReleaseNotes>v0.1.0-preview.1: Initial preview. ChatPanelExtensions wires the Anthropic SDK stream into ChatPanel via BeginAnthropicTurn + StreamAnthropicAsync. GetConversationAsAnthropicMessages snapshots the panel conversation into MessageParam format. Requires AssistStudio.Anthropic 0.1.0-preview.1 and Controls.WinUI 0.17.0+.</PackageReleaseNotes>
     <PackageIcon>icon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
