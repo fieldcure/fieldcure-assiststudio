@@ -1,0 +1,64 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="AssistStudio.Controls.MemoryEntryCard"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    PointerEntered="OnCardPointerEntered"
+    PointerExited="OnCardPointerExited">
+
+    <StackPanel>
+        <Grid Background="Transparent" Padding="0,10,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Spacing="{StaticResource TightSpacing}">
+                <TextBlock
+                    Text="{x:Bind Item.Key, Mode=OneWay}"
+                    Style="{ThemeResource CaptionTextBlockStyle}"
+                    Opacity="0.6" />
+                <TextBlock
+                    Text="{x:Bind Item.Value, Mode=OneWay}"
+                    Style="{ThemeResource BodyTextBlockStyle}"
+                    TextWrapping="Wrap"
+                    VerticalAlignment="Center" />
+            </StackPanel>
+
+            <Button
+                x:Uid="Memory_DeleteButton"
+                x:Name="DeleteButton"
+                Grid.Column="1"
+                Padding="6"
+                MinWidth="0"
+                MinHeight="0"
+                Margin="8,0,0,0"
+                VerticalAlignment="Bottom"
+                Visibility="Collapsed"
+                Style="{ThemeResource SubtleButtonStyle}"
+                Click="OnDeleteClicked"
+                ToolTipService.Placement="Mouse">
+                <FontIcon Glyph="&#xE74D;" FontSize="12" />
+            </Button>
+
+            <ProgressRing
+                x:Name="DeleteProgressRing"
+                Grid.Column="1"
+                Width="16"
+                Height="16"
+                Margin="10,2,0,0"
+                VerticalAlignment="Top"
+                IsActive="False"
+                Visibility="Collapsed" />
+        </Grid>
+
+        <!-- Divider -->
+        <Rectangle
+            Height="1"
+            Fill="{ThemeResource DividerStrokeColorDefaultBrush}"
+            HorizontalAlignment="Stretch" />
+    </StackPanel>
+</UserControl>

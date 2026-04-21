@@ -1,9 +1,11 @@
-﻿using AssistStudio.Controls.Dialogs;
+﻿using AssistStudio.Controls;
 using AssistStudio.Mcp;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using Microsoft.Windows.ApplicationModel.Resources;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Text.Json;
 
 namespace AssistStudio.Settings;
@@ -15,8 +17,8 @@ namespace AssistStudio.Settings;
 public sealed partial class MemoryPage : Page
 {
     private static readonly ResourceLoader Res = new();
+    private readonly ObservableCollection<MemoryEntryItemViewModel> _items = [];
 
-    private string _deleteTooltip = "";
     private string _connectingText = "";
 
     /// <summary>
@@ -25,6 +27,7 @@ public sealed partial class MemoryPage : Page
     public MemoryPage()
     {
         InitializeComponent();
+        MemoryList.ItemsSource = _items;
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -34,12 +37,17 @@ public sealed partial class MemoryPage : Page
         _ = LoadMemoriesAsync();
     }
 
+    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    {
+        base.OnNavigatedFrom(e);
+        ClearItems();
+    }
+
     /// <summary>
     /// Loads localized UI strings from the resource file.
     /// </summary>
     private void LoadLocalizedStrings()
     {
-        _deleteTooltip = Res.GetString("Memory_DeleteTooltip");
         _connectingText = Res.GetString("Memory_Connecting");
         ConnectingText.Text = _connectingText;
     }
@@ -51,7 +59,7 @@ public sealed partial class MemoryPage : Page
     {
         var conn = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.EssentialsKey);
 
-        // Not connected — show connecting state and wait
+        // Not connected - show connecting state and wait
         if (conn is null || !conn.IsConnected)
         {
             ShowConnecting();
@@ -87,7 +95,7 @@ public sealed partial class MemoryPage : Page
     }
 
     /// <summary>
-    /// Fetches and renders the memory list from the given connection.
+    /// Fetches memories from the given connection and rebuilds the item collection.
     /// </summary>
     private async Task RefreshListAsync(McpServerConnection conn, string? query = null)
     {
@@ -109,82 +117,7 @@ public sealed partial class MemoryPage : Page
             }
 
             var total = root.TryGetProperty("total", out var totalEl) ? totalEl.GetInt32() : memories.GetArrayLength();
-
-            ConnectingPanel.Visibility = Visibility.Collapsed;
-            EmptyPanel.Visibility = Visibility.Collapsed;
-            NoResultsText.Visibility = Visibility.Collapsed;
-            HintText.Visibility = Visibility.Visible;
-            HintDivider.Visibility = Visibility.Visible;
-            CounterText.Text = $"{total}";
-
-            var items = new List<FrameworkElement>();
-            var isFirst = true;
-            foreach (var entry in memories.EnumerateArray())
-            {
-                if (!isFirst)
-                {
-                    items.Add(new Microsoft.UI.Xaml.Shapes.Rectangle
-                    {
-                        Height = 1,
-                        Fill = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["DividerStrokeColorDefaultBrush"],
-                    });
-                }
-                isFirst = false;
-
-                var key = entry.GetProperty("key").GetString() ?? "";
-                var value = entry.GetProperty("value").GetString() ?? "";
-
-                var grid = new Grid
-                {
-                    Padding = new Thickness(0, 10, 0, 10),
-                    ColumnDefinitions =
-                    {
-                        new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                        new ColumnDefinition { Width = GridLength.Auto },
-                    },
-                };
-
-                var textPanel = new StackPanel { Spacing = 6 };
-                textPanel.Children.Add(new TextBlock
-                {
-                    Text = key,
-                    Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-                    Opacity = 0.6,
-                });
-                textPanel.Children.Add(new TextBlock
-                {
-                    Text = value,
-                    TextWrapping = TextWrapping.Wrap,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Style = (Style)Application.Current.Resources["BodyTextBlockStyle"],
-                });
-                Grid.SetColumn(textPanel, 0);
-                grid.Children.Add(textPanel);
-
-                var deleteButton = new Button
-                {
-                    Content = new FontIcon { Glyph = "\uE74D", FontSize = 12 },
-                    Padding = new Thickness(6),
-                    MinWidth = 0,
-                    MinHeight = 0,
-                    Tag = key,
-                    VerticalAlignment = VerticalAlignment.Top,
-                    Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
-                    Opacity = 0,
-                };
-                ToolTipService.SetToolTip(deleteButton, _deleteTooltip);
-                ToolTipService.SetPlacement(deleteButton, Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse);
-                deleteButton.Click += OnDeleteClicked;
-                Grid.SetColumn(deleteButton, 1);
-                grid.Children.Add(deleteButton);
-
-                grid.PointerEntered += (_, _) => deleteButton.Opacity = 1;
-                grid.PointerExited += (_, _) => deleteButton.Opacity = 0;
-
-                items.Add(grid);
-            }
-
-            MemoryList.ItemsSource = items;
+            RenderItems(memories, total);
         }
         catch
         {
@@ -193,11 +126,54 @@ public sealed partial class MemoryPage : Page
     }
 
     /// <summary>
+    /// Rebuilds the repeater item collection from the latest server response.
+    /// </summary>
+    private void RenderItems(JsonElement memories, int total)
+    {
+        if (memories.GetArrayLength() == 0)
+        {
+            ShowEmpty(isSearching: !string.IsNullOrWhiteSpace(SearchBox.Text));
+            return;
+        }
+
+        ConnectingPanel.Visibility = Visibility.Collapsed;
+        EmptyPanel.Visibility = Visibility.Collapsed;
+        NoResultsText.Visibility = Visibility.Collapsed;
+        HintText.Visibility = Visibility.Visible;
+        HintDivider.Visibility = Visibility.Collapsed;
+        CounterText.Text = $"{total}";
+
+        ClearItems();
+
+        foreach (var entry in memories.EnumerateArray())
+        {
+            var item = new MemoryEntryItemViewModel(
+                entry.GetProperty("key").GetString() ?? "",
+                entry.GetProperty("value").GetString() ?? "");
+            item.PropertyChanged += OnItemPropertyChanged;
+            _items.Add(item);
+        }
+    }
+
+    /// <summary>
+    /// Unsubscribes from all item view models and clears the collection.
+    /// </summary>
+    private void ClearItems()
+    {
+        foreach (var item in _items)
+        {
+            item.PropertyChanged -= OnItemPropertyChanged;
+        }
+
+        _items.Clear();
+    }
+
+    /// <summary>
     /// Switches the UI to the "connecting" state.
     /// </summary>
     private void ShowConnecting()
     {
-        MemoryList.ItemsSource = null;
+        ClearItems();
         ConnectingPanel.Visibility = Visibility.Visible;
         EmptyPanel.Visibility = Visibility.Collapsed;
         NoResultsText.Visibility = Visibility.Collapsed;
@@ -211,7 +187,7 @@ public sealed partial class MemoryPage : Page
     /// </summary>
     private void ShowEmpty(bool isSearching = false)
     {
-        MemoryList.ItemsSource = null;
+        ClearItems();
         ConnectingPanel.Visibility = Visibility.Collapsed;
         EmptyPanel.Visibility = isSearching ? Visibility.Collapsed : Visibility.Visible;
         NoResultsText.Visibility = isSearching ? Visibility.Visible : Visibility.Collapsed;
@@ -240,23 +216,24 @@ public sealed partial class MemoryPage : Page
     }
 
     /// <summary>
-    /// Deletes a single memory entry via the Essentials MCP server.
+    /// Removes deleted items from the collection and updates page-level state.
     /// </summary>
-    private async void OnDeleteClicked(object sender, RoutedEventArgs e)
+    private void OnItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (sender is not Button btn || btn.Tag is not string key)
+        if (e.PropertyName != nameof(MemoryEntryItemViewModel.IsDeleted))
             return;
 
-        var conn = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.EssentialsKey);
-        if (conn is null || !conn.IsConnected) return;
+        if (sender is not MemoryEntryItemViewModel item || !item.IsDeleted)
+            return;
 
-        try
-        {
-            var args = JsonDocument.Parse(JsonSerializer.Serialize(new { key })).RootElement;
-            await conn.CallToolWithProgressAsync("forget", args, null, CancellationToken.None);
-            await RefreshListAsync(conn, string.IsNullOrWhiteSpace(SearchBox.Text) ? null : SearchBox.Text);
-        }
-        catch { /* best effort */ }
+        item.PropertyChanged -= OnItemPropertyChanged;
+        _items.Remove(item);
+
+        var remainingItems = _items.Count;
+        CounterText.Text = $"{remainingItems}";
+
+        if (remainingItems == 0)
+            ShowEmpty(isSearching: !string.IsNullOrWhiteSpace(SearchBox.Text));
     }
 
     /// <summary>
@@ -277,3 +254,5 @@ public sealed partial class MemoryPage : Page
         }
     }
 }
+
+

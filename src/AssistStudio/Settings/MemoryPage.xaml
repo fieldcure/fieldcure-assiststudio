@@ -1,8 +1,10 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Page
     x:Class="AssistStudio.Settings.MemoryPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:AssistStudio.Controls"
+    xmlns:settings="using:AssistStudio.Settings"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
@@ -35,14 +37,13 @@
                        VerticalAlignment="Center"
                        Margin="0,0,12,0" />
 
-            <Button x:Name="RefreshButton" Grid.Column="3"
+            <Button x:Uid="Memory_RefreshButton"
+                    x:Name="RefreshButton" Grid.Column="3"
                     Click="OnRefreshClicked"
                     Style="{StaticResource SubtleButtonStyle}"
-                    Padding="8" MinWidth="0" MinHeight="0">
+                    Padding="8" MinWidth="0" MinHeight="0"
+                    ToolTipService.Placement="Mouse">
                 <FontIcon Glyph="&#xE72C;" FontSize="14" />
-                <ToolTipService.ToolTip>
-                    <ToolTip x:Uid="Memory_RefreshTip" Placement="Mouse" />
-                </ToolTipService.ToolTip>
             </Button>
         </Grid>
 
@@ -69,7 +70,13 @@
                 </StackPanel>
 
                 <!-- Memory list -->
-                <ItemsRepeater x:Name="MemoryList" />
+                <ItemsRepeater x:Name="MemoryList">
+                    <ItemsRepeater.ItemTemplate>
+                        <DataTemplate x:DataType="settings:MemoryEntryItemViewModel">
+                            <controls:MemoryEntryCard Item="{x:Bind}" />
+                        </DataTemplate>
+                    </ItemsRepeater.ItemTemplate>
+                </ItemsRepeater>
 
                 <!-- Divider before hint -->
                 <Rectangle x:Name="HintDivider" Visibility="Collapsed"
