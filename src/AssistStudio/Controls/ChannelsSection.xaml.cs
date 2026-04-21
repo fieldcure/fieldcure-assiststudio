@@ -250,9 +250,11 @@ public sealed partial class ChannelsSection : UserControl
     }
 
     /// <summary>
-    /// Spawns <c>fieldcure-mcp-outbox &lt;command&gt; &lt;arg&gt;</c> in a new console
-    /// window and waits for it to exit. Disconnects and reconnects the Outbox
-    /// server afterwards so <c>list_channels</c> reflects the CLI's changes.
+    /// Spawns the Outbox CLI (<c>dnx FieldCure.Mcp.Outbox@... &lt;command&gt; &lt;arg&gt;</c>)
+    /// in its own console window and waits for it to exit. No server reconnect
+    /// is needed afterwards: <c>ChannelStore.LoadAsync</c> reads
+    /// <c>channels.json</c> on every tool call, so the next <c>list_channels</c>
+    /// already reflects the CLI's changes.
     /// </summary>
     private async Task RunCliAsync(string command, string arg)
     {
@@ -260,11 +262,21 @@ public sealed partial class ChannelsSection : UserControl
 
         try
         {
+            var (_, prefixArgs) = BuiltInServerHelper.GetLaunchSpec(BuiltInServerHelper.OutboxKey);
+            if (prefixArgs.Length == 0)
+            {
+                LoggingService.LogError("[Outbox] No launch spec available for Outbox CLI");
+                return;
+            }
+
+            // UseShellExecute=true honors PATHEXT so "dnx" resolves to dnx.cmd,
+            // and the .cmd shim opens its own console window for interactive prompts.
+            var args = string.Join(' ', prefixArgs) + $" {command} {arg}";
             var psi = new ProcessStartInfo
             {
-                FileName = "fieldcure-mcp-outbox",
-                Arguments = $"{command} {arg}",
-                UseShellExecute = true, // opens its own console window
+                FileName = "dnx",
+                Arguments = args,
+                UseShellExecute = true,
             };
 
             using var process = Process.Start(psi);
@@ -277,7 +289,7 @@ public sealed partial class ChannelsSection : UserControl
             await process.WaitForExitAsync();
             LoggingService.LogInfo($"[Outbox] CLI '{command} {arg}' exited with code {process.ExitCode}");
 
-            await ReconnectAndReloadAsync();
+            await ReloadAsync();
         }
         catch (Exception ex)
         {
@@ -290,25 +302,13 @@ public sealed partial class ChannelsSection : UserControl
     }
 
     /// <summary>
-    /// Reconnects the Outbox server (so it re-reads channels.json) and reloads
-    /// the channel list.
+    /// Reloads the channel list by re-invoking <c>list_channels</c>. The Outbox
+    /// server re-reads <c>channels.json</c> on every call, so no reconnect is
+    /// required to surface CLI-driven changes.
     /// </summary>
-    private async Task ReconnectAndReloadAsync()
+    private async Task ReloadAsync()
     {
         _loaded = true;
-        ShowLoading();
-
-        try
-        {
-            var conn = _registry?.GetBuiltInConnection(BuiltInServerHelper.OutboxKey);
-            if (conn is not null && _registry is not null)
-                await _registry.ReconnectAsync(conn);
-        }
-        catch (Exception ex)
-        {
-            LoggingService.LogWarning($"[Outbox] Reconnect after CLI failed: {ex.Message}");
-        }
-
         await LoadChannelsAsync();
     }
 
