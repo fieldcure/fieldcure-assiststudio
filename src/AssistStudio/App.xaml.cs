@@ -10,7 +10,7 @@ using Windows.ApplicationModel.Activation;
 using Windows.Storage;
 using FieldCure.Ai.Providers;
 using FieldCure.AssistStudio.Controls;
-using FieldCure.DocumentParsers.Pdf;
+using FieldCure.DocumentParsers.Imaging;
 using WindowHelper = FieldCure.AssistStudio.Controls.Helpers.WindowHelper;
 
 namespace AssistStudio;
@@ -54,7 +54,7 @@ public partial class App : Application
     /// <inheritdoc/>
     protected override async void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
     {
-        DocumentParserFactoryExtensions.AddPdfSupport();
+        DocumentParserFactoryImagingExtensions.AddImagingSupport();
         ConversationManager.Initialize(ApplicationData.Current.LocalFolder.Path);
         AppSettings.MigrateAppTasksSettings();
 
