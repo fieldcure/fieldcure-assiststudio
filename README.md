@@ -11,7 +11,7 @@
 
 AssistStudio is two things:
 
-1. **A reusable WinUI 3 library** (two NuGet packages) for building desktop AI assistants with multi-provider support, tool approval, and profile-based behavior.
+1. **A reusable WinUI 3 library** for building desktop AI assistants with multi-provider support, tool approval, and profile-based behavior. Comes with optional adapter packages so you can stream from a vendor SDK (e.g. the official Anthropic SDK) directly into the chat UI when you want its latest features without reimplementing `IAiProvider`.
 2. **A Windows-native AI workspace app** for cloud and local models, profiles, tools, and structured conversations.
 
 ![Chat conversation with Markdown and syntax highlighting](docs/chat-conversation.png)
@@ -34,7 +34,7 @@ AssistStudio is two things:
 ### Tools & Agents
 - **Tool / Function Calling** — Define tools with `IAssistTool`. `ToolCallExecutor` orchestrates execution with confirmation flow and parallel execution.
 - **MCP Integration** — Connect to MCP servers (Stdio / HTTP) to aggregate tools. `McpToolAdapter` bridges MCP tools to `IAssistTool`.
-- **Built-in MCP Servers** — Essentials (12–16 tools), Filesystem, Knowledge Base (RAG), and Outbox — auto-installed and auto-updated via `dotnet tool`.
+- **Built-in MCP Servers** — Essentials (12–16 tools), Filesystem, Knowledge Base (RAG), Outbox, and Runner — fetched and run directly from NuGet via `dnx` (.NET 10 SDK), pinned to a major-version range so minor/patch updates flow through on the next launch.
 - **Sub-Agent Delegation** — `delegate_task` tool for autonomous sub-agent execution with parallel dispatch. `ISpecialist` interface for domain-specific routing (e.g., Web Search Specialist).
 
 ### UI & Media
@@ -77,6 +77,8 @@ AssistStudio is two things:
 | **Ai.Execution** | `FieldCure.Ai.Execution` | `net8.0` | `IAgentLoop`, `AgentLoop`, `ISubAgentExecutor`, `SubAgentExecutor`, `AgentLoopContext`, `AgentLoopResult` |
 | **AssistStudio.Core** | `FieldCure.AssistStudio.Core` | `net8.0` | `ISpecialist`, `KnowledgeBase`, `ToolCallExecutor`, `ToolResolver`, `IWorkspaceContext`, `BuiltInServerConfig`, `Profile` |
 | **AssistStudio.Controls** | `FieldCure.AssistStudio.Controls.WinUI` | `net8.0-windows10.0.19041.0`<br>`net9.0-windows10.0.19041.0` | `ChatPanel`, `ComposeBar`, `AttachmentPreviewBar`, `ToolApprovalPanel`, `ToolElicitationPanel`, `ChatTheme` |
+| **AssistStudio.Anthropic** *(optional adapter)* | `FieldCure.AssistStudio.Anthropic` | `net8.0`<br>`net9.0` | `AnthropicStreamEventMapper`, `AnthropicMessageConverter` — maps the official `Anthropic` SDK's `RawMessageStreamEvent` to `StreamEvent` |
+| **AssistStudio.Controls.Anthropic** *(optional adapter)* | `FieldCure.AssistStudio.Controls.WinUI.Anthropic` | `net8.0-windows10.0.19041.0`<br>`net9.0-windows10.0.19041.0` | `ChatPanelExtensions` — one-call streaming of an Anthropic SDK response into a `ChatPanel` via `AssistantTurnHandle` |
 | **AssistStudio** | *(workspace app)* | `net9.0-windows10.0.19041.0` | Reference implementation with settings, MCP server management, sub-agent delegation, schedule, and `PasswordVaultHelper` |
 
 > **Core is platform-agnostic** (`net8.0`). It has no Windows-specific dependencies — you can reference it from a console app, a server, or any .NET project.
@@ -213,6 +215,32 @@ Then assign it to a `ChatPanel`:
 Chat.Provider = new MyCustomProvider();
 ```
 
+### Third-party SDK adapters
+
+When you'd rather stream from an official vendor SDK instead of using a built-in `IAiProvider` implementation, the adapter packages bridge that SDK's event stream into `ChatPanel` without you having to write an `IAiProvider`.
+
+**Anthropic SDK** — `FieldCure.AssistStudio.Anthropic` (platform-agnostic, for any .NET host) and `FieldCure.AssistStudio.Controls.WinUI.Anthropic` (ChatPanel extensions):
+
+```csharp
+using Anthropic;
+using FieldCure.AssistStudio.Controls.Anthropic;
+
+var client = new AnthropicClient();
+var sdkStream = client.Messages.CreateStreaming(new MessageCreateParams
+{
+    Model = "claude-sonnet-4-6",
+    MaxTokens = 4096,
+    Messages = [/* … */],
+});
+
+// Begin an assistant turn, then consume the SDK stream through the mapper.
+// RawMessageStreamEvent is translated to StreamEvent and rendered directly.
+using var turn = Chat.BeginAnthropicTurn(providerName: "Claude", modelId: "claude-sonnet-4-6");
+await turn.StreamAnthropicAsync(sdkStream);
+```
+
+Use the adapter when you need features the vendor SDK ships first (new beta capabilities, prompt caching controls, etc.) while keeping the `ChatPanel` UX — branching, attachments, tool approval — intact.
+
 ---
 
 ## Controls
@@ -250,6 +278,10 @@ Horizontal scrollable bar showing thumbnails of attached files before sending.
 
 Inline confirmation panel shown when a tool with `RequiresConfirmation = true` is invoked. Displays the tool name, an expandable JSON arguments preview, and Allow/Reject buttons. Replaces `ComposeBar` during confirmation and restores it after.
 
+### ToolElicitationPanel
+
+Inline input panel shown when an MCP server issues an `elicitation/create` request mid-tool-call (e.g. asking for a missing API key or confirming a destructive action). Renders the server-supplied JSON Schema as a native form — `string`, `number`, `boolean`, enum, and multi-field objects. String fields whose name looks secret (`password`, `secret`, `token`, `apiKey`, etc.) automatically render as `PasswordBox` to avoid leaking values via shoulder-surfing or screen capture. Server-origin badge and batch submit keep the flow auditable.
+
 ### Re-templating
 
 Override the default template in your app's resources:
@@ -281,20 +313,13 @@ The workspace app bundles MCP servers that are auto-installed and managed:
 - **Essentials** ([`FieldCure.Mcp.Essentials`](https://www.nuget.org/packages/FieldCure.Mcp.Essentials)) — 12–16 tools: HTTP client, web search (Bing/Serper/SerpApi/Tavily + category search for news/images/scholar/patents), web/document fetching, shell commands, JavaScript sandbox, environment info, file I/O, persistent memory (`remember`/`forget`).
 - **Filesystem** ([`FieldCure.Mcp.Filesystem`](https://www.nuget.org/packages/FieldCure.Mcp.Filesystem)) — Secure file operations within workspace folders. Per-tab instances with MCP Roots protocol for dynamic folder updates.
 - **Knowledge Base** ([`FieldCure.Mcp.Rag`](https://www.nuget.org/packages/FieldCure.Mcp.Rag)) — Multi-KB document indexing and search for RAG. Shared server with `kb_id` parameter, per-conversation KB selection, and embedding model configuration.
-- **Outbox** ([`FieldCure.Mcp.Outbox`](https://www.nuget.org/packages/FieldCure.Mcp.Outbox)) — Send messages via Slack, Telegram, Discord, Email (SMTP), and KakaoTalk. Shared instance across all tabs.
-- **BuiltInServerHelper** — Auto-installs and auto-updates built-in servers to latest NuGet version via `dotnet tool` on app startup. Read-only tools (read, list, search) skip user approval.
+- **Outbox** ([`FieldCure.Mcp.Outbox`](https://www.nuget.org/packages/FieldCure.Mcp.Outbox)) — Send messages via Slack, Discord, Telegram, Email (Gmail / Naver / generic SMTP), Microsoft (Outlook), and KakaoTalk. Shared instance across all tabs; channels are added/removed from the Settings → Connect page.
+- **Runner** ([`FieldCure.AssistStudio.Runner`](https://www.nuget.org/packages/FieldCure.AssistStudio.Runner)) — Headless LLM task runner with Windows Task Scheduler-backed cron scheduling. Windows-only.
+- **BuiltInServerHelper** — Launches each built-in server as `dnx <PackageId>@<Major>.* --yes …` at startup. `dnx` fetches and caches the latest in-range version directly from NuGet; AssistStudio polls NuGet on a 24-hour interval and surfaces an in-app notification when a new in-range build appears. Read-only tools (read, list, search) skip user approval.
 
-#### Manual Update
+#### Update model
 
-Built-in servers update automatically on next launch. To update immediately:
-
-```bash
-dotnet tool update FieldCure.Mcp.Essentials --tool-path "%LOCALAPPDATA%\FieldCure\AssistStudio\tools"
-```
-
-Replace the package name with any built-in server: `FieldCure.Mcp.Filesystem`, `FieldCure.Mcp.Rag`, `FieldCure.Mcp.Outbox`, or `FieldCure.AssistStudio.Runner`.
-
-> **Note:** Close AssistStudio before running — the tool executable may be locked while the app is running.
+No manual `dotnet tool update` step is needed. `dnx` resolves within the pinned major range on each invocation, so minor/patch releases flow through automatically on the next app launch. Major-version bumps (e.g. `2.* → 3.*`) are intentionally release-coupled to AssistStudio itself so breaking changes can be validated against the host before being picked up.
 
 ---
 
@@ -326,7 +351,7 @@ var profile = new Profile
 {
     Name = "Task Planner",
     SystemPrompt = "You are a task planner that breaks down complex requests into steps.",
-    EnabledServers = ["essentials", "memory", "builtin_filesystem"],
+    EnabledServers = ["builtin_essentials", "builtin_filesystem"],
     UseSearchTools = true  // Use meta-tool instead of sending all tool definitions
 };
 ```
@@ -335,12 +360,13 @@ var profile = new Profile
 
 ## Requirements
 
-| Dependency | Minimum Version |
-|------------|----------------|
-| .NET | 8.0 |
-| Windows App SDK | 1.7 |
-| WebView2 Runtime | Evergreen |
-| Target Platform | Windows 10 1903+ (10.0.19041.0) |
+| Dependency | Minimum Version | Scope |
+|------------|----------------|-------|
+| .NET runtime | 8.0 | Library consumers (Core / Controls / Providers / Execution) |
+| .NET SDK | 10.0 | AssistStudio app — `dnx` (ships with the .NET 10 SDK) launches built-in MCP servers |
+| Windows App SDK | 1.7 | AssistStudio app + Controls |
+| WebView2 Runtime | Evergreen | AssistStudio app + Controls |
+| Target Platform | Windows 10 1903+ (10.0.19041.0) | AssistStudio app + Controls |
 
 ---
 
@@ -351,11 +377,11 @@ var profile = new Profile
 | Package | Version | Description |
 |---------|---------|-------------|
 | [FieldCure.Mcp.Essentials](https://github.com/fieldcure/fieldcure-mcp-essentials) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.Mcp.Essentials)](https://www.nuget.org/packages/FieldCure.Mcp.Essentials) | 12–16 tools — HTTP, web search (+ news/images/scholar/patents), web/document fetching, shell, JavaScript sandbox, environment info, file I/O, persistent memory |
-| [FieldCure.Mcp.Outbox](https://github.com/fieldcure/fieldcure-mcp-outbox) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.Mcp.Outbox)](https://www.nuget.org/packages/FieldCure.Mcp.Outbox) | Multi-channel messaging — Slack, Telegram, Discord, Email (SMTP/Graph), KakaoTalk |
+| [FieldCure.Mcp.Outbox](https://github.com/fieldcure/fieldcure-mcp-outbox) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.Mcp.Outbox)](https://www.nuget.org/packages/FieldCure.Mcp.Outbox) | Multi-channel messaging — Slack, Discord, Telegram, Email (Gmail / Naver / SMTP / Microsoft Graph), KakaoTalk |
 | [FieldCure.Mcp.Filesystem](https://github.com/fieldcure/fieldcure-mcp-filesystem) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.Mcp.Filesystem)](https://www.nuget.org/packages/FieldCure.Mcp.Filesystem) | Sandboxed file/directory operations with built-in document parsing (DOCX, HWPX, XLSX, PDF) |
 | [FieldCure.Mcp.Rag](https://github.com/fieldcure/fieldcure-mcp-rag) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.Mcp.Rag)](https://www.nuget.org/packages/FieldCure.Mcp.Rag) | Document search — hybrid BM25 + vector retrieval, multi-KB, incremental indexing |
 | [FieldCure.Mcp.PublicData.Kr](https://github.com/fieldcure/fieldcure-mcp-publicdata) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.Mcp.PublicData.Kr)](https://www.nuget.org/packages/FieldCure.Mcp.PublicData.Kr) | Korean public data gateway — data.go.kr (80,000+ APIs) |
-| [FieldCure.AssistStudio.Runner](https://github.com/fieldcure/fieldcure-assiststudio-runner) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.AssistStudio.Runner)](https://www.nuget.org/packages/FieldCure.AssistStudio.Runner) | Headless LLM task runner with scheduling via Windows Task Scheduler |
+| [FieldCure.AssistStudio.Runner](https://github.com/fieldcure/fieldcure-assiststudio-runner) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.AssistStudio.Runner)](https://www.nuget.org/packages/FieldCure.AssistStudio.Runner) | Headless LLM task runner with scheduling via Windows Task Scheduler. **Windows-only.** |
 
 ### Libraries
 
@@ -365,8 +391,11 @@ var profile = new Profile
 | [FieldCure.Ai.Execution](https://github.com/fieldcure/fieldcure-assiststudio) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.Ai.Execution)](https://www.nuget.org/packages/FieldCure.Ai.Execution) | Agent loop and sub-agent execution engine for autonomous tool-use workflows |
 | [FieldCure.AssistStudio.Core](https://github.com/fieldcure/fieldcure-assiststudio) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.AssistStudio.Core)](https://www.nuget.org/packages/FieldCure.AssistStudio.Core) | MCP server management, tool orchestration, and conversation persistence |
 | [FieldCure.AssistStudio.Controls.WinUI](https://github.com/fieldcure/fieldcure-assiststudio) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.AssistStudio.Controls.WinUI)](https://www.nuget.org/packages/FieldCure.AssistStudio.Controls.WinUI) | WinUI 3 chat UI controls — WebView2 rendering, streaming, conversation branching |
-| [FieldCure.DocumentParsers](https://github.com/fieldcure/fieldcure-document-parsers) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.DocumentParsers)](https://www.nuget.org/packages/FieldCure.DocumentParsers) | Document text extraction — DOCX, HWPX, XLSX, PPTX with math-to-LaTeX |
-| [FieldCure.DocumentParsers.Pdf](https://github.com/fieldcure/fieldcure-document-parsers) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.DocumentParsers.Pdf)](https://www.nuget.org/packages/FieldCure.DocumentParsers.Pdf) | PDF text extraction add-on for DocumentParsers |
+| [FieldCure.AssistStudio.Anthropic](https://github.com/fieldcure/fieldcure-assiststudio) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.AssistStudio.Anthropic)](https://www.nuget.org/packages/FieldCure.AssistStudio.Anthropic) | Platform-agnostic Anthropic SDK adapter — maps `RawMessageStreamEvent` to `StreamEvent`, converts `ChatMessage` ↔ `MessageParam` |
+| [FieldCure.AssistStudio.Controls.WinUI.Anthropic](https://github.com/fieldcure/fieldcure-assiststudio) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.AssistStudio.Controls.WinUI.Anthropic)](https://www.nuget.org/packages/FieldCure.AssistStudio.Controls.WinUI.Anthropic) | WinUI 3 ChatPanel extensions for streaming Anthropic SDK responses via `AssistantTurnHandle` |
+| [FieldCure.DocumentParsers](https://github.com/fieldcure/fieldcure-document-parsers) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.DocumentParsers)](https://www.nuget.org/packages/FieldCure.DocumentParsers) | Document text extraction — DOCX, HWPX, XLSX, PPTX with math-to-LaTeX, plus PdfPig-backed PDF text (auto-registered from v2.0) |
+| [FieldCure.DocumentParsers.Imaging](https://github.com/fieldcure/fieldcure-document-parsers) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.DocumentParsers.Imaging)](https://www.nuget.org/packages/FieldCure.DocumentParsers.Imaging) | PDF page-as-image rendering via PDFium. Needed by hosts that send PDFs to vision-capable providers (register with `AddImagingSupport()`) |
+| [FieldCure.DocumentParsers.Ocr](https://github.com/fieldcure/fieldcure-document-parsers) | [![NuGet](https://img.shields.io/nuget/v/FieldCure.DocumentParsers.Ocr)](https://www.nuget.org/packages/FieldCure.DocumentParsers.Ocr) | Tesseract-based OCR for scanned PDFs and image documents. Windows x64 only |
 
 ---
 
