@@ -271,3 +271,8 @@ SigningSettings.props
 
 # todo
 todo/
+
+# Windows App Certification Kit reports (local pre-submission checks)
+wack-report.xml
+wack-report.htm
+wack-report.html
