@@ -185,11 +185,18 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
 
             _client = await McpClient.CreateAsync(transport, options, cancellationToken: ct);
 
-            // Auto-fill description and version from server's self-reported info
+            // Auto-fill description and version from server's self-reported info.
+            // Prefer ServerInfo.Description (purpose/usage text) and fall back to
+            // ServerInfo.Title (short brand label) only when Description is blank —
+            // matching to Name produces redundant text for the AI-facing field.
             if (_client.ServerInfo is { } serverInfo)
             {
                 if (string.IsNullOrWhiteSpace(Config.Description))
-                    Config.Description = serverInfo.Title ?? "";
+                {
+                    Config.Description = !string.IsNullOrWhiteSpace(serverInfo.Description)
+                        ? serverInfo.Description!
+                        : serverInfo.Title ?? "";
+                }
                 ServerVersion = serverInfo.Version;
             }
 
