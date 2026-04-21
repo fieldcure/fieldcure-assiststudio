@@ -64,7 +64,8 @@
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
 
-                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="2">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4"
+                                            VerticalAlignment="Center">
                                     <Button x:Name="PART_AttachButton"
                                             x:Uid="ComposeBar_Attach"
                                             Style="{StaticResource SubtleButtonStyle}"

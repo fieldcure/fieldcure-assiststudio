@@ -1024,9 +1024,27 @@ public sealed partial class ChatPanel
                 }
             };
         }
-        if (_searchPrevButton is not null) _searchPrevButton.Click += (s, e) => _ = NavigateSearchAsync(-1);
-        if (_searchNextButton is not null) _searchNextButton.Click += (s, e) => _ = NavigateSearchAsync(1);
-        if (_searchCloseButton is not null) _searchCloseButton.Click += (s, e) => CloseSearchBar();
+        if (_searchPrevButton is not null)
+        {
+            _searchPrevButton.Click += (s, e) => _ = NavigateSearchAsync(-1);
+            SetBottomRightToolTip(_searchPrevButton,
+                Res.GetString("Chat_SearchPrevButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip")
+                ?? "Previous");
+        }
+        if (_searchNextButton is not null)
+        {
+            _searchNextButton.Click += (s, e) => _ = NavigateSearchAsync(1);
+            SetBottomRightToolTip(_searchNextButton,
+                Res.GetString("Chat_SearchNextButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip")
+                ?? "Next");
+        }
+        if (_searchCloseButton is not null)
+        {
+            _searchCloseButton.Click += (s, e) => CloseSearchBar();
+            SetBottomRightToolTip(_searchCloseButton,
+                Res.GetString("Chat_SearchCloseButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip")
+                ?? "Close search");
+        }
 
         // Wire approval panel events
         if (_approvalPanel is not null)
