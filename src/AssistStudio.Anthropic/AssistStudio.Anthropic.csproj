@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
-    <Version>0.1.0</Version>
+    <Version>0.1.0-preview.1</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
     <!-- NuGet Package Metadata -->
@@ -19,6 +19,7 @@
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;anthropic;claude;streaming;adapter</PackageTags>
+    <PackageReleaseNotes>v0.1.0-preview.1: Initial preview. AnthropicStreamEventMapper translates Anthropic SDK RawMessageStreamEvent into Controls StreamEvent (text/thinking/tool-use deltas, usage, truncation). AnthropicMessageConverter bridges ChatMessage to MessageParam (system prompt extraction, image + text attachments). net8.0/net9.0, platform-agnostic.</PackageReleaseNotes>
     <PackageIcon>icon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
