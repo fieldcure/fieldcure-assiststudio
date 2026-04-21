@@ -7,7 +7,9 @@
   <Folder Name="/docs/">
     <File Path="docs/dependencies.md" />
     <File Path="README.md" />
+    <File Path="RELEASENOTES.Anthropic.md" />
     <File Path="RELEASENOTES.App.md" />
+    <File Path="RELEASENOTES.Controls.Anthropic.md" />
     <File Path="RELEASENOTES.Controls.md" />
     <File Path="RELEASENOTES.Core.md" />
     <File Path="RELEASENOTES.Execution.md" />
