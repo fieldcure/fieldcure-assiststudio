@@ -1,9 +1,10 @@
-﻿using AssistStudio.Helpers;
+using AssistStudio.Helpers;
 using AssistStudio.Mcp;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.Windows.ApplicationModel.Resources;
+using System.Diagnostics;
 using System.Text.Json;
 using Windows.UI;
 
@@ -11,7 +12,10 @@ namespace AssistStudio.Controls;
 
 /// <summary>
 /// Self-contained section that displays configured Outbox messaging channels.
-/// Calls the <c>list_channels</c> MCP tool to fetch the channel list.
+/// Reads channels via the <c>list_channels</c> MCP tool. Mutations are delegated
+/// to the Outbox CLI (<c>fieldcure-mcp-outbox add|remove</c>) spawned in a new
+/// console window; after the CLI exits we reconnect the Outbox server so the
+/// list reflects the new channels.json state.
 /// </summary>
 public sealed partial class ChannelsSection : UserControl
 {
@@ -41,6 +45,7 @@ public sealed partial class ChannelsSection : UserControl
     public ChannelsSection()
     {
         InitializeComponent();
+        AddChannelText.Text = _loader.GetString("Connect_AddChannel") ?? "Add channel";
     }
 
     #endregion
@@ -72,6 +77,31 @@ public sealed partial class ChannelsSection : UserControl
         _ = LoadChannelsAsync();
     }
 
+    /// <summary>
+    /// Launches the Outbox CLI in a new console window to add a channel of the
+    /// selected type, then reconnects the server so the UI picks up the new
+    /// entry.
+    /// </summary>
+    private async void OnAddChannelTypeClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuFlyoutItem item || item.Tag is not string type)
+            return;
+
+        await RunCliAsync("add", type);
+    }
+
+    /// <summary>
+    /// Launches the Outbox CLI in a new console window to remove a channel,
+    /// then reconnects the server so the UI picks up the removal.
+    /// </summary>
+    private async void OnDeleteChannelClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn || btn.Tag is not string channelId)
+            return;
+
+        await RunCliAsync("remove", channelId);
+    }
+
     #endregion
 
     #region Private Methods
@@ -99,7 +129,7 @@ public sealed partial class ChannelsSection : UserControl
             if (string.IsNullOrEmpty(resultJson))
             {
                 ShowStatus(_loader.GetString("Connect_NoChannels")
-                    ?? "No channels configured. Add channels in a conversation.");
+                    ?? "No channels configured yet.");
                 return;
             }
 
@@ -108,7 +138,7 @@ public sealed partial class ChannelsSection : UserControl
                 || channels.GetArrayLength() == 0)
             {
                 ShowStatus(_loader.GetString("Connect_NoChannels")
-                    ?? "No channels configured. Add channels in a conversation.");
+                    ?? "No channels configured yet.");
                 return;
             }
 
@@ -138,14 +168,18 @@ public sealed partial class ChannelsSection : UserControl
     }
 
     /// <summary>
-    /// Builds the channel list UI from the MCP tool result.
+    /// Builds the channel list UI from the MCP tool result, attaching a delete
+    /// button per row that dispatches to the CLI <c>remove</c> command.
     /// </summary>
     private void BuildChannelList(JsonElement channels)
     {
         ChannelListPanel.Children.Clear();
 
+        var deleteTooltip = _loader.GetString("Connect_DeleteChannel") ?? "Delete channel";
+
         foreach (var channel in channels.EnumerateArray())
         {
+            var id = channel.TryGetProperty("id", out var i) ? i.GetString() ?? "" : "";
             var type = channel.TryGetProperty("type", out var t) ? t.GetString() ?? "" : "";
             var name = channel.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
             var from = channel.TryGetProperty("from", out var f) ? f.GetString() ?? "" : "";
@@ -153,39 +187,129 @@ public sealed partial class ChannelsSection : UserControl
             var displayType = TypeDisplayNames.TryGetValue(type, out var dn) ? dn : type;
             var displayDetail = !string.IsNullOrEmpty(from) ? from : name;
 
-            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
+            var row = new Grid();
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
             // Green status dot
-            row.Children.Add(new FontIcon
+            var dot = new FontIcon
             {
                 Glyph = "\uF136",
                 FontSize = 10,
                 Foreground = new SolidColorBrush(Color.FromArgb(255, 76, 175, 80)),
                 VerticalAlignment = VerticalAlignment.Center,
-            });
+                Margin = new Thickness(0, 0, 10, 0),
+            };
+            Grid.SetColumn(dot, 0);
+            row.Children.Add(dot);
 
             // Channel type label (bold, fixed width)
-            row.Children.Add(new TextBlock
+            var typeLabel = new TextBlock
             {
                 Text = displayType,
-                Width = 80,
                 Style = (Style)Application.Current.Resources["BodyStrongTextBlockStyle"],
                 VerticalAlignment = VerticalAlignment.Center,
-            });
+            };
+            Grid.SetColumn(typeLabel, 1);
+            row.Children.Add(typeLabel);
 
             // Channel detail (name/from)
-            row.Children.Add(new TextBlock
+            var detail = new TextBlock
             {
                 Text = displayDetail,
                 Opacity = 0.7,
                 VerticalAlignment = VerticalAlignment.Center,
-            });
+                TextTrimming = TextTrimming.CharacterEllipsis,
+            };
+            Grid.SetColumn(detail, 2);
+            row.Children.Add(detail);
+
+            // Delete button — CLI remove
+            var deleteButton = new Button
+            {
+                Tag = id,
+                Padding = new Thickness(6, 2, 6, 2),
+                Background = (Brush)Application.Current.Resources["SubtleFillColorTransparentBrush"],
+                BorderThickness = new Thickness(0),
+                Content = new FontIcon { Glyph = "\uE74D", FontSize = 12 },
+            };
+            ToolTipService.SetToolTip(deleteButton, deleteTooltip);
+            ToolTipService.SetPlacement(deleteButton, Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse);
+            deleteButton.Click += OnDeleteChannelClick;
+            Grid.SetColumn(deleteButton, 3);
+            row.Children.Add(deleteButton);
 
             ChannelListPanel.Children.Add(row);
         }
 
         LoadingPanel.Visibility = Visibility.Collapsed;
         ChannelListPanel.Visibility = Visibility.Visible;
+        StatusText.Visibility = Visibility.Collapsed;
+    }
+
+    /// <summary>
+    /// Spawns <c>fieldcure-mcp-outbox &lt;command&gt; &lt;arg&gt;</c> in a new console
+    /// window and waits for it to exit. Disconnects and reconnects the Outbox
+    /// server afterwards so <c>list_channels</c> reflects the CLI's changes.
+    /// </summary>
+    private async Task RunCliAsync(string command, string arg)
+    {
+        AddChannelButton.IsEnabled = false;
+
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "fieldcure-mcp-outbox",
+                Arguments = $"{command} {arg}",
+                UseShellExecute = true, // opens its own console window
+            };
+
+            using var process = Process.Start(psi);
+            if (process is null)
+            {
+                LoggingService.LogError($"[Outbox] Failed to launch CLI for '{command} {arg}'");
+                return;
+            }
+
+            await process.WaitForExitAsync();
+            LoggingService.LogInfo($"[Outbox] CLI '{command} {arg}' exited with code {process.ExitCode}");
+
+            await ReconnectAndReloadAsync();
+        }
+        catch (Exception ex)
+        {
+            LoggingService.LogError($"[Outbox] CLI spawn failed: {ex.Message}");
+        }
+        finally
+        {
+            AddChannelButton.IsEnabled = true;
+        }
+    }
+
+    /// <summary>
+    /// Reconnects the Outbox server (so it re-reads channels.json) and reloads
+    /// the channel list.
+    /// </summary>
+    private async Task ReconnectAndReloadAsync()
+    {
+        _loaded = true;
+        ShowLoading();
+
+        try
+        {
+            var conn = _registry?.GetBuiltInConnection(BuiltInServerHelper.OutboxKey);
+            if (conn is not null && _registry is not null)
+                await _registry.ReconnectAsync(conn);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.LogWarning($"[Outbox] Reconnect after CLI failed: {ex.Message}");
+        }
+
+        await LoadChannelsAsync();
     }
 
     /// <summary>

@@ -1211,7 +1211,13 @@
     <value>Unable to load channels</value>
   </data>
   <data name="Connect_NoChannels" xml:space="preserve">
-    <value>No channels configured. Add channels in a conversation.</value>
+    <value>No channels configured yet.</value>
+  </data>
+  <data name="Connect_AddChannel" xml:space="preserve">
+    <value>Add channel</value>
+  </data>
+  <data name="Connect_DeleteChannel" xml:space="preserve">
+    <value>Delete channel</value>
   </data>
   <data name="Embedding_OllamaNotRunning" xml:space="preserve">
     <value>Ollama is not running. Start with: ollama serve</value>

@@ -9,6 +9,28 @@
                                  Expanded="OnSectionExpanded">
         <controls:CollapsibleSection.Body>
             <StackPanel x:Name="ContentPanel" Spacing="6">
+                <!-- Add channel button with type picker -->
+                <Button x:Name="AddChannelButton"
+                        HorizontalAlignment="Left"
+                        Padding="10,4">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon Glyph="&#xE710;" FontSize="12" />
+                        <TextBlock x:Name="AddChannelText" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <Button.Flyout>
+                        <MenuFlyout>
+                            <MenuFlyoutItem x:Name="AddSlackItem"     Tag="slack"     Click="OnAddChannelTypeClick" Text="Slack" />
+                            <MenuFlyoutItem x:Name="AddDiscordItem"   Tag="discord"   Click="OnAddChannelTypeClick" Text="Discord" />
+                            <MenuFlyoutItem x:Name="AddGmailItem"     Tag="gmail"     Click="OnAddChannelTypeClick" Text="Gmail" />
+                            <MenuFlyoutItem x:Name="AddNaverItem"     Tag="naver"     Click="OnAddChannelTypeClick" Text="Naver" />
+                            <MenuFlyoutItem x:Name="AddSmtpItem"      Tag="smtp"      Click="OnAddChannelTypeClick" Text="SMTP (custom)" />
+                            <MenuFlyoutItem x:Name="AddTelegramItem"  Tag="telegram"  Click="OnAddChannelTypeClick" Text="Telegram" />
+                            <MenuFlyoutItem x:Name="AddKakaoItem"     Tag="kakaotalk" Click="OnAddChannelTypeClick" Text="KakaoTalk" />
+                            <MenuFlyoutItem x:Name="AddMicrosoftItem" Tag="microsoft" Click="OnAddChannelTypeClick" Text="Microsoft (Outlook)" />
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+
                 <!-- Loading indicator -->
                 <StackPanel x:Name="LoadingPanel" Orientation="Horizontal" Spacing="8">
                     <ProgressRing IsActive="True" Width="16" Height="16" />
