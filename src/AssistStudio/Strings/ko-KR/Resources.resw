@@ -191,7 +191,7 @@
   <data name="Memory_Title.Text" xml:space="preserve">
     <value>메모리</value>
   </data>
-  <data name="Memory_Refresh.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+  <data name="Memory_RefreshTip.Content" xml:space="preserve">
     <value>새로 고침</value>
   </data>
   <data name="Memory_Empty.Text" xml:space="preserve">
@@ -1434,6 +1434,9 @@
   </data>
   <data name="Schedule_Title.Text" xml:space="preserve">
     <value>스케줄</value>
+  </data>
+  <data name="Schedule_RefreshTip.Content" xml:space="preserve">
+    <value>새로 고침</value>
   </data>
   <data name="Schedule_Empty.Text" xml:space="preserve">
     <value>등록된 스케줄이 없습니다.</value>

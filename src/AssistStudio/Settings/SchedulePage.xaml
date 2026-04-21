@@ -40,6 +40,9 @@
                     Style="{StaticResource SubtleButtonStyle}"
                     Padding="8" MinWidth="0" MinHeight="0">
                 <FontIcon Glyph="&#xE72C;" FontSize="14" />
+                <ToolTipService.ToolTip>
+                    <ToolTip x:Uid="Schedule_RefreshTip" Placement="Mouse" />
+                </ToolTipService.ToolTip>
             </Button>
         </Grid>
 

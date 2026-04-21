@@ -191,7 +191,7 @@
   <data name="Memory_Title.Text" xml:space="preserve">
     <value>Memory</value>
   </data>
-  <data name="Memory_Refresh.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+  <data name="Memory_RefreshTip.Content" xml:space="preserve">
     <value>Refresh</value>
   </data>
   <data name="Memory_Empty.Text" xml:space="preserve">
@@ -1434,6 +1434,9 @@
   </data>
   <data name="Schedule_Title.Text" xml:space="preserve">
     <value>Schedule</value>
+  </data>
+  <data name="Schedule_RefreshTip.Content" xml:space="preserve">
+    <value>Refresh</value>
   </data>
   <data name="Schedule_Empty.Text" xml:space="preserve">
     <value>No scheduled tasks registered.</value>
