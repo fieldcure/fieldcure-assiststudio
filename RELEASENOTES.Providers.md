@@ -1,5 +1,12 @@
 ﻿# Release Notes — FieldCure.Ai.Providers
 
+## v0.5.0 (2026-04-21)
+
+### Changed
+- **FieldCure.DocumentParsers 1.x → 2.x** — PDF text extraction is now served by the core `DocumentParsers` package (PdfPig auto-registered); `IMediaDocumentParser` (used by `AttachmentProcessor.RenderPdfPages`) is resolved via the host-registered `FieldCure.DocumentParsers.Imaging` package. Consumers must rebuild against the new transitive type locations.
+
+---
+
 ## v0.4.0 (2026-04-14)
 
 ### Added
