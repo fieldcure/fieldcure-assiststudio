@@ -247,11 +247,14 @@ public static class BuiltInServerHelper
     }
 
     /// <summary>
-    /// Returns the <c>dnx</c> invocation spec for a built-in server.
-    /// Command is always <c>dnx</c>; prefix args pin the package id with its
-    /// major-version range (e.g. <c>FieldCure.Mcp.Rag@2.*</c>) followed by
-    /// <c>--yes</c> to suppress the first-run install prompt. Callers append
-    /// their own trailing args.
+    /// Returns the <c>dnx</c> invocation spec for a built-in server. Command is
+    /// the literal string <c>"dnx"</c> — MCP stdio transports resolve it through
+    /// the shell so PATHEXT lookup works. For direct <see cref="Process.Start"/>
+    /// callers (which do not search PATHEXT), use
+    /// <see cref="GetLaunchSpecForProcess"/> which substitutes a resolved
+    /// absolute path to <c>dnx.cmd</c>/<c>dnx</c>. Prefix args pin the package
+    /// id with its major-version range (e.g. <c>FieldCure.Mcp.Rag@2.*</c>)
+    /// followed by <c>--yes</c> to suppress the first-run install prompt.
     /// </summary>
     public static (string Command, string[] PrefixArgs) GetLaunchSpec(string serverKey)
     {
@@ -260,6 +263,57 @@ public static class BuiltInServerHelper
             return ("", []);
 
         return ("dnx", [$"{packageId}@{range}", "--yes"]);
+    }
+
+    /// <summary>
+    /// Variant of <see cref="GetLaunchSpec"/> for code paths that spawn the
+    /// built-in server with <see cref="Process.Start(ProcessStartInfo)"/> and
+    /// <c>UseShellExecute=false</c>. On Windows <c>dnx</c> ships as a
+    /// <c>.cmd</c> shim which <c>Process.Start</c> will not find via bare name,
+    /// so we substitute the resolved absolute path. Returns an empty command
+    /// when <c>dnx</c> is not on PATH — callers should log and skip.
+    /// </summary>
+    public static (string Command, string[] PrefixArgs) GetLaunchSpecForProcess(string serverKey)
+    {
+        var (_, prefixArgs) = GetLaunchSpec(serverKey);
+        if (prefixArgs.Length == 0) return ("", []);
+
+        var dnx = _dnxPath.Value;
+        return string.IsNullOrEmpty(dnx) ? ("", []) : (dnx, prefixArgs);
+    }
+
+    /// <summary>
+    /// Cached absolute path to the <c>dnx</c> launcher. On Windows <c>dnx</c>
+    /// ships as a <c>.cmd</c> shim; <see cref="Process.Start(ProcessStartInfo)"/>
+    /// with <c>UseShellExecute=false</c> only searches PATH for <c>.exe</c> by
+    /// default, so we resolve the full path once here and reuse it.
+    /// </summary>
+    private static readonly Lazy<string?> _dnxPath = new(ResolveDnxPath);
+
+    /// <summary>
+    /// Walks the PATH environment variable looking for a <c>dnx</c> launcher.
+    /// Returns <see langword="null"/> when not found (e.g. user has not installed
+    /// the .NET 10 SDK); callers should handle the absence gracefully.
+    /// </summary>
+    private static string? ResolveDnxPath()
+    {
+        var pathVar = Environment.GetEnvironmentVariable("PATH");
+        if (string.IsNullOrEmpty(pathVar)) return null;
+
+        string[] extensions = OperatingSystem.IsWindows()
+            ? [".cmd", ".exe", ".bat", ".ps1"]
+            : [""];
+
+        foreach (var dir in pathVar.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+        {
+            foreach (var ext in extensions)
+            {
+                var candidate = Path.Combine(dir, $"dnx{ext}");
+                if (File.Exists(candidate))
+                    return candidate;
+            }
+        }
+        return null;
     }
 
     /// <summary>

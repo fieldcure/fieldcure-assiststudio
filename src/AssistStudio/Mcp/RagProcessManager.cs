@@ -57,7 +57,7 @@ public static class RagProcessManager
     /// </param>
     public static void StartQueueOrchestrator(bool sweepAll = false)
     {
-        var (command, prefixArgs) = BuiltInServerHelper.GetLaunchSpec(BuiltInServerHelper.RagKey);
+        var (command, prefixArgs) = BuiltInServerHelper.GetLaunchSpecForProcess(BuiltInServerHelper.RagKey);
         if (string.IsNullOrEmpty(command))
         {
             LoggingService.LogError("[RAG] exec-queue failed — no launch spec for RAG");
@@ -99,7 +99,7 @@ public static class RagProcessManager
         if (!KnowledgeBaseStore.AnyExists())
             return;
 
-        var (command, prefixArgs) = BuiltInServerHelper.GetLaunchSpec(BuiltInServerHelper.RagKey);
+        var (command, prefixArgs) = BuiltInServerHelper.GetLaunchSpecForProcess(BuiltInServerHelper.RagKey);
         if (string.IsNullOrEmpty(command))
             return;
 
