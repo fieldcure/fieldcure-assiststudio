@@ -6,6 +6,7 @@ using FieldCure.Ai.Providers;
 using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Controls;
 using FieldCure.AssistStudio.Models;
+using Microsoft.UI.Dispatching;
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.Text;
@@ -60,6 +61,27 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     private bool _ollamaReachable = true;
 
+    /// <summary>
+    /// Startup health-check is delayed slightly and retried because Ollama can come up
+    /// a bit after the app window appears.
+    /// </summary>
+    private static readonly TimeSpan OllamaInitialCheckDelay = TimeSpan.FromSeconds(3);
+
+    /// <summary>
+    /// Timeout per startup reachability probe.
+    /// </summary>
+    private static readonly TimeSpan OllamaProbeTimeout = TimeSpan.FromSeconds(2);
+
+    /// <summary>
+    /// Delay between startup reachability retries.
+    /// </summary>
+    private static readonly TimeSpan OllamaRetryDelay = TimeSpan.FromSeconds(2);
+
+    /// <summary>
+    /// Number of startup probes before concluding Ollama is unavailable for this session.
+    /// </summary>
+    private const int OllamaStartupProbeAttempts = 4;
+
     #endregion
 
     #region Constructors
@@ -74,8 +96,9 @@ public partial class MainViewModel : ObservableObject
         // Register available tools
         ToolRegistry.Register(new SearchToolsTool(App.McpRegistry));
 
-        // Fire-and-forget Ollama check for UI dropdown cleanup
-        _ = FilterUnreachableOllamaAsync();
+        // Fire-and-forget Ollama monitoring for UI dropdown cleanup. We delay and retry
+        // because the local server may still be starting while the app is booting.
+        _ = MonitorOllamaReachabilityAsync();
     }
 
     #endregion
@@ -559,26 +582,65 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Fire-and-forget Ollama reachability check for UI cleanup.
-    /// Sets <see cref="_ollamaReachable"/> to <c>false</c> when complete,
-    /// causing <see cref="GetFilteredPresets"/> to exclude Ollama from preset dropdowns.
+    /// Delayed, retried Ollama reachability check for UI cleanup.
+    /// Updates preset lists only when the observed reachability state changes.
     /// Not a safety mechanism — <see cref="IAuxiliaryProviderResolver"/> validates
     /// at call time as a runtime safety net.
     /// </summary>
-    private async Task FilterUnreachableOllamaAsync()
+    private async Task MonitorOllamaReachabilityAsync()
     {
-        try
-        {
-            var baseUrl = AppSettings.GetOllamaBaseUrl() ?? "http://localhost:11434";
-            using var provider = new OllamaProvider(baseUrl: baseUrl);
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-            var info = await provider.ValidateConnectionAsync(cts.Token);
-            if (info.IsValid) return;
-        }
-        catch { /* unreachable */ }
+        await Task.Delay(OllamaInitialCheckDelay);
 
-        _ollamaReachable = false;
-        LoggingService.LogInfo("[App] Ollama unreachable — excluded from preset dropdowns");
+        for (var attempt = 1; attempt <= OllamaStartupProbeAttempts; attempt++)
+        {
+            try
+            {
+                var baseUrl = AppSettings.GetOllamaBaseUrl() ?? "http://localhost:11434";
+                using var provider = new OllamaProvider(baseUrl: baseUrl);
+                using var cts = new CancellationTokenSource(OllamaProbeTimeout);
+                var info = await provider.ValidateConnectionAsync(cts.Token);
+                if (info.IsValid)
+                {
+                    SetOllamaReachable(true, attempt == 1
+                        ? "[App] Ollama reachable at startup"
+                        : $"[App] Ollama reachable after retry {attempt}/{OllamaStartupProbeAttempts}");
+                    return;
+                }
+            }
+            catch
+            {
+                // Treat probe exceptions as "not reachable yet" and retry below.
+            }
+
+            if (attempt < OllamaStartupProbeAttempts)
+                await Task.Delay(OllamaRetryDelay);
+        }
+
+        SetOllamaReachable(false, "[App] Ollama unreachable after startup retries — excluded from preset dropdowns");
+    }
+
+    /// <summary>
+    /// Applies a new Ollama reachability state and refreshes open-tab preset lists when needed.
+    /// </summary>
+    private void SetOllamaReachable(bool reachable, string logMessage)
+    {
+        if (_ollamaReachable == reachable)
+        {
+            LoggingService.LogInfo(logMessage);
+            return;
+        }
+
+        _ollamaReachable = reachable;
+        LoggingService.LogInfo(logMessage);
+
+        var dispatcher = (App.Current as App)?.MainWindow?.DispatcherQueue;
+        if (dispatcher is null)
+        {
+            RefreshPresetsOnAll();
+            return;
+        }
+
+        dispatcher.TryEnqueue(DispatcherQueuePriority.Normal, RefreshPresetsOnAll);
     }
 
     /// <summary>
