@@ -57,28 +57,29 @@ public static class RagProcessManager
     /// </param>
     public static void StartQueueOrchestrator(bool sweepAll = false)
     {
-        var exePath = BuiltInServerHelper.GetServerExePath(BuiltInServerHelper.RagKey);
-        if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath))
+        var (command, prefixArgs) = BuiltInServerHelper.GetLaunchSpec(BuiltInServerHelper.RagKey);
+        if (string.IsNullOrEmpty(command))
         {
-            LoggingService.LogError($"[RAG] exec-queue failed — executable not found: {exePath}");
+            LoggingService.LogError("[RAG] exec-queue failed — no launch spec for RAG");
             return;
         }
 
-        var queuePath = DeferredQueueStore.QueueFilePath;
-        var args = $"exec-queue --queue-file \"{queuePath}\"";
-        if (sweepAll) args += " --sweep-all";
+        var psi = new ProcessStartInfo
+        {
+            FileName = command,
+            CreateNoWindow = true,
+            UseShellExecute = false,
+        };
+        foreach (var a in prefixArgs) psi.ArgumentList.Add(a);
+        psi.ArgumentList.Add("exec-queue");
+        psi.ArgumentList.Add("--queue-file");
+        psi.ArgumentList.Add(DeferredQueueStore.QueueFilePath);
+        if (sweepAll) psi.ArgumentList.Add("--sweep-all");
 
-        LoggingService.LogInfo($"[RAG] Starting exec-queue orchestrator: {exePath} {args}");
+        LoggingService.LogInfo($"[RAG] Starting exec-queue orchestrator: {command} {string.Join(' ', psi.ArgumentList)}");
 
         try
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName = exePath,
-                Arguments = args,
-                CreateNoWindow = true,
-                UseShellExecute = false,
-            };
             InjectApiKeys(psi);
             Process.Start(psi);
         }
@@ -95,25 +96,29 @@ public static class RagProcessManager
     /// </summary>
     public static void StartPruneOrphans()
     {
-        var exePath = BuiltInServerHelper.GetServerExePath(BuiltInServerHelper.RagKey);
-        if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath))
-            return;
-
         if (!KnowledgeBaseStore.AnyExists())
             return;
 
-        var args = $"prune-orphans --base-path \"{KnowledgeBaseStore.BasePath}\"";
-        LoggingService.LogInfo($"[RAG] Starting prune-orphans: {exePath} {args}");
+        var (command, prefixArgs) = BuiltInServerHelper.GetLaunchSpec(BuiltInServerHelper.RagKey);
+        if (string.IsNullOrEmpty(command))
+            return;
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = command,
+            CreateNoWindow = true,
+            UseShellExecute = false,
+        };
+        foreach (var a in prefixArgs) psi.ArgumentList.Add(a);
+        psi.ArgumentList.Add("prune-orphans");
+        psi.ArgumentList.Add("--base-path");
+        psi.ArgumentList.Add(KnowledgeBaseStore.BasePath);
+
+        LoggingService.LogInfo($"[RAG] Starting prune-orphans: {command} {string.Join(' ', psi.ArgumentList)}");
 
         try
         {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = exePath,
-                Arguments = args,
-                CreateNoWindow = true,
-                UseShellExecute = false,
-            });
+            Process.Start(psi);
         }
         catch (Exception ex)
         {

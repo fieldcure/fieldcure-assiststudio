@@ -331,7 +331,7 @@ public sealed partial class ConnectPage : Page
             Id = fsPrefix,
             Name = BuiltInServerHelper.FilesystemDisplayName,
             TransportType = McpTransportType.Stdio,
-            Command = BuiltInServerHelper.GetServerExePath(BuiltInServerHelper.FilesystemKey),
+            Command = "dnx",
             IsBuiltIn = true,
             IsEnabled = false,
             Description = activeTabCount > 0
@@ -366,7 +366,7 @@ public sealed partial class ConnectPage : Page
             Id = ragPrefix,
             Name = BuiltInServerHelper.RagDisplayName,
             TransportType = McpTransportType.Stdio,
-            Command = BuiltInServerHelper.GetServerExePath(BuiltInServerHelper.RagKey),
+            Command = "dnx",
             IsBuiltIn = true,
             IsEnabled = false,
             Description = ragDescription,
@@ -381,7 +381,7 @@ public sealed partial class ConnectPage : Page
             Id = outboxPrefix,
             Name = BuiltInServerHelper.OutboxDisplayName,
             TransportType = McpTransportType.Stdio,
-            Command = BuiltInServerHelper.GetServerExePath(BuiltInServerHelper.OutboxKey),
+            Command = "dnx",
             IsBuiltIn = true,
             IsEnabled = false,
             Description = _loader.GetString("Connect_OutboxDescription"),
@@ -396,7 +396,7 @@ public sealed partial class ConnectPage : Page
             Id = runnerPrefix,
             Name = BuiltInServerHelper.RunnerDisplayName,
             TransportType = McpTransportType.Stdio,
-            Command = BuiltInServerHelper.GetServerExePath(BuiltInServerHelper.RunnerKey),
+            Command = "dnx",
             IsBuiltIn = true,
             IsEnabled = false,
             Description = _loader.GetString("Connect_RunnerDescription"),
@@ -411,7 +411,7 @@ public sealed partial class ConnectPage : Page
             Id = essentialsPrefix,
             Name = BuiltInServerHelper.EssentialsDisplayName,
             TransportType = McpTransportType.Stdio,
-            Command = BuiltInServerHelper.GetServerExePath(BuiltInServerHelper.EssentialsKey),
+            Command = "dnx",
             IsBuiltIn = true,
             IsEnabled = false,
             Description = _loader.GetString("Connect_EssentialsDescription"),
@@ -549,9 +549,11 @@ public sealed partial class ConnectPage : Page
                     return;
                 }
 
-                // Built-in server guard
+                // Built-in server guard — check both the name and the command,
+                // passing the args so dnx-launched built-ins are matched on package id.
+                var cmdArgs = argsBox.Text.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 var isBuiltIn = BuiltInServerHelper.IsBuiltInCommand(name)
-                    || BuiltInServerHelper.IsBuiltInCommand(commandBox.Text.Trim());
+                    || BuiltInServerHelper.IsBuiltInCommand(commandBox.Text.Trim(), cmdArgs);
                 builtInWarning.Visibility = isBuiltIn ? Visibility.Visible : Visibility.Collapsed;
                 dialog.IsPrimaryButtonEnabled = !isBuiltIn;
             }
@@ -676,7 +678,7 @@ public sealed partial class ConnectPage : Page
             foreach (var config in configs)
             {
                 if (existingNames.Contains(config.Name)) continue;
-                if (BuiltInServerHelper.IsBuiltInCommand(config.Command)
+                if (BuiltInServerHelper.IsBuiltInCommand(config.Command, config.Arguments)
                     || BuiltInServerHelper.IsBuiltInCommand(config.Name)) continue;
 
                 _registry?.AddWithoutConnect(config);

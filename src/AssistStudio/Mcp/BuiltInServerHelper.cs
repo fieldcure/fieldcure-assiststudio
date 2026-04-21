@@ -2,9 +2,7 @@
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.ApplicationModel.Resources;
-using System.Diagnostics;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace AssistStudio.Mcp;
 
@@ -24,15 +22,9 @@ public static class BuiltInServerHelper
     #region Constants
 
     /// <summary>
-    /// Base installation path for built-in server dotnet tools.
-    /// </summary>
-    private static readonly string ToolInstallPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "FieldCure", "AssistStudio", "tools");
-
-    /// <summary>
-    /// Maps server keys to their NuGet package IDs.
-    /// Versions are resolved automatically via <c>dotnet tool install/update</c> (always latest stable).
+    /// Maps server keys to their NuGet package IDs. Packages are run via <c>dnx</c>
+    /// (NuGet's npx-equivalent, .NET 10+), which fetches and executes them directly
+    /// from NuGet — no global install step is required.
     /// </summary>
     private static readonly Dictionary<string, string> NuGetPackages = new()
     {
@@ -41,6 +33,22 @@ public static class BuiltInServerHelper
         [OutboxKey] = "FieldCure.Mcp.Outbox",
         [RunnerKey] = "FieldCure.AssistStudio.Runner",
         [EssentialsKey] = "FieldCure.Mcp.Essentials",
+    };
+
+    /// <summary>
+    /// Major-version ranges for built-in packages. <c>dnx</c> resolves the
+    /// latest available version within the range on every invocation (subject
+    /// to its own cache). Bumping a major here is an intentional AssistStudio
+    /// release-coupled decision — new majors ship breaking changes and must be
+    /// validated against the host before being picked up.
+    /// </summary>
+    private static readonly Dictionary<string, string> MajorVersionRanges = new()
+    {
+        [FilesystemKey] = "1.*",
+        [RagKey] = "2.*",
+        [OutboxKey] = "2.*",
+        [RunnerKey] = "1.*",
+        [EssentialsKey] = "2.*",
     };
 
     /// <summary>NuGet package ID for the Filesystem server.</summary>
@@ -122,9 +130,6 @@ public static class BuiltInServerHelper
         [EssentialsKey] = ("fieldcure-mcp-essentials", EssentialsDisplayName),
     };
 
-    /// <summary>Path to the pending updates file.</summary>
-    private static readonly string PendingUpdatesPath = Path.Combine(ToolInstallPath, "pending-updates.json");
-
     /// <summary>Static HttpClient for NuGet API queries with 10-second timeout.</summary>
     private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
@@ -161,8 +166,9 @@ public static class BuiltInServerHelper
 
     /// <summary>
     /// Creates a <see cref="McpServerConfig"/> for a built-in server.
-    /// Returns <see langword="null"/> if the server is disabled, has no folders
-    /// (for folder-based servers), or the executable is not found.
+    /// Returns <see langword="null"/> if the server is disabled or has no folders
+    /// (for folder-based servers). The command is always <c>dnx</c>, which fetches
+    /// the package from NuGet on first use and caches subsequent invocations.
     /// </summary>
     public static McpServerConfig? CreateMcpServerConfig(string serverKey, BuiltInServerConfig config)
     {
@@ -180,17 +186,28 @@ public static class BuiltInServerHelper
         if (!ServerDefinitions.TryGetValue(serverKey, out var def))
             return null;
 
-        var exePath = GetServerExePath(serverKey);
-        if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath))
+        var (command, prefixArgs) = GetLaunchSpec(serverKey);
+        if (string.IsNullOrEmpty(command))
             return null;
+
+        // Server-specific trailing args
+        List<string> tailArgs = serverKey switch
+        {
+            RunnerKey => ["serve"],
+            RagKey => ["serve", "--base-path", KnowledgeBaseStore.BasePath],
+            EssentialsKey when !string.IsNullOrEmpty(config.SearchEngine)
+                && !config.SearchEngine.Equals("default", StringComparison.OrdinalIgnoreCase)
+                => ["--search-engine", config.SearchEngine],
+            _ => config.Folders.Count > 0 ? [.. config.Folders] : [],
+        };
 
         var mcpConfig = new McpServerConfig
         {
             Id = $"builtin_{serverKey}",
             Name = def.DisplayName,
             TransportType = McpTransportType.Stdio,
-            Command = exePath,
-            Arguments = config.Folders.Count > 0 ? [.. config.Folders] : [],
+            Command = command,
+            Arguments = [.. prefixArgs, .. tailArgs],
             IsEnabled = true,
             IsBuiltIn = true,
             Description = serverKey switch
@@ -203,22 +220,6 @@ public static class BuiltInServerHelper
                 _ => "",
             },
         };
-
-        // Runner requires "serve" subcommand for MCP stdio mode
-        if (serverKey == RunnerKey)
-            mcpConfig.Arguments = ["serve"];
-
-        // RAG uses multi-KB serve mode with --base-path
-        if (serverKey == RagKey)
-            mcpConfig.Arguments = ["serve", "--base-path", KnowledgeBaseStore.BasePath];
-
-        // Essentials: pass --search-engine arg if a non-default engine is configured
-        if (serverKey == EssentialsKey
-            && !string.IsNullOrEmpty(config.SearchEngine)
-            && !config.SearchEngine.Equals("default", StringComparison.OrdinalIgnoreCase))
-        {
-            mcpConfig.Arguments = ["--search-engine", config.SearchEngine];
-        }
 
         // Load environment variables from PasswordVault for built-in servers
         if (config.EnvironmentVariableKeys is { Count: > 0 } keys)
@@ -246,93 +247,72 @@ public static class BuiltInServerHelper
     }
 
     /// <summary>
-    /// Resolves the path to a built-in server executable installed via dotnet tool.
-    /// Falls back to the legacy <c>servers/</c> subfolder in the app directory.
+    /// Returns the <c>dnx</c> invocation spec for a built-in server.
+    /// Command is always <c>dnx</c>; prefix args pin the package id with its
+    /// major-version range (e.g. <c>FieldCure.Mcp.Rag@2.*</c>) followed by
+    /// <c>--yes</c> to suppress the first-run install prompt. Callers append
+    /// their own trailing args.
     /// </summary>
-    public static string GetServerExePath(string serverKey)
+    public static (string Command, string[] PrefixArgs) GetLaunchSpec(string serverKey)
     {
-        if (!ServerDefinitions.TryGetValue(serverKey, out var def))
-            return "";
+        if (!NuGetPackages.TryGetValue(serverKey, out var packageId)
+            || !MajorVersionRanges.TryGetValue(serverKey, out var range))
+            return ("", []);
 
-        var exeName = OperatingSystem.IsWindows() ? $"{def.ExeName}.exe" : def.ExeName;
-
-        // Primary: dotnet tool install path
-        var toolPath = Path.Combine(ToolInstallPath, exeName);
-        if (File.Exists(toolPath))
-            return toolPath;
-
-        // Fallback: legacy bundled path
-        return Path.Combine(AppContext.BaseDirectory, "servers", exeName);
+        return ("dnx", [$"{packageId}@{range}", "--yes"]);
     }
 
     /// <summary>
-    /// Critical-path initialization: refreshes the version cache, installs any missing
-    /// servers in parallel, and applies any pending updates queued by a previous launch.
-    /// Designed to complete as fast as possible so MCP servers can spawn immediately after.
+    /// Populates the version cache by querying NuGet for the latest version of each
+    /// built-in package within its pinned major range. Fast fire-and-forget — does
+    /// not block startup beyond the HTTP timeout. <c>dnx</c> handles actual package
+    /// fetching lazily on first server spawn.
     /// </summary>
     public static async Task InitializeToolsAsync()
     {
-        Directory.CreateDirectory(ToolInstallPath);
-
-        // 1. Single "dotnet tool list" call → populate version cache
         await RefreshVersionCacheAsync();
-
-        // 2. Install any missing executables in parallel
-        await InstallMissingToolsAsync();
-
-        // 3. Apply pending updates from a previous background check
-        await ApplyPendingUpdatesAsync();
     }
 
     /// <summary>
-    /// Background task: queries the NuGet API for newer versions of all built-in packages
-    /// and writes a <c>pending-updates.json</c> file if updates are available.
-    /// Shows an <see cref="AppNotification"/> (OS toast) when updates are found.
-    /// Fully wrapped in try/catch — safe to fire-and-forget.
+    /// Background refresh of the version cache. Notifies the user when a package's
+    /// latest-in-range version has advanced since the last check so they know a new
+    /// build will be picked up on next server spawn (dnx auto-resolves within the
+    /// range). Fully wrapped in try/catch — safe to fire-and-forget.
     /// </summary>
     public static async Task CheckForUpdatesInBackgroundAsync()
     {
         try
         {
-            // Skip if pending updates are already queued (avoid duplicate notifications)
-            if (File.Exists(PendingUpdatesPath)) return;
-
             // Throttle: debug = every launch, release = once per 24h
             if (!ShouldCheckForUpdates()) return;
 
-            LoggingService.LogInfo("[BuiltIn] Background update check starting");
+            LoggingService.LogInfo("[BuiltIn] Background version check starting");
 
-            // Query NuGet flat container API for all packages in parallel
-            var updates = new List<PendingUpdateEntry>();
-            var tasks = NuGetPackages.Select(async kv =>
+            var previous = new Dictionary<string, string>(_versionCache);
+            await RefreshVersionCacheAsync();
+
+            var bumped = new List<(string Package, string From, string To)>();
+            foreach (var (serverKey, latest) in _versionCache)
             {
-                var (serverKey, packageId) = kv;
-                if (!_versionCache.TryGetValue(serverKey, out var currentVersion))
-                    return (PendingUpdateEntry?)null;
+                if (!previous.TryGetValue(serverKey, out var prev) || prev == latest)
+                    continue;
+                if (!Version.TryParse(prev, out var prevVer) || !Version.TryParse(latest, out var latestVer))
+                    continue;
+                if (latestVer <= prevVer)
+                    continue;
+                if (!NuGetPackages.TryGetValue(serverKey, out var packageId))
+                    continue;
+                bumped.Add((packageId, prev, latest));
+            }
 
-                var latest = await GetLatestVersionAsync(packageId);
-                if (latest is null) return null;
-
-                if (!Version.TryParse(currentVersion, out var current)) return null;
-                if (!Version.TryParse(latest, out var latestVer)) return null;
-
-                return latestVer > current
-                    ? new PendingUpdateEntry { Package = packageId, From = currentVersion, To = latest }
-                    : null;
-            }).ToArray();
-
-            var results = await Task.WhenAll(tasks);
-            updates.AddRange(results.Where(r => r is not null)!);
-
-            if (updates.Count > 0)
+            if (bumped.Count > 0)
             {
-                await SavePendingUpdatesAsync(updates);
-                ShowUpdateNotification(updates);
-                LoggingService.LogInfo($"[BuiltIn] {updates.Count} update(s) queued for next launch");
+                ShowUpdateNotification(bumped);
+                LoggingService.LogInfo($"[BuiltIn] {bumped.Count} package(s) advanced within range");
             }
             else
             {
-                LoggingService.LogInfo("[BuiltIn] All packages are up-to-date");
+                LoggingService.LogInfo("[BuiltIn] No version changes detected");
             }
 
             AppSettings.LastToolUpdateCheck = DateTime.UtcNow;
@@ -340,180 +320,10 @@ public static class BuiltInServerHelper
         catch (Exception ex)
         {
             LoggingService.LogWarning(
-                $"[BuiltIn] Background update check failed: {ex.GetType().FullName}: " +
+                $"[BuiltIn] Background version check failed: {ex.GetType().FullName}: " +
                 $"{ex.Message}{(ex.InnerException is null ? "" : $" → {ex.InnerException.GetType().Name}: {ex.InnerException.Message}")}");
             LoggingService.LogException(ex);
         }
-    }
-
-    #endregion
-
-    #region Private Helpers — Tool Management
-
-    /// <summary>
-    /// Installs any built-in server executables that are not yet present, in parallel.
-    /// </summary>
-    private static async Task InstallMissingToolsAsync()
-    {
-        var installTasks = new List<Task>();
-
-        foreach (var (serverKey, packageId) in NuGetPackages)
-        {
-            if (!ServerDefinitions.TryGetValue(serverKey, out var def))
-                continue;
-
-            var exeName = OperatingSystem.IsWindows() ? $"{def.ExeName}.exe" : def.ExeName;
-            var exePath = Path.Combine(ToolInstallPath, exeName);
-
-            if (File.Exists(exePath))
-                continue;
-
-            installTasks.Add(InstallPackageAsync(serverKey, packageId, def.DisplayName));
-        }
-
-        if (installTasks.Count > 0)
-        {
-            LoggingService.LogInfo($"[BuiltIn] Installing {installTasks.Count} missing package(s)");
-            await Task.WhenAll(installTasks);
-        }
-    }
-
-    /// <summary>
-    /// Installs a single dotnet tool package with notification.
-    /// </summary>
-    private static async Task InstallPackageAsync(string serverKey, string packageId, string displayName)
-    {
-        LoggingService.LogInfo($"[BuiltIn] Installing {packageId}");
-        NotifyAction(packageId, "BuiltIn_Installing", displayName);
-
-        try
-        {
-            var result = await RunDotnetToolAsync("install", packageId, ToolInstallPath);
-            if (result == 0)
-            {
-                LoggingService.LogInfo($"[BuiltIn] {packageId} installed successfully");
-                await RefreshVersionCacheAsync();
-                var version = _versionCache.TryGetValue(serverKey, out var v) ? v : "?";
-                NotifyInstallSuccess(displayName, version);
-            }
-            else
-            {
-                LoggingService.LogError($"[BuiltIn] {packageId} install failed (exit code {result})");
-                NotifyInstallFailure(displayName);
-            }
-        }
-        catch (Exception ex)
-        {
-            LoggingService.LogError($"[BuiltIn] {packageId} install error: {ex.Message}");
-            NotifyInstallFailure(displayName);
-        }
-    }
-
-    /// <summary>
-    /// Loads and applies pending updates from disk. Updates are run in parallel.
-    /// Progress is shown via persistent notification. Failed items are discarded.
-    /// </summary>
-    private static async Task ApplyPendingUpdatesAsync()
-    {
-        var pending = await LoadPendingUpdatesAsync();
-        if (pending is null || pending.Updates.Count == 0)
-            return;
-
-        // Filter out entries already at or above target version
-        // (e.g., user manually upgraded via `dotnet tool update`)
-        var actualUpdates = pending.Updates.Where(entry =>
-        {
-            var serverKey = NuGetPackages
-                .FirstOrDefault(kv => kv.Value.Equals(entry.Package, StringComparison.OrdinalIgnoreCase))
-                .Key;
-
-            if (serverKey is not null
-                && _versionCache.TryGetValue(serverKey, out var installedStr)
-                && Version.TryParse(installedStr, out var installed)
-                && Version.TryParse(entry.To, out var target)
-                && installed >= target)
-            {
-                LoggingService.LogInfo(
-                    $"[BuiltIn] Skipping update for {entry.Package}: already at {installedStr} (target {entry.To})");
-                return false;
-            }
-
-            return true;
-        }).ToList();
-
-        if (actualUpdates.Count == 0)
-        {
-            LoggingService.LogInfo("[BuiltIn] All pending updates already satisfied, cleaning up");
-            DeletePendingUpdates();
-            return;
-        }
-
-        var total = actualUpdates.Count;
-        LoggingService.LogInfo($"[BuiltIn] Applying {total} pending update(s)");
-
-        var progressTitle = Res.GetString("BuiltIn_UpdatingProgress") ?? "Updating MCP packages ({0}/{1})";
-
-        var token = NotificationCenter.Instance.PostPersistent(
-            InfoBarSeverity.Informational,
-            SafeFormat(progressTitle, [0, total]),
-            string.Empty);
-
-        var completed = 0;
-        var updateTasks = actualUpdates.Select(async entry =>
-        {
-            try
-            {
-                var args = new List<string> { "tool", "update", entry.Package, "--tool-path", ToolInstallPath };
-                if (!string.IsNullOrEmpty(entry.To))
-                {
-                    args.Add("--version");
-                    args.Add(entry.To);
-                }
-
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "dotnet",
-                    CreateNoWindow = true,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                };
-                foreach (var arg in args) psi.ArgumentList.Add(arg);
-
-                using var process = Process.Start(psi);
-                if (process is null) return;
-
-                await process.WaitForExitAsync();
-
-                var count = Interlocked.Increment(ref completed);
-                NotificationCenter.Instance.Update(token,
-                    title: SafeFormat(progressTitle, [count, total]));
-
-                if (process.ExitCode == 0)
-                    LoggingService.LogInfo($"[BuiltIn] Updated {entry.Package} {entry.From} → {entry.To}");
-                else
-                    LoggingService.LogWarning($"[BuiltIn] {entry.Package} update failed (exit code {process.ExitCode}), discarding");
-            }
-            catch (Exception ex)
-            {
-                Interlocked.Increment(ref completed);
-                LoggingService.LogWarning($"[BuiltIn] {entry.Package} update error: {ex.Message}, discarding");
-            }
-        }).ToArray();
-
-        await Task.WhenAll(updateTasks);
-
-        // Always delete pending file — failed items are discarded, background check will re-detect
-        DeletePendingUpdates();
-
-        // Refresh version cache after updates
-        await RefreshVersionCacheAsync();
-
-        // Dismiss progress, show completion
-        NotificationCenter.Instance.Dismiss(token);
-
-        var completeMsg = Res.GetString("BuiltIn_UpdateComplete") ?? "MCP packages updated";
-        NotificationCenter.Instance.Post(InfoBarSeverity.Success, completeMsg, string.Empty, 3000);
     }
 
     #endregion
@@ -548,165 +358,71 @@ public static class BuiltInServerHelper
     }
 
     /// <summary>
-    /// Refreshes <see cref="_versionCache"/> with a single <c>dotnet tool list</c> invocation.
+    /// Refreshes <see cref="_versionCache"/> by querying NuGet for the latest
+    /// stable version of each built-in package within its pinned major range.
+    /// Called at startup and periodically thereafter; actual package download is
+    /// handled by <c>dnx</c> on first invocation.
     /// </summary>
     private static async Task RefreshVersionCacheAsync()
     {
-        _versionCache.Clear();
-
-        try
+        var tasks = NuGetPackages.Select(async kv =>
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName = "dotnet",
-                ArgumentList = { "tool", "list", "--tool-path", ToolInstallPath },
-                CreateNoWindow = true,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-            };
+            var (serverKey, packageId) = kv;
+            if (!MajorVersionRanges.TryGetValue(serverKey, out var range))
+                return ((string, string)?)null;
 
-            using var process = Process.Start(psi);
-            if (process is null) return;
+            var latest = await GetLatestVersionInMajorAsync(packageId, range);
+            return latest is null ? null : ((string, string)?)(serverKey, latest);
+        }).ToArray();
 
-            var output = await process.StandardOutput.ReadToEndAsync();
-            await process.WaitForExitAsync();
-
-            // Build reverse lookup: packageId (lowercase) → serverKey
-            var packageToKey = NuGetPackages.ToDictionary(
-                kv => kv.Value.ToLowerInvariant(),
-                kv => kv.Key);
-
-            // Parse output lines: "package-id    version    commands"
-            foreach (var line in output.Split('\n'))
-            {
-                var parts = line.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length < 2) continue;
-
-                if (packageToKey.TryGetValue(parts[0].ToLowerInvariant(), out var serverKey)
-                    && Version.TryParse(parts[1], out _))
-                {
-                    _versionCache[serverKey] = parts[1];
-                }
-            }
-        }
-        catch (Exception ex)
+        var results = await Task.WhenAll(tasks);
+        foreach (var item in results)
         {
-            LoggingService.LogWarning($"[BuiltIn] Failed to refresh version cache: {ex.Message}");
+            if (item is (string key, string ver))
+                _versionCache[key] = ver;
         }
     }
 
     /// <summary>
-    /// Queries the latest stable version of a NuGet package via the flat container API.
+    /// Queries NuGet's flat container API for the latest stable version of a
+    /// package whose <see cref="Version.Major"/> matches the given range
+    /// (e.g. <c>2.*</c> → pick the max version with Major == 2). Prerelease
+    /// versions are excluded.
     /// </summary>
-    private static async Task<string?> GetLatestVersionAsync(string packageId)
+    private static async Task<string?> GetLatestVersionInMajorAsync(string packageId, string majorRange)
     {
         try
         {
+            // Parse "2.*" → 2
+            var dotStar = majorRange.IndexOf(".*", StringComparison.Ordinal);
+            if (dotStar <= 0 || !int.TryParse(majorRange.AsSpan(0, dotStar), out var major))
+                return null;
+
             var url = $"https://api.nuget.org/v3-flatcontainer/{packageId.ToLowerInvariant()}/index.json";
             using var response = await _httpClient.GetAsync(url);
             if (!response.IsSuccessStatusCode) return null;
 
             var json = await response.Content.ReadAsStringAsync();
             using var doc = JsonDocument.Parse(json);
-            return doc.RootElement
+
+            var best = doc.RootElement
                 .GetProperty("versions")
                 .EnumerateArray()
                 .Select(v => v.GetString())
-                .Where(v => v is not null && !v.Contains('-')) // exclude prerelease
-                .LastOrDefault();
+                .Where(v => !string.IsNullOrEmpty(v) && !v!.Contains('-'))
+                .Select(v => Version.TryParse(v, out var parsed) ? parsed : null)
+                .Where(v => v is not null && v.Major == major)
+                .Max();
+
+            return best?.ToString();
         }
         catch (Exception ex)
         {
             LoggingService.LogWarning(
-                $"[BuiltIn] Failed to check latest version for {packageId}: {ex.GetType().Name}: " +
-                $"{ex.Message}{(ex.InnerException is null ? "" : $" → {ex.InnerException.GetType().Name}: {ex.InnerException.Message}")}");
+                $"[BuiltIn] Failed to check latest {majorRange} version for {packageId}: " +
+                $"{ex.GetType().Name}: {ex.Message}");
             return null;
         }
-    }
-
-    #endregion
-
-    #region Private Helpers — Pending Updates File
-
-    /// <summary>
-    /// Loads pending updates from disk, or returns <c>null</c> if the file doesn't exist or is invalid.
-    /// </summary>
-    private static async Task<PendingUpdatesFile?> LoadPendingUpdatesAsync()
-    {
-        try
-        {
-            if (!File.Exists(PendingUpdatesPath)) return null;
-            var json = await File.ReadAllTextAsync(PendingUpdatesPath);
-            return JsonSerializer.Deserialize(json, PendingUpdatesJsonContext.Default.PendingUpdatesFile);
-        }
-        catch (Exception ex)
-        {
-            LoggingService.LogWarning($"[BuiltIn] Failed to load pending updates: {ex.Message}");
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// Saves pending updates to disk.
-    /// </summary>
-    private static async Task SavePendingUpdatesAsync(List<PendingUpdateEntry> updates)
-    {
-        try
-        {
-            var file = new PendingUpdatesFile
-            {
-                CheckedAt = DateTime.UtcNow,
-                Updates = updates,
-            };
-            var json = JsonSerializer.Serialize(file, PendingUpdatesJsonContext.Default.PendingUpdatesFile);
-            await File.WriteAllTextAsync(PendingUpdatesPath, json);
-        }
-        catch (Exception ex)
-        {
-            LoggingService.LogWarning($"[BuiltIn] Failed to save pending updates: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// Deletes the pending updates file from disk.
-    /// </summary>
-    private static void DeletePendingUpdates()
-    {
-        try
-        {
-            if (File.Exists(PendingUpdatesPath))
-                File.Delete(PendingUpdatesPath);
-        }
-        catch (Exception ex)
-        {
-            LoggingService.LogWarning($"[BuiltIn] Failed to delete pending updates file: {ex.Message}");
-        }
-    }
-
-    #endregion
-
-    #region Private Helpers — Process Execution
-
-    /// <summary>
-    /// Runs a dotnet tool command (install/update) and returns the exit code.
-    /// </summary>
-    private static async Task<int> RunDotnetToolAsync(string action, string packageId, string toolPath)
-    {
-        var psi = new ProcessStartInfo
-        {
-            FileName = "dotnet",
-            ArgumentList = { "tool", action, packageId, "--tool-path", toolPath },
-            CreateNoWindow = true,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-        };
-
-        using var process = Process.Start(psi);
-        if (process is null) return -1;
-
-        await process.WaitForExitAsync();
-        return process.ExitCode;
     }
 
     #endregion
@@ -714,76 +430,33 @@ public static class BuiltInServerHelper
     #region Private Helpers — Notifications
 
     /// <summary>
-    /// Shows an in-app notification about available updates (for next launch).
+    /// Shows an in-app notification listing packages whose latest-in-range
+    /// version advanced since the previous check. dnx will pick up the new
+    /// build automatically on the next server spawn.
     /// </summary>
-    private static void ShowUpdateNotification(List<PendingUpdateEntry> updates)
+    private static void ShowUpdateNotification(List<(string Package, string From, string To)> bumped)
     {
-
         string title;
         string body;
 
-        if (updates.Count == 1)
+        if (bumped.Count == 1)
         {
-            var u = updates[0];
+            var u = bumped[0];
             title = Res.GetString("BuiltIn_UpdateAvailable_Title")
                     ?? "MCP package update ready";
             body = $"{u.Package} {u.From} → {u.To}";
         }
         else
         {
-            var first = updates[0];
+            var first = bumped[0];
             title = Res.GetString("BuiltIn_UpdateAvailable_Title")
                     ?? "MCP package updates ready";
             var template = Res.GetString("BuiltIn_UpdateAvailable_Body")
                            ?? "{0} {1} → {2} and {3} more";
-            body = SafeFormat(template, [first.Package, first.From, first.To, updates.Count - 1]);
+            body = SafeFormat(template, [first.Package, first.From, first.To, bumped.Count - 1]);
         }
 
         NotificationCenter.Instance.Post(InfoBarSeverity.Informational, title, body, 8000);
-    }
-
-    /// <summary>
-    /// Posts a success notification for server installation.
-    /// </summary>
-    private static void NotifyInstallSuccess(string serverName, string version)
-    {
-        var template = Res.GetString("BuiltIn_InstallSuccess") ?? "{0} v{1} server installed";
-
-        NotificationCenter.Instance.Post(
-            InfoBarSeverity.Success,
-            SafeFormat(template, [serverName, version]),
-            Res.GetString("BuiltIn_InstallSuccessMessage") ?? "Configure workspace folders in Profile settings.",
-            5000);
-    }
-
-    /// <summary>
-    /// Posts an error notification for server installation failure.
-    /// </summary>
-    private static void NotifyInstallFailure(string serverName)
-    {
-        var template = Res.GetString("BuiltIn_InstallFailed") ?? "Failed to install {0}";
-
-        NotificationCenter.Instance.Post(
-            InfoBarSeverity.Error,
-            SafeFormat(template, [serverName]),
-            Res.GetString("BuiltIn_InstallFailedMessage") ?? "Check your internet connection and try again.",
-            8000);
-    }
-
-    /// <summary>
-    /// Posts an informational notification for install/update actions using a localized format string.
-    /// </summary>
-    private static void NotifyAction(string packageId, string resourceKey, params string[] args)
-    {
-
-        var template = Res.GetString(resourceKey) ?? $"{packageId} — {resourceKey}";
-        var message = SafeFormat(template, args);
-
-        NotificationCenter.Instance.Post(
-            InfoBarSeverity.Informational,
-            message,
-            string.Empty,
-            4000);
     }
 
     /// <summary>
@@ -798,7 +471,6 @@ public static class BuiltInServerHelper
         }
         catch (FormatException)
         {
-            // Prevent a bad resource string from crashing initialization
             return $"{template} [{string.Join(", ", args)}]";
         }
     }
@@ -879,57 +551,31 @@ public static class BuiltInServerHelper
     public static bool IsSharedServer(string serverKey) => serverKey is EssentialsKey or OutboxKey or RunnerKey or RagKey;
 
     /// <summary>
-    /// Returns <see langword="true"/> if the given command matches a built-in server executable.
-    /// Used to prevent users from manually adding a server that duplicates a built-in one.
+    /// Returns <see langword="true"/> if the given stdio invocation matches a
+    /// built-in server (<c>dnx</c> launching one of our package ids). Used to
+    /// prevent users from manually adding a server that duplicates a built-in.
     /// </summary>
-    public static bool IsBuiltInCommand(string? command)
+    public static bool IsBuiltInCommand(string? command, IReadOnlyList<string>? arguments = null)
     {
         if (string.IsNullOrWhiteSpace(command)) return false;
 
+        // Legacy: direct exe name match (pre-dnx installs)
         var fileName = Path.GetFileNameWithoutExtension(command);
-        return ServerDefinitions.Values.Any(d =>
-            d.ExeName.Equals(fileName, StringComparison.OrdinalIgnoreCase));
+        if (ServerDefinitions.Values.Any(d =>
+            d.ExeName.Equals(fileName, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        // Current: dnx <packageId>@range
+        if (!command.Equals("dnx", StringComparison.OrdinalIgnoreCase) || arguments is null || arguments.Count == 0)
+            return false;
+
+        var first = arguments[0];
+        var at = first.IndexOf('@');
+        var pkg = at > 0 ? first[..at] : first;
+        return NuGetPackages.Values.Any(p => p.Equals(pkg, StringComparison.OrdinalIgnoreCase));
     }
 
     #endregion
 }
-
-#region Pending Updates Models
-
-/// <summary>
-/// Represents the pending-updates.json file structure.
-/// </summary>
-internal sealed class PendingUpdatesFile
-{
-    [JsonPropertyName("checked_at")]
-    public DateTime CheckedAt { get; set; }
-
-    [JsonPropertyName("updates")]
-    public List<PendingUpdateEntry> Updates { get; set; } = [];
-}
-
-/// <summary>
-/// A single pending package update entry.
-/// </summary>
-internal sealed class PendingUpdateEntry
-{
-    [JsonPropertyName("package")]
-    public string Package { get; set; } = "";
-
-    [JsonPropertyName("from")]
-    public string From { get; set; } = "";
-
-    [JsonPropertyName("to")]
-    public string To { get; set; } = "";
-}
-
-/// <summary>
-/// Source-generated JSON context for pending updates serialization.
-/// </summary>
-[JsonSourceGenerationOptions(WriteIndented = true)]
-[JsonSerializable(typeof(PendingUpdatesFile))]
-internal partial class PendingUpdatesJsonContext : JsonSerializerContext
-{
-}
-
-#endregion
