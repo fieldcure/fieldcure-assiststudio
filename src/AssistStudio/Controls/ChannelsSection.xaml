@@ -1,12 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <UserControl
     x:Class="AssistStudio.Controls.ChannelsSection"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:AssistStudio.Controls">
 
-    <controls:CollapsibleSection x:Name="Section" IsExpanded="False" IsCompact="True"
-                                 Expanded="OnSectionExpanded">
+    <controls:CollapsibleSection x:Name="Section" IsExpanded="False" IsCompact="True" Expanded="OnSectionExpanded">
         <controls:CollapsibleSection.Body>
             <StackPanel x:Name="ContentPanel" Spacing="6">
                 <!-- Add channel button with type picker -->
@@ -34,19 +33,21 @@
                 <!-- Loading indicator -->
                 <StackPanel x:Name="LoadingPanel" Orientation="Horizontal" Spacing="8">
                     <ProgressRing IsActive="True" Width="16" Height="16" />
-                    <TextBlock x:Name="LoadingText"
-                               Style="{StaticResource CaptionTextBlockStyle}"
-                               Opacity="0.6" VerticalAlignment="Center" />
+                    <TextBlock
+                        x:Name="LoadingText"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Opacity="0.6" VerticalAlignment="Center" />
                 </StackPanel>
 
                 <!-- Channel list -->
                 <StackPanel x:Name="ChannelListPanel" Spacing="4" Visibility="Collapsed" />
 
                 <!-- Empty / error state -->
-                <TextBlock x:Name="StatusText"
-                           Style="{StaticResource CaptionTextBlockStyle}"
-                           Opacity="0.5" TextWrapping="Wrap"
-                           Visibility="Collapsed" />
+                <TextBlock
+                    x:Name="StatusText"
+                    Style="{StaticResource CaptionTextBlockStyle}"
+                    Opacity="0.5" TextWrapping="Wrap"
+                    Visibility="Collapsed" />
             </StackPanel>
         </controls:CollapsibleSection.Body>
     </controls:CollapsibleSection>

@@ -11,56 +11,62 @@
         <StackPanel Spacing="{StaticResource CompactSpacing}" Padding="0,0,0,24">
             <!-- Source Folders -->
             <StackPanel Spacing="4">
-                <TextBlock x:Name="FoldersHeader"
-                           x:Uid="KbEditDialog_FoldersHeader"
-                           Style="{StaticResource ControlHeaderStyle}"/>
+                <TextBlock
+                    x:Name="FoldersHeader"
+                    x:Uid="KbEditDialog_FoldersHeader"
+                    Style="{StaticResource ControlHeaderStyle}"/>
                 <StackPanel x:Name="FolderList" Spacing="4"/>
-                <Button x:Name="AddFolderButton"
-                        x:Uid="KbEditDialog_AddFolderButton"
-                        Click="OnAddFolderClicked"/>
-                <TextBlock x:Name="FolderWarning"
-                           Style="{StaticResource DescriptionTextBlockStyle}"
-                           Foreground="{ThemeResource SystemFillColorCautionBrush}"
-                           TextWrapping="Wrap"
-                           Visibility="Collapsed"/>
+                <Button
+                    x:Name="AddFolderButton"
+                    x:Uid="KbEditDialog_AddFolderButton"
+                    Click="OnAddFolderClicked"/>
+                <TextBlock
+                    x:Name="FolderWarning"
+                    Style="{StaticResource DescriptionTextBlockStyle}"
+                    Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                    TextWrapping="Wrap"
+                    Visibility="Collapsed"/>
             </StackPanel>
 
             <!-- Name -->
-            <TextBox x:Name="NameBox"
-                     x:Uid="KbEditDialog_NameBox"
-                     TextChanged="OnNameTextChanged"/>
-            <TextBlock x:Name="NameHint"
-                       x:Uid="KbEditDialog_NameHint"
-                       Style="{StaticResource DescriptionTextBlockStyle}"
-                       Opacity="0.5"/>
+            <TextBox
+                x:Name="NameBox"
+                x:Uid="KbEditDialog_NameBox"
+                TextChanged="OnNameTextChanged"/>
+            <TextBlock
+                x:Name="NameHint"
+                x:Uid="KbEditDialog_NameHint"
+                Style="{StaticResource DescriptionTextBlockStyle}"
+                Opacity="0.5"/>
 
             <!-- Model Selection -->
             <controls:EmbeddingModelSelector x:Name="ModelSelector"/>
 
             <!-- Indexing Timing -->
-            <RadioButtons x:Name="TimingRadios"
-                          x:Uid="KbEditDialog_TimingRadios"
-                          Margin="0,0,0,0"
-                          SelectionChanged="OnTimingSelectionChanged">
-                <RadioButton x:Name="TimingNowRadio"
-                             x:Uid="KbEditDialog_TimingNowRadio"/>
-                <RadioButton x:Name="TimingOnCloseRadio"
-                             x:Uid="KbEditDialog_TimingOnCloseRadio"/>
+            <RadioButtons
+                x:Name="TimingRadios"
+                x:Uid="KbEditDialog_TimingRadios"
+                Margin="0,0,0,0"
+                SelectionChanged="OnTimingSelectionChanged">
+                <RadioButton x:Name="TimingNowRadio" x:Uid="KbEditDialog_TimingNowRadio"/>
+                <RadioButton x:Name="TimingOnCloseRadio" x:Uid="KbEditDialog_TimingOnCloseRadio"/>
             </RadioButtons>
-            <TextBlock x:Name="TimingHint"
-                       x:Uid="KbEditDialog_TimingHint"
-                       Style="{StaticResource DescriptionTextBlockStyle}"
-                       Opacity="0.6"
-                       TextWrapping="Wrap"
-                       Visibility="Collapsed"/>
+            <TextBlock
+                x:Name="TimingHint"
+                x:Uid="KbEditDialog_TimingHint"
+                Style="{StaticResource DescriptionTextBlockStyle}"
+                Opacity="0.6"
+                TextWrapping="Wrap"
+                Visibility="Collapsed"/>
 
             <!-- Re-index warning (Edit mode only) -->
-            <TextBlock x:Name="ReindexWarning"
-                       x:Uid="KbEditDialog_ReindexWarning"
-                       Style="{StaticResource DescriptionTextBlockStyle}"
-                       Foreground="{ThemeResource SystemControlErrorTextForegroundBrush}"                       
-                       TextWrapping="Wrap"
-                       Visibility="Collapsed"/>
+            <TextBlock
+                x:Name="ReindexWarning"
+                x:Uid="KbEditDialog_ReindexWarning"
+                Style="{StaticResource DescriptionTextBlockStyle}"
+                Foreground="{ThemeResource SystemControlErrorTextForegroundBrush}"                       
+                TextWrapping="Wrap"
+                Visibility="Collapsed"/>
         </StackPanel>
     </ScrollViewer>
 </local:ThemedContentDialog>

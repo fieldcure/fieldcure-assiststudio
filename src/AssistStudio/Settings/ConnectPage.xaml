@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Page
     x:Class="AssistStudio.Settings.ConnectPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -17,8 +17,9 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Grid Grid.Row="0" Padding="20" BorderThickness="0,0,0,1"
-              BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}">
+        <Grid
+            Grid.Row="0" Padding="20" BorderThickness="0,0,0,1"
+            BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}">
             <TextBlock x:Uid="Connect_Title" Style="{StaticResource TitleTextBlockStyle}" />
         </Grid>
 
@@ -27,9 +28,10 @@
             <StackPanel Spacing="16" Padding="20,20,20,44" MaxWidth="700" HorizontalAlignment="Left">
 
                 <!-- Description -->
-                <TextBlock x:Uid="Connect_Description"
-                           Style="{StaticResource CaptionTextBlockStyle}" Opacity="0.7"
-                           TextWrapping="Wrap" />
+                <TextBlock
+                    x:Uid="Connect_Description"
+                    Style="{StaticResource CaptionTextBlockStyle}" Opacity="0.7"
+                    TextWrapping="Wrap" />
 
                 <!-- Built-in servers (grouped, tight spacing) -->
                 <StackPanel Spacing="8">
@@ -71,21 +73,23 @@
                 <ItemsControl x:Name="ServerListControl">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="mcp:McpServerConnection">
-                            <controls:McpServerCard Connection="{x:Bind}"
-                                                    Margin="0,0,0,8"
-                                                    EnableToggled="OnCardEnableToggled"
-                                                    EditRequested="OnCardEditRequested"
-                                                    ReconnectRequested="OnCardReconnectRequested"
-                                                    DeleteRequested="OnCardDeleteRequested" />
+                            <controls:McpServerCard
+                                Connection="{x:Bind}"
+                                Margin="0,0,0,8"
+                                EnableToggled="OnCardEnableToggled"
+                                EditRequested="OnCardEditRequested"
+                                ReconnectRequested="OnCardReconnectRequested"
+                                DeleteRequested="OnCardDeleteRequested" />
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
                 <!-- Empty state -->
-                <TextBlock x:Name="EmptyStateText"
-                           Style="{StaticResource CaptionTextBlockStyle}"
-                           Opacity="0.5"
-                           Visibility="Visible" />
+                <TextBlock
+                    x:Name="EmptyStateText"
+                    Style="{StaticResource CaptionTextBlockStyle}"
+                    Opacity="0.5"
+                    Visibility="Visible" />
 
             </StackPanel>
         </ScrollViewer>

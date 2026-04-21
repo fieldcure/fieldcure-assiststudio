@@ -27,46 +27,52 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <TextBlock x:Uid="Memory_Title" Text="Memory"
-                       Grid.Column="0"
-                       Style="{StaticResource TitleTextBlockStyle}" />
+            <TextBlock
+                x:Uid="Memory_Title" Text="Memory"
+                Grid.Column="0"
+                Style="{StaticResource TitleTextBlockStyle}" />
 
-            <TextBlock x:Name="CounterText" Grid.Column="2"
-                       Style="{StaticResource CaptionTextBlockStyle}"
-                       Opacity="0.6"
-                       VerticalAlignment="Center"
-                       Margin="0,0,12,0" />
+            <TextBlock
+                x:Name="CounterText" Grid.Column="2"
+                Style="{StaticResource CaptionTextBlockStyle}"
+                Opacity="0.6"
+                VerticalAlignment="Center"
+                Margin="0,0,12,0" />
 
-            <Button x:Uid="Memory_RefreshButton"
-                    x:Name="RefreshButton" Grid.Column="3"
-                    Click="OnRefreshClicked"
-                    Style="{StaticResource SubtleButtonStyle}"
-                    Padding="8" MinWidth="0" MinHeight="0"
-                    ToolTipService.Placement="Mouse">
+            <Button
+                x:Uid="Memory_RefreshButton"
+                x:Name="RefreshButton" Grid.Column="3"
+                Click="OnRefreshClicked"
+                Style="{StaticResource SubtleButtonStyle}"
+                Padding="8" MinWidth="0" MinHeight="0"
+                ToolTipService.Placement="Mouse">
                 <FontIcon Glyph="&#xE72C;" FontSize="14" />
             </Button>
         </Grid>
 
         <!-- Search box -->
-        <AutoSuggestBox x:Name="SearchBox" Grid.Row="1"
-                        x:Uid="Memory_SearchBox"
-                        Margin="20,12,20,0"
-                        QueryIcon="Find"
-                        QuerySubmitted="OnSearchQuerySubmitted"
-                        TextChanged="OnSearchTextChanged" />
+        <AutoSuggestBox
+            x:Name="SearchBox" Grid.Row="1"
+            x:Uid="Memory_SearchBox"
+            Margin="20,12,20,0"
+            QueryIcon="Find"
+            QuerySubmitted="OnSearchQuerySubmitted"
+            TextChanged="OnSearchTextChanged" />
 
         <!-- Content -->
         <ScrollViewer Grid.Row="2" Padding="20,12">
             <StackPanel Spacing="0" Padding="0,0,0,24">
 
                 <!-- Connecting state -->
-                <StackPanel x:Name="ConnectingPanel" Visibility="Collapsed"
-                            Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+                <StackPanel
+                    x:Name="ConnectingPanel" Visibility="Collapsed"
+                    Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
                     <ProgressRing IsActive="True" Width="16" Height="16" />
-                    <TextBlock x:Name="ConnectingText" Text="Connecting to Essentials server..."
-                               Style="{StaticResource CaptionTextBlockStyle}"
-                               Opacity="0.6"
-                               VerticalAlignment="Center" />
+                    <TextBlock
+                        x:Name="ConnectingText" Text="Connecting to Essentials server..."
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Opacity="0.6"
+                        VerticalAlignment="Center" />
                 </StackPanel>
 
                 <!-- Memory list -->
@@ -79,35 +85,39 @@
                 </ItemsRepeater>
 
                 <!-- Divider before hint -->
-                <Rectangle x:Name="HintDivider" Visibility="Collapsed"
-                           Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                <Rectangle
+                    x:Name="HintDivider" Visibility="Collapsed"
+                    Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
 
                 <!-- Hint text (shown when entries exist) -->
-                <TextBlock x:Name="HintText" x:Uid="Memory_Hint"
-                           Visibility="Collapsed"
-                           Style="{StaticResource CaptionTextBlockStyle}"
-                           TextWrapping="Wrap"
-                           Opacity="0.5"
-                           Margin="0,12,0,0" />
+                <TextBlock
+                    x:Name="HintText" x:Uid="Memory_Hint"
+                    Visibility="Collapsed"
+                    Style="{StaticResource CaptionTextBlockStyle}"
+                    TextWrapping="Wrap"
+                    Opacity="0.5"
+                    Margin="0,12,0,0" />
 
                 <!-- Empty state (shown when no entries exist at all) -->
-                <StackPanel x:Name="EmptyPanel" Visibility="Collapsed" Spacing="4"
-                            Margin="0,8,0,0">
-                    <TextBlock x:Uid="Memory_Empty"
-                               Style="{StaticResource BodyTextBlockStyle}"
-                               Opacity="0.6" />
-                    <TextBlock x:Uid="Memory_EmptyHint"
-                               Style="{StaticResource CaptionTextBlockStyle}"
-                               TextWrapping="Wrap"
-                               Opacity="0.5" />
+                <StackPanel x:Name="EmptyPanel" Visibility="Collapsed" Spacing="4" Margin="0,8,0,0">
+                    <TextBlock
+                        x:Uid="Memory_Empty"
+                        Style="{StaticResource BodyTextBlockStyle}"
+                        Opacity="0.6" />
+                    <TextBlock
+                        x:Uid="Memory_EmptyHint"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        TextWrapping="Wrap"
+                        Opacity="0.5" />
                 </StackPanel>
 
                 <!-- No-results state (shown when search yields nothing) -->
-                <TextBlock x:Name="NoResultsText" x:Uid="Memory_NoResults"
-                           Visibility="Collapsed"
-                           Style="{StaticResource BodyTextBlockStyle}"
-                           Opacity="0.6"
-                           Margin="0,8,0,0" />
+                <TextBlock
+                    x:Name="NoResultsText" x:Uid="Memory_NoResults"
+                    Visibility="Collapsed"
+                    Style="{StaticResource BodyTextBlockStyle}"
+                    Opacity="0.6"
+                    Margin="0,8,0,0" />
 
             </StackPanel>
         </ScrollViewer>

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Page
     x:Class="AssistStudio.Settings.ModelsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -16,11 +16,13 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Grid Grid.Row="0" Padding="20,14,20,14"
-              BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
-              BorderThickness="0,0,0,1">
-            <TextBlock x:Uid="Models_Title" Text="Models"
-                       Style="{StaticResource TitleTextBlockStyle}" />
+        <Grid
+            Grid.Row="0" Padding="20,14,20,14"
+            BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+            BorderThickness="0,0,0,1">
+            <TextBlock
+                x:Uid="Models_Title" Text="Models"
+                Style="{StaticResource TitleTextBlockStyle}" />
         </Grid>
 
         <!-- Content -->
@@ -30,19 +32,23 @@
                 <!-- ============================== -->
                 <!-- Cloud Inference (SaaS) Section -->
                 <!-- ============================== -->
-                <TextBlock x:Uid="Models_CloudSection" Text="Cloud models"
-                           Style="{StaticResource SubtitleTextBlockStyle}" />
-                <TextBlock x:Uid="Models_ApiKeyStorageInfo"
-                           Text="API keys are encrypted and stored securely on this device."
-                           FontSize="12" Opacity="0.6"
-                           TextWrapping="Wrap" Margin="0,-16,0,0" />
+                <TextBlock
+                    x:Uid="Models_CloudSection" Text="Cloud models"
+                    Style="{StaticResource SubtitleTextBlockStyle}" />
+                <TextBlock
+                    x:Uid="Models_ApiKeyStorageInfo"
+                    Text="API keys are encrypted and stored securely on this device."
+                    FontSize="12" Opacity="0.6"
+                    TextWrapping="Wrap" Margin="0,-16,0,0" />
 
                 <!-- Anthropic Claude -->
-                <controls:CollapsibleSection x:Name="ClaudeHeader" Header="Anthropic Claude" IsExpanded="False"
-                                             Expanded="OnSectionExpanded">
+                <controls:CollapsibleSection
+                    x:Name="ClaudeHeader" Header="Anthropic Claude" IsExpanded="False"
+                    Expanded="OnSectionExpanded">
                     <controls:CollapsibleSection.Body>
                         <Grid>
-                            <controls:CloudProviderSection x:Name="ClaudeSection" x:Load="False"
+                            <controls:CloudProviderSection
+                                x:Name="ClaudeSection" x:Load="False"
                                 ProviderType="Claude"
                                 FallbackModelsString="claude-sonnet-4-6,claude-opus-4-6,claude-haiku-4-6" />
                         </Grid>
@@ -50,11 +56,13 @@
                 </controls:CollapsibleSection>
 
                 <!-- OpenAI -->
-                <controls:CollapsibleSection x:Name="OpenAIHeader" Header="OpenAI" IsExpanded="False"
-                                             Expanded="OnSectionExpanded">
+                <controls:CollapsibleSection
+                    x:Name="OpenAIHeader" Header="OpenAI" IsExpanded="False"
+                    Expanded="OnSectionExpanded">
                     <controls:CollapsibleSection.Body>
                         <Grid>
-                            <controls:CloudProviderSection x:Name="OpenAISection" x:Load="False"
+                            <controls:CloudProviderSection
+                                x:Name="OpenAISection" x:Load="False"
                                 ProviderType="OpenAI"
                                 FallbackModelsString="gpt-4o,gpt-4o-mini,gpt-4-turbo,o1,o1-mini,o3-mini" />
                         </Grid>
@@ -62,11 +70,13 @@
                 </controls:CollapsibleSection>
 
                 <!-- Google Gemini -->
-                <controls:CollapsibleSection x:Name="GeminiHeader" Header="Google Gemini" IsExpanded="False"
-                                             Expanded="OnSectionExpanded">
+                <controls:CollapsibleSection
+                    x:Name="GeminiHeader" Header="Google Gemini" IsExpanded="False"
+                    Expanded="OnSectionExpanded">
                     <controls:CollapsibleSection.Body>
                         <Grid>
-                            <controls:CloudProviderSection x:Name="GeminiSection" x:Load="False"
+                            <controls:CloudProviderSection
+                                x:Name="GeminiSection" x:Load="False"
                                 ProviderType="Gemini"
                                 FallbackModelsString="gemini-2.0-flash,gemini-2.0-flash-lite,gemini-2.5-pro-preview-05-06" />
                         </Grid>
@@ -74,11 +84,13 @@
                 </controls:CollapsibleSection>
 
                 <!-- Groq -->
-                <controls:CollapsibleSection x:Name="GroqHeader" Header="Groq" IsExpanded="False"
-                                             Expanded="OnSectionExpanded">
+                <controls:CollapsibleSection
+                    x:Name="GroqHeader" Header="Groq" IsExpanded="False"
+                    Expanded="OnSectionExpanded">
                     <controls:CollapsibleSection.Body>
                         <Grid>
-                            <controls:CloudProviderSection x:Name="GroqSection" x:Load="False"
+                            <controls:CloudProviderSection
+                                x:Name="GroqSection" x:Load="False"
                                 ProviderType="Groq"
                                 FallbackModelsString="llama-3.3-70b-versatile,llama-3.1-8b-instant,mixtral-8x7b-32768" />
                         </Grid>
@@ -95,23 +107,27 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock x:Uid="Models_CustomSection" Text="Custom providers"
-                               Style="{StaticResource SubtitleTextBlockStyle}"
-                               VerticalAlignment="Center" />
-                    <Button Grid.Column="1"
-                            x:Uid="Models_AddCustomProvider"
-                            Click="OnAddCustomProvider"
-                            ToolTipService.ToolTip="Add provider" ToolTipService.Placement="Mouse"
-                            Padding="6,4"
-                            VerticalAlignment="Center">
-                        <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
-                                  Glyph="&#xE710;" FontSize="14" />
+                    <TextBlock
+                        x:Uid="Models_CustomSection" Text="Custom providers"
+                        Style="{StaticResource SubtitleTextBlockStyle}"
+                        VerticalAlignment="Center" />
+                    <Button
+                        Grid.Column="1"
+                        x:Uid="Models_AddCustomProvider"
+                        Click="OnAddCustomProvider"
+                        ToolTipService.ToolTip="Add provider" ToolTipService.Placement="Mouse"
+                        Padding="6,4"
+                        VerticalAlignment="Center">
+                        <FontIcon
+                            FontFamily="{StaticResource SymbolThemeFontFamily}"
+                            Glyph="&#xE710;" FontSize="14" />
                     </Button>
                 </Grid>
-                <TextBlock x:Uid="Models_CustomSectionDesc"
-                           Text="Register OpenAI-compatible API endpoints (e.g., Together AI, OpenRouter)."
-                           FontSize="12" Opacity="0.6"
-                           TextWrapping="Wrap" Margin="0,-16,0,0" />
+                <TextBlock
+                    x:Uid="Models_CustomSectionDesc"
+                    Text="Register OpenAI-compatible API endpoints (e.g., Together AI, OpenRouter)."
+                    FontSize="12" Opacity="0.6"
+                    TextWrapping="Wrap" Margin="0,-16,0,0" />
 
                 <StackPanel x:Name="CustomProvidersPanel" Spacing="8" />
 
@@ -120,12 +136,14 @@
                 <!-- ============================== -->
                 <Rectangle Height="2" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="0,8" />
 
-                <TextBlock x:Uid="Models_LocalSection" Text="Local models"
-                           Style="{StaticResource SubtitleTextBlockStyle}" />
+                <TextBlock
+                    x:Uid="Models_LocalSection" Text="Local models"
+                    Style="{StaticResource SubtitleTextBlockStyle}" />
 
                 <!-- Ollama -->
-                <controls:CollapsibleSection x:Name="OllamaHeader" Header="Ollama" IsExpanded="False"
-                                             Expanded="OnSectionExpanded">
+                <controls:CollapsibleSection
+                    x:Name="OllamaHeader" Header="Ollama" IsExpanded="False"
+                    Expanded="OnSectionExpanded">
                     <controls:CollapsibleSection.Body>
                         <Grid>
                             <controls:OllamaProviderSection x:Name="OllamaSection" x:Load="False" />

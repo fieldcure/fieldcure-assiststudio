@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Page
     x:Class="AssistStudio.Settings.PersonalizationPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -15,22 +15,24 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Grid Grid.Row="0" Padding="20,14,20,14"
-              BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
-              BorderThickness="0,0,0,1">
-            <TextBlock x:Uid="Personalization_Title" Text="Personalization"
-                       Style="{StaticResource TitleTextBlockStyle}" />
+        <Grid
+            Grid.Row="0" Padding="20,14,20,14"
+            BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+            BorderThickness="0,0,0,1">
+            <TextBlock
+                x:Uid="Personalization_Title" Text="Personalization"
+                Style="{StaticResource TitleTextBlockStyle}" />
         </Grid>
 
         <!-- Content -->
         <ScrollViewer Grid.Row="1" Padding="20,16">
             <StackPanel Spacing="16" Padding="0,0,0,24">
 
-                <TextBlock x:Uid="Personalization_Theme" Text="Theme"
-                           Style="{StaticResource BodyStrongTextBlockStyle}" />
+                <TextBlock
+                    x:Uid="Personalization_Theme" Text="Theme"
+                    Style="{StaticResource BodyStrongTextBlockStyle}" />
 
-                <RadioButtons x:Name="ThemeRadioButtons"
-                              SelectionChanged="OnThemeChanged">
+                <RadioButtons x:Name="ThemeRadioButtons" SelectionChanged="OnThemeChanged">
                     <RadioButton x:Uid="Personalization_System" Content="System" Tag="System" />
                     <RadioButton x:Uid="Personalization_Light" Content="Light" Tag="Light" />
                     <RadioButton x:Uid="Personalization_Dark" Content="Dark" Tag="Dark" />

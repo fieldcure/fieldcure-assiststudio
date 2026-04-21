@@ -15,20 +15,23 @@
 
     <StackPanel Spacing="16" MinWidth="400">
         <!-- Display Name -->
-        <TextBox x:Name="DisplayNameBox"
-                 x:Uid="CustomProviderDialog_DisplayName"
-                 Header="Display name"
-                 PlaceholderText="e.g., Together AI"
-                 TextChanged="OnInputChanged" />
+        <TextBox
+            x:Name="DisplayNameBox"
+            x:Uid="CustomProviderDialog_DisplayName"
+            Header="Display name"
+            PlaceholderText="e.g., Together AI"
+            TextChanged="OnInputChanged" />
 
         <!-- Base URL -->
-        <TextBox x:Name="BaseUrlBox"
-                 x:Uid="CustomProviderDialog_BaseUrl"
-                 Header="Base URL"
-                 PlaceholderText="https://api.example.com/v1"
-                 TextChanged="OnInputChanged" />
-        <TextBlock x:Uid="CustomProviderDialog_BaseUrlHint"
-                   Text="Do not include /chat/completions path."
-                   FontSize="12" Opacity="0.6" Margin="0,-12,0,0" />
+        <TextBox
+            x:Name="BaseUrlBox"
+            x:Uid="CustomProviderDialog_BaseUrl"
+            Header="Base URL"
+            PlaceholderText="https://api.example.com/v1"
+            TextChanged="OnInputChanged" />
+        <TextBlock
+            x:Uid="CustomProviderDialog_BaseUrlHint"
+            Text="Do not include /chat/completions path."
+            FontSize="12" Opacity="0.6" Margin="0,-12,0,0" />
     </StackPanel>
 </local:ThemedContentDialog>

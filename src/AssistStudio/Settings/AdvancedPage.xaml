@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Page
     x:Class="AssistStudio.Settings.AdvancedPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -15,11 +15,13 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Grid Grid.Row="0" Padding="20,14,20,14"
-              BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
-              BorderThickness="0,0,0,1">
-            <TextBlock x:Uid="Advanced_Title" Text="Advanced"
-                       Style="{StaticResource TitleTextBlockStyle}" />
+        <Grid
+            Grid.Row="0" Padding="20,14,20,14"
+            BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+            BorderThickness="0,0,0,1">
+            <TextBlock
+                x:Uid="Advanced_Title" Text="Advanced"
+                Style="{StaticResource TitleTextBlockStyle}" />
         </Grid>
 
         <!-- Content -->
@@ -27,40 +29,47 @@
             <StackPanel Spacing="16" Padding="0,0,0,24">
 
                 <!-- Language -->
-                <TextBlock x:Uid="Advanced_Language" Text="Language"
-                           Style="{StaticResource BodyStrongTextBlockStyle}" />
+                <TextBlock
+                    x:Uid="Advanced_Language" Text="Language"
+                    Style="{StaticResource BodyStrongTextBlockStyle}" />
 
-                <TextBlock x:Uid="Advanced_LanguageDescription"
-                           Text="Override the system default language. Changes take effect after restarting the app."
-                           Style="{StaticResource CaptionTextBlockStyle}"
-                           TextWrapping="Wrap"
-                           Opacity="0.7" />
+                <TextBlock
+                    x:Uid="Advanced_LanguageDescription"
+                    Text="Override the system default language. Changes take effect after restarting the app."
+                    Style="{StaticResource CaptionTextBlockStyle}"
+                    TextWrapping="Wrap"
+                    Opacity="0.7" />
 
-                <ComboBox x:Name="LanguagePicker"
-                          Width="220"
-                          SelectionChanged="OnLanguageChanged" />
+                <ComboBox
+                    x:Name="LanguagePicker"
+                    Width="220"
+                    SelectionChanged="OnLanguageChanged" />
 
-                <TextBlock x:Name="LanguageRestartPrompt"
-                           x:Uid="Advanced_Restart"
-                           Style="{StaticResource DescriptionTextBlockStyle}"
-                           Foreground="{ThemeResource SystemControlErrorTextForegroundBrush}"
-                           TextWrapping="Wrap"
-                           Visibility="Collapsed" />
+                <TextBlock
+                    x:Name="LanguageRestartPrompt"
+                    x:Uid="Advanced_Restart"
+                    Style="{StaticResource DescriptionTextBlockStyle}"
+                    Foreground="{ThemeResource SystemControlErrorTextForegroundBrush}"
+                    TextWrapping="Wrap"
+                    Visibility="Collapsed" />
 
                 <!-- Logging -->
-                <TextBlock x:Uid="Advanced_Logging" Text="Logging"
-                           Style="{StaticResource BodyStrongTextBlockStyle}"
-                           Margin="0,16,0,0" />
+                <TextBlock
+                    x:Uid="Advanced_Logging" Text="Logging"
+                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                    Margin="0,16,0,0" />
 
-                <TextBlock x:Uid="Advanced_LoggingDescription"
-                           Text="Application logs are stored locally for troubleshooting."
-                           Style="{StaticResource CaptionTextBlockStyle}"
-                           TextWrapping="Wrap"
-                           Opacity="0.7" />
+                <TextBlock
+                    x:Uid="Advanced_LoggingDescription"
+                    Text="Application logs are stored locally for troubleshooting."
+                    Style="{StaticResource CaptionTextBlockStyle}"
+                    TextWrapping="Wrap"
+                    Opacity="0.7" />
 
-                <Button x:Uid="Advanced_OpenLogsFolder"
-                        Content="Open logs folder"
-                        Click="OnOpenLogsFolderClick">
+                <Button
+                    x:Uid="Advanced_OpenLogsFolder"
+                    Content="Open logs folder"
+                    Click="OnOpenLogsFolderClick">
                     <Button.Resources>
                         <FontIcon x:Key="ButtonIcon" Glyph="&#xE838;" FontSize="14" />
                     </Button.Resources>

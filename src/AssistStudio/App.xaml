@@ -30,16 +30,13 @@
                 <Setter Property="FontWeight" Value="Normal" />
                 <Setter Property="Foreground" Value="{ThemeResource TextControlHeaderForeground}" />
             </Style>
-            <Style x:Key="CompactSubtitleTextBlockStyle" TargetType="TextBlock"
-                   BasedOn="{StaticResource SubtitleTextBlockStyle}">
+            <Style x:Key="CompactSubtitleTextBlockStyle" TargetType="TextBlock" BasedOn="{StaticResource SubtitleTextBlockStyle}">
                 <Setter Property="FontSize" Value="18" />
             </Style>
-            <Style x:Key="DescriptionTextBlockStyle" TargetType="TextBlock"
-                   BasedOn="{StaticResource CaptionTextBlockStyle}">
+            <Style x:Key="DescriptionTextBlockStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextBlockStyle}">
                 <Setter Property="Foreground" Value="{ThemeResource SystemBaseMediumHighColor}" />
             </Style>
-            <Style x:Key="PageTitleTextBlockStyle" TargetType="TextBlock"
-                   BasedOn="{StaticResource TitleTextBlockStyle}">
+            <Style x:Key="PageTitleTextBlockStyle" TargetType="TextBlock" BasedOn="{StaticResource TitleTextBlockStyle}">
                 <Setter Property="FontSize" Value="24" />
                 <Setter Property="FontWeight" Value="SemiBold" />
                 <Setter Property="VerticalAlignment" Value="Bottom" />
@@ -53,8 +50,7 @@
                 <Setter Property="TextWrapping" Value="WrapWholeWords" />
                 <Setter Property="TextAlignment" Value="Center" />
             </Style>
-            <Style x:Key="RowHeaderTextBlockStyle" TargetType="TextBlock"
-                   BasedOn="{StaticResource BodyTextBlockStyle}">
+            <Style x:Key="RowHeaderTextBlockStyle" TargetType="TextBlock" BasedOn="{StaticResource BodyTextBlockStyle}">
                 <Setter Property="FontWeight" Value="Medium" />
                 <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
                 <Setter Property="TextTrimming" Value="CharacterEllipsis" />

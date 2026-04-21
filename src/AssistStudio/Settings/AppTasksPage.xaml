@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Page
     x:Class="AssistStudio.Settings.AppTasksPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -17,37 +17,43 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Grid Grid.Row="0" Padding="20,14,20,14"
-              BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
-              BorderThickness="0,0,0,1">
-            <TextBlock x:Uid="AppTasks_Title" Text="App Tasks"
-                       Style="{StaticResource TitleTextBlockStyle}" />
+        <Grid
+            Grid.Row="0" Padding="20,14,20,14"
+            BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+            BorderThickness="0,0,0,1">
+            <TextBlock
+                x:Uid="AppTasks_Title" Text="App Tasks"
+                Style="{StaticResource TitleTextBlockStyle}" />
         </Grid>
 
         <!-- Content -->
         <ScrollViewer Grid.Row="1" Padding="20,16">
             <StackPanel Spacing="16" MaxWidth="480" HorizontalAlignment="Left" Padding="0,0,0,24">
 
-                <TextBlock x:Uid="AppTasks_Description"
-                           Text="Choose which model the app uses for background tasks such as title generation, summarization, and sub-agent execution."
-                           Style="{StaticResource CaptionTextBlockStyle}"
-                           TextWrapping="Wrap"
-                           Opacity="0.7"
-                           Margin="0,0,0,12" />
+                <TextBlock
+                    x:Uid="AppTasks_Description"
+                    Text="Choose which model the app uses for background tasks such as title generation, summarization, and sub-agent execution."
+                    Style="{StaticResource CaptionTextBlockStyle}"
+                    TextWrapping="Wrap"
+                    Opacity="0.7"
+                    Margin="0,0,0,12" />
 
                 <!-- Title Generation -->
-                <controls:CollapsibleSection x:Name="TitleSection"
+                <controls:CollapsibleSection
+                    x:Name="TitleSection"
                     x:Uid="AppTasks_TitleSection"
                     Header="Title generation"
                     IsExpanded="True">
                     <controls:CollapsibleSection.Body>
                         <StackPanel Spacing="12" Padding="0">
-                            <ToggleSwitch x:Name="AutoTitleToggle"
-                                          OnContent="On" OffContent="Off"
-                                          Toggled="OnAutoTitleToggled" />
+                            <ToggleSwitch
+                                x:Name="AutoTitleToggle"
+                                OnContent="On" OffContent="Off"
+                                Toggled="OnAutoTitleToggled" />
 
                             <StackPanel x:Name="TitleDetailsPanel" Spacing="12" Visibility="Collapsed">
-                                <local:TaskPresetSelector x:Name="TitleSelector"
+                                <local:TaskPresetSelector
+                                    x:Name="TitleSelector"
                                     SettingsChanged="OnTitleSettingsChanged" />
                             </StackPanel>
                         </StackPanel>
@@ -55,35 +61,40 @@
                 </controls:CollapsibleSection>
 
                 <!-- Summary -->
-                <controls:CollapsibleSection x:Name="SummarySection"
+                <controls:CollapsibleSection
+                    x:Name="SummarySection"
                     x:Uid="AppTasks_SummarySection"
                     Header="Summary"
                     IsExpanded="True">
                     <controls:CollapsibleSection.Body>
                         <StackPanel Spacing="12" Padding="0">
-                            <ToggleSwitch x:Name="AutoSummaryToggle"
-                                          OnContent="On" OffContent="Off"
-                                          Toggled="OnAutoSummaryToggled" />
+                            <ToggleSwitch
+                                x:Name="AutoSummaryToggle"
+                                OnContent="On" OffContent="Off"
+                                Toggled="OnAutoSummaryToggled" />
 
                             <StackPanel x:Name="SummaryDetailsPanel" Spacing="12" Visibility="Collapsed">
-                                <local:TaskPresetSelector x:Name="SummarySelector"
+                                <local:TaskPresetSelector
+                                    x:Name="SummarySelector"
                                     SettingsChanged="OnSummarySettingsChanged" />
 
                                 <StackPanel x:Name="SummaryThresholdPanel" Spacing="6">
-                                <NumberBox x:Name="MaxInputTokensBox"
-                                           x:Uid="AppTasks_MaxInputTokens"
-                                           Header="Summary threshold (tokens)"
-                                           Minimum="1000"
-                                           Maximum="1000000"
-                                           SpinButtonPlacementMode="Inline"
-                                           SmallChange="10000"
-                                           LargeChange="50000"
-                                           ValueChanged="OnMaxInputTokensChanged" />
-                                <TextBlock x:Uid="AppTasks_MaxInputTokensHint"
-                                           Text="When input tokens exceed this value, prior conversation is summarized automatically. Set below your model's context limit."
-                                           Style="{StaticResource CaptionTextBlockStyle}"
-                                           TextWrapping="Wrap"
-                                           Opacity="0.6" />
+                                <NumberBox
+                                    x:Name="MaxInputTokensBox"
+                                    x:Uid="AppTasks_MaxInputTokens"
+                                    Header="Summary threshold (tokens)"
+                                    Minimum="1000"
+                                    Maximum="1000000"
+                                    SpinButtonPlacementMode="Inline"
+                                    SmallChange="10000"
+                                    LargeChange="50000"
+                                    ValueChanged="OnMaxInputTokensChanged" />
+                                <TextBlock
+                                    x:Uid="AppTasks_MaxInputTokensHint"
+                                    Text="When input tokens exceed this value, prior conversation is summarized automatically. Set below your model's context limit."
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    TextWrapping="Wrap"
+                                    Opacity="0.6" />
                             </StackPanel>
                             </StackPanel>
                         </StackPanel>
@@ -91,13 +102,15 @@
                 </controls:CollapsibleSection>
 
                 <!-- Sub-Agent -->
-                <controls:CollapsibleSection x:Name="SubAgentSection"
+                <controls:CollapsibleSection
+                    x:Name="SubAgentSection"
                     x:Uid="AppTasks_SubAgentSection"
                     Header="Sub-Agent"
                     IsExpanded="True">
                     <controls:CollapsibleSection.Body>
                         <StackPanel Spacing="12" Padding="0">
-                            <local:TaskPresetSelector x:Name="SubAgentSelector"
+                            <local:TaskPresetSelector
+                                x:Name="SubAgentSelector"
                                 SettingsChanged="OnSubAgentSettingsChanged" />
                         </StackPanel>
                     </controls:CollapsibleSection.Body>

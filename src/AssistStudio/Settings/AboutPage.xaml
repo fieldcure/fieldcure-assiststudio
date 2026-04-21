@@ -15,11 +15,14 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Grid Grid.Row="0" Padding="20,14,20,14"
-              BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
-              BorderThickness="0,0,0,1">
-            <TextBlock x:Uid="About_Title" Text="App Info"
-                       Style="{StaticResource TitleTextBlockStyle}" />
+        <Grid
+            Grid.Row="0" Padding="20,14,20,14"
+            BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+            BorderThickness="0,0,0,1">
+            <TextBlock
+                x:Uid="About_Title"
+                Text="App Info"
+                Style="{StaticResource TitleTextBlockStyle}" />
         </Grid>
 
         <!-- Content -->
@@ -28,53 +31,59 @@
 
                 <!-- App Icon + Name + Version -->
                 <StackPanel Orientation="Horizontal" Spacing="20">
-                    <Image Source="ms-appx:///Assets/Logo.png"
-                           Width="96" Height="96"
-                           VerticalAlignment="Center" />
+                    <Image
+                        Source="ms-appx:///Assets/Logo.png"
+                        Width="96" Height="96"
+                        VerticalAlignment="Center" />
                     <StackPanel VerticalAlignment="Center" Spacing="4">
-                        <TextBlock x:Name="AppNameText"
-                                   Style="{StaticResource SubtitleTextBlockStyle}" />
-                        <TextBlock x:Name="VersionText"
-                                   Style="{StaticResource SubtitleTextBlockStyle}"
-                                   Opacity="0.7" />
+                        <TextBlock
+                            x:Name="AppNameText"
+                            Style="{StaticResource SubtitleTextBlockStyle}" />
+                        <TextBlock
+                            x:Name="VersionText"
+                            Style="{StaticResource SubtitleTextBlockStyle}"
+                            Opacity="0.7" />
                     </StackPanel>
                 </StackPanel>
 
                 <!-- Copyright -->
-                <TextBlock Text="Copyright (c) 2026 FieldCure"
-                           Style="{StaticResource BodyTextBlockStyle}"
-                           Opacity="0.8" />
+                <TextBlock
+                    Text="Copyright (c) 2026 FieldCure"
+                    Style="{StaticResource BodyTextBlockStyle}"
+                    Opacity="0.8" />
 
                 <!-- Description -->
-                <TextBlock x:Uid="About_Description" Text="AI Chat UI Control for WinUI 3."
-                           TextWrapping="Wrap" />
+                <TextBlock
+                    x:Uid="About_Description" Text="AI Chat UI Control for WinUI 3."
+                    TextWrapping="Wrap" />
 
-                <TextBlock x:Uid="About_Providers" Text="Supports Claude, OpenAI, Ollama, Gemini, Groq and more."
-                           TextWrapping="Wrap"
-                           Opacity="0.7" />
+                <TextBlock
+                    x:Uid="About_Providers" Text="Supports Claude, OpenAI, Ollama, Gemini, Groq and more."
+                    TextWrapping="Wrap"
+                    Opacity="0.7" />
 
                 <!-- License -->
                 <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="0,4" />
 
-                <TextBlock x:Uid="About_License" Text="License"
-                           Style="{StaticResource BodyStrongTextBlockStyle}" />
+                <TextBlock x:Uid="About_License" Text="License" Style="{StaticResource BodyStrongTextBlockStyle}" />
                 <TextBlock x:Uid="About_MITLicense" Text="MIT License" />
 
                 <!-- Links -->
                 <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="0,4" />
 
-                <TextBlock x:Uid="About_Links" Text="Links"
-                           Style="{StaticResource BodyStrongTextBlockStyle}" />
+                <TextBlock x:Uid="About_Links" Text="Links" Style="{StaticResource BodyStrongTextBlockStyle}" />
 
-                <HyperlinkButton x:Uid="About_GitHubRepo" Content="GitHub Repository"
-                                 NavigateUri="https://github.com/fieldcure/fieldcure-assiststudio"
-                                 Padding="0" />
+                <HyperlinkButton
+                    x:Uid="About_GitHubRepo" Content="GitHub Repository"
+                    NavigateUri="https://github.com/fieldcure/fieldcure-assiststudio"
+                    Padding="0" />
 
                 <!-- System Specification -->
                 <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="0,4" />
 
-                <TextBlock x:Uid="About_SystemSpec" Text="System Specification"
-                           Style="{StaticResource BodyStrongTextBlockStyle}" />
+                <TextBlock
+                    x:Uid="About_SystemSpec" Text="System Specification"
+                    Style="{StaticResource BodyStrongTextBlockStyle}" />
 
                 <Grid ColumnSpacing="12" RowSpacing="6">
                     <Grid.ColumnDefinitions>

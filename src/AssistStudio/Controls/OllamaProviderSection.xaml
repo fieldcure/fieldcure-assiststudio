@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <UserControl
     x:Class="AssistStudio.Controls.OllamaProviderSection"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -9,40 +9,47 @@
 
     <StackPanel Spacing="8">
         <!-- Status -->
-        <StackPanel Orientation="Horizontal" Spacing="10">
-            <TextBlock x:Name="StatusText"
-                       FontSize="12"
-                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                       VerticalAlignment="Center" />
-            <ProgressRing x:Name="Spinner" IsActive="False"
-                          Width="16" Height="16" Visibility="Collapsed" />
-            <Button x:Name="RefreshButton"
-                    Padding="4"
-                    x:Uid="Models_RefreshStatus"
-                    ToolTipService.ToolTip="Check status" ToolTipService.Placement="Mouse"
-                    Click="OnCheckStatus">
-                <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
-                          Glyph="&#xE72C;" FontSize="12" />
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource CompactSpacing}">
+            <TextBlock
+                x:Name="StatusText"
+                FontSize="12"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                VerticalAlignment="Center" />
+            <ProgressRing
+                x:Name="Spinner" IsActive="False"
+                Width="16" Height="16" Visibility="Collapsed" />
+            <Button
+                x:Name="RefreshButton"
+                Padding="4"
+                x:Uid="Models_RefreshStatus"
+                ToolTipService.ToolTip="Check status" ToolTipService.Placement="Mouse"
+                Click="OnCheckStatus">
+                <FontIcon
+                    FontFamily="{StaticResource SymbolThemeFontFamily}"
+                    Glyph="&#xE72C;" FontSize="12" />
             </Button>
         </StackPanel>
 
         <!-- Server URL -->
         <StackPanel Spacing="4">
-            <TextBlock x:Uid="Models_OllamaServerUrl"
-                       Text="Server URL" FontSize="12" Opacity="0.7" />
+            <TextBlock
+                x:Uid="Models_OllamaServerUrl"
+                Text="Server URL" FontSize="12" Opacity="0.7" />
             <Grid ColumnSpacing="8">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBox x:Name="UrlBox"
-                         PlaceholderText="http://localhost:11434"
-                         LostFocus="OnUrlChanged">
+                <TextBox
+                    x:Name="UrlBox"
+                    PlaceholderText="http://localhost:11434"
+                    LostFocus="OnUrlChanged">
                     <TextBox.ContextFlyout>
                         <MenuFlyout>
-                            <MenuFlyoutItem x:Uid="Models_OllamaLocalhost"
-                                            Text="Reset to localhost"
-                                            Click="OnLocalhost">
+                            <MenuFlyoutItem
+                                x:Uid="Models_OllamaLocalhost"
+                                Text="Reset to localhost"
+                                Click="OnLocalhost">
                                 <MenuFlyoutItem.Icon>
                                     <FontIcon Glyph="&#xE10F;" />
                                 </MenuFlyoutItem.Icon>
@@ -50,107 +57,122 @@
                         </MenuFlyout>
                     </TextBox.ContextFlyout>
                 </TextBox>
-                <Button x:Name="TestButton"
-                        Grid.Column="1"
-                        x:Uid="Models_OllamaTestConnection"
-                        Content="Test" Click="OnTestUrl" />
+                <Button
+                    x:Name="TestButton"
+                    Grid.Column="1"
+                    x:Uid="Models_OllamaTestConnection"
+                    Content="Test" Click="OnTestUrl" />
             </Grid>
         </StackPanel>
 
         <!-- Install guidance -->
         <StackPanel x:Name="InstallPanel" Visibility="Collapsed" Spacing="2">
-            <HyperlinkButton x:Uid="Models_DownloadOllama"
-                             Content="Download Ollama"
-                             NavigateUri="https://ollama.com/download"
-                             Foreground="{ThemeResource SystemFillColorCriticalBrush}"
-                             Padding="0" />
+            <HyperlinkButton
+                x:Uid="Models_DownloadOllama"
+                Content="Download Ollama"
+                NavigateUri="https://ollama.com/download"
+                Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                Padding="0" />
         </StackPanel>
 
         <!-- Start button -->
-        <Button x:Name="StartButton"
-                x:Uid="Models_StartOllama"
-                Content="Start Ollama" Click="OnStartOllama"
-                Visibility="Collapsed" />
+        <Button
+            x:Name="StartButton"
+            x:Uid="Models_StartOllama"
+            Content="Start Ollama" Click="OnStartOllama"
+            Visibility="Collapsed" />
 
         <!-- Browse models + Login -->
-        <StackPanel x:Name="ActionButtons" Orientation="Horizontal" Spacing="8"
-                    Visibility="Collapsed">
-            <Button x:Name="BrowseModelsButton"
-                    x:Uid="Models_BrowsePullModels"
-                    Content="Browse models" Click="OnBrowseModels" />
-            <Button x:Name="LoginButton"
-                    x:Uid="Models_OllamaLogin"
-                    Content="Ollama Login" Click="OnLogin" />
+        <StackPanel
+            x:Name="ActionButtons" Orientation="Horizontal" Spacing="8"
+            Visibility="Collapsed">
+            <Button
+                x:Name="BrowseModelsButton"
+                x:Uid="Models_BrowsePullModels"
+                Content="Browse models" Click="OnBrowseModels" />
+            <Button
+                x:Name="LoginButton"
+                x:Uid="Models_OllamaLogin"
+                Content="Ollama Login" Click="OnLogin" />
         </StackPanel>
-        <TextBlock x:Name="CloudHint"
-                   x:Uid="Models_OllamaCloudHint"
-                   Text="Sign in required for cloud models (:cloud). Clicking Login opens a command prompt — complete authentication in your browser."
-                   FontSize="12" Opacity="0.6"
-                   TextWrapping="Wrap"
-                   Visibility="Collapsed" />
+        <TextBlock
+            x:Name="CloudHint"
+            x:Uid="Models_OllamaCloudHint"
+            Text="Sign in required for cloud models (:cloud). Clicking Login opens a command prompt — complete authentication in your browser."
+            FontSize="12" Opacity="0.6"
+            TextWrapping="Wrap"
+            Visibility="Collapsed" />
 
         <!-- Download Progress -->
-        <StackPanel x:Name="PullProgressPanel" Visibility="Collapsed" Spacing="4"
-                    Margin="0,0,0,8">
+        <StackPanel x:Name="PullProgressPanel" Visibility="Collapsed" Spacing="4" Margin="0,0,0,8">
             <TextBlock x:Name="PullProgressStatus" FontSize="12" />
             <ProgressBar x:Name="PullProgressBar" Minimum="0" Maximum="100" />
         </StackPanel>
 
         <!-- Model selection -->
-        <ComboBox x:Name="ModelCombo"
-                  x:Uid="Models_OllamaDefaultModel"
-                  Header="Default model"
-                  HorizontalAlignment="Stretch"
-                  IsEnabled="False"
-                  PlaceholderText="Not available"
-                  SelectionChanged="OnModelChanged" />
-        <NumberBox x:Name="MaxTokensBox"
-                   x:Uid="Models_MaxTokens"
-                   Header="Max tokens"
-                   Value="4096" Minimum="1" Maximum="1000000"
-                   SpinButtonPlacementMode="Inline"
-                   SmallChange="1024" LargeChange="4096"
-                   ValueChanged="OnMaxTokensChanged" />
-        <NumberBox x:Name="NumCtxBox"
-                   Header="Context window (tokens)"
-                   ToolTipService.ToolTip="Maximum context size the model will use. Ollama's default (2048) is too small for RAG. Check your model's supported max."
-                   Value="8192" Minimum="512" Maximum="131072"
-                   SpinButtonPlacementMode="Inline"
-                   SmallChange="1024" LargeChange="4096"
-                   ValueChanged="OnNumCtxChanged" />
-        <TextBox x:Name="KeepAliveBox"
-                 Header="Keep model loaded"
-                 ToolTipService.ToolTip="Duration to retain the model in VRAM after last use. Prevents cold-start delays. Use '-1' for permanent, '0' for immediate unload."
-                 PlaceholderText="5m"
-                 TextChanged="OnKeepAliveChanged" />
+        <ComboBox
+            x:Name="ModelCombo"
+            x:Uid="Models_OllamaDefaultModel"
+            Header="Default model"
+            HorizontalAlignment="Stretch"
+            IsEnabled="False"
+            PlaceholderText="Not available"
+            SelectionChanged="OnModelChanged" />
+        <NumberBox
+            x:Name="MaxTokensBox"
+            x:Uid="Models_MaxTokens"
+            Header="Max tokens"
+            Value="4096" Minimum="1" Maximum="1000000"
+            SpinButtonPlacementMode="Inline"
+            SmallChange="1024" LargeChange="4096"
+            ValueChanged="OnMaxTokensChanged" />
+        <NumberBox
+            x:Name="NumCtxBox"
+            Header="Context window (tokens)"
+            ToolTipService.ToolTip="Maximum context size the model will use. Ollama's default (2048) is too small for RAG. Check your model's supported max."
+            Value="8192" Minimum="512" Maximum="131072"
+            SpinButtonPlacementMode="Inline"
+            SmallChange="1024" LargeChange="4096"
+            ValueChanged="OnNumCtxChanged" />
+        <TextBox
+            x:Name="KeepAliveBox"
+            Header="Keep model loaded"
+            ToolTipService.ToolTip="Duration to retain the model in VRAM after last use. Prevents cold-start delays. Use '-1' for permanent, '0' for immediate unload."
+            PlaceholderText="5m"
+            TextChanged="OnKeepAliveChanged" />
         <StackPanel Spacing="4">
             <TextBlock x:Uid="Models_PdfHandling" Text="PDF handling" FontSize="12" Opacity="0.7" />
-            <ComboBox x:Name="PdfCombo"
-                      HorizontalAlignment="Stretch"
-                      SelectionChanged="OnPdfHandlingChanged" />
+            <ComboBox
+                x:Name="PdfCombo"
+                HorizontalAlignment="Stretch"
+                SelectionChanged="OnPdfHandlingChanged" />
         </StackPanel>
         <StackPanel Spacing="4">
-            <ComboBox x:Name="ThinkingOverrideCombo"
-                      x:Uid="Models_ThinkingOverride"
-                      Header="Reasoning mode"
-                      HorizontalAlignment="Stretch"
-                      SelectionChanged="OnThinkingOverrideChanged" />
-            <ToggleSwitch x:Name="ThinkingToggle"
-                          x:Uid="Models_ExtendedThinking"
-                          Header="Extended reasoning"
-                          Toggled="OnThinkingToggled" />
-            <NumberBox x:Name="ThinkingBudgetBox"
-                       x:Uid="Models_ThinkingBudget"
-                       Header="Reasoning budget (tokens)"
-                       Value="4096" Minimum="1024" Maximum="128000"
-                       SpinButtonPlacementMode="Inline"
-                       SmallChange="1024" LargeChange="4096"
-                       IsEnabled="False"
-                       ValueChanged="OnThinkingBudgetChanged" />
-            <TextBlock x:Name="ThinkingHint"
-                       FontSize="12" Opacity="0.6"
-                       TextWrapping="Wrap"
-                       Visibility="Collapsed" />
+            <ComboBox
+                x:Name="ThinkingOverrideCombo"
+                x:Uid="Models_ThinkingOverride"
+                Header="Reasoning mode"
+                HorizontalAlignment="Stretch"
+                SelectionChanged="OnThinkingOverrideChanged" />
+            <ToggleSwitch
+                x:Name="ThinkingToggle"
+                x:Uid="Models_ExtendedThinking"
+                Header="Extended reasoning"
+                Toggled="OnThinkingToggled" />
+            <NumberBox
+                x:Name="ThinkingBudgetBox"
+                x:Uid="Models_ThinkingBudget"
+                Header="Reasoning budget (tokens)"
+                Value="4096" Minimum="1024" Maximum="128000"
+                SpinButtonPlacementMode="Inline"
+                SmallChange="1024" LargeChange="4096"
+                IsEnabled="False"
+                ValueChanged="OnThinkingBudgetChanged" />
+            <TextBlock
+                x:Name="ThinkingHint"
+                FontSize="12" Opacity="0.6"
+                TextWrapping="Wrap"
+                Visibility="Collapsed" />
         </StackPanel>
     </StackPanel>
 </UserControl>

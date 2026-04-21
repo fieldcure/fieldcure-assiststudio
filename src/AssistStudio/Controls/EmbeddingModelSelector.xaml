@@ -15,31 +15,34 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- Provider badge -->
-                <Border Grid.Column="0"
-                        Background="{ThemeResource SubtleFillColorTertiaryBrush}"
-                        CornerRadius="4" Padding="6,2"
-                        VerticalAlignment="Center">
-                    <TextBlock Text="{x:Bind Provider}"
-                               Style="{StaticResource DescriptionTextBlockStyle}"
-                               Opacity="0.7" />
+                <Border
+                    Grid.Column="0"
+                    Background="{ThemeResource SubtleFillColorTertiaryBrush}"
+                    CornerRadius="4" Padding="6,2"
+                    VerticalAlignment="Center">
+                    <TextBlock
+                        Text="{x:Bind Provider}"
+                        Style="{StaticResource DescriptionTextBlockStyle}"
+                        Opacity="0.7" />
                 </Border>
 
                 <!-- Model name + meta -->
                 <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center">
-                    <TextBlock Text="{x:Bind Label}"
-                               Style="{StaticResource BodyStrongTextBlockStyle}" />
-                    <TextBlock Text="{x:Bind Meta}"
-                               Visibility="{x:Bind MetaVisibility}"
-                               Style="{StaticResource DescriptionTextBlockStyle}"
-                               Opacity="0.7" />
+                    <TextBlock Text="{x:Bind Label}" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                    <TextBlock
+                        Text="{x:Bind Meta}"
+                        Visibility="{x:Bind MetaVisibility}"
+                        Style="{StaticResource DescriptionTextBlockStyle}"
+                        Opacity="0.7" />
                 </StackPanel>
 
                 <!-- Not-installed badge -->
-                <TextBlock Grid.Column="2"
-                           Text="{x:Bind StatusText}"
-                           Style="{StaticResource DescriptionTextBlockStyle}"
-                           Foreground="{ThemeResource SystemFillColorCautionBrush}"
-                           VerticalAlignment="Center" />
+                <TextBlock
+                    Grid.Column="2"
+                    Text="{x:Bind StatusText}"
+                    Style="{StaticResource DescriptionTextBlockStyle}"
+                    Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                    VerticalAlignment="Center" />
             </Grid>
         </DataTemplate>
     </UserControl.Resources>
@@ -47,30 +50,35 @@
     <StackPanel Spacing="{StaticResource CompactSpacing}">
         <!-- Embedding model -->
         <StackPanel Spacing="4">
-            <ComboBox x:Name="EmbeddingCombo"
-                      x:Uid="EmbeddingModelSelector_EmbeddingCombo"
-                      HorizontalAlignment="Stretch"
-                      ItemTemplate="{StaticResource ModelOptionTemplate}"
-                      SelectionChanged="OnEmbeddingComboChanged" />
-            <TextBlock x:Name="EmbeddingMetaText"
-                       Style="{StaticResource DescriptionTextBlockStyle}"
-                       Opacity="0.6" />
+            <ComboBox
+                x:Name="EmbeddingCombo"
+                x:Uid="EmbeddingModelSelector_EmbeddingCombo"
+                HorizontalAlignment="Stretch"
+                ItemTemplate="{StaticResource ModelOptionTemplate}"
+                SelectionChanged="OnEmbeddingComboChanged" />
+            <TextBlock
+                x:Name="EmbeddingMetaText"
+                Style="{StaticResource DescriptionTextBlockStyle}"
+                Opacity="0.6" />
         </StackPanel>
 
         <!-- Chunk contextualization -->
         <StackPanel Spacing="4">
-            <ToggleSwitch x:Name="ContextualizerToggle"
-                          x:Uid="EmbeddingModelSelector_ContextualizerToggle"
-                          Toggled="OnContextualizerToggled" />
-            <ComboBox x:Name="ContextualizerCombo"
-                      HorizontalAlignment="Stretch"
-                      Visibility="Collapsed"
-                      ItemTemplate="{StaticResource ModelOptionTemplate}"
-                      SelectionChanged="OnContextualizerComboChanged" />
-            <TextBlock x:Name="ContextualizerMetaText"
-                       Style="{StaticResource DescriptionTextBlockStyle}"
-                       Opacity="0.6"
-                       Visibility="Collapsed" />
+            <ToggleSwitch
+                x:Name="ContextualizerToggle"
+                x:Uid="EmbeddingModelSelector_ContextualizerToggle"
+                Toggled="OnContextualizerToggled" />
+            <ComboBox
+                x:Name="ContextualizerCombo"
+                HorizontalAlignment="Stretch"
+                Visibility="Collapsed"
+                ItemTemplate="{StaticResource ModelOptionTemplate}"
+                SelectionChanged="OnContextualizerComboChanged" />
+            <TextBlock
+                x:Name="ContextualizerMetaText"
+                Style="{StaticResource DescriptionTextBlockStyle}"
+                Opacity="0.6"
+                Visibility="Collapsed" />
         </StackPanel>
     </StackPanel>
 </UserControl>
