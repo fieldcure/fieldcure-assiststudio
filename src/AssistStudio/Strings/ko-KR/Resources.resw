@@ -191,11 +191,8 @@
   <data name="Memory_Title.Text" xml:space="preserve">
     <value>메모리</value>
   </data>
-  <data name="Memory_ClearAll.Content" xml:space="preserve">
-    <value>전체 삭제</value>
-  </data>
-  <data name="Memory_ClearConfirm" xml:space="preserve">
-    <value>모든 메모리를 삭제하시겠습니까?</value>
+  <data name="Memory_Refresh.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>새로 고침</value>
   </data>
   <data name="Memory_Empty.Text" xml:space="preserve">
     <value>저장된 메모리가 없습니다.</value>
@@ -208,9 +205,6 @@
   </data>
   <data name="Memory_Connecting" xml:space="preserve">
     <value>메모리 서비스에 연결 중…</value>
-  </data>
-  <data name="Memory_ClearAllTitle" xml:space="preserve">
-    <value>전체 삭제</value>
   </data>
   <data name="Memory_DeleteTooltip" xml:space="preserve">
     <value>삭제</value>

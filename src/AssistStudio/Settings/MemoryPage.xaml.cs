@@ -114,7 +114,6 @@ public sealed partial class MemoryPage : Page
             EmptyPanel.Visibility = Visibility.Collapsed;
             HintText.Visibility = Visibility.Visible;
             HintDivider.Visibility = Visibility.Visible;
-            ClearAllButton.Visibility = Visibility.Visible;
             CounterText.Text = $"{total}";
 
             var items = new List<FrameworkElement>();
@@ -202,7 +201,6 @@ public sealed partial class MemoryPage : Page
         EmptyPanel.Visibility = Visibility.Collapsed;
         HintText.Visibility = Visibility.Collapsed;
         HintDivider.Visibility = Visibility.Collapsed;
-        ClearAllButton.Visibility = Visibility.Collapsed;
         CounterText.Text = "";
     }
 
@@ -216,7 +214,6 @@ public sealed partial class MemoryPage : Page
         EmptyPanel.Visibility = Visibility.Visible;
         HintText.Visibility = Visibility.Collapsed;
         HintDivider.Visibility = Visibility.Collapsed;
-        ClearAllButton.Visibility = Visibility.Collapsed;
         CounterText.Text = "";
     }
 
@@ -260,48 +257,20 @@ public sealed partial class MemoryPage : Page
     }
 
     /// <summary>
-    /// Confirms and deletes all memory entries.
+    /// Re-runs <c>list_memories</c> against the Essentials server. The page does
+    /// not auto-refresh while the user is on another page, so this button lets
+    /// the user pick up memories the AI added or removed during a conversation.
     /// </summary>
-    private async void OnClearAllClicked(object sender, RoutedEventArgs e)
+    private async void OnRefreshClicked(object sender, RoutedEventArgs e)
     {
-        var title = Res.GetString("Memory_ClearAllTitle");
-        var content = Res.GetString("Memory_ClearConfirm");
-
-        var dialog = new ThemedContentDialog
-        {
-            Title = title,
-            Content = content,
-            PrimaryButtonText = title,
-            CloseButtonText = "Cancel",
-            DefaultButton = ContentDialogButton.Close,
-            XamlRoot = XamlRoot,
-        };
-
-        if (await dialog.ShowAsync() != ContentDialogResult.Primary)
-            return;
-
-        var conn = App.McpRegistry.GetBuiltInConnection(BuiltInServerHelper.EssentialsKey);
-        if (conn is null || !conn.IsConnected) return;
-
+        RefreshButton.IsEnabled = false;
         try
         {
-            var listArgs = JsonDocument.Parse("{\"limit\": 100}").RootElement;
-            var resultJson = await conn.CallToolWithProgressAsync("list_memories", listArgs, null, CancellationToken.None);
-
-            using var doc = JsonDocument.Parse(resultJson);
-            if (doc.RootElement.TryGetProperty("memories", out var memories))
-            {
-                foreach (var entry in memories.EnumerateArray())
-                {
-                    var key = entry.GetProperty("key").GetString();
-                    if (key is null) continue;
-                    var args = JsonDocument.Parse(JsonSerializer.Serialize(new { key })).RootElement;
-                    await conn.CallToolWithProgressAsync("forget", args, null, CancellationToken.None);
-                }
-            }
-
-            await RefreshListAsync(conn);
+            await LoadMemoriesAsync(string.IsNullOrWhiteSpace(SearchBox.Text) ? null : SearchBox.Text);
         }
-        catch { /* best effort */ }
+        finally
+        {
+            RefreshButton.IsEnabled = true;
+        }
     }
 }

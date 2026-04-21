@@ -14,7 +14,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Header: title + counter badge + Clear All -->
+        <!-- Header: title + counter badge + Refresh -->
         <Grid Grid.Row="0" Padding="20,14,20,14"
               BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
               BorderThickness="0,0,0,1">
@@ -35,9 +35,13 @@
                        VerticalAlignment="Center"
                        Margin="0,0,12,0" />
 
-            <Button x:Name="ClearAllButton" Grid.Column="3"
-                    x:Uid="Memory_ClearAll" Content="Clear All"
-                    Click="OnClearAllClicked" />
+            <Button x:Name="RefreshButton" Grid.Column="3"
+                    x:Uid="Memory_Refresh"
+                    Click="OnRefreshClicked"
+                    Style="{StaticResource SubtleButtonStyle}"
+                    Padding="8" MinWidth="0" MinHeight="0">
+                <FontIcon Glyph="&#xE72C;" FontSize="14" />
+            </Button>
         </Grid>
 
         <!-- Search box -->

@@ -191,11 +191,8 @@
   <data name="Memory_Title.Text" xml:space="preserve">
     <value>Memory</value>
   </data>
-  <data name="Memory_ClearAll.Content" xml:space="preserve">
-    <value>Clear All</value>
-  </data>
-  <data name="Memory_ClearConfirm" xml:space="preserve">
-    <value>Are you sure you want to clear all memories?</value>
+  <data name="Memory_Refresh.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Refresh</value>
   </data>
   <data name="Memory_Empty.Text" xml:space="preserve">
     <value>No memories saved yet.</value>
@@ -208,9 +205,6 @@
   </data>
   <data name="Memory_Connecting" xml:space="preserve">
     <value>Connecting to memory service…</value>
-  </data>
-  <data name="Memory_ClearAllTitle" xml:space="preserve">
-    <value>Clear All</value>
   </data>
   <data name="Memory_DeleteTooltip" xml:space="preserve">
     <value>Delete</value>
