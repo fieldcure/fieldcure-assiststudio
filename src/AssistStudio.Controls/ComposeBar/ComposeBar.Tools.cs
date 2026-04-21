@@ -1,15 +1,23 @@
-﻿using FieldCure.Ai.Providers.Models;
+using FieldCure.Ai.Providers.Models;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
 
 namespace FieldCure.AssistStudio.Controls;
 
 public sealed partial class ComposeBar
 {
+    #region Fields
+
+    /// <summary>
+    /// The reusable flyout showing the tool/server toggles. Instantiated once and updated in place.
+    /// </summary>
+    private ToolSelectionFlyout? _toolFlyout;
+
+    #endregion
+
     #region Dependency Property Callbacks
 
     /// <summary>
-    /// Called when <see cref="AvailableTools"/> changes to rebuild the tool toggle flyout.
+    /// Called when <see cref="AvailableTools"/> changes to refresh the tool toggle flyout.
     /// </summary>
     private static void OnAvailableToolsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
@@ -18,9 +26,13 @@ public sealed partial class ComposeBar
             // Reset — all tools enabled by default
             self.EnabledToolNames = null;
             self.UpdateToolButtonVisibility();
+            self.RefreshToolsFlyout();
         }
     }
 
+    /// <summary>
+    /// Called when <see cref="SelectedProfile"/> changes; the tool list may depend on the profile.
+    /// </summary>
     private static void OnSelectedProfileChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is ComposeBar self)
@@ -46,128 +58,37 @@ public sealed partial class ComposeBar
     #region Tool Flyout
 
     /// <summary>
-    /// Builds the tools flyout showing tool toggles from the profile.
-    /// Shows an empty state message when no tools are enabled in the profile.
+    /// Ensures the tools flyout instance exists and is attached to the tool button, creating
+    /// it lazily on first use. Subsequent calls are no-ops.
     /// </summary>
-    private void BuildToolsFlyout()
+    private void EnsureToolsFlyout()
     {
-        if (_toolButton is null) return;
+        if (_toolButton is null || _toolFlyout is not null) return;
 
-        var tools = AvailableTools;
-
-        // Flyout shows only server placeholders (Essentials, Workspace, etc.).
-        // Individual tools and meta-tools (search_tools) are hidden.
-        bool IsVisibleTool(IAssistTool t) => t.IsServerPlaceholder;
-
-        // Empty state: no tools enabled
-        if (tools.Count == 0)
-        {
-            var emptyPanel = new StackPanel
-            {
-                Spacing = 4,
-                Padding = new Thickness(8),
-                MaxWidth = 240,
-            };
-            emptyPanel.Children.Add(new TextBlock
-            {
-                Text = Res.GetString("ComposeBar_NoToolsEnabled") is { Length: > 0 } emptyText
-                    ? emptyText
-                    : "No tools or servers enabled.\nAdd them in Profile settings.",
-                TextWrapping = TextWrapping.Wrap,
-                Opacity = 0.6,
-                FontSize = 12,
-            });
-
-            _toolButton.Flyout = new Flyout
-            {
-                Content = emptyPanel,
-                Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedLeft,
-            };
-            return;
-        }
-
-        var panel = new StackPanel { Spacing = 4 };
-        var allCheckBoxes = new List<CheckBox>();
-
-        var enabledToolSet = EnabledToolNames?.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        foreach (var tool in tools.Where(IsVisibleTool))
-        {
-            // Tool names are technical identifiers, not localized.
-            var cb = new CheckBox
-            {
-                Content = tool.DisplayName,
-                IsChecked = enabledToolSet is null || enabledToolSet.Contains(tool.Name),
-                Tag = tool.Name,
-                MinWidth = 0,
-            };
-            cb.Checked += ToolCheckBox_Changed;
-            cb.Unchecked += ToolCheckBox_Changed;
-            panel.Children.Add(cb);
-            allCheckBoxes.Add(cb);
-        }
-
-        // --- Footer: Separator + Toggle all ---
-        var footer = new StackPanel { Spacing = 4, Padding = new Thickness(4, 0, 4, 4) };
-        footer.Children.Add(new Microsoft.UI.Xaml.Shapes.Rectangle
-        {
-            Height = 1,
-            Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
-            Opacity = 0.3,
-            Margin = new Thickness(0, 2, 0, 2),
-        });
-
-        var selectLabel = Res.GetString("ComposeBar_SelectAll") ?? "Select all";
-        var deselectLabel = Res.GetString("ComposeBar_DeselectAll") ?? "Deselect all";
-        var allChecked = allCheckBoxes.All(c => c.IsChecked == true);
-
-        var toggleLink = new HyperlinkButton
-        {
-            Content = allChecked ? deselectLabel : selectLabel,
-            Padding = new Thickness(0),
-            FontSize = 12,
-        };
-        toggleLink.Click += (_, _) =>
-        {
-            var nowAllChecked = allCheckBoxes.All(c => c.IsChecked == true);
-            foreach (var cb in allCheckBoxes)
-                cb.IsChecked = !nowAllChecked;
-        };
-        footer.Children.Add(toggleLink);
-
-        var outerPanel = new StackPanel { Padding = new Thickness(4) };
-        outerPanel.Children.Add(new ScrollViewer
-        {
-            Content = panel,
-            MaxHeight = 400,
-            Padding = new Thickness(0, 0, 8, 0),
-        });
-        outerPanel.Children.Add(footer);
-
-        _toolButton.Flyout = new Flyout
-        {
-            Content = outerPanel,
-            Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedLeft,
-        };
+        _toolFlyout = new ToolSelectionFlyout();
+        _toolFlyout.SelectionChanged += (_, enabled) => EnabledToolNames = enabled;
+        _toolButton.Flyout = _toolFlyout;
     }
 
     /// <summary>
-    /// Handles tool checkbox toggle to update <see cref="EnabledToolNames"/>.
+    /// Refreshes the tools flyout content from the current <see cref="AvailableTools"/> list.
+    /// Filters to server placeholders (individual tools and meta-tools are hidden).
     /// </summary>
-    private void ToolCheckBox_Changed(object sender, RoutedEventArgs e)
+    private void RefreshToolsFlyout()
     {
-        if (sender is not CheckBox cb || cb.Tag is not string toolName) return;
+        EnsureToolsFlyout();
+        if (_toolFlyout is null) return;
 
-        var tools = AvailableTools;
-        var current = EnabledToolNames?.ToHashSet(StringComparer.OrdinalIgnoreCase)
-            ?? [.. tools.Select(t => t.Name)];
-
-        if (cb.IsChecked == true)
-            current.Add(toolName);
-        else
-            current.Remove(toolName);
-
-        EnabledToolNames = current.Count == tools.Count ? null : [.. current];
+        // Flyout shows only server placeholders (Essentials, Workspace, etc.).
+        // Individual tools and meta-tools (search_tools) are hidden.
+        var visibleTools = AvailableTools.Where(IsVisibleTool).ToList();
+        _toolFlyout.SetItems(visibleTools, EnabledToolNames);
     }
+
+    /// <summary>
+    /// Determines whether a tool should be visible in the selection flyout.
+    /// </summary>
+    private static bool IsVisibleTool(IAssistTool t) => t.IsServerPlaceholder;
 
     #endregion
 }

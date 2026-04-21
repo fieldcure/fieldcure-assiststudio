@@ -287,7 +287,7 @@ public sealed partial class ComposeBar
         _containerBorder = GetTemplateChild("PART_ContainerBorder") as Border;
         _toolButton = GetTemplateChild("PART_ToolButton") as Button;
         if (_toolButton is not null)
-            _toolButton.Click += (_, _) => BuildToolsFlyout();
+            _toolButton.Click += (_, _) => RefreshToolsFlyout();
 
         // Apply ThemeShadow in code (XAML compiler crashes with ThemeShadow in ControlTemplate.Resources)
         if (_containerBorder is not null)
