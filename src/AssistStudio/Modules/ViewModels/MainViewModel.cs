@@ -381,6 +381,30 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Re-checks Ollama reachability once and applies any resulting preset visibility change.
+    /// Intended for explicit user-driven refresh points such as the Settings page.
+    /// </summary>
+    public async Task RefreshOllamaReachabilityAsync()
+    {
+        try
+        {
+            var baseUrl = AppSettings.GetOllamaBaseUrl() ?? "http://localhost:11434";
+            using var provider = new OllamaProvider(baseUrl: baseUrl);
+            using var cts = new CancellationTokenSource(OllamaProbeTimeout);
+            var info = await provider.ValidateConnectionAsync(cts.Token);
+            SetOllamaReachable(
+                info.IsValid,
+                info.IsValid
+                    ? "[App] Ollama reachability refreshed — presets restored"
+                    : "[App] Ollama reachability refreshed — presets hidden");
+        }
+        catch
+        {
+            SetOllamaReachable(false, "[App] Ollama reachability refreshed — presets hidden");
+        }
+    }
+
     #endregion
 
     #region Private Methods
@@ -635,10 +659,7 @@ public partial class MainViewModel : ObservableObject
 
         var dispatcher = (App.Current as App)?.MainWindow?.DispatcherQueue;
         if (dispatcher is null)
-        {
-            RefreshPresetsOnAll();
             return;
-        }
 
         dispatcher.TryEnqueue(DispatcherQueuePriority.Normal, RefreshPresetsOnAll);
     }

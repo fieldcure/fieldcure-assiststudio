@@ -1,4 +1,4 @@
-using AssistStudio.Controls.Dialogs;
+﻿using AssistStudio.Controls.Dialogs;
 using AssistStudio.Helpers;
 using FieldCure.Ai.Providers;
 using FieldCure.Ai.Providers.Models;
@@ -187,7 +187,18 @@ public sealed partial class OllamaProviderSection : UserControl
             Spinner.IsActive = false;
             Spinner.Visibility = Visibility.Collapsed;
             UpdateSubHeader();
+            await SyncMainViewModelOllamaReachabilityAsync();
         }
+    }
+
+    /// <summary>
+    /// Keeps main-tab preset filtering in sync when the user explicitly re-checks Ollama
+    /// from the Settings UI or starts the server after app launch.
+    /// </summary>
+    private static async Task SyncMainViewModelOllamaReachabilityAsync()
+    {
+        if ((App.Current as App)?.MainWindow?.ViewModel is { } viewModel)
+            await viewModel.RefreshOllamaReachabilityAsync();
     }
 
     #endregion
