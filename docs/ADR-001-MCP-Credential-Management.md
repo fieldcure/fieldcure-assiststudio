@@ -3,6 +3,7 @@
 **Status:** Accepted
 **Date:** 2026-04-18
 **Amended:** 2026-04-19 — Static/dynamic credential distinction, Outbox OAuth phased rollout
+**Amended:** 2026-04-20 — Outbox local-trust exception for `channels.json`; Essentials Phase 2 split into auto/explicit cases (Elicitation required only on explicit paid-engine intent, implementation deferred to v2.2); Outbox Phase 3c reframed — OAuth host constraint is "local browser + localhost callback", not Windows. v2.1 folds CLI-equivalent flow into MCP `add_channel`; v2.2 adds device-code flow for headless
 **Applies to:** All FieldCure MCP servers (Essentials, Outbox, PublicData.Kr, RAG, future servers)
 
 ---
@@ -63,6 +64,19 @@ Microsoft channel:
    - Security boundary: does not defend against same-user compromise (same level as GitHub CLI, Docker CLI, AWS CLI)
    - Optional secure backend (e.g. ASP.NET Core DataProtection) may be added later if needed
 
+   **Local-trust exception (Outbox CLI `add_channel`).** The interactive CLI setup
+   flow for static-secret channels (Slack bot token, Discord webhook URL, SMTP
+   password, Telegram API hash) writes the secret directly into `channels.json`
+   alongside the non-secret config. `OutboxSecretResolver` reads this as the last
+   fallback in the resolution chain (`cache → env var → channels.json`). This is a
+   deliberate concession to single-user-machine usability: it matches the same-user
+   security boundary already documented for `tokens.json`, and is consistent with
+   the disk-plaintext convention of `~/.docker/config.json`, `~/.config/gh/hosts.yml`,
+   and similar local CLI tools. Production, shared-host, and headless deployments
+   should set env vars (or use an Elicitation-capable client) exclusively, leaving
+   the secret fields in `channels.json` empty — the resolver will then pick the key
+   up from the environment and never touch the file.
+
 3. **Lazy elicitation.** Servers do not elicit at startup. They elicit on the first tool call that requires the key. `tools/list` must always succeed without a key. **Batch/headless modes** (e.g. RAG exec, exec-queue) where no MCP client is present must not attempt Elicitation — they use env var only and soft-fail if absent.
 
 4. **Soft fail.** If no env var is set and elicitation fails (client does not support it, user declines, or the retry cap is exhausted), the server stays up. Only the affected tool returns a structured error:
@@ -82,7 +96,7 @@ Microsoft channel:
 | AssistStudio | PasswordVault (interactive GUI, Windows-only app — appropriate) |
 | AssistStudio → MCP spawn | Reads PasswordVault, injects via `ProcessStartInfo.EnvironmentVariables` |
 | Mcp.Rag | env var → Elicitation fallback (static secrets only) |
-| Mcp.Outbox (static channels) | env var → Elicitation fallback + `channels.json` (non-secret config) |
+| Mcp.Outbox (static channels) | env var → Elicitation fallback → `channels.json` (local-trust plaintext fallback, see Principle 2) + non-secret config |
 | Mcp.Outbox (OAuth channels) | static part via env var + dynamic part via `tokens.json` (file-permission protected) |
 
 ### Elicitation schema standard
@@ -134,13 +148,45 @@ MCP Elicitation is a spec 2025-06-18+ feature. On non-supporting clients:
 - Replaced startup hard-fail with soft-fail.
 - Renamed env var `PUBLICDATA_API_KEY` → `DATA_GO_KR_API_KEY` (non-breaking at `v0.x`; aligns with the external Korean government API naming convention). The legacy name remains accepted.
 
-**Phase 2 — Essentials** ✅ Complete
+**Phase 2 — Essentials** 🚧 Partially Complete (amended 2026-04-20)
 
-- Added Elicitation as the final link of the existing `ResolveArg` chain.
-- Elicitation happens per selected engine, after the engine has been chosen.
-- Full chain: `--search-api-key` CLI → `ESSENTIALS_SEARCH_API_KEY` → engine-specific env var → Elicitation.
+Essentials resolves a **search engine** at startup, then each tool call uses it. The
+credential need is therefore conditional on *which* engine the user picked. Two
+cases must be distinguished:
 
-**Shared-package extraction trigger:** at Phase 2 completion, if the Elicitation implementations in PublicData and Essentials show real duplication, extract them into `FieldCure.Mcp.Common.Credentials`. Use it twice before abstracting — a single use does not reveal the right abstraction.
+*Case A — Engine unspecified (auto-detect mode).*
+The user did not pass `--search-engine` and did not set `ESSENTIALS_SEARCH_ENGINE`.
+The server scans the environment for any paid-engine key (`SERPER_API_KEY`,
+`SERPAPI_API_KEY`, `TAVILY_API_KEY`). If one is present, that engine is used.
+Otherwise the `FallbackSearchEngine` (Bing → DuckDuckGo) is used. **No
+Elicitation.** Rationale: with no explicit intent, free fallback is the lowest-
+friction default and matches the user's implicit "just work" expectation.
+
+*Case B — Explicit engine selected.*
+The user specified a paid engine (e.g. `--search-engine serper`). Key resolution:
+`--search-api-key` CLI → `ESSENTIALS_SEARCH_API_KEY` → engine-specific env var →
+**Elicitation** (first tool call) → **fallback-consent Elicitation** (if the user
+declines the key) → soft fail. Rationale: explicit engine selection is a paid-
+intent signal; silently swapping to a free fallback without the user's consent
+would misrepresent the result. Elicitation is skipped if the client does not
+advertise the `elicitation` capability — in that case the server behaves as in
+Case A (falls back to free search) and logs a stderr warning.
+
+| Case | Resolution order | Elicitation |
+|---|---|---|
+| A (auto) | env scan → free fallback | ❌ |
+| B (explicit) | CLI → env → engine env → Elicit → fallback-consent Elicit → soft fail | ✅ |
+
+**Status:** Case A is implemented. Case B currently silently falls back without
+eliciting (see `Program.cs:161-169` — `LogAndFallback`). Elicitation implementation
+is tracked at `fieldcure-mcp-essentials/todo/5. elicitation-for-explicit-engine.md`
+and will ship as v2.2 (minor, non-breaking — hosts without Elicitation support
+continue to see the existing free-fallback behaviour).
+
+**Shared-package extraction trigger:** once Essentials v2.2 ships with its own
+`ApiKeyResolverRegistry` (ported from Rag), two production uses will exist. At
+that point, extract `FieldCure.Mcp.Common.Credentials`. Use it twice before
+abstracting — a single use does not reveal the right abstraction.
 
 **Phase 3a — RAG** (credential cross-platform)
 
@@ -172,28 +218,41 @@ MCP Elicitation is a spec 2025-06-18+ feature. On non-supporting clients:
   ```
 - Secret vs non-secret split: secrets → env var (host responsibility), non-secrets → `channels.json`.
 
-**Phase 3c — Outbox, OAuth channels** (Microsoft, KakaoTalk) — deferred to v2.1
+**Phase 3c — Outbox, OAuth channels** (Microsoft, KakaoTalk)
 
-- In v2.0: existing browser-based OAuth flow is retained but marked deprecated.
-  ```
-  "Microsoft and KakaoTalk channels currently require Windows for OAuth setup.
-   Cross-platform OAuth (device-code flow) is planned for v2.1."
-  ```
-- In v2.1: redesign to Device Authorization Grant (RFC 8628) for headless/cross-platform.
-  - Prerequisite investigation: KakaoTalk device-code flow support (Azure AD is confirmed).
-  - Static part (client_id/client_secret) → env var (static secret, host responsibility).
-  - Dynamic part (access/refresh tokens) → `tokens.json` with file-permission protection (dynamic credential, server responsibility).
-  - Token refresh failure → automatic re-authentication trigger.
+The real constraint for OAuth authorization-code flows is **not the operating system** but whether the MCP server host can (a) launch a local default browser and (b) receive an `http://localhost:9876/callback` redirect from that browser. Both CLI-based and MCP-tool-internal implementations share this constraint; earlier drafts of this ADR misattributed it to Windows.
+
+Supported host environments (identical for v2.0 CLI path and v2.1 MCP path):
+
+| Host | Status | Reason |
+|---|:---:|---|
+| Windows desktop | ✅ | `ShellExecute` opens default browser |
+| macOS desktop | ✅ | `.NET` falls back to `open` |
+| Desktop Linux (GNOME/KDE with xdg-open) | ✅ | `.NET` falls back to `xdg-open` |
+| Headless Linux / Docker / CI runner | ❌ | No browser on host |
+| Remote MCP server (SSH tunnel / networked) | ❌ | `localhost:9876` on server is not reachable from user's browser |
+
+**v2.0 — CLI retained as fallback path.** Sub-process `fieldcure-mcp-outbox add {kakaotalk|microsoft}` runs the interactive masked-input setup, opens the browser, and catches the callback. The MCP `add_channel` tool returns a soft error pointing users at the CLI command.
+
+**v2.1 — OAuth folds into `add_channel` MCP tool.** The same browser + `HttpListener` pattern runs *inside* the MCP tool call, racing the listener callback against a second Elicitation prompt so the user can confirm progress or cancel. Host-session requirement is identical to v2.0; the difference is that the user stays inside the MCP host UI (Claude Desktop, Claude Code, AssistStudio, etc.) with no terminal context switch. CLI remains as a developer-diagnostic path. Tracked in `fieldcure-mcp-outbox/todo/3. oauth-channels-via-mcp-elicitation.md`.
+
+**v2.2 — Device-code flow (RFC 8628) removes the host-browser constraint.** Device-code replaces `redirect_uri` with an out-of-band user-to-browser handoff (server returns a URL + user code; user authorizes on any device; server polls the token endpoint). This unlocks headless / Docker / remote / CI deployments.
+- Prerequisite investigation: KakaoTalk device-code support. Azure AD (Microsoft) is confirmed.
+- Static part (client_id / client_secret) → env var (host responsibility).
+- Dynamic part (access/refresh tokens) → `tokens.json` (server responsibility, unchanged).
+- Token refresh failure → automatic re-authentication trigger.
 
 ### Version impact
 
 | Server | Current | After ADR | Compatibility |
 |--------|------|------------|--------|
 | PublicData.Kr | 0.x → 1.0.0 | ✅ Done | New — non-breaking |
-| Essentials | 2.0.x → 2.1.0 | ✅ Done | Non-breaking — Elicitation is an added fallback |
+| Essentials | 2.0.x → 2.1.0 | ✅ Done (cross-platform, PasswordVault removal) | Non-breaking |
+| Essentials | 2.1.x → 2.2.0 | 🚧 In design | Non-breaking — Elicitation on explicit paid-engine intent; hosts without Elicitation fall back silently as today |
 | RAG | 1.x | 2.0.0 (major) | CredentialService removal is breaking |
 | Outbox (static) | 1.x | 2.0.0 (major) | Subprocess removal is breaking |
-| Outbox (OAuth) | — | 2.1.0 | device-code redesign, separate milestone |
+| Outbox (OAuth) | — | 2.1.0 | MCP-internal OAuth (browser + listener + elicit race); host-session requirement unchanged from v2.0 |
+| Outbox (OAuth headless) | — | 2.2.0 | Device-code flow (RFC 8628) — removes host-browser requirement |
 
 ### Success criteria
 
@@ -202,9 +261,10 @@ MCP Elicitation is a spec 2025-06-18+ feature. On non-supporting clients:
 2. After elicitation, `call_api` succeeds.
 3. A bad key yields 401 → re-elicit → success (verified against AssistStudio).
 
-**Phase 2:** ✅ All passed
-1. Essentials elicits the engine-specific key when none is supplied via CLI or env var.
-2. Switching engines elicits the new engine's key as needed.
+**Phase 2:**
+1. ✅ Auto-detect mode: Essentials picks up paid engines from env vars when present; falls back to Bing/DuckDuckGo otherwise.
+2. 🚧 Explicit-engine mode: Elicits the engine-specific key when none is supplied via CLI or env var; on decline, asks for fallback consent; soft-fails otherwise. **Not yet implemented — tracked in `fieldcure-mcp-essentials/todo/5. elicitation-for-explicit-engine.md`.**
+3. 🚧 Switching engines elicits the new engine's key as needed (requires 2 above).
 
 **Phase 3a:**
 1. RAG starts on Linux/macOS without `DllNotFoundException`.
@@ -215,10 +275,15 @@ MCP Elicitation is a spec 2025-06-18+ feature. On non-supporting clients:
 1. Outbox `add_channel` (Slack/Telegram/Discord/Gmail) works end-to-end via Elicitation.
 2. Works in external hosts such as Claude Desktop (no subprocess/console dependency).
 
-**Phase 3c:**
-1. Microsoft/KakaoTalk OAuth via device-code flow works on Linux/macOS.
-2. Token refresh persists correctly in `tokens.json`.
-3. Re-authentication triggers automatically on refresh-token expiry.
+**Phase 3c (v2.1 — MCP-internal OAuth):**
+1. `add_channel(type="kakaotalk"|"microsoft")` completes entirely inside the MCP tool on hosts with a local browser — no CLI terminal required.
+2. Browser + `HttpListener` + second Elicitation race correctly handles completion, cancel, and timeout.
+3. Token refresh persists correctly in `tokens.json`.
+4. CLI path continues to work as a diagnostic fallback.
+
+**Phase 3c (v2.2 — device-code flow):**
+1. Microsoft/KakaoTalk OAuth via device-code flow works on headless / Docker / remote MCP servers.
+2. Re-authentication triggers automatically on refresh-token expiry.
 
 ## In-memory cache design
 
@@ -265,7 +330,7 @@ Note: this cache design applies to **static secrets** only. Dynamic credentials 
 - Clients that do not yet support Elicitation require manual env var configuration (which is most MCP clients today).
 - Outbox's multi-channel configuration may feel heavier through Elicitation alone — per-channel-type schema design needs care.
 - Cached keys are lost on server restart — the host must continue to provide env vars across restarts.
-- Outbox OAuth channels (Microsoft, KakaoTalk) do not achieve full cross-platform in v2.0. Static channels are converted first; OAuth is deferred to v2.1 with device-code redesign.
+- Outbox OAuth channels (Microsoft, KakaoTalk) are constrained to MCP server hosts with a local desktop browser in v2.0 and v2.1 alike; the difference is whether the user drives the flow from CLI (v2.0) or from inside the MCP host UI (v2.1). Full cross-platform (headless / remote / container) arrives with v2.2 device-code flow.
 - Dynamic credential storage (`tokens.json`) protects only at the file-permission level (same-user boundary). This matches the security posture of GitHub CLI, Docker CLI, and AWS CLI, and is appropriate for MCP stdio servers' threat model.
 
 ## Phase 1.1 backlog (record only — none urgent)
@@ -275,11 +340,18 @@ Note: this cache design applies to **static secrets** only. Dynamic credentials 
 - [ ] Elicit `api_key` field masking (propose MCP spec `format: "password"`)
 - [ ] SubAgentTool `ParseStringArray` object array fix
 
-## Phase 3c prerequisites (investigate before v2.1)
+## Phase 3c follow-up work
 
-- [ ] Microsoft: Device Authorization Grant (RFC 8628) Azure AD support — confirmed
+### v2.1 (MCP-internal OAuth) — tracked in [`fieldcure-mcp-outbox/todo/3. oauth-channels-via-mcp-elicitation.md`](../../fieldcure-mcp-outbox/todo/3.%20oauth-channels-via-mcp-elicitation.md)
+- [ ] Extract `BrowserOAuthFlow` helper (listener + `Process.Start` + elicit race)
+- [ ] Replace CLI-dispatch branches in `AddChannelTool.cs` with MCP-internal Kakao / Microsoft flows
+- [ ] Keep CLI path as developer-diagnostic fallback
+- [ ] README / RELEASENOTES update: end-user path is MCP `add_channel`; CLI is diagnostic
+
+### v2.2 (device-code flow)
+- [x] Microsoft: Device Authorization Grant (RFC 8628) Azure AD support — confirmed
 - [ ] KakaoTalk: device-code flow support — unconfirmed, alternative needed if unsupported
-- [ ] `tokens.json` file-permission utility implementation (Windows ACL / Unix 0600)
+- [x] `tokens.json` file-permission utility (Windows ACL / Unix 0600) — shipped in v2.0 `OAuthTokenStore`
 - [ ] Token refresh failure → re-authentication auto-trigger UX design
 
 ## References
