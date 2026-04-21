@@ -32,7 +32,7 @@ public static class McpCommandInstaller
     /// </summary>
     internal static readonly HashSet<string> KnownRunners = new(StringComparer.OrdinalIgnoreCase)
     {
-        "npx", "uvx", "node", "python", "python3", "docker",
+        "npx", "uvx", "dnx", "node", "python", "python3", "docker",
         "cmd", "powershell", "pwsh", "bash", "sh",
     };
 

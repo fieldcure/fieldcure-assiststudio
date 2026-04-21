@@ -921,7 +921,7 @@
     <value>{0} active instance(s)</value>
   </data>
   <data name="Connect_CommandHint" xml:space="preserve">
-    <value>Enter the tool command (e.g. npx, uvx, or a NuGet .NET tool command). .NET tools are installed on first use — you'll be asked for the NuGet package id separately. Avoid build wrappers like dotnet run or cargo run; they add 5–10s to every startup.</value>
+    <value>Enter the tool command (e.g. npx, uvx, dnx, or a NuGet .NET tool command). For .NET packages prefer dnx — it fetches and runs from NuGet like npx, with no separate install step; pass the package as the first argument, e.g. FieldCure.Mcp.PublicData.Kr@1.* --yes. Legacy .NET global tools are installed on first use and prompt for the NuGet package id separately. Avoid build wrappers like dotnet run or cargo run; they add 5–10s to every startup.</value>
   </data>
   <data name="Connect_BuiltInDuplicate" xml:space="preserve">
     <value>This server is already managed as a built-in server.</value>

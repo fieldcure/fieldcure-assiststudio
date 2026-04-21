@@ -921,7 +921,7 @@
     <value>활성 인스턴스 {0}개</value>
   </data>
   <data name="Connect_CommandHint" xml:space="preserve">
-    <value>도구 명령어(예: npx, uvx, 또는 NuGet .NET 도구 명령어)를 입력하세요. .NET 도구는 첫 사용 시 자동 설치되며 NuGet 패키지명은 별도로 입력받습니다. dotnet run, cargo run 같은 빌드 래퍼는 매 시작이 5–10초 느려집니다.</value>
+    <value>도구 명령어(예: npx, uvx, dnx, 또는 NuGet .NET 도구 명령어)를 입력하세요. .NET 패키지는 dnx를 권장합니다 — npx처럼 NuGet에서 받아 바로 실행하며 별도 설치 단계가 없습니다. 첫 인수에 패키지를 넘기세요, 예: FieldCure.Mcp.PublicData.Kr@1.* --yes. 기존 .NET 글로벌 도구는 첫 사용 시 자동 설치되며 NuGet 패키지명을 별도로 입력받습니다. dotnet run, cargo run 같은 빌드 래퍼는 매 시작이 5–10초 느려집니다.</value>
   </data>
   <data name="Connect_BuiltInDuplicate" xml:space="preserve">
     <value>이 서버는 이미 내장 서버로 관리되고 있습니다.</value>
