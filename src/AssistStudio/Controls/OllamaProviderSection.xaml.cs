@@ -131,49 +131,31 @@ public sealed partial class OllamaProviderSection : UserControl
         {
             var isRemote = IsRemote();
 
-            if (isRemote)
+            var result = await ValidateOllamaConnectionAsync();
+            if (result.IsValid)
             {
-                var baseUrl = UrlBox.Text.Trim();
-                using var provider = new OllamaProvider(baseUrl: baseUrl);
-                var result = await provider.ValidateConnectionAsync();
-
-                if (result.IsValid)
-                {
-                    StatusText.Text = L("Models_Running");
-                    StatusText.Foreground = ThemeHelper.GetBrush("StatusAccentForegroundBrush");
-                    ActionButtons.Visibility = Visibility.Visible;
-                    CloudHint.Visibility = Visibility.Visible;
-                    await LoadModelsAsync();
-                }
-                else
-                {
-                    StatusText.Text = result.ErrorMessage ?? L("Models_Error");
-                    StatusText.Foreground = ThemeHelper.GetBrush("StatusErrorForegroundBrush");
-                }
+                StatusText.Text = L("Models_Running");
+                StatusText.Foreground = ThemeHelper.GetBrush("StatusAccentForegroundBrush");
+                ActionButtons.Visibility = Visibility.Visible;
+                CloudHint.Visibility = Visibility.Visible;
+                await LoadModelsAsync();
+            }
+            else if (!isRemote && OllamaHelper.IsOllamaInstalled())
+            {
+                StatusText.Text = L("Models_InstalledNotRunning");
+                StatusText.Foreground = ThemeHelper.GetBrush("StatusErrorForegroundBrush");
+                StartButton.Visibility = Visibility.Visible;
+            }
+            else if (!isRemote)
+            {
+                StatusText.Text = L("Models_NotInstalled");
+                StatusText.Foreground = ThemeHelper.GetBrush("StatusErrorForegroundBrush");
+                InstallPanel.Visibility = Visibility.Visible;
             }
             else
             {
-                var isRunning = await OllamaHelper.IsOllamaRunningAsync();
-                if (isRunning)
-                {
-                    StatusText.Text = L("Models_Running");
-                    StatusText.Foreground = ThemeHelper.GetBrush("StatusAccentForegroundBrush");
-                    ActionButtons.Visibility = Visibility.Visible;
-                    CloudHint.Visibility = Visibility.Visible;
-                    await LoadModelsAsync();
-                }
-                else if (OllamaHelper.IsOllamaInstalled())
-                {
-                    StatusText.Text = L("Models_InstalledNotRunning");
-                    StatusText.Foreground = ThemeHelper.GetBrush("StatusErrorForegroundBrush");
-                    StartButton.Visibility = Visibility.Visible;
-                }
-                else
-                {
-                    StatusText.Text = L("Models_NotInstalled");
-                    StatusText.Foreground = ThemeHelper.GetBrush("StatusErrorForegroundBrush");
-                    InstallPanel.Visibility = Visibility.Visible;
-                }
+                StatusText.Text = result.ErrorMessage ?? L("Models_Error");
+                StatusText.Foreground = ThemeHelper.GetBrush("StatusErrorForegroundBrush");
             }
         }
         catch (Exception ex)
@@ -199,6 +181,20 @@ public sealed partial class OllamaProviderSection : UserControl
     {
         if ((App.Current as App)?.MainWindow?.ViewModel is { } viewModel)
             await viewModel.RefreshOllamaReachabilityAsync();
+    }
+
+    /// <summary>
+    /// Uses the provider-level health check so Settings and startup filtering rely on the
+    /// same Ollama endpoint semantics.
+    /// </summary>
+    private async Task<ConnectionInfo> ValidateOllamaConnectionAsync()
+    {
+        var baseUrl = UrlBox.Text.Trim();
+        if (string.IsNullOrEmpty(baseUrl))
+            baseUrl = "http://localhost:11434";
+
+        using var provider = new OllamaProvider(baseUrl: baseUrl);
+        return await provider.ValidateConnectionAsync();
     }
 
     #endregion
@@ -283,6 +279,10 @@ public sealed partial class OllamaProviderSection : UserControl
         if (preset is not null)
             preset.BaseUrl = url;
         PersistPresets();
+
+        // Keep preset filtering aligned with the saved URL even if the user does not
+        // explicitly click Test/Refresh after leaving the URL box.
+        _ = SyncMainViewModelOllamaReachabilityAsync();
     }
 
     private void OnLocalhost(object sender, RoutedEventArgs e)
@@ -295,6 +295,9 @@ public sealed partial class OllamaProviderSection : UserControl
             preset.BaseUrl = null;
         PersistPresets();
 
+        // Keep preset filtering aligned with the saved URL after switching back
+        // to localhost from a remote address.
+        _ = SyncMainViewModelOllamaReachabilityAsync();
         _ = CheckStatusAsync();
     }
 

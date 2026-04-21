@@ -387,22 +387,12 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public async Task RefreshOllamaReachabilityAsync()
     {
-        try
-        {
-            var baseUrl = AppSettings.GetOllamaBaseUrl() ?? "http://localhost:11434";
-            using var provider = new OllamaProvider(baseUrl: baseUrl);
-            using var cts = new CancellationTokenSource(OllamaProbeTimeout);
-            var info = await provider.ValidateConnectionAsync(cts.Token);
-            SetOllamaReachable(
-                info.IsValid,
-                info.IsValid
-                    ? "[App] Ollama reachability refreshed — presets restored"
-                    : "[App] Ollama reachability refreshed — presets hidden");
-        }
-        catch
-        {
-            SetOllamaReachable(false, "[App] Ollama reachability refreshed — presets hidden");
-        }
+        var reachable = await ProbeOllamaReachabilityOnceAsync();
+        SetOllamaReachable(
+            reachable,
+            reachable
+                ? "[App] Ollama reachability refreshed — presets restored"
+                : "[App] Ollama reachability refreshed — presets hidden");
     }
 
     #endregion
@@ -617,23 +607,12 @@ public partial class MainViewModel : ObservableObject
 
         for (var attempt = 1; attempt <= OllamaStartupProbeAttempts; attempt++)
         {
-            try
+            if (await ProbeOllamaReachabilityOnceAsync())
             {
-                var baseUrl = AppSettings.GetOllamaBaseUrl() ?? "http://localhost:11434";
-                using var provider = new OllamaProvider(baseUrl: baseUrl);
-                using var cts = new CancellationTokenSource(OllamaProbeTimeout);
-                var info = await provider.ValidateConnectionAsync(cts.Token);
-                if (info.IsValid)
-                {
-                    SetOllamaReachable(true, attempt == 1
-                        ? "[App] Ollama reachable at startup"
-                        : $"[App] Ollama reachable after retry {attempt}/{OllamaStartupProbeAttempts}");
-                    return;
-                }
-            }
-            catch
-            {
-                // Treat probe exceptions as "not reachable yet" and retry below.
+                SetOllamaReachable(true, attempt == 1
+                    ? "[App] Ollama reachable at startup"
+                    : $"[App] Ollama reachable after retry {attempt}/{OllamaStartupProbeAttempts}");
+                return;
             }
 
             if (attempt < OllamaStartupProbeAttempts)
@@ -662,6 +641,26 @@ public partial class MainViewModel : ObservableObject
             return;
 
         dispatcher.TryEnqueue(DispatcherQueuePriority.Normal, RefreshPresetsOnAll);
+    }
+
+    /// <summary>
+    /// Probes Ollama once using the same endpoint used by provider validation.
+    /// Returns <c>false</c> for any timeout or connection failure.
+    /// </summary>
+    private static async Task<bool> ProbeOllamaReachabilityOnceAsync()
+    {
+        try
+        {
+            var baseUrl = AppSettings.GetOllamaBaseUrl() ?? "http://localhost:11434";
+            using var provider = new OllamaProvider(baseUrl: baseUrl);
+            using var cts = new CancellationTokenSource(OllamaProbeTimeout);
+            var info = await provider.ValidateConnectionAsync(cts.Token);
+            return info.IsValid;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     /// <summary>
