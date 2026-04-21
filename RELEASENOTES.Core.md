@@ -1,6 +1,6 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Core
 
-## [0.16.0] - 2026-04-14
+## v0.16.0 (2026-04-14)
 
 ### Fixed
 - Update stale `.astd` references to `.astx` and filter MRU by extension
@@ -10,7 +10,7 @@
 
 ---
 
-## [0.15.0] - 2026-04-10
+## v0.15.0 (2026-04-10)
 
 ### Changed
 - Updated transitive dependency: Ai.Providers 0.2.0 → 0.3.0
@@ -18,7 +18,7 @@
 
 ---
 
-## [0.14.0] - 2026-04-07
+## v0.14.0 (2026-04-07)
 
 ### Added
 - `ISpecialist` interface — specialist agent abstraction with `Name`, `Description`, `Icon`, `AllowedTools`, and `ExecuteAsync` for domain-specific sub-agent routing
@@ -34,7 +34,7 @@
 
 ---
 
-## [0.13.0] - 2026-03-31
+## v0.13.0 (2026-03-31)
 
 ### Changed
 - **Providers extracted** — AI providers, shared models, and streaming types moved to new `FieldCure.Ai.Providers` package. Core now references Providers as a dependency.
@@ -52,7 +52,7 @@
 
 ---
 
-## [0.12.0] - 2026-03-30
+## v0.12.0 (2026-03-30)
 
 ### Added
 - MCP Outbox built-in server support — shared (folderless) server pattern with `IsSharedServer()` helper
@@ -64,7 +64,7 @@
 
 ---
 
-## [0.11.0] - 2026-03-29
+## v0.11.0 (2026-03-29)
 
 ### Added
 - Essentials virtual server — bundle built-in tools (`read_file`, `remember`, `forget`) as an in-process server
@@ -82,7 +82,7 @@
 
 ---
 
-## [0.10.0] - 2026-03-24
+## v0.10.0 (2026-03-24)
 
 ### Added
 - `IAssistTool.DisplayName` used for UI grouping — server-owned tools hidden from individual tool list when server checkbox exists
@@ -92,7 +92,7 @@
 
 ---
 
-## [0.9.0] - 2026-03-24
+## v0.9.0 (2026-03-24)
 
 ### Added
 - `BuiltInServerConfig` model for built-in MCP server configuration (enabled, folders)
@@ -104,7 +104,7 @@
 
 ---
 
-## [0.8.0] - 2026-03-22
+## v0.8.0 (2026-03-22)
 
 ### Added
 - `FieldCure.DocumentParsers` extracted as independent NuGet package (`v0.1.0`)
@@ -116,7 +116,7 @@
 
 ---
 
-## [0.7.0] - 2026-03-21
+## v0.7.0 (2026-03-21)
 
 ### Added
 - Extended thinking support with `ThinkingOverride` and per-provider `ThinkingCapability` architecture
@@ -142,7 +142,7 @@
 
 ---
 
-## [0.6.0] - 2026-03-17
+## v0.6.0 (2026-03-17)
 
 ### Added
 - `AppJsonContext` and `IndentedJsonContext` source-generated JSON serializer contexts for trim-safe serialization
@@ -152,7 +152,7 @@
 
 ---
 
-## [0.5.0] - 2026-03-17
+## v0.5.0 (2026-03-17)
 
 ### Added
 - Dedicated NuGet package README with Core-specific usage examples and API reference
@@ -162,7 +162,7 @@
 
 ---
 
-## [0.4.0] - 2026-03-17
+## v0.4.0 (2026-03-17)
 
 ### Added
 - NuGet package metadata (Company, Copyright, Icon, README, Repository URL, Tags)
@@ -171,7 +171,7 @@
 
 ---
 
-## [0.3.0] - 2026-03-17
+## v0.3.0 (2026-03-17)
 
 ### Added
 - Generic file and command tools for agentic workflows (`ReadFileTool`, `WriteFileTool`, `RunCommandTool`, etc.)
@@ -179,7 +179,7 @@
 
 ---
 
-## [0.2.0] - 2026-03-16
+## v0.2.0 (2026-03-16)
 
 ### Added
 - Tool calling support for `ClaudeProvider` and `GeminiProvider`
@@ -195,7 +195,7 @@
 
 ---
 
-## [0.1.0] - 2026-03-15
+## v0.1.0 (2026-03-15)
 
 ### Added
 - `IAiProvider` abstraction with `StreamAsync` returning `IAsyncEnumerable<string>`

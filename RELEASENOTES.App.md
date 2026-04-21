@@ -1,6 +1,6 @@
 ﻿# Release Notes — AssistStudio App
 
-## [0.15.0] - 2026-04-10
+## v0.15.0 (2026-04-10)
 
 ### Added
 - **Custom OpenAI-compatible providers** — Register any OpenAI-compatible endpoint (Together AI, MiniMax, etc.) with custom base URL and display name. Categorized provider selector (Cloud / Custom / Local / Demo)
@@ -23,7 +23,7 @@
 
 ---
 
-## [0.14.0] - 2026-04-07
+## v0.14.0 (2026-04-07)
 
 ### Added
 - **Sub-Agent delegation** — `delegate_task` tool for autonomous sub-agent execution with parallel dispatch and specialist routing
@@ -61,7 +61,7 @@
 
 ---
 
-## [0.13.0] - 2026-03-31
+## v0.13.0 (2026-03-31)
 
 ### Added
 - **Essentials MCP server** — replaced in-process virtual server with external `FieldCure.Mcp.Essentials` v0.2.0 (7 tools: http_request, run_command, run_javascript, get_environment, read_file, write_file, search_files)
@@ -80,7 +80,7 @@
 
 ---
 
-## [0.12.0] - 2026-03-30
+## v0.12.0 (2026-03-30)
 
 ### Added
 - **MCP Outbox** built-in server — send messages via Slack, Telegram, Email (SMTP), and KakaoTalk through AI conversations
@@ -100,7 +100,7 @@
 
 ---
 
-## [0.11.0] - 2026-03-29
+## v0.11.0 (2026-03-29)
 
 ### Added
 - Persistent memory with `remember` / `forget` tools for cross-conversation context
@@ -140,7 +140,7 @@
 
 ---
 
-## [0.10.0] - 2026-03-24
+## v0.10.0 (2026-03-24)
 
 ### Added
 - Knowledge Base (RAG) built-in MCP server with per-tab folder management
@@ -164,7 +164,7 @@
 
 ---
 
-## [0.9.0] - 2026-03-24
+## v0.9.0 (2026-03-24)
 
 ### Added
 - Built-in MCP server infrastructure with auto-install via `dotnet tool`
@@ -195,7 +195,7 @@
 
 ---
 
-## [0.8.0] - 2026-03-22
+## v0.8.0 (2026-03-22)
 
 ### Added
 - Protocol activation via `assiststudio://` URI scheme
@@ -212,7 +212,7 @@
 
 ---
 
-## [0.7.0] - 2026-03-21
+## v0.7.0 (2026-03-21)
 
 ### Added
 - Extended thinking support with per-provider toggle in Models settings
@@ -251,7 +251,7 @@
 
 ---
 
-## [0.6.0] - 2026-03-17
+## v0.6.0 (2026-03-17)
 
 ### Added
 - `ChatTabView` UserControl for declarative tab content layout (MVVM pattern)
@@ -270,7 +270,7 @@
 
 ---
 
-## [0.5.0] - 2026-03-17
+## v0.5.0 (2026-03-17)
 
 ### Added
 - `ThemeHelper` utility for theme-aware brush resolution across the app
@@ -290,14 +290,14 @@
 
 ---
 
-## [0.4.0] - 2026-03-17
+## v0.4.0 (2026-03-17)
 
 ### Added
 - NuGet publish automation (`publish-nuget.ps1` script)
 
 ---
 
-## [0.3.0] - 2026-03-17
+## v0.3.0 (2026-03-17)
 
 ### Added
 - ToolApprovalPanel for tool execution confirmation before running
@@ -307,7 +307,7 @@
 
 ---
 
-## [0.2.0] - 2026-03-16
+## v0.2.0 (2026-03-16)
 
 ### Added
 - PDF Handling setting per provider (Auto / Native PDF / Page as Image / Text Extraction)
@@ -316,7 +316,7 @@
 
 ---
 
-## [0.1.0] - 2026-03-15
+## v0.1.0 (2026-03-15)
 
 ### Added
 - Multi-tab chat interface with TabView

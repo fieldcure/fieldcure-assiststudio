@@ -1,6 +1,6 @@
-# Release Notes — FieldCure.Ai.Execution
+﻿# Release Notes — FieldCure.Ai.Execution
 
-## v0.3.0
+## v0.3.0 (2026-04-14)
 
 ### Breaking
 - `SubAgentExecutor.ProviderResolver` is now async (`Task<IAiProvider>`)
@@ -15,6 +15,8 @@
 ## v0.2.0
 
 - `AgentLoopResult.Messages`: expose full conversation history (user, assistant, tool messages) accumulated during the loop for detailed audit trails and execution logging
+
+---
 
 ## v0.1.0
 

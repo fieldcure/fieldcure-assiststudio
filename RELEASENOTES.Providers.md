@@ -1,6 +1,6 @@
 ﻿# Release Notes — FieldCure.Ai.Providers
 
-## v0.4.0
+## v0.4.0 (2026-04-14)
 
 ### Added
 - **Markdown export** — `ConversationExporter` with per-message provider attribution and `<details open>` structure

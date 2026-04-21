@@ -1,6 +1,6 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Controls.WinUI
 
-## [0.16.0] - 2026-04-14
+## v0.16.0 (2026-04-14)
 
 ### Added
 - **Markdown export** — conversation export with per-message attribution
@@ -22,7 +22,7 @@
 
 ---
 
-## [0.15.0] - 2026-04-10
+## v0.15.0 (2026-04-10)
 
 ### Added
 - **MCP Elicitation** — `ToolElicitationPanel` for MCP server user-input requests with multi-field selection and batch submit
@@ -46,7 +46,7 @@
 
 ---
 
-## [0.14.0] - 2026-04-07
+## v0.14.0 (2026-04-07)
 
 ### Added
 - **Multimedia rendering** — MCP `ImageContentBlock` inline display, audio/video player elements with native controls
@@ -72,7 +72,7 @@
 
 ---
 
-## [0.13.0] - 2026-03-31
+## v0.13.0 (2026-03-31)
 
 ### Changed
 - Streaming token rendering batched at 50ms intervals to reduce WebView2 `ExecuteScriptAsync` calls — prevents UI thread saturation during large responses
@@ -80,7 +80,7 @@
 
 ---
 
-## [0.12.0] - 2026-03-30
+## v0.12.0 (2026-03-30)
 
 ### Fixed
 - `ToolApprovalPanel` prompt text not updating when tool name changes — added `PropertyChanged` callbacks for `ToolName` and `ToolDisplayName` dependency properties
@@ -88,7 +88,7 @@
 
 ---
 
-## [0.11.0] - 2026-03-29
+## v0.11.0 (2026-03-29)
 
 ### Added
 - `ChatZoomFactor` dependency property for dynamic chat UI scaling (default 1.05)
@@ -119,7 +119,7 @@
 
 ---
 
-## [0.10.0] - 2026-03-24
+## v0.10.0 (2026-03-24)
 
 ### Added
 - Folder flyout converted from code-behind to XAML `<Button.Flyout>` with `{ThemeResource}` bindings
@@ -144,7 +144,7 @@
 
 ---
 
-## [0.9.0] - 2026-03-24
+## v0.9.0 (2026-03-24)
 
 ### Added
 - `AvailableServers` property on `ChatPanel` for MCP server status display
@@ -155,7 +155,7 @@
 
 ---
 
-## [0.8.0] - 2026-03-22
+## v0.8.0 (2026-03-22)
 
 ### Changed
 - Document parser code extracted from `InputContainer` to `FieldCure.DocumentParsers` package
@@ -166,7 +166,7 @@
 
 ---
 
-## [0.7.0] - 2026-03-21
+## v0.7.0 (2026-03-21)
 
 ### Added
 - Extended thinking UI with collapsible left-bar styled thinking blocks
@@ -199,7 +199,7 @@
 
 ---
 
-## [0.6.0] - 2026-03-17
+## v0.6.0 (2026-03-17)
 
 ### Added
 - Title edit button tooltip with localized resource strings (`ChatPanel_EditTitleTooltip`)
@@ -213,14 +213,14 @@
 
 ---
 
-## [0.5.0] - 2026-03-17
+## v0.5.0 (2026-03-17)
 
 ### Added
 - Dedicated NuGet package README with Controls-specific XAML examples and API reference
 
 ---
 
-## [0.4.0] - 2026-03-17
+## v0.4.0 (2026-03-17)
 
 ### Added
 - NuGet package metadata (Company, Copyright, Icon, README, Repository URL, Tags)
@@ -229,7 +229,7 @@
 
 ---
 
-## [0.3.0] - 2026-03-17
+## v0.3.0 (2026-03-17)
 
 ### Added
 - `ToolApprovalPanel` templated control for tool execution confirmation UI
@@ -241,7 +241,7 @@
 
 ---
 
-## [0.2.0] - 2026-03-16
+## v0.2.0 (2026-03-16)
 
 ### Fixed
 - Duplicate file attachment on drag-and-drop (event bubbling from InputContainer to ChatPanel)
@@ -249,7 +249,7 @@
 
 ---
 
-## [0.1.0] - 2026-03-15
+## v0.1.0 (2026-03-15)
 
 ### Added
 - `ChatPanel` templated control with WebView2-based message rendering
