@@ -242,6 +242,18 @@ Add them in Profile settings.</value>
   <data name="ComposeBar_AttachmentUnsupportedTooltip" xml:space="preserve">
     <value>Unsupported image format — will not be sent</value>
   </data>
+  <data name="ComposeBar_Profile.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Profile</value>
+  </data>
+  <data name="ComposeBar_Preset.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Model preset</value>
+  </data>
+  <data name="ToolApproval_UserNote.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Additional instructions for the tool</value>
+  </data>
+  <data name="FolderFlyout_RemoveFolderAccessibilityName" xml:space="preserve">
+    <value>Remove folder: {0}</value>
+  </data>
   <data name="ChatPanel_Greeting" xml:space="preserve">
     <value>How can I help you today?</value>
   </data>

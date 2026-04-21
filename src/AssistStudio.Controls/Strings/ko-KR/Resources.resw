@@ -242,6 +242,18 @@
   <data name="ComposeBar_AttachmentUnsupportedTooltip" xml:space="preserve">
     <value>지원하지 않는 이미지 형식 — 전송되지 않습니다</value>
   </data>
+  <data name="ComposeBar_Profile.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>프로필</value>
+  </data>
+  <data name="ComposeBar_Preset.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>모델 프리셋</value>
+  </data>
+  <data name="ToolApproval_UserNote.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>도구 실행에 대한 추가 지시 사항</value>
+  </data>
+  <data name="FolderFlyout_RemoveFolderAccessibilityName" xml:space="preserve">
+    <value>폴더 제거: {0}</value>
+  </data>
   <data name="ChatPanel_Greeting" xml:space="preserve">
     <value>무엇을 도와드릴까요?</value>
   </data>

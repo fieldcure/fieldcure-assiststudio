@@ -84,12 +84,14 @@
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4"
                                             VerticalAlignment="Center">
                                     <ComboBox x:Name="PART_ProfileComboBox"
+                                              x:Uid="ComposeBar_Profile"
                                               MinWidth="100"
                                               VerticalAlignment="Center"
                                               BorderThickness="0"
                                               Background="Transparent"
                                               Padding="8,4" />
                                     <ComboBox x:Name="PART_PresetComboBox"
+                                              x:Uid="ComposeBar_Preset"
                                               MinWidth="120"
                                               VerticalAlignment="Center"
                                               BorderThickness="0"

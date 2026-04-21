@@ -120,6 +120,7 @@
 
                             <!-- Row 2: User instruction (always visible, borderless like ComposeBar) -->
                             <TextBox x:Name="PART_UserNoteBox"
+                                     x:Uid="ToolApproval_UserNote"
                                      Grid.Row="2"
                                      PlaceholderText="Additional instructions (optional)"
                                      TextWrapping="Wrap"

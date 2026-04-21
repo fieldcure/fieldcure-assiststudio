@@ -356,6 +356,8 @@ public sealed partial class ChatPanel
         _folderList.Children.Clear();
 
         var removeTooltipText = Res.GetString("FolderFlyout_RemoveTooltip") ?? "Remove";
+        var removeFolderNameFormat = Res.GetString("FolderFlyout_RemoveFolderAccessibilityName");
+        if (string.IsNullOrEmpty(removeFolderNameFormat)) removeFolderNameFormat = "Remove folder: {0}";
 
         foreach (var folder in folders)
         {
@@ -393,6 +395,8 @@ public sealed partial class ChatPanel
                 Content = removeTooltipText,
                 Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
             });
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(
+                removeButton, string.Format(removeFolderNameFormat, capturedFolder));
             removeButton.Click += (s, e) =>
             {
                 var updated = folders.Where(f => f != capturedFolder).ToList();

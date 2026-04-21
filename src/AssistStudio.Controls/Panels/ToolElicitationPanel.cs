@@ -438,6 +438,8 @@ public sealed partial class ToolElicitationPanel : Control
                 HorizontalAlignment = HorizontalAlignment.Stretch,
             };
 
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(
+                passwordBox, field.Title ?? field.Description ?? field.Name);
             _passwordInputs[field.Name] = passwordBox;
             _fieldsPanel.Children.Add(passwordBox);
             return;
@@ -453,6 +455,8 @@ public sealed partial class ToolElicitationPanel : Control
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
 
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(
+            textBox, field.Title ?? field.Description ?? field.Name);
         _textInputs[field.Name] = textBox;
         _fieldsPanel.Children.Add(textBox);
     }
