@@ -67,14 +67,12 @@
                                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4"
                                             VerticalAlignment="Center">
                                     <Button x:Name="PART_AttachButton"
-                                            x:Uid="ComposeBar_Attach"
                                             AutomationProperties.AutomationId="ComposeBarAttachButton"
                                             Style="{StaticResource SubtleButtonStyle}"
                                             Padding="6">
                                         <FontIcon Glyph="&#xE710;" FontSize="14" />
                                     </Button>
                                     <Button x:Name="PART_ToolButton"
-                                            x:Uid="ComposeBar_Tools"
                                             AutomationProperties.AutomationId="ComposeBarToolButton"
                                             Style="{StaticResource SubtleButtonStyle}"
                                             Padding="6"
@@ -86,7 +84,6 @@
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4"
                                             VerticalAlignment="Center">
                                     <ComboBox x:Name="PART_ProfileComboBox"
-                                              x:Uid="ComposeBar_Profile"
                                               AutomationProperties.AutomationId="ComposeBarProfileSelector"
                                               MinWidth="100"
                                               VerticalAlignment="Center"
@@ -94,7 +91,6 @@
                                               Background="Transparent"
                                               Padding="8,4" />
                                     <ComboBox x:Name="PART_PresetComboBox"
-                                              x:Uid="ComposeBar_Preset"
                                               AutomationProperties.AutomationId="ComposeBarPresetSelector"
                                               MinWidth="120"
                                               VerticalAlignment="Center"
@@ -103,7 +99,6 @@
                                               Padding="8,4" />
                                     <!-- Send button (visible when idle) -->
                                     <Button x:Name="PART_SendButton"
-                                            x:Uid="ComposeBar_Send"
                                             AutomationProperties.AutomationId="ComposeBarSendButton"
                                             Style="{StaticResource SubtleButtonStyle}"
                                             VerticalAlignment="Center"
@@ -112,7 +107,6 @@
                                     </Button>
                                     <!-- Stop button (visible when streaming) -->
                                     <Button x:Name="PART_StopButton"
-                                            x:Uid="ComposeBar_Stop"
                                             AutomationProperties.AutomationId="ComposeBarStopButton"
                                             Style="{StaticResource SubtleButtonStyle}"
                                             VerticalAlignment="Center"

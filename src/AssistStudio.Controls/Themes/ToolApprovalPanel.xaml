@@ -98,7 +98,6 @@
                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 </Border>
                                 <Button x:Name="PART_ExpandButton"
-                                        x:Uid="ToolApproval_Expand"
                                         AutomationProperties.AutomationId="ToolApprovalExpandButton"
                                         Grid.Column="2"
                                         Style="{StaticResource SubtleButtonStyle}"
@@ -121,7 +120,6 @@
 
                             <!-- Row 2: User instruction (always visible, borderless like ComposeBar) -->
                             <TextBox x:Name="PART_UserNoteBox"
-                                     x:Uid="ToolApproval_UserNote"
                                      AutomationProperties.AutomationId="ToolApprovalUserNoteBox"
                                      Grid.Row="2"
                                      PlaceholderText="Additional instructions (optional)"

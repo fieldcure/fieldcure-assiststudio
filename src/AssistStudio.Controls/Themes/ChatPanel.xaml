@@ -57,7 +57,6 @@
                                                MaxLines="1"
                                                VerticalAlignment="Center" />
                                     <Button x:Name="PART_TitleEditButton"
-                                            x:Uid="ChatPanel_EditTitle"
                                             AutomationProperties.AutomationId="ChatPanelTitleEditButton"
                                             Style="{StaticResource SubtleButtonStyle}"
                                             Padding="4"
@@ -65,7 +64,6 @@
                                         <FontIcon Glyph="&#xE70F;" FontSize="12" />
                                     </Button>
                                     <Button x:Name="PART_TitleRefreshButton"
-                                            x:Uid="ChatPanel_RefreshTitle"
                                             AutomationProperties.AutomationId="ChatPanelTitleRefreshButton"
                                             Style="{StaticResource SubtleButtonStyle}"
                                             Padding="4"
@@ -75,7 +73,6 @@
                                 </StackPanel>
                                 <!-- Right: folder button with indexing animation -->
                                 <Button x:Name="PART_TitleFolderButton"
-                                        x:Uid="ChatPanel_TitleFolder"
                                         AutomationProperties.AutomationId="ChatPanelFolderButton"
                                         Grid.Column="1"
                                         Style="{StaticResource SubtleButtonStyle}"
@@ -204,7 +201,6 @@
                                 </Border.Shadow>
                                 <StackPanel Orientation="Horizontal" Spacing="4">
                                     <TextBox x:Name="PART_SearchTextBox"
-                                             x:Uid="Chat_SearchTextBox"
                                              AutomationProperties.AutomationId="ChatPanelSearchTextBox"
                                              Width="200" Height="28"
                                              Padding="8,4"
@@ -228,7 +224,6 @@
                                             Width="28" Height="28"
                                             MinWidth="28" MinHeight="28"
                                             Padding="0"
-                                            x:Uid="Chat_SearchPrevButton"
                                             AutomationProperties.AutomationId="ChatPanelSearchPrevButton"
                                             Style="{StaticResource SubtleButtonStyle}">
                                         <FontIcon FontFamily="{ThemeResource SymbolThemeFontFamily}" Glyph="&#xE70E;" FontSize="11" />
@@ -237,7 +232,6 @@
                                             Width="28" Height="28"
                                             MinWidth="28" MinHeight="28"
                                             Padding="0"
-                                            x:Uid="Chat_SearchNextButton"
                                             AutomationProperties.AutomationId="ChatPanelSearchNextButton"
                                             Style="{StaticResource SubtleButtonStyle}">
                                         <FontIcon FontFamily="{ThemeResource SymbolThemeFontFamily}" Glyph="&#xE70D;" FontSize="11" />
@@ -246,7 +240,6 @@
                                             Width="28" Height="28"
                                             MinWidth="28" MinHeight="28"
                                             Padding="0"
-                                            x:Uid="Chat_SearchCloseButton"
                                             AutomationProperties.AutomationId="ChatPanelSearchCloseButton"
                                             Style="{StaticResource SubtleButtonStyle}">
                                         <FontIcon FontFamily="{ThemeResource SymbolThemeFontFamily}" Glyph="&#xE711;" FontSize="11" />

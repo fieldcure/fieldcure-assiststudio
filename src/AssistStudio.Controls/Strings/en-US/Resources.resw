@@ -1,18 +1,96 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
     <xsd:element name="root" msdata:IsDataSet="true">
       <xsd:complexType>
         <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
           <xsd:element name="data">
             <xsd:complexType>
               <xsd:sequence>
                 <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
                 <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
               </xsd:sequence>
-              <xsd:attribute name="name" type="xsd:string" use="required" />
-              <xsd:attribute name="type" type="xsd:string" />
-              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
             </xsd:complexType>
           </xsd:element>
           <xsd:element name="resheader">
@@ -46,7 +124,7 @@
     <value>Copied!</value>
   </data>
   <data name="Chat_Continue" xml:space="preserve">
-    <value>&#x25B6; Continue</value>
+    <value>▶ Continue</value>
   </data>
   <data name="Chat_Code" xml:space="preserve">
     <value>code</value>
@@ -126,12 +204,6 @@
   <data name="Chat_RegenerateTitle" xml:space="preserve">
     <value>Regenerate title with {0}</value>
   </data>
-  <data name="ComposeBar_Attach.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
-    <value>Attach file</value>
-  </data>
-  <data name="ComposeBar_Stop.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
-    <value>Stop generating</value>
-  </data>
   <data name="ComposeBar_AttachTooltip" xml:space="preserve">
     <value>Attach file</value>
   </data>
@@ -184,54 +256,26 @@ Add them in Profile settings.</value>
   <data name="ToolElicitation_Submit" xml:space="preserve">
     <value>Submit</value>
   </data>
-  <data name="Chat_SearchTextBox.PlaceholderText" xml:space="preserve">
-    <value>Search...</value>
-  </data>
-  <data name="Chat_SearchPrevButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+  <data name="Chat_SearchPrevTooltip" xml:space="preserve">
     <value>Previous</value>
   </data>
-  <data name="Chat_SearchNextButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+  <data name="Chat_SearchNextTooltip" xml:space="preserve">
     <value>Next</value>
   </data>
-  <data name="Chat_SearchCloseButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+  <data name="Chat_SearchCloseTooltip" xml:space="preserve">
     <value>Close search bar</value>
   </data>
-  <!-- Accessibility -->
-  <data name="ComposeBar_Attach.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Attach file</value>
-  </data>
-  <data name="ComposeBar_Tools.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Tools</value>
-  </data>
-  <data name="ComposeBar_Send.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Send message</value>
-  </data>
-  <data name="ComposeBar_Stop.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Stop generating</value>
-  </data>
-  <data name="ChatPanel_EditTitle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Edit title</value>
-  </data>
-  <data name="ChatPanel_RefreshTitle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Regenerate title</value>
-  </data>
-  <data name="ToolApproval_Expand.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Toggle details</value>
-  </data>
-  <data name="Chat_SearchPrevButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+  <data name="Chat_SearchPrevName" xml:space="preserve">
     <value>Previous result</value>
   </data>
-  <data name="Chat_SearchNextButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+  <data name="Chat_SearchNextName" xml:space="preserve">
     <value>Next result</value>
   </data>
-  <data name="Chat_SearchCloseButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+  <data name="Chat_SearchCloseName" xml:space="preserve">
     <value>Close search</value>
   </data>
   <data name="Attachment_RemoveTooltip" xml:space="preserve">
     <value>Remove attachment</value>
-  </data>
-  <data name="ChatPanel_TitleFolder.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Workspace folders and knowledge base</value>
   </data>
   <data name="ChatPanel_TitleFolderTooltip" xml:space="preserve">
     <value>Workspace folders and knowledge base</value>
@@ -241,15 +285,6 @@ Add them in Profile settings.</value>
   </data>
   <data name="ComposeBar_AttachmentUnsupportedTooltip" xml:space="preserve">
     <value>Unsupported image format — will not be sent</value>
-  </data>
-  <data name="ComposeBar_Profile.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Profile</value>
-  </data>
-  <data name="ComposeBar_Preset.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Model preset</value>
-  </data>
-  <data name="ToolApproval_UserNote.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Additional instructions for the tool</value>
   </data>
   <data name="FolderFlyout_RemoveFolderAccessibilityName" xml:space="preserve">
     <value>Remove folder: {0}</value>
@@ -296,31 +331,6 @@ Add them in Profile settings.</value>
   <data name="FolderFlyout_RemoveTooltip" xml:space="preserve">
     <value>Remove</value>
   </data>
-  <data name="FolderFlyout_Header.Text" xml:space="preserve">
-    <value>Workspace Folders</value>
-  </data>
-  <data name="FolderFlyout_AddButton.Text" xml:space="preserve">
-    <value>Add Folder</value>
-  </data>
-  <data name="FolderFlyout_Empty.Text" xml:space="preserve">
-    <value>(empty)</value>
-  </data>
-  <data name="FolderFlyout_DisabledHint.Text" xml:space="preserve">
-    <value>Read and write files in these folders.</value>
-  </data>
-  <data name="FolderFlyout_KbHeader.Text" xml:space="preserve">
-    <value>Knowledge Base</value>
-  </data>
-  <data name="FolderFlyout_SetKb.Text" xml:space="preserve">
-    <value>Set Folder</value>
-  </data>
-  <data name="FolderFlyout_KbDisabledHint.Text" xml:space="preserve">
-    <value>Search documents in these folders.</value>
-  </data>
-  <data name="FolderFlyout_KbEmpty.Text" xml:space="preserve">
-    <value>(empty)</value>
-  </data>
-  <!-- Control-level AutomationProperties.Name for TemplatedControls -->
   <data name="ChatPanel_ControlName" xml:space="preserve">
     <value>Chat panel</value>
   </data>

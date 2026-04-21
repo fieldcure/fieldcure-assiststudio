@@ -1028,23 +1028,26 @@ public sealed partial class ChatPanel
         if (_searchPrevButton is not null)
         {
             _searchPrevButton.Click += (s, e) => _ = NavigateSearchAsync(-1);
-            SetBottomRightToolTip(_searchPrevButton,
-                Res.GetString("Chat_SearchPrevButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip")
-                ?? "Previous");
+            var tip = SafeGetResString("Chat_SearchPrevTooltip") ?? "Previous";
+            SetBottomRightToolTip(_searchPrevButton, tip);
+            AutomationHelper.SetAutomation(_searchPrevButton, "ChatPanelSearchPrevButton",
+                nameKey: "Chat_SearchPrevName");
         }
         if (_searchNextButton is not null)
         {
             _searchNextButton.Click += (s, e) => _ = NavigateSearchAsync(1);
-            SetBottomRightToolTip(_searchNextButton,
-                Res.GetString("Chat_SearchNextButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip")
-                ?? "Next");
+            var tip = SafeGetResString("Chat_SearchNextTooltip") ?? "Next";
+            SetBottomRightToolTip(_searchNextButton, tip);
+            AutomationHelper.SetAutomation(_searchNextButton, "ChatPanelSearchNextButton",
+                nameKey: "Chat_SearchNextName");
         }
         if (_searchCloseButton is not null)
         {
             _searchCloseButton.Click += (s, e) => CloseSearchBar();
-            SetBottomRightToolTip(_searchCloseButton,
-                Res.GetString("Chat_SearchCloseButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip")
-                ?? "Close search");
+            var tip = SafeGetResString("Chat_SearchCloseTooltip") ?? "Close search";
+            SetBottomRightToolTip(_searchCloseButton, tip);
+            AutomationHelper.SetAutomation(_searchCloseButton, "ChatPanelSearchCloseButton",
+                nameKey: "Chat_SearchCloseName");
         }
 
         // Wire approval panel events
@@ -1114,11 +1117,17 @@ public sealed partial class ChatPanel
         if (_titleEditButton is not null)
         {
             _titleEditButton.Click += OnTitleEditClick;
-            var tooltip = Res.GetString("ChatPanel_EditTitleTooltip");
+            var tooltip = SafeGetResString("ChatPanel_EditTitleTooltip");
             SetBottomRightToolTip(_titleEditButton, !string.IsNullOrEmpty(tooltip) ? tooltip : "Edit title");
+            AutomationHelper.SetAutomation(_titleEditButton, "ChatPanelTitleEditButton",
+                nameKey: "ChatPanel_EditTitleName");
         }
         if (_titleRefreshButton is not null)
+        {
             _titleRefreshButton.Click += OnTitleRefreshClick;
+            AutomationHelper.SetAutomation(_titleRefreshButton, "ChatPanelTitleRefreshButton",
+                nameKey: "ChatPanel_RefreshTitleName");
+        }
         if (_titleFolderButton is not null)
         {
             // Wire Flyout.Opening for lazy PART_ resolution and content population
@@ -1128,9 +1137,9 @@ public sealed partial class ChatPanel
                 folderFlyout.Opening += OnFolderFlyoutOpening;
             }
 
-            SetBottomRightToolTip(_titleFolderButton, Res.GetString("Folder_Tooltip") ?? "Folders");
+            SetBottomRightToolTip(_titleFolderButton, SafeGetResString("Folder_Tooltip") ?? "Folders");
             AutomationHelper.SetAutomation(_titleFolderButton, "ChatPanelFolderButton",
-                nameKey: "Folder_Tooltip");
+                nameKey: "ChatPanel_TitleFolderName");
         }
 
         UpdateFolderButtonBadge();
@@ -1343,7 +1352,31 @@ public sealed partial class ChatPanel
     #region UI Utilities
 
     /// <summary>
-    /// Sets a tooltip with <see cref="Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse"/> placement on the specified element.
+    /// Resolves a resource string from the Controls <c>.resw</c> map, returning <c>null</c>
+    /// when the key or resource map cannot be found rather than propagating the COMException.
+    /// Use this for resource lookups that happen during template or layout passes where an
+    /// unhandled exception would tear down the control tree.
+    /// </summary>
+    private static string? SafeGetResString(string key)
+    {
+        try
+        {
+            var value = Res.GetString(key);
+            return string.IsNullOrEmpty(value) ? null : value;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Wraps <paramref name="text"/> in a <see cref="ToolTip"/> with
+    /// <see cref="Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse"/> placement
+    /// and attaches it to <paramref name="element"/>. All tooltips in this library follow
+    /// the project-wide Mouse-placement UX convention; use this helper instead of the
+    /// plain <c>ToolTipService.SetToolTip(element, string)</c> form to avoid tooltips
+    /// defaulting to the Top/Bottom placement.
     /// </summary>
     private static void SetBottomRightToolTip(FrameworkElement element, string text)
     {

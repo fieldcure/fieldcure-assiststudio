@@ -165,6 +165,13 @@ public sealed partial class ToolApprovalPanel : Control
         if (_approveButton is not null) _approveButton.Content = _approveLabel;
         if (_rejectButton is not null) _rejectButton.Content = _rejectLabel;
 
+        if (_expandButton is not null)
+            AutomationHelper.SetAutomation(_expandButton, "ToolApprovalExpandButton",
+                nameKey: "ToolApproval_ExpandName");
+        if (_userNoteBox is not null)
+            AutomationHelper.SetAutomation(_userNoteBox, "ToolApprovalUserNoteBox",
+                nameKey: "ToolApproval_UserNoteName");
+
         // Sync current state
         UpdatePromptText();
         PopulateParameters();

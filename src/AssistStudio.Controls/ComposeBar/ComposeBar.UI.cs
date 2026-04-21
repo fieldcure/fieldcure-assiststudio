@@ -1,4 +1,5 @@
 ﻿using FieldCure.Ai.Providers.Models;
+using FieldCure.AssistStudio.Controls.Helpers;
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -314,7 +315,7 @@ public sealed partial class ComposeBar
         if (_profileComboBox is not null)
             _profileComboBox.SelectionChanged += ProfileComboBox_SelectionChanged;
 
-        // Apply localized tooltips (x:Uid doesn't work in TemplatedControls from library assemblies)
+        // Apply localized tooltips + AutomationProperties.Name (x:Uid doesn't work in TemplatedControls from library assemblies)
         try
         {
             SetTooltip(_attachButton, Res.GetString("ComposeBar_AttachTooltip"));
@@ -323,6 +324,15 @@ public sealed partial class ComposeBar
             SetTooltip(_toolButton, Res.GetString("ComposeBar_ToolsTooltip"));
         }
         catch { /* Resource not found — tooltips will be empty */ }
+
+        if (_attachButton is not null)
+            AutomationHelper.SetAutomation(_attachButton, "ComposeBarAttachButton", nameKey: "ComposeBar_AttachName");
+        if (_toolButton is not null)
+            AutomationHelper.SetAutomation(_toolButton, "ComposeBarToolButton", nameKey: "ComposeBar_ToolsName");
+        if (_sendButton is not null)
+            AutomationHelper.SetAutomation(_sendButton, "ComposeBarSendButton", nameKey: "ComposeBar_SendName");
+        if (_stopButton is not null)
+            AutomationHelper.SetAutomation(_stopButton, "ComposeBarStopButton", nameKey: "ComposeBar_StopName");
 
         // Apply deferred property values
         if (_pendingMaxLength.HasValue && _messageTextBox is not null)
