@@ -9,6 +9,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using Microsoft.UI.Xaml.Shapes;
 using Microsoft.Windows.ApplicationModel.Resources;
+using System.Collections.ObjectModel;
 using System.Text.Json;
 
 namespace AssistStudio.Settings;
@@ -23,10 +24,9 @@ public sealed partial class KnowledgeBasesPage : Page
     #region Fields
 
     private readonly DispatcherTimer _searchDebounceTimer;
-    private readonly List<KbCard> _liveCards = [];
+    private readonly ObservableCollection<KbItemViewModel> _items = [];
     private readonly Dictionary<string, int> _matchCountsByKbId = [];
     private readonly ResourceLoader _loader = new();
-    private List<KnowledgeBase> _kbs = [];
     private string _searchQuery = "";
     private Task? _ragReadyTask;
     private bool _isDialogOpen;
@@ -41,6 +41,7 @@ public sealed partial class KnowledgeBasesPage : Page
     public KnowledgeBasesPage()
     {
         InitializeComponent();
+        KbList.ItemsSource = _items;
 
         _searchDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
         _searchDebounceTimer.Tick += OnSearchDebounceTick;
@@ -114,7 +115,7 @@ public sealed partial class KnowledgeBasesPage : Page
                 app.MainWindow?.DeferredThisSession.Add((kb.Id, kb.Name));
 
             AppendKbCard(kb);
-            _liveCards.FirstOrDefault(c => c.KbId == kb.Id)?.MarkDeferredScheduled();
+            FindItem(kb.Id)?.SetDeferredVisual(true);
             return;
         }
 
@@ -238,9 +239,7 @@ public sealed partial class KnowledgeBasesPage : Page
 
         LoggingService.LogInfo($"[KB] Quick re-index queued: {kbId}");
 
-        var card = _liveCards.FirstOrDefault(c => c.KbId == kbId);
-        if (card is not null)
-            await card.RefreshAsync();
+        FindItem(kbId)?.RequestRefresh();
     }
 
     /// <summary>
@@ -264,7 +263,7 @@ public sealed partial class KnowledgeBasesPage : Page
         if (App.Current is App app)
             app.MainWindow?.DeferredThisSession.Add((kbId, kb.Name));
 
-        _liveCards.FirstOrDefault(c => c.KbId == kbId)?.MarkDeferredScheduled();
+        FindItem(kbId)?.SetDeferredVisual(true);
     }
 
     /// <summary>
@@ -321,8 +320,7 @@ public sealed partial class KnowledgeBasesPage : Page
                 if (App.Current is App app2)
                     app2.MainWindow?.DeferredThisSession.Add((kbId, kb.Name));
 
-                var deferredCard = _liveCards.FirstOrDefault(c => c.KbId == kbId);
-                deferredCard?.MarkDeferredScheduled();
+                FindItem(kbId)?.SetDeferredVisual(true);
             }
             else
             {
@@ -529,8 +527,8 @@ public sealed partial class KnowledgeBasesPage : Page
     /// </summary>
     private void PropagateSearchQuery()
     {
-        foreach (var c in _liveCards)
-            c.SearchQuery = _searchQuery;
+        foreach (var item in _items)
+            item.SearchQuery = _searchQuery;
 
         if (string.IsNullOrEmpty(_searchQuery))
         {
@@ -550,8 +548,12 @@ public sealed partial class KnowledgeBasesPage : Page
     /// </summary>
     private Task RefreshListAsync()
     {
-        _kbs = [.. KnowledgeBaseStore.ListAll()
-            .OrderBy(k => k.Name, StringComparer.CurrentCultureIgnoreCase)];
+        var snapshot = KnowledgeBaseStore.ListAll()
+            .OrderBy(k => k.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Select(k => new KbItemViewModel(k, _searchQuery, _ragReadyTask))
+            .ToList();
+
+        RebuildItems(snapshot);
         ApplyFilter();
         return Task.CompletedTask;
     }
@@ -563,83 +565,46 @@ public sealed partial class KnowledgeBasesPage : Page
     /// </summary>
     private void AppendKbCard(KnowledgeBase kb)
     {
-        _kbs.Add(kb);
-        _kbs.Sort((a, b) => StringComparer.CurrentCultureIgnoreCase.Compare(a.Name, b.Name));
+        var snapshot = _items
+            .Select(i => i.Kb)
+            .Append(kb)
+            .OrderBy(k => k.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Select(k => new KbItemViewModel(k, _searchQuery, _ragReadyTask))
+            .ToList();
+
+        RebuildItems(snapshot);
         ApplyFilter();
     }
 
     /// <summary>
-    /// Rebuilds the card list UI. Cards are always shown (no filtering);
-    /// chunk search results appear inline within each card.
+    /// Refreshes page-level chrome for the current bound KB item collection.
     /// </summary>
     private void ApplyFilter()
     {
-        CounterText.Text = _kbs.Count.ToString();
+        CounterText.Text = _items.Count.ToString();
 
-        ReleaseLiveCards();
-        KbList.ItemsSource = null;
-        var panel = new StackPanel { Spacing = 0 };
-
-        for (int idx = 0; idx < _kbs.Count; idx++)
-        {
-            if (idx > 0)
-            {
-                panel.Children.Add(new Rectangle
-                {
-                    Height = 1,
-                    Fill = (Brush)Application.Current.Resources["DividerStrokeColorDefaultBrush"],
-                    Margin = new Thickness(0, 8, 0, 8),
-                });
-            }
-
-            var kb = _kbs[idx];
-            var card = new KbCard
-            {
-                Kb = kb,
-                RagReadyTask = _ragReadyTask,
-                SearchQuery = _searchQuery,
-            };
-            card.DeleteRequested += OnDeleteRequested;
-            card.SettingsRequested += OnSettingsRequested;
-            card.ReindexRequested += OnReindexRequested;
-            card.ReindexScheduledRequested += OnReindexScheduledRequested;
-            card.CancelIndexRequested += OnCancelIndexRequested;
-            card.CheckChangesRequested += OnCheckChangesRequested;
-            card.IndexNowRequested += OnIndexNowRequested;
-            card.CancelDeferredRequested += OnCancelDeferredRequested;
-            card.MatchCountChanged += OnCardMatchCountChanged;
-            _liveCards.Add(card);
-            panel.Children.Add(card);
-        }
-
-        KbList.ItemsSource = new[] { panel };
-
-        var hasItems = _kbs.Count > 0;
+        var hasItems = _items.Count > 0;
         EmptyPanel.Visibility = hasItems ? Visibility.Collapsed : Visibility.Visible;
-        HintDivider.Visibility = hasItems ? Visibility.Visible : Visibility.Collapsed;
+        HintDivider.Visibility = Visibility.Collapsed;
         HintText.Visibility = hasItems ? Visibility.Visible : Visibility.Collapsed;
     }
 
     /// <summary>
-    /// Unsubscribes from all live cards and clears tracking state. Cards
-    /// stop their own poll timers on Unloaded — we just need to drop
-    /// references so they can be GC'd.
+    /// Replaces the bound KB items with a fresh sorted snapshot.
+    /// </summary>
+    private void RebuildItems(List<KbItemViewModel> items)
+    {
+        _items.Clear();
+        foreach (var item in items)
+            _items.Add(item);
+    }
+
+    /// <summary>
+    /// Clears page-owned per-card aggregates and releases the bound items.
     /// </summary>
     private void ReleaseLiveCards()
     {
-        foreach (var c in _liveCards)
-        {
-            c.DeleteRequested -= OnDeleteRequested;
-            c.SettingsRequested -= OnSettingsRequested;
-            c.ReindexRequested -= OnReindexRequested;
-            c.ReindexScheduledRequested -= OnReindexScheduledRequested;
-            c.CancelIndexRequested -= OnCancelIndexRequested;
-            c.CheckChangesRequested -= OnCheckChangesRequested;
-            c.IndexNowRequested -= OnIndexNowRequested;
-            c.CancelDeferredRequested -= OnCancelDeferredRequested;
-            c.MatchCountChanged -= OnCardMatchCountChanged;
-        }
-        _liveCards.Clear();
+        _items.Clear();
         _matchCountsByKbId.Clear();
         UpdateMatchSummary();
     }
@@ -672,7 +637,8 @@ public sealed partial class KnowledgeBasesPage : Page
 
         MatchSummaryText.Visibility = Visibility.Visible;
 
-        var hitsByName = _kbs
+        var hitsByName = _items
+            .Select(item => item.Kb)
             .Where(kb => _matchCountsByKbId.TryGetValue(kb.Id, out var c) && c > 0)
             .Select(kb => $"{kb.Name} ({_matchCountsByKbId[kb.Id]})")
             .ToList();
@@ -780,13 +746,13 @@ public sealed partial class KnowledgeBasesPage : Page
     /// </summary>
     private async void OnIndexNowRequested(object? sender, string kbId)
     {
-        var card = _liveCards.FirstOrDefault(c => c.KbId == kbId);
-        card?.ClearDeferred();
+        var item = FindItem(kbId);
+        item?.SetDeferredVisual(false);
 
         var status = await StartReindexAsync(kbId, deferred: false);
         if (!await HandleStartReindexResultAsync(status))
         {
-            if (card is not null) await card.RefreshAsync();
+            item?.RequestRefresh();
             return;
         }
 
@@ -795,7 +761,7 @@ public sealed partial class KnowledgeBasesPage : Page
         if (App.Current is App app)
             app.MainWindow?.DeferredThisSession.RemoveAll(e => e.KbId == kbId);
 
-        if (card is not null) await card.RefreshAsync();
+        item?.RequestRefresh();
     }
 
     /// <summary>
@@ -811,12 +777,9 @@ public sealed partial class KnowledgeBasesPage : Page
         if (App.Current is App app)
             app.MainWindow?.DeferredThisSession.RemoveAll(e => e.KbId == kbId);
 
-        var card = _liveCards.FirstOrDefault(c => c.KbId == kbId);
-        if (card is not null)
-        {
-            card.ClearDeferred();
-            await card.RefreshAsync();
-        }
+        var item = FindItem(kbId);
+        item?.SetDeferredVisual(false);
+        item?.RequestRefresh();
 
         LoggingService.LogInfo($"[KB] Deferred indexing cancelled: {kbId}");
     }
@@ -826,13 +789,16 @@ public sealed partial class KnowledgeBasesPage : Page
     /// </summary>
     private async void OnCheckChangesRequested(object? sender, string kbId)
     {
-        var card = _liveCards.FirstOrDefault(c => c.KbId == kbId);
+        var card = sender as KbCard;
         if (card is null) return;
 
         var result = await KbMcpClient.CheckChangesAsync(kbId);
         if (result is not null)
             card.ApplyChangeCheckResult(result);
     }
+
+    private KbItemViewModel? FindItem(string kbId) =>
+        _items.FirstOrDefault(i => i.Kb.Id == kbId);
 
     #endregion
 }

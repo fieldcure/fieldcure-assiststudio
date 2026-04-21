@@ -23,6 +23,14 @@ public sealed partial class KbCard : UserControl, INotifyPropertyChanged
 {
     #region Dependency Properties
 
+    /// <summary>Identifies the <see cref="Item"/> dependency property.</summary>
+    public static readonly DependencyProperty ItemProperty =
+        DependencyProperty.Register(
+            nameof(Item),
+            typeof(KbItemViewModel),
+            typeof(KbCard),
+            new PropertyMetadata(null, OnItemChanged));
+
     /// <summary>Identifies the <see cref="Kb"/> dependency property.</summary>
     public static readonly DependencyProperty KbProperty =
         DependencyProperty.Register(
@@ -124,6 +132,16 @@ public sealed partial class KbCard : UserControl, INotifyPropertyChanged
     #region Properties
 
     /// <summary>
+    /// The item view model that drives this card when hosted from an
+    /// <see cref="ItemsRepeater"/> template.
+    /// </summary>
+    public KbItemViewModel? Item
+    {
+        get => (KbItemViewModel?)GetValue(ItemProperty);
+        set => SetValue(ItemProperty, value);
+    }
+
+    /// <summary>
     /// The knowledge base this card represents. Setting it rebuilds the
     /// static fields (name, source paths, model info) and, once the card
     /// is loaded, kicks off a status refresh.
@@ -220,12 +238,65 @@ public sealed partial class KbCard : UserControl, INotifyPropertyChanged
     /// fields on the view model and, if the card is already attached to
     /// the tree, kicks off an async status refresh.
     /// </summary>
+    private static void OnItemChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is not KbCard card) return;
+
+        if (e.OldValue is KbItemViewModel oldItem)
+            oldItem.PropertyChanged -= card.OnItemPropertyChanged;
+
+        if (e.NewValue is KbItemViewModel newItem)
+        {
+            newItem.PropertyChanged += card.OnItemPropertyChanged;
+            card.Kb = newItem.Kb;
+            card.SearchQuery = newItem.SearchQuery;
+            card.RagReadyTask = newItem.RagReadyTask;
+            if (newItem.IsDeferredVisual)
+                card.MarkDeferredScheduled();
+            else
+                card.ClearDeferred();
+        }
+    }
+
     private static void OnKbChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is not KbCard card) return;
         card.ApplyKbSnapshot();
         if (card.IsLoaded && card.Kb is not null)
             _ = card.StartLoadAsync();
+    }
+
+    private void OnItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (sender is not KbItemViewModel item) return;
+
+        if (e.PropertyName == nameof(KbItemViewModel.Kb))
+        {
+            Kb = item.Kb;
+            return;
+        }
+
+        if (e.PropertyName == nameof(KbItemViewModel.SearchQuery))
+        {
+            SearchQuery = item.SearchQuery;
+            return;
+        }
+
+        if (e.PropertyName == nameof(KbItemViewModel.RagReadyTask))
+        {
+            RagReadyTask = item.RagReadyTask;
+            return;
+        }
+
+        if (e.PropertyName == nameof(KbItemViewModel.IsDeferredVisual))
+        {
+            if (item.IsDeferredVisual) MarkDeferredScheduled();
+            else ClearDeferred();
+            return;
+        }
+
+        if (e.PropertyName == nameof(KbItemViewModel.RefreshToken))
+            _ = RefreshAsync();
     }
 
     /// <summary>
