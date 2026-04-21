@@ -230,6 +230,18 @@
   <data name="Attachment_RemoveTooltip" xml:space="preserve">
     <value>첨부 파일 제거</value>
   </data>
+  <data name="ChatPanel_TitleFolder.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>작업 폴더 및 지식 베이스</value>
+  </data>
+  <data name="ChatPanel_TitleFolderTooltip" xml:space="preserve">
+    <value>작업 폴더 및 지식 베이스</value>
+  </data>
+  <data name="ComposeBar_AttachmentItem" xml:space="preserve">
+    <value>첨부 파일: {0}</value>
+  </data>
+  <data name="ComposeBar_AttachmentUnsupportedTooltip" xml:space="preserve">
+    <value>지원하지 않는 이미지 형식 — 전송되지 않습니다</value>
+  </data>
   <data name="ChatPanel_Greeting" xml:space="preserve">
     <value>무엇을 도와드릴까요?</value>
   </data>

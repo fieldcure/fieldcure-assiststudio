@@ -229,7 +229,8 @@ public sealed partial class AttachmentPreviewBar : Control
         Grid.SetColumn(name, 1);
         chip.Children.Add(name);
 
-        ToolTipService.SetToolTip(chip, attachment.FileName);
+        SetChipTooltip(chip, attachment.FileName);
+        AutomationProperties.SetName(chip, FormatAttachmentAccessibilityName(attachment.FileName));
         return chip;
     }
 
@@ -269,8 +270,9 @@ public sealed partial class AttachmentPreviewBar : Control
         var tooltipName = attachment.Source == AttachmentSource.Pasted
             ? "Pasted text"
             : attachment.FileName;
-        ToolTipService.SetToolTip(chip,
-            $"{tooltipName} \u00B7 {attachment.CharCount:N0} chars \u00B7 {attachment.LineCount:N0} lines");
+        var tooltipText = $"{tooltipName} \u00B7 {attachment.CharCount:N0} chars \u00B7 {attachment.LineCount:N0} lines";
+        SetChipTooltip(chip, tooltipText);
+        AutomationProperties.SetName(chip, FormatAttachmentAccessibilityName(tooltipText));
 
         return chip;
     }
@@ -310,7 +312,12 @@ public sealed partial class AttachmentPreviewBar : Control
         Grid.SetColumn(name, 1);
         chip.Children.Add(name);
 
-        ToolTipService.SetToolTip(chip, "Unsupported image format \u2014 will not be sent");
+        var unsupportedText = Res.GetString("ComposeBar_AttachmentUnsupportedTooltip") is { Length: > 0 } u
+            ? u
+            : "Unsupported image format \u2014 will not be sent";
+        SetChipTooltip(chip, unsupportedText);
+        AutomationProperties.SetName(chip,
+            FormatAttachmentAccessibilityName($"{attachment.FileName} — {unsupportedText}"));
         return chip;
     }
 
@@ -340,8 +347,32 @@ public sealed partial class AttachmentPreviewBar : Control
         Grid.SetColumn(name, 1);
         chip.Children.Add(name);
 
-        ToolTipService.SetToolTip(chip, attachment.FileName);
+        SetChipTooltip(chip, attachment.FileName);
+        AutomationProperties.SetName(chip, FormatAttachmentAccessibilityName(attachment.FileName));
         return chip;
+    }
+
+    /// <summary>
+    /// Sets a themed tooltip with <see cref="Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse"/>
+    /// placement on the given chip grid, following the project-wide tooltip convention.
+    /// </summary>
+    private static void SetChipTooltip(Grid chip, string text)
+    {
+        ToolTipService.SetToolTip(chip, new ToolTip
+        {
+            Content = text,
+            Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
+        });
+    }
+
+    /// <summary>
+    /// Builds a localized accessibility announcement for an attachment chip,
+    /// e.g. "Attachment: report.pdf".
+    /// </summary>
+    private static string FormatAttachmentAccessibilityName(string value)
+    {
+        var format = Res.GetString("ComposeBar_AttachmentItem");
+        return string.IsNullOrEmpty(format) ? value : string.Format(format, value);
     }
 
     /// <summary>

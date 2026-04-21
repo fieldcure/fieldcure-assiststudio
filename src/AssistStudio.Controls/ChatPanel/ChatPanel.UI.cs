@@ -1110,6 +1110,9 @@ public sealed partial class ChatPanel
             }
 
             SetBottomRightToolTip(_titleFolderButton, Res.GetString("Folder_Tooltip") ?? "Folders");
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(
+                _titleFolderButton,
+                Res.GetString("Folder_Tooltip") ?? "Folders");
         }
 
         UpdateFolderButtonBadge();

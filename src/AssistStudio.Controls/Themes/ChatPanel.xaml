@@ -73,6 +73,7 @@
                                 </StackPanel>
                                 <!-- Right: folder button with indexing animation -->
                                 <Button x:Name="PART_TitleFolderButton"
+                                        x:Uid="ChatPanel_TitleFolder"
                                         Grid.Column="1"
                                         Style="{StaticResource SubtleButtonStyle}"
                                         Padding="4"

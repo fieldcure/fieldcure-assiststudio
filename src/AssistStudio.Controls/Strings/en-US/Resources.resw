@@ -230,6 +230,18 @@ Add them in Profile settings.</value>
   <data name="Attachment_RemoveTooltip" xml:space="preserve">
     <value>Remove attachment</value>
   </data>
+  <data name="ChatPanel_TitleFolder.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Workspace folders and knowledge base</value>
+  </data>
+  <data name="ChatPanel_TitleFolderTooltip" xml:space="preserve">
+    <value>Workspace folders and knowledge base</value>
+  </data>
+  <data name="ComposeBar_AttachmentItem" xml:space="preserve">
+    <value>Attachment: {0}</value>
+  </data>
+  <data name="ComposeBar_AttachmentUnsupportedTooltip" xml:space="preserve">
+    <value>Unsupported image format — will not be sent</value>
+  </data>
   <data name="ChatPanel_Greeting" xml:space="preserve">
     <value>How can I help you today?</value>
   </data>
