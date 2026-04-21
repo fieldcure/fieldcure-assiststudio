@@ -42,20 +42,55 @@ jobs:
         run: |
           MODE="${{ steps.parse.outputs.mode }}"
           NAME="${{ steps.parse.outputs.name }}"
+          VERSION="${{ steps.parse.outputs.version }}"
+
+          # Extract a single version's section from a RELEASENOTES file.
+          # Matches "## vX.Y.Z" (followed by space, paren, or EOL) and emits
+          # everything up to (but not including) the next "## vN..." heading.
+          # Strips a leading UTF-8 BOM and any trailing "---" dividers or blank lines.
+          extract_version() {
+            local file="$1" ver="$2"
+            awk -v ver="v$ver" '
+              BEGIN { found = 0 }
+              { sub(/^\xef\xbb\xbf/, "") }
+              !found && $0 ~ "^## " ver "([[:space:]]|\\(|$)" { found = 1; print; next }
+              found && /^## v[0-9]/ { exit }
+              found { print }
+            ' "$file" | awk '
+              { lines[NR] = $0 }
+              END {
+                end = NR
+                while (end > 0 && (lines[end] ~ /^[[:space:]]*$/ || lines[end] ~ /^---[[:space:]]*$/)) end--
+                for (i = 1; i <= end; i++) print lines[i]
+              }
+            '
+          }
+
           if [ "$MODE" = "all" ]; then
+            # Bundled release: concatenate the latest section from each package.
             {
               for f in RELEASENOTES.*.md; do
                 TITLE=$(echo "$f" | sed 's/RELEASENOTES\.\(.*\)\.md/\1/')
+                # Latest heading in the file (first match of "## vX.Y.Z ...")
+                LATEST=$(grep -oE '^## v[0-9]+\.[0-9]+\.[0-9]+' "$f" | head -n 1 | sed 's/^## v//')
+                if [ -z "$LATEST" ]; then
+                  continue
+                fi
                 echo "# $TITLE"
                 echo ""
-                cat "$f"
+                extract_version "$f" "$LATEST"
                 echo ""
                 echo "---"
                 echo ""
               done
             } > RELEASE_BODY.md
           else
-            cp "RELEASENOTES.${NAME}.md" RELEASE_BODY.md
+            BODY=$(extract_version "RELEASENOTES.${NAME}.md" "$VERSION")
+            if [ -z "$BODY" ]; then
+              echo "::error::No section for v$VERSION found in RELEASENOTES.${NAME}.md"
+              exit 1
+            fi
+            printf '%s\n' "$BODY" > RELEASE_BODY.md
           fi
 
       - name: Create GitHub Release
