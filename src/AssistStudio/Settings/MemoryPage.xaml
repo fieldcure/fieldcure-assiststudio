@@ -83,7 +83,7 @@
                            Opacity="0.5"
                            Margin="0,12,0,0" />
 
-                <!-- Empty state (shown when no entries) -->
+                <!-- Empty state (shown when no entries exist at all) -->
                 <StackPanel x:Name="EmptyPanel" Visibility="Collapsed" Spacing="4"
                             Margin="0,8,0,0">
                     <TextBlock x:Uid="Memory_Empty"
@@ -94,6 +94,13 @@
                                TextWrapping="Wrap"
                                Opacity="0.5" />
                 </StackPanel>
+
+                <!-- No-results state (shown when search yields nothing) -->
+                <TextBlock x:Name="NoResultsText" x:Uid="Memory_NoResults"
+                           Visibility="Collapsed"
+                           Style="{StaticResource BodyTextBlockStyle}"
+                           Opacity="0.6"
+                           Margin="0,8,0,0" />
 
             </StackPanel>
         </ScrollViewer>

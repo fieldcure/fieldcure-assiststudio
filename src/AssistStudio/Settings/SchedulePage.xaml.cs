@@ -117,11 +117,12 @@ public sealed partial class SchedulePage : Page
     {
         if (items.Count == 0)
         {
-            ShowEmpty();
+            ShowEmpty(isSearching: _allItems.Count > 0);
             return;
         }
 
         EmptyPanel.Visibility = Visibility.Collapsed;
+        NoResultsText.Visibility = Visibility.Collapsed;
         LoadingPanel.Visibility = Visibility.Collapsed;
         HintText.Visibility = Visibility.Visible;
         HintDivider.Visibility = Visibility.Visible;
@@ -197,6 +198,7 @@ public sealed partial class SchedulePage : Page
         ReleaseLiveCards();
         LoadingPanel.Visibility = Visibility.Visible;
         EmptyPanel.Visibility = Visibility.Collapsed;
+        NoResultsText.Visibility = Visibility.Collapsed;
         HintText.Visibility = Visibility.Collapsed;
         HintDivider.Visibility = Visibility.Collapsed;
         CounterText.Text = "";
@@ -205,12 +207,13 @@ public sealed partial class SchedulePage : Page
     /// <summary>
     /// Switches the UI to the "empty" state.
     /// </summary>
-    private void ShowEmpty()
+    private void ShowEmpty(bool isSearching = false)
     {
         ScheduleList.ItemsSource = null;
         ReleaseLiveCards();
         LoadingPanel.Visibility = Visibility.Collapsed;
-        EmptyPanel.Visibility = Visibility.Visible;
+        EmptyPanel.Visibility = isSearching ? Visibility.Collapsed : Visibility.Visible;
+        NoResultsText.Visibility = isSearching ? Visibility.Visible : Visibility.Collapsed;
         HintText.Visibility = Visibility.Collapsed;
         HintDivider.Visibility = Visibility.Collapsed;
         CounterText.Text = "";

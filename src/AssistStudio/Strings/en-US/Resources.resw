@@ -197,6 +197,9 @@
   <data name="Memory_Empty.Text" xml:space="preserve">
     <value>No memories saved yet.</value>
   </data>
+  <data name="Memory_NoResults.Text" xml:space="preserve">
+    <value>No memories match your search.</value>
+  </data>
   <data name="Memory_EmptyHint.Text" xml:space="preserve">
     <value>Say "remember this" during a conversation and the AI will save it.</value>
   </data>
@@ -1440,6 +1443,9 @@
   </data>
   <data name="Schedule_Empty.Text" xml:space="preserve">
     <value>No scheduled tasks registered.</value>
+  </data>
+  <data name="Schedule_NoResults.Text" xml:space="preserve">
+    <value>No scheduled tasks match your search.</value>
   </data>
   <data name="Schedule_EmptyHint.Text" xml:space="preserve">
     <value>Say "do this every day at 9am" during a conversation and the AI will create a schedule.</value>
