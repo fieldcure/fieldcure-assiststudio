@@ -99,6 +99,7 @@
                                 </Border>
                                 <Button x:Name="PART_ExpandButton"
                                         x:Uid="ToolApproval_Expand"
+                                        AutomationProperties.AutomationId="ToolApprovalExpandButton"
                                         Grid.Column="2"
                                         Style="{StaticResource SubtleButtonStyle}"
                                         Padding="6"
@@ -121,6 +122,7 @@
                             <!-- Row 2: User instruction (always visible, borderless like ComposeBar) -->
                             <TextBox x:Name="PART_UserNoteBox"
                                      x:Uid="ToolApproval_UserNote"
+                                     AutomationProperties.AutomationId="ToolApprovalUserNoteBox"
                                      Grid.Row="2"
                                      PlaceholderText="Additional instructions (optional)"
                                      TextWrapping="Wrap"
@@ -147,10 +149,12 @@
                             <StackPanel Grid.Row="3" Orientation="Horizontal"
                                         HorizontalAlignment="Right" Spacing="8">
                                 <Button x:Name="PART_RejectButton"
+                                        AutomationProperties.AutomationId="ToolApprovalRejectButton"
                                         Style="{StaticResource SubtleButtonStyle}"
                                         Padding="12,6"
                                         Content="Reject" />
                                 <Button x:Name="PART_ApproveButton"
+                                        AutomationProperties.AutomationId="ToolApprovalApproveButton"
                                         Style="{StaticResource AccentButtonStyle}"
                                         Padding="16,6"
                                         Content="Allow" />

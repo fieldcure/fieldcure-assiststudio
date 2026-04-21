@@ -320,4 +320,29 @@
   <data name="FolderFlyout_KbEmpty.Text" xml:space="preserve">
     <value>(비어 있음)</value>
   </data>
+  <!-- Control-level AutomationProperties.Name for TemplatedControls -->
+  <data name="ChatPanel_ControlName" xml:space="preserve">
+    <value>채팅 패널</value>
+  </data>
+  <data name="ChatPanel_ControlHelpText" xml:space="preserve">
+    <value>메시지 목록, 입력창, 첨부를 포함한 대화 영역입니다.</value>
+  </data>
+  <data name="ComposeBar_ControlName" xml:space="preserve">
+    <value>메시지 입력 영역</value>
+  </data>
+  <data name="AttachmentPreviewBar_ControlName" xml:space="preserve">
+    <value>첨부 미리보기 영역</value>
+  </data>
+  <data name="ToolApprovalPanel_ControlName" xml:space="preserve">
+    <value>도구 승인 패널</value>
+  </data>
+  <data name="ToolApprovalPanel_ControlHelpText" xml:space="preserve">
+    <value>실행 전에 대기 중인 도구 호출을 검토하고 허용 또는 거부합니다.</value>
+  </data>
+  <data name="ToolElicitationPanel_ControlName" xml:space="preserve">
+    <value>도구 입력 패널</value>
+  </data>
+  <data name="ToolElicitationPanel_ControlHelpText" xml:space="preserve">
+    <value>도구가 요청한 값을 입력한 후 제출하여 계속 진행합니다.</value>
+  </data>
 </root>

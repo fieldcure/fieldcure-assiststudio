@@ -1,5 +1,6 @@
 ﻿using FieldCure.Ai.Providers;
 using FieldCure.Ai.Providers.Models;
+using FieldCure.AssistStudio.Controls.Helpers;
 using FieldCure.AssistStudio.Helpers;
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml;
@@ -1128,9 +1129,8 @@ public sealed partial class ChatPanel
             }
 
             SetBottomRightToolTip(_titleFolderButton, Res.GetString("Folder_Tooltip") ?? "Folders");
-            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(
-                _titleFolderButton,
-                Res.GetString("Folder_Tooltip") ?? "Folders");
+            AutomationHelper.SetAutomation(_titleFolderButton, "ChatPanelFolderButton",
+                nameKey: "Folder_Tooltip");
         }
 
         UpdateFolderButtonBadge();

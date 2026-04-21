@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Text.Json;
+using FieldCure.AssistStudio.Controls.Helpers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.ApplicationModel.Resources;
@@ -115,6 +116,8 @@ public sealed partial class ToolApprovalPanel : Control
     public ToolApprovalPanel()
     {
         DefaultStyleKey = typeof(ToolApprovalPanel);
+        AutomationHelper.SetAutomation(this, "ToolApprovalPanel",
+            nameKey: "ToolApprovalPanel_ControlName", helpTextKey: "ToolApprovalPanel_ControlHelpText");
     }
 
     #endregion

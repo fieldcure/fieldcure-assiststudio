@@ -1,4 +1,5 @@
 ﻿using FieldCure.Ai.Providers.Models;
+using FieldCure.AssistStudio.Controls.Helpers;
 using FieldCure.AssistStudio.Controls.Rendering;
 using FieldCure.AssistStudio.Helpers;
 using Microsoft.UI.Xaml;
@@ -218,6 +219,8 @@ public sealed partial class ChatPanel : Control, IDisposable
     public ChatPanel()
     {
         DefaultStyleKey = typeof(ChatPanel);
+        AutomationHelper.SetAutomation(this, "ChatPanel",
+            nameKey: "ChatPanel_ControlName", helpTextKey: "ChatPanel_ControlHelpText");
         _renderer.ContinueRequested += OnContinueRequested;
         _renderer.MessageCopyRequested += OnMessageCopyRequested;
         _renderer.RetryRequested += OnRetryRequested;

@@ -320,4 +320,29 @@ Add them in Profile settings.</value>
   <data name="FolderFlyout_KbEmpty.Text" xml:space="preserve">
     <value>(empty)</value>
   </data>
+  <!-- Control-level AutomationProperties.Name for TemplatedControls -->
+  <data name="ChatPanel_ControlName" xml:space="preserve">
+    <value>Chat panel</value>
+  </data>
+  <data name="ChatPanel_ControlHelpText" xml:space="preserve">
+    <value>Conversation view with message list, composer, and attachments.</value>
+  </data>
+  <data name="ComposeBar_ControlName" xml:space="preserve">
+    <value>Message composer</value>
+  </data>
+  <data name="AttachmentPreviewBar_ControlName" xml:space="preserve">
+    <value>Attachment preview bar</value>
+  </data>
+  <data name="ToolApprovalPanel_ControlName" xml:space="preserve">
+    <value>Tool approval panel</value>
+  </data>
+  <data name="ToolApprovalPanel_ControlHelpText" xml:space="preserve">
+    <value>Review and approve or reject the pending tool invocation before it runs.</value>
+  </data>
+  <data name="ToolElicitationPanel_ControlName" xml:space="preserve">
+    <value>Tool input panel</value>
+  </data>
+  <data name="ToolElicitationPanel_ControlHelpText" xml:space="preserve">
+    <value>Provide the values the tool requested, then submit to continue.</value>
+  </data>
 </root>

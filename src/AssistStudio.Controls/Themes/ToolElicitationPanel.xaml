@@ -76,10 +76,12 @@
                             <StackPanel Grid.Row="3" Orientation="Horizontal"
                                         HorizontalAlignment="Right" Spacing="8">
                                 <Button x:Name="PART_DeclineButton"
+                                        AutomationProperties.AutomationId="ToolElicitationDeclineButton"
                                         Style="{StaticResource SubtleButtonStyle}"
                                         Padding="12,6"
                                         Content="Skip" />
                                 <Button x:Name="PART_SubmitButton"
+                                        AutomationProperties.AutomationId="ToolElicitationSubmitButton"
                                         Style="{StaticResource AccentButtonStyle}"
                                         Padding="16,6"
                                         Content="Submit"

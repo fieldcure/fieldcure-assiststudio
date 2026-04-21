@@ -1,4 +1,5 @@
-﻿using Microsoft.UI.Xaml.Controls;
+﻿using FieldCure.AssistStudio.Controls.Helpers;
+using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.ApplicationModel.Resources;
 
 namespace FieldCure.AssistStudio.Controls;
@@ -98,6 +99,7 @@ public sealed partial class ComposeBar : Control
     public ComposeBar()
     {
         DefaultStyleKey = typeof(ComposeBar);
+        AutomationHelper.SetAutomation(this, "ComposeBar", nameKey: "ComposeBar_ControlName");
         Loaded += OnLoaded;
     }
 

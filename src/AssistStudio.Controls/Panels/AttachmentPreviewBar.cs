@@ -1,6 +1,6 @@
 ﻿using FieldCure.Ai.Providers.Models;
+using FieldCure.AssistStudio.Controls.Helpers;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
@@ -41,6 +41,8 @@ public sealed partial class AttachmentPreviewBar : Control
     public AttachmentPreviewBar()
     {
         DefaultStyleKey = typeof(AttachmentPreviewBar);
+        AutomationHelper.SetAutomation(this, "AttachmentPreviewBar",
+            nameKey: "AttachmentPreviewBar_ControlName");
         _attachments.CollectionChanged += OnAttachmentsChanged;
     }
 
@@ -230,7 +232,8 @@ public sealed partial class AttachmentPreviewBar : Control
         chip.Children.Add(name);
 
         SetChipTooltip(chip, attachment.FileName);
-        AutomationProperties.SetName(chip, FormatAttachmentAccessibilityName(attachment.FileName));
+        AutomationHelper.SetAutomationLiteral(chip, "AttachmentPreviewImageChip",
+            FormatAttachmentAccessibilityName(attachment.FileName));
         return chip;
     }
 
@@ -272,7 +275,8 @@ public sealed partial class AttachmentPreviewBar : Control
             : attachment.FileName;
         var tooltipText = $"{tooltipName} \u00B7 {attachment.CharCount:N0} chars \u00B7 {attachment.LineCount:N0} lines";
         SetChipTooltip(chip, tooltipText);
-        AutomationProperties.SetName(chip, FormatAttachmentAccessibilityName(tooltipText));
+        AutomationHelper.SetAutomationLiteral(chip, "AttachmentPreviewTextChip",
+            FormatAttachmentAccessibilityName(tooltipText));
 
         return chip;
     }
@@ -316,7 +320,7 @@ public sealed partial class AttachmentPreviewBar : Control
             ? u
             : "Unsupported image format \u2014 will not be sent";
         SetChipTooltip(chip, unsupportedText);
-        AutomationProperties.SetName(chip,
+        AutomationHelper.SetAutomationLiteral(chip, "AttachmentPreviewUnsupportedChip",
             FormatAttachmentAccessibilityName($"{attachment.FileName} — {unsupportedText}"));
         return chip;
     }
@@ -348,7 +352,8 @@ public sealed partial class AttachmentPreviewBar : Control
         chip.Children.Add(name);
 
         SetChipTooltip(chip, attachment.FileName);
-        AutomationProperties.SetName(chip, FormatAttachmentAccessibilityName(attachment.FileName));
+        AutomationHelper.SetAutomationLiteral(chip, "AttachmentPreviewGenericChip",
+            FormatAttachmentAccessibilityName(attachment.FileName));
         return chip;
     }
 
@@ -427,7 +432,8 @@ public sealed partial class AttachmentPreviewBar : Control
             Opacity = 0,
             Tag = attachment
         };
-        AutomationProperties.SetName(removeButton, Res.GetString("Attachment_RemoveTooltip"));
+        AutomationHelper.SetAutomation(removeButton, "AttachmentPreviewRemoveButton",
+            nameKey: "Attachment_RemoveTooltip");
         removeButton.Click += OnRemoveClick;
         Grid.SetColumn(removeButton, 2);
         container.Children.Add(removeButton);

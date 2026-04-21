@@ -1,4 +1,5 @@
-﻿using Microsoft.UI.Xaml;
+﻿using FieldCure.AssistStudio.Controls.Helpers;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
@@ -123,6 +124,8 @@ public sealed partial class ToolElicitationPanel : Control
     public ToolElicitationPanel()
     {
         DefaultStyleKey = typeof(ToolElicitationPanel);
+        AutomationHelper.SetAutomation(this, "ToolElicitationPanel",
+            nameKey: "ToolElicitationPanel_ControlName", helpTextKey: "ToolElicitationPanel_ControlHelpText");
     }
 
     #endregion
@@ -415,6 +418,8 @@ public sealed partial class ToolElicitationPanel : Control
 
         button.Click += (_, _) => OnOptionSelected(fieldName, value, button);
 
+        AutomationHelper.SetAutomationLiteral(button, "ToolElicitationOptionButton", title);
+
         return button;
     }
 
@@ -438,8 +443,10 @@ public sealed partial class ToolElicitationPanel : Control
                 HorizontalAlignment = HorizontalAlignment.Stretch,
             };
 
-            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(
-                passwordBox, field.Title ?? field.Description ?? field.Name);
+            AutomationHelper.SetAutomationLiteral(
+                passwordBox,
+                "ToolElicitationPasswordField",
+                field.Title ?? field.Description ?? field.Name);
             _passwordInputs[field.Name] = passwordBox;
             _fieldsPanel.Children.Add(passwordBox);
             return;
@@ -455,8 +462,10 @@ public sealed partial class ToolElicitationPanel : Control
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
 
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(
-            textBox, field.Title ?? field.Description ?? field.Name);
+        AutomationHelper.SetAutomationLiteral(
+            textBox,
+            "ToolElicitationTextField",
+            field.Title ?? field.Description ?? field.Name);
         _textInputs[field.Name] = textBox;
         _fieldsPanel.Children.Add(textBox);
     }

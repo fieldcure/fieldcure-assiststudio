@@ -395,8 +395,10 @@ public sealed partial class ChatPanel
                 Content = removeTooltipText,
                 Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
             });
-            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(
-                removeButton, string.Format(removeFolderNameFormat, capturedFolder));
+            AutomationHelper.SetAutomationLiteral(
+                removeButton,
+                "ChatPanelFolderFlyoutRemoveButton",
+                string.Format(removeFolderNameFormat, capturedFolder));
             removeButton.Click += (s, e) =>
             {
                 var updated = folders.Where(f => f != capturedFolder).ToList();
