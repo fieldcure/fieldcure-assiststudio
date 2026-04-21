@@ -20,16 +20,19 @@ jobs:
         shell: bash
         run: |
           MESSAGE="${{ github.event.head_commit.message }}"
-          # "Release vX.X.X" (all) or "Release <Name> vX.X.X" (single)
+          # "Release vX.Y.Z[-prerelease]" (all) or "Release <Name> vX.Y.Z[-prerelease]" (single)
+          # Version captures SemVer core plus optional pre-release/build metadata
+          # (alphanumerics, dot, plus, hyphen) so tags like v0.1.0-preview.1 work.
+          VER_PATTERN='[0-9][A-Za-z0-9.+-]*'
           if echo "$MESSAGE" | grep -qE '^Release v[0-9]'; then
-            VERSION=$(echo "$MESSAGE" | sed -n 's/Release v\([0-9]*\.[0-9]*\.[0-9]*\).*/\1/p')
+            VERSION=$(echo "$MESSAGE" | sed -n "s/^Release v\\($VER_PATTERN\\).*/\\1/p")
             echo "version=$VERSION" >> "$GITHUB_OUTPUT"
             echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
             echo "name=" >> "$GITHUB_OUTPUT"
             echo "mode=all" >> "$GITHUB_OUTPUT"
           else
-            PACKAGE=$(echo "$MESSAGE" | sed -n 's/Release \(.*\) v[0-9].*/\1/p')
-            VERSION=$(echo "$MESSAGE" | sed -n 's/.*v\([0-9]*\.[0-9]*\.[0-9]*\).*/\1/p')
+            PACKAGE=$(echo "$MESSAGE" | sed -n 's/^Release \(.*\) v[0-9].*/\1/p')
+            VERSION=$(echo "$MESSAGE" | sed -n "s/^Release .* v\\($VER_PATTERN\\).*/\\1/p")
             TAG_NAME=$(echo "$PACKAGE" | tr '[:upper:]' '[:lower:]')
             echo "version=$VERSION" >> "$GITHUB_OUTPUT"
             echo "tag=${TAG_NAME}-v${VERSION}" >> "$GITHUB_OUTPUT"
@@ -71,8 +74,8 @@ jobs:
             {
               for f in RELEASENOTES.*.md; do
                 TITLE=$(echo "$f" | sed 's/RELEASENOTES\.\(.*\)\.md/\1/')
-                # Latest heading in the file (first match of "## vX.Y.Z ...")
-                LATEST=$(grep -oE '^## v[0-9]+\.[0-9]+\.[0-9]+' "$f" | head -n 1 | sed 's/^## v//')
+                # Latest heading in the file (first match of "## vX.Y.Z[-prerelease]")
+                LATEST=$(grep -oE '^## v[0-9][A-Za-z0-9.+-]*' "$f" | head -n 1 | sed 's/^## v//')
                 if [ -z "$LATEST" ]; then
                   continue
                 fi
