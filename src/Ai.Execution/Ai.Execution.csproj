@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
-    <Version>0.3.0</Version>
+    <Version>0.3.1</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CA1416</NoWarn>
 
@@ -22,7 +22,7 @@
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;agent;execution;sub-agent;tool-use;llm</PackageTags>
-    <PackageReleaseNotes>v0.3.0: BREAKING — SubAgentExecutor.ProviderResolver async. LogCallback for host-injected logging. Per-task auxiliary provider settings with runtime fallback.</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.3.1: Rebuild against Ai.Providers 0.5.0 (transitive DocumentParsers 2.x). Sync RAG system-prompt hint label with the "Knowledge Base" rename in the rest of the stack. No public API changes.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

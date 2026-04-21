@@ -1,5 +1,13 @@
 ﻿# Release Notes — FieldCure.Ai.Execution
 
+## v0.3.1 (2026-04-21)
+
+### Changed
+- Rebuilt against **FieldCure.Ai.Providers 0.5.0** — picks up the transitive `FieldCure.DocumentParsers 2.x` upgrade. No public API changes in this package.
+- RAG system-prompt hint label synced to "Knowledge Base" to match the rename in the rest of the stack.
+
+---
+
 ## v0.3.0 (2026-04-14)
 
 ### Breaking
