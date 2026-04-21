@@ -189,9 +189,11 @@ public sealed partial class ToolElicitationPanel : Control
 
     #region Private Methods
 
+    /// <summary>Handles the Skip (decline) button click by raising <see cref="Declined"/>.</summary>
     private void OnDeclineClick(object sender, RoutedEventArgs e) =>
         Declined?.Invoke(this, EventArgs.Empty);
 
+    /// <summary>Handles the Submit button click by collecting field values and raising <see cref="Submitted"/>.</summary>
     private void OnSubmitClick(object sender, RoutedEventArgs e) =>
         SubmitAllFields();
 
@@ -525,21 +527,25 @@ public sealed partial class ToolElicitationPanel : Control
 
     #region Property Change Callbacks
 
+    /// <summary>Callback when <see cref="ToolName"/> changes to refresh the prompt text.</summary>
     private static void OnToolNameChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is ToolElicitationPanel panel) panel.UpdatePromptText();
     }
 
+    /// <summary>Callback when <see cref="ServerName"/> changes to refresh the server badge.</summary>
     private static void OnServerNameChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is ToolElicitationPanel panel) panel.UpdateServerBadge();
     }
 
+    /// <summary>Callback when <see cref="Message"/> changes to refresh the message text.</summary>
     private static void OnMessageChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is ToolElicitationPanel panel) panel.UpdateMessageText();
     }
 
+    /// <summary>Callback when <see cref="Fields"/> changes to re-render the field list.</summary>
     private static void OnFieldsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is ToolElicitationPanel panel) panel.RenderFields();

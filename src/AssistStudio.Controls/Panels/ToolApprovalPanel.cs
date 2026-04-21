@@ -232,8 +232,10 @@ public sealed partial class ToolApprovalPanel : Control
             _expandIcon.Glyph = IsExpanded ? "\uE70D" : "\uE70E"; // ChevronUp : ChevronRight
     }
 
+    /// <summary>JSON serializer options used when pretty-printing nested object/array arguments for display.</summary>
     private static readonly JsonSerializerOptions s_indentedOptions = new() { WriteIndented = true };
 
+    /// <summary>Parses the raw <see cref="Arguments"/> JSON into <see cref="ToolParameterItem"/> rows bound to the parameters list.</summary>
     private void PopulateParameters()
     {
         if (_parametersControl is null) return;

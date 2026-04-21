@@ -282,9 +282,6 @@ public sealed partial class AttachmentPreviewBar : Control
     }
 
     /// <summary>
-    /// Creates a generic file chip for Document type attachments.
-    /// </summary>
-    /// <summary>
     /// Creates an error-state chip for unsupported image formats.
     /// Shows strikethrough filename and reduced opacity.
     /// </summary>
@@ -325,6 +322,9 @@ public sealed partial class AttachmentPreviewBar : Control
         return chip;
     }
 
+    /// <summary>
+    /// Creates a generic file chip for Document type attachments.
+    /// </summary>
     private static Grid CreateGenericChip(ChatAttachment attachment, int number)
     {
         var chip = CreateChipContainer();

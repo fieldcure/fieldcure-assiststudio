@@ -35,6 +35,7 @@ public sealed partial class WrapPanel : Panel
         DependencyProperty.Register(nameof(VerticalSpacing), typeof(double),
             typeof(WrapPanel), new PropertyMetadata(0.0, OnLayoutPropertyChanged));
 
+    /// <summary>Invalidates measure when a spacing property changes so the panel re-lays out.</summary>
     private static void OnLayoutPropertyChanged(
         DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
