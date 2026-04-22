@@ -68,17 +68,22 @@ public partial class MainViewModel : ObservableObject
     private static readonly TimeSpan OllamaInitialCheckDelay = TimeSpan.FromSeconds(3);
 
     /// <summary>
-    /// Timeout per startup reachability probe.
+    /// Timeout per startup reachability probe. Generous enough to cover the first-request
+    /// latency of a freshly-started <c>ollama serve</c> (model metadata warmup) so
+    /// a user who launches both the app and Ollama at the same time is not falsely
+    /// marked unreachable.
     /// </summary>
-    private static readonly TimeSpan OllamaProbeTimeout = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan OllamaProbeTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>
     /// Delay between startup reachability retries.
     /// </summary>
-    private static readonly TimeSpan OllamaRetryDelay = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan OllamaRetryDelay = TimeSpan.FromSeconds(3);
 
     /// <summary>
     /// Number of startup probes before concluding Ollama is unavailable for this session.
+    /// Combined with the probe timeout and retry delay, the app gives Ollama roughly
+    /// 30 seconds after launch to come up before hiding it from preset lists.
     /// </summary>
     private const int OllamaStartupProbeAttempts = 4;
 
