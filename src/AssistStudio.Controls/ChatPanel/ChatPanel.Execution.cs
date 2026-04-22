@@ -855,7 +855,11 @@ public sealed partial class ChatPanel
             pendingUserNote = null;
             var request = await CreateRequestAsync(messages, activeTools);
             if (round == 0)
+            {
                 DiagnosticLogger.LogInfo($"[Chat] Request start — provider={Provider!.ProviderName}, model={Provider.ModelId}, tools={activeTools.Count}, thinking={request.ThinkingEnabled}");
+                DiagnosticLogger.LogInfo($"[Chat][Debug] activeTools=[{string.Join(",", activeTools.Select(t => t.Name))}]");
+                DiagnosticLogger.LogInfo($"[Chat][Debug] mcpTools=[{string.Join(",", (McpTools ?? []).Select(t => t.Name))}]");
+            }
             result = await ConsumeStreamAsync(Provider!.StreamAsync(request, ct), assistantMessage, ct);
             DiagnosticLogger.LogInfo($"[Chat] Stream completed — tokens={result.Usage?.TotalTokens ?? 0}, truncated={result.IsTruncated}, hasToolCalls={result.HasToolCalls}");
 
