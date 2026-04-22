@@ -1,4 +1,10 @@
-﻿using FieldCure.AssistStudio.Controls.Helpers;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Windows.Input;
+using FieldCure.AssistStudio.Controls.Helpers;
+using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
@@ -10,7 +16,7 @@ namespace FieldCure.AssistStudio.Controls;
 /// <summary>
 /// An inline panel that replaces the ComposeBar when an MCP server requests
 /// user input via elicitation. Renders enum/boolean fields as clickable option
-/// buttons (click = immediate submit) and string fields with a TextBox.
+/// buttons and string fields with text inputs.
 /// </summary>
 public sealed partial class ToolElicitationPanel : Control
 {
@@ -92,29 +98,16 @@ public sealed partial class ToolElicitationPanel : Control
     private TextBlock? _messageText;
     private Border? _serverBadge;
     private TextBlock? _serverBadgeText;
-    private StackPanel? _fieldsPanel;
+    private ItemsControl? _fieldsPanel;
     private Button? _declineButton;
     private Button? _submitButton;
     private string _declineLabel = "Skip";
     private string _submitLabel = "Submit";
     private string _promptTemplate = "{0} requires input";
-
-    /// <summary>Tracks the current text input value for string fields (non-secret).</summary>
-    private readonly Dictionary<string, TextBox> _textInputs = [];
-
-    /// <summary>
-    /// Tracks the current password input value for secret-looking string fields.
-    /// Secrets are identified by <see cref="LooksLikeSecret"/> (ADR-001: the MCP 1.2 SDK
-    /// does not support <c>format: "password"</c>, so the host applies a field-name /
-    /// title / description heuristic instead).
-    /// </summary>
-    private readonly Dictionary<string, PasswordBox> _passwordInputs = [];
-
-    /// <summary>Tracks the selected option value for enum/boolean fields (multi-field mode).</summary>
-    private readonly Dictionary<string, string> _selectedOptions = [];
-
-    /// <summary>Whether the panel has multiple fields (disables immediate submit on option click).</summary>
     private bool _isMultiField;
+
+    /// <summary>Projection of elicitation fields into XAML-friendly field view models.</summary>
+    private readonly ObservableCollection<ToolElicitationFieldViewModel> _fieldItems = [];
 
     #endregion
 
@@ -137,36 +130,35 @@ public sealed partial class ToolElicitationPanel : Control
     {
         base.OnApplyTemplate();
 
-        // Detach old handlers
         if (_declineButton is not null) _declineButton.Click -= OnDeclineClick;
         if (_submitButton is not null) _submitButton.Click -= OnSubmitClick;
 
-        // Get template parts
         _promptText = GetTemplateChild("PART_PromptText") as TextBlock;
         _messageText = GetTemplateChild("PART_MessageText") as TextBlock;
         _serverBadge = GetTemplateChild("PART_ServerBadge") as Border;
         _serverBadgeText = GetTemplateChild("PART_ServerBadgeText") as TextBlock;
-        _fieldsPanel = GetTemplateChild("PART_FieldsPanel") as StackPanel;
+        _fieldsPanel = GetTemplateChild("PART_FieldsPanel") as ItemsControl;
         _declineButton = GetTemplateChild("PART_DeclineButton") as Button;
         _submitButton = GetTemplateChild("PART_SubmitButton") as Button;
 
-        // Attach handlers
         if (_declineButton is not null) _declineButton.Click += OnDeclineClick;
         if (_submitButton is not null) _submitButton.Click += OnSubmitClick;
 
-        // Load localized strings
         try
         {
             _declineLabel = Res.GetString("ToolElicitation_Skip");
             _submitLabel = Res.GetString("ToolElicitation_Submit");
             _promptTemplate = Res.GetString("ToolElicitation_Prompt");
         }
-        catch { /* Use defaults */ }
+        catch
+        {
+            // Fall back to the built-in defaults when localization is unavailable.
+        }
 
         if (_declineButton is not null) _declineButton.Content = _declineLabel;
         if (_submitButton is not null) _submitButton.Content = _submitLabel;
+        if (_fieldsPanel is not null) _fieldsPanel.ItemsSource = _fieldItems;
 
-        // Sync current state
         UpdatePromptText();
         UpdateMessageText();
         UpdateServerBadge();
@@ -182,6 +174,7 @@ public sealed partial class ToolElicitationPanel : Control
             Cancelled?.Invoke(this, EventArgs.Empty);
             return;
         }
+
         base.OnKeyDown(e);
     }
 
@@ -189,7 +182,7 @@ public sealed partial class ToolElicitationPanel : Control
 
     #region Private Methods
 
-    /// <summary>Handles the Skip (decline) button click by raising <see cref="Declined"/>.</summary>
+    /// <summary>Handles the Skip button click by raising <see cref="Declined"/>.</summary>
     private void OnDeclineClick(object sender, RoutedEventArgs e) =>
         Declined?.Invoke(this, EventArgs.Empty);
 
@@ -197,87 +190,40 @@ public sealed partial class ToolElicitationPanel : Control
     private void OnSubmitClick(object sender, RoutedEventArgs e) =>
         SubmitAllFields();
 
-    /// <summary>Collects all field values (selected options + text inputs + password inputs) and submits.</summary>
+    /// <summary>Collects the current values from all projected field view models and submits them.</summary>
     private void SubmitAllFields()
     {
         var content = new Dictionary<string, object?>();
-        foreach (var (name, value) in _selectedOptions)
-            content[name] = value;
-        foreach (var (name, textBox) in _textInputs)
-            content[name] = textBox.Text;
-        foreach (var (name, passwordBox) in _passwordInputs)
-            content[name] = passwordBox.Password;
+        foreach (var field in _fieldItems)
+            content[field.Name] = field.CurrentValue;
+
         Submitted?.Invoke(this, content);
     }
 
-    /// <summary>
-    /// Handles an option button click. In single-field mode, submits immediately.
-    /// In multi-field mode, records the selection and highlights the button.
-    /// </summary>
-    private void OnOptionSelected(string fieldName, string value, Button clickedButton)
-    {
-        if (!_isMultiField)
-        {
-            // Single field — immediate submit
-            var content = new Dictionary<string, object?> { [fieldName] = value };
-            Submitted?.Invoke(this, content);
-            return;
-        }
-
-        // Multi-field — record selection, update visual state
-        _selectedOptions[fieldName] = value;
-
-        // Find the parent container and update all sibling button visuals
-        if (clickedButton.Parent is StackPanel container)
-        {
-            foreach (var child in container.Children)
-            {
-                if (child is not Button sibling) continue;
-                var isSelected = sibling == clickedButton;
-                UpdateOptionButtonVisual(sibling, isSelected);
-            }
-        }
-    }
-
-    /// <summary>Updates an option button's visual to selected or unselected state.</summary>
-    private static void UpdateOptionButtonVisual(Button button, bool isSelected)
-    {
-        if (button.Content is not StackPanel panel || panel.Children.Count < 2) return;
-        if (panel.Children[0] is not Border badge) return;
-        if (badge.Child is not TextBlock badgeText) return;
-        if (panel.Children[1] is not TextBlock label) return;
-
-        badge.Background = isSelected
-            ? (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"]
-            : (Brush)Application.Current.Resources["SubtleFillColorSecondaryBrush"];
-        badgeText.Foreground = isSelected
-            ? (Brush)Application.Current.Resources["TextOnAccentFillColorPrimaryBrush"]
-            : (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
-        label.FontWeight = isSelected
-            ? Microsoft.UI.Text.FontWeights.SemiBold
-            : Microsoft.UI.Text.FontWeights.Normal;
-    }
-
-    /// <summary>Updates the prompt text.</summary>
+    /// <summary>Updates the prompt text shown in the header.</summary>
     private void UpdatePromptText()
     {
         if (_promptText is not null)
-            _promptText.Text = string.Format(_promptTemplate,
+        {
+            _promptText.Text = string.Format(
+                _promptTemplate,
                 string.IsNullOrEmpty(ToolName) ? "Tool" : ToolName);
+        }
     }
 
-    /// <summary>Updates the message text.</summary>
+    /// <summary>Updates the optional descriptive message below the header.</summary>
     private void UpdateMessageText()
     {
         if (_messageText is not null)
         {
             _messageText.Text = Message;
             _messageText.Visibility = string.IsNullOrEmpty(Message)
-                ? Visibility.Collapsed : Visibility.Visible;
+                ? Visibility.Collapsed
+                : Visibility.Visible;
         }
     }
 
-    /// <summary>Shows or hides the server badge.</summary>
+    /// <summary>Shows or hides the MCP server badge based on <see cref="ServerName"/>.</summary>
     private void UpdateServerBadge()
     {
         var hasServer = !string.IsNullOrEmpty(ServerName);
@@ -287,14 +233,10 @@ public sealed partial class ToolElicitationPanel : Control
             _serverBadgeText.Text = ServerName;
     }
 
-    /// <summary>Renders all fields into the fields panel.</summary>
+    /// <summary>Projects the field schema into XAML-friendly field view models.</summary>
     private void RenderFields()
     {
-        if (_fieldsPanel is null) return;
-        _fieldsPanel.Children.Clear();
-        _textInputs.Clear();
-        _passwordInputs.Clear();
-        _selectedOptions.Clear();
+        _fieldItems.Clear();
 
         var fields = Fields;
         if (fields is null || fields.Count == 0)
@@ -305,188 +247,101 @@ public sealed partial class ToolElicitationPanel : Control
         }
 
         _isMultiField = fields.Count > 1;
+        foreach (var field in fields)
+            _fieldItems.Add(CreateFieldViewModel(field));
 
-        for (var fi = 0; fi < fields.Count; fi++)
-        {
-            var field = fields[fi];
-
-            // Add spacing between fields in multi-field mode
-            if (_isMultiField && fi > 0)
-            {
-                _fieldsPanel.Children.Add(new Border { Height = 12 });
-            }
-
-            // Add field label in multi-field mode
-            if (_isMultiField)
-            {
-                var labelText = field.Description ?? field.Title ?? field.Name;
-                _fieldsPanel.Children.Add(new TextBlock
-                {
-                    Text = labelText,
-                    FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-                    Margin = new Thickness(0, 0, 0, 4),
-                });
-            }
-
-            switch (field.Type)
-            {
-                case ElicitationFieldType.Enum:
-                case ElicitationFieldType.Boolean:
-                    RenderOptionField(field);
-                    break;
-                case ElicitationFieldType.String:
-                    RenderStringField(field);
-                    break;
-            }
-        }
-
-        // Show Submit button if multi-field OR has string fields (TextBox or PasswordBox)
-        UpdateSubmitVisibility(_isMultiField || _textInputs.Count > 0 || _passwordInputs.Count > 0);
+        UpdateSubmitVisibility(_isMultiField || _fieldItems.Any(field => field.Kind is ToolElicitationFieldKind.Text or ToolElicitationFieldKind.Password));
     }
 
-    /// <summary>Renders an enum or boolean field as clickable option buttons.</summary>
-    private void RenderOptionField(ElicitationFieldInfo field)
+    /// <summary>Creates a view model projection for one elicitation field.</summary>
+    private ToolElicitationFieldViewModel CreateFieldViewModel(ElicitationFieldInfo field)
     {
-        if (_fieldsPanel is null || field.Options is null) return;
+        var labelText = field.Description ?? field.Title ?? field.Name;
+        var placeholder = field.Description ?? field.Title ?? field.Name;
+        var accessibilityName = field.Title ?? field.Description ?? field.Name;
+        var showLabel = _isMultiField;
 
-        var container = new StackPanel { Spacing = 4 };
+        return field.Type switch
+        {
+            ElicitationFieldType.Enum or ElicitationFieldType.Boolean => CreateOptionsFieldViewModel(field, labelText, showLabel),
+            ElicitationFieldType.String when LooksLikeSecret(field) => new ToolElicitationFieldViewModel(
+                field.Name,
+                ToolElicitationFieldKind.Password,
+                labelText,
+                showLabel,
+                placeholder,
+                accessibilityName,
+                field.DefaultValue ?? string.Empty),
+            _ => new ToolElicitationFieldViewModel(
+                field.Name,
+                ToolElicitationFieldKind.Text,
+                labelText,
+                showLabel,
+                placeholder,
+                accessibilityName,
+                field.DefaultValue ?? string.Empty),
+        };
+    }
+
+    /// <summary>Creates an option-based field view model and wires the option selection commands.</summary>
+    private ToolElicitationFieldViewModel CreateOptionsFieldViewModel(ElicitationFieldInfo field, string labelText, bool showLabel)
+    {
+        var selectedValue = field.DefaultValue;
+        var fieldViewModel = new ToolElicitationFieldViewModel(
+            field.Name,
+            ToolElicitationFieldKind.Options,
+            labelText,
+            showLabel,
+            placeholderText: null,
+            accessibilityName: labelText,
+            currentValue: selectedValue ?? string.Empty);
+
+        if (field.Options is null)
+            return fieldViewModel;
 
         for (var i = 0; i < field.Options.Count; i++)
         {
             var option = field.Options[i];
-            var index = i + 1;
-
-            var optionButton = CreateOptionButton(index, option.DisplayTitle,
-                field.Name, option.Value, option.Value == field.DefaultValue);
-            container.Children.Add(optionButton);
+            var optionViewModel = new ToolElicitationOptionViewModel(
+                (i + 1).ToString(),
+                option.DisplayTitle,
+                option.Value,
+                option.Value == selectedValue,
+                () => OnOptionSelected(fieldViewModel, option.Value));
+            fieldViewModel.Options.Add(optionViewModel);
         }
 
-        _fieldsPanel.Children.Add(container);
-    }
-
-    /// <summary>Creates a single clickable option button with a number badge.</summary>
-    private Button CreateOptionButton(int index, string title, string fieldName, string value, bool isDefault)
-    {
-        // Number badge
-        var badgeBorder = new Border
-        {
-            Width = 24,
-            Height = 24,
-            CornerRadius = new CornerRadius(12),
-            Background = isDefault
-                ? (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"]
-                : (Brush)Application.Current.Resources["SubtleFillColorSecondaryBrush"],
-            Child = new TextBlock
-            {
-                Text = index.ToString(),
-                FontSize = 12,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-                Foreground = isDefault
-                    ? (Brush)Application.Current.Resources["TextOnAccentFillColorPrimaryBrush"]
-                    : (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
-            }
-        };
-
-        var content = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 10,
-            Children =
-            {
-                badgeBorder,
-                new TextBlock
-                {
-                    Text = title,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    FontWeight = isDefault
-                        ? Microsoft.UI.Text.FontWeights.SemiBold
-                        : Microsoft.UI.Text.FontWeights.Normal,
-                }
-            }
-        };
-
-        var button = new Button
-        {
-            Content = content,
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            HorizontalContentAlignment = HorizontalAlignment.Left,
-            Padding = new Thickness(10, 8, 10, 8),
-            Tag = (fieldName, value),
-        };
-
-        // Use Subtle style for non-default, mimic a list item feel
-        button.Style = (Style)Application.Current.Resources["SubtleButtonStyle"];
-
-        button.Click += (_, _) => OnOptionSelected(fieldName, value, button);
-
-        AutomationHelper.SetAutomationLiteral(button, "ToolElicitationOptionButton", title);
-
-        return button;
+        return fieldViewModel;
     }
 
     /// <summary>
-    /// Renders a string field. When the field looks like a secret (see <see cref="LooksLikeSecret"/>),
-    /// a <see cref="PasswordBox"/> is used so the value is masked on screen; otherwise a plain
-    /// <see cref="TextBox"/> is used.
+    /// Handles an option selection. Single-field option prompts submit immediately,
+    /// while multi-field prompts just update the current selection state.
     /// </summary>
-    private void RenderStringField(ElicitationFieldInfo field)
+    private void OnOptionSelected(ToolElicitationFieldViewModel field, string value)
     {
-        if (_fieldsPanel is null) return;
+        field.CurrentValue = value;
+        foreach (var option in field.Options)
+            option.IsSelected = option.Value == value;
 
-        if (LooksLikeSecret(field))
-        {
-            var passwordBox = new PasswordBox
-            {
-                PlaceholderText = field.Description ?? field.Title ?? field.Name,
-                Password = field.DefaultValue ?? string.Empty,
-                PasswordRevealMode = PasswordRevealMode.Peek,
-                MaxLength = 500,
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-            };
-
-            AutomationHelper.SetAutomationLiteral(
-                passwordBox,
-                "ToolElicitationPasswordField",
-                field.Title ?? field.Description ?? field.Name);
-            _passwordInputs[field.Name] = passwordBox;
-            _fieldsPanel.Children.Add(passwordBox);
+        if (_isMultiField)
             return;
-        }
 
-        var textBox = new TextBox
-        {
-            PlaceholderText = field.Description ?? field.Title ?? field.Name,
-            Text = field.DefaultValue ?? string.Empty,
-            TextWrapping = TextWrapping.Wrap,
-            AcceptsReturn = false,
-            MaxLength = 500,
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-        };
+        var content = new Dictionary<string, object?> { [field.Name] = value };
+        Submitted?.Invoke(this, content);
+    }
 
-        AutomationHelper.SetAutomationLiteral(
-            textBox,
-            "ToolElicitationTextField",
-            field.Title ?? field.Description ?? field.Name);
-        _textInputs[field.Name] = textBox;
-        _fieldsPanel.Children.Add(textBox);
+    /// <summary>Determines whether the Submit button should be visible.</summary>
+    private void UpdateSubmitVisibility(bool hasManualSubmitField)
+    {
+        if (_submitButton is not null)
+            _submitButton.Visibility = hasManualSubmitField ? Visibility.Visible : Visibility.Collapsed;
     }
 
     /// <summary>
     /// Heuristic for rendering a string field as a masked input. The MCP 1.2 SDK does
-    /// not support <c>format: "password"</c> on StringSchema (only email/uri/date/date-time),
-    /// so the host infers "looks like a secret" from the field metadata.
+    /// not support <c>format: "password"</c> on StringSchema.
     /// </summary>
-    /// <remarks>
-    /// A field is treated as a secret when either:
-    /// <list type="bullet">
-    /// <item>The <c>Name</c> matches a known secret pattern: <c>api_key</c>, <c>apikey</c>,
-    ///       <c>token</c>, <c>secret</c>, <c>password</c>, or ends with <c>_key</c>.</item>
-    /// <item>The <c>Title</c> or <c>Description</c> contains one of <c>"key"</c>, <c>"token"</c>,
-    ///       <c>"secret"</c>, or <c>"password"</c> (case-insensitive).</item>
-    /// </list>
-    /// Reconsidered once the MCP spec / SDK adds a canonical masked-input hint.
-    /// </remarks>
     private static bool LooksLikeSecret(ElicitationFieldInfo field)
     {
         if (MatchesSecretName(field.Name)) return true;
@@ -514,13 +369,6 @@ public sealed partial class ToolElicitationPanel : Control
                || text.Contains("token", StringComparison.OrdinalIgnoreCase)
                || text.Contains("secret", StringComparison.OrdinalIgnoreCase)
                || text.Contains("password", StringComparison.OrdinalIgnoreCase);
-    }
-
-    /// <summary>Shows or hides the Submit button based on whether string fields exist.</summary>
-    private void UpdateSubmitVisibility(bool hasStringField)
-    {
-        if (_submitButton is not null)
-            _submitButton.Visibility = hasStringField ? Visibility.Visible : Visibility.Collapsed;
     }
 
     #endregion
@@ -552,4 +400,249 @@ public sealed partial class ToolElicitationPanel : Control
     }
 
     #endregion
+}
+
+/// <summary>Selects the appropriate field template for one elicitation field view model.</summary>
+public sealed partial class ToolElicitationFieldTemplateSelector : DataTemplateSelector
+{
+    /// <summary>Template used for option-based fields.</summary>
+    public DataTemplate? OptionsTemplate { get; set; }
+
+    /// <summary>Template used for plain text fields.</summary>
+    public DataTemplate? TextTemplate { get; set; }
+
+    /// <summary>Template used for password-like fields.</summary>
+    public DataTemplate? PasswordTemplate { get; set; }
+
+    /// <inheritdoc/>
+    protected override DataTemplate SelectTemplateCore(object item, DependencyObject container)
+    {
+        if (item is not ToolElicitationFieldViewModel field)
+            return base.SelectTemplateCore(item, container);
+
+        return field.Kind switch
+        {
+            ToolElicitationFieldKind.Options when OptionsTemplate is not null => OptionsTemplate,
+            ToolElicitationFieldKind.Password when PasswordTemplate is not null => PasswordTemplate,
+            ToolElicitationFieldKind.Text when TextTemplate is not null => TextTemplate,
+            _ => base.SelectTemplateCore(item, container),
+        };
+    }
+}
+
+/// <summary>Binds <see cref="PasswordBox.Password"/> to a view model-friendly attached property.</summary>
+public static class PasswordBoxBindingHelper
+{
+    private static readonly DependencyProperty IsUpdatingProperty =
+        DependencyProperty.RegisterAttached(
+            "IsUpdating",
+            typeof(bool),
+            typeof(PasswordBoxBindingHelper),
+            new PropertyMetadata(false));
+
+    /// <summary>Identifies the attached bound-password property.</summary>
+    public static readonly DependencyProperty BoundPasswordProperty =
+        DependencyProperty.RegisterAttached(
+            "BoundPassword",
+            typeof(string),
+            typeof(PasswordBoxBindingHelper),
+            new PropertyMetadata(string.Empty, OnBoundPasswordChanged));
+
+    /// <summary>Gets the bound password value.</summary>
+    public static string GetBoundPassword(DependencyObject obj) =>
+        (string)obj.GetValue(BoundPasswordProperty);
+
+    /// <summary>Sets the bound password value.</summary>
+    public static void SetBoundPassword(DependencyObject obj, string value) =>
+        obj.SetValue(BoundPasswordProperty, value);
+
+    /// <summary>Updates the real PasswordBox value when the bound property changes.</summary>
+    private static void OnBoundPasswordChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is not PasswordBox passwordBox)
+            return;
+
+        passwordBox.PasswordChanged -= PasswordBox_PasswordChanged;
+        if (!(bool)passwordBox.GetValue(IsUpdatingProperty))
+            passwordBox.Password = e.NewValue as string ?? string.Empty;
+        passwordBox.PasswordChanged += PasswordBox_PasswordChanged;
+    }
+
+    /// <summary>Pushes password edits back into the attached bound-password property.</summary>
+    private static void PasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is not PasswordBox passwordBox)
+            return;
+
+        passwordBox.SetValue(IsUpdatingProperty, true);
+        SetBoundPassword(passwordBox, passwordBox.Password);
+        passwordBox.SetValue(IsUpdatingProperty, false);
+    }
+}
+
+/// <summary>Represents one XAML-facing elicitation field projection.</summary>
+public sealed class ToolElicitationFieldViewModel : INotifyPropertyChanged
+{
+    private string _currentValue;
+
+    /// <summary>Initializes a new field view model.</summary>
+    public ToolElicitationFieldViewModel(
+        string name,
+        ToolElicitationFieldKind kind,
+        string labelText,
+        bool showLabel,
+        string? placeholderText,
+        string accessibilityName,
+        string currentValue)
+    {
+        Name = name;
+        Kind = kind;
+        LabelText = labelText;
+        LabelVisibility = showLabel ? Visibility.Visible : Visibility.Collapsed;
+        PlaceholderText = placeholderText;
+        AccessibilityName = accessibilityName;
+        _currentValue = currentValue;
+    }
+
+    /// <summary>Raised when a bindable property changes.</summary>
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    /// <summary>Gets the result key for this field.</summary>
+    public string Name { get; }
+
+    /// <summary>Gets the rendering kind for this field.</summary>
+    public ToolElicitationFieldKind Kind { get; }
+
+    /// <summary>Gets the optional label shown above the field.</summary>
+    public string LabelText { get; }
+
+    /// <summary>Gets whether the label should be visible.</summary>
+    public Visibility LabelVisibility { get; }
+
+    /// <summary>Gets the placeholder text for text-based inputs.</summary>
+    public string? PlaceholderText { get; }
+
+    /// <summary>Gets the accessibility label for the input control.</summary>
+    public string AccessibilityName { get; }
+
+    /// <summary>Gets the current text or selected option value for the field.</summary>
+    public string CurrentValue
+    {
+        get => _currentValue;
+        set => SetProperty(ref _currentValue, value);
+    }
+
+    /// <summary>Gets the option list for enum/boolean fields.</summary>
+    public ObservableCollection<ToolElicitationOptionViewModel> Options { get; } = [];
+
+    /// <summary>Updates a property backing field and raises change notification.</summary>
+    private void SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
+    {
+        if (EqualityComparer<T>.Default.Equals(field, value))
+            return;
+
+        field = value;
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+}
+
+/// <summary>Represents one selectable option within an option-based elicitation field.</summary>
+public sealed class ToolElicitationOptionViewModel : INotifyPropertyChanged
+{
+    private bool _isSelected;
+
+    /// <summary>Initializes a new option view model.</summary>
+    public ToolElicitationOptionViewModel(
+        string indexText,
+        string title,
+        string value,
+        bool isSelected,
+        Action selectAction)
+    {
+        IndexText = indexText;
+        Title = title;
+        Value = value;
+        _isSelected = isSelected;
+        SelectCommand = new DelegateCommand(selectAction);
+    }
+
+    /// <summary>Raised when a bindable property changes.</summary>
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    /// <summary>Gets the display index shown in the option badge.</summary>
+    public string IndexText { get; }
+
+    /// <summary>Gets the option title shown to the user.</summary>
+    public string Title { get; }
+
+    /// <summary>Gets the result value sent back when this option is chosen.</summary>
+    public string Value { get; }
+
+    /// <summary>Gets the command that selects this option.</summary>
+    public ICommand SelectCommand { get; }
+
+    /// <summary>Gets or sets whether this option is the selected one.</summary>
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set
+        {
+            if (_isSelected == value)
+                return;
+
+            _isSelected = value;
+            RaiseAllVisualPropertiesChanged();
+        }
+    }
+
+    /// <summary>Gets the badge background brush for the current selection state.</summary>
+    public Brush BadgeBackgroundBrush =>
+        (Brush)Application.Current.Resources[_isSelected ? "AccentFillColorDefaultBrush" : "SubtleFillColorSecondaryBrush"];
+
+    /// <summary>Gets the badge foreground brush for the current selection state.</summary>
+    public Brush BadgeForegroundBrush =>
+        (Brush)Application.Current.Resources[_isSelected ? "TextOnAccentFillColorPrimaryBrush" : "TextFillColorSecondaryBrush"];
+
+    /// <summary>Gets the title font weight for the current selection state.</summary>
+    public Windows.UI.Text.FontWeight TitleFontWeight =>
+        _isSelected ? FontWeights.SemiBold : FontWeights.Normal;
+
+    /// <summary>Raises change notifications for the selection-dependent visual properties.</summary>
+    private void RaiseAllVisualPropertiesChanged()
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BadgeBackgroundBrush)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BadgeForegroundBrush)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TitleFontWeight)));
+    }
+}
+
+/// <summary>Distinguishes the input template used for one elicitation field.</summary>
+public enum ToolElicitationFieldKind
+{
+    /// <summary>Option buttons for enum/boolean fields.</summary>
+    Options,
+
+    /// <summary>Plain text input.</summary>
+    Text,
+
+    /// <summary>Masked password-style input.</summary>
+    Password,
+}
+
+/// <summary>Minimal command wrapper for invoking a provided delegate from XAML.</summary>
+internal sealed partial class DelegateCommand(Action execute) : ICommand
+{
+    /// <summary>Unused because this command is always executable.</summary>
+    public event EventHandler? CanExecuteChanged
+    {
+        add { }
+        remove { }
+    }
+
+    /// <summary>Always returns <c>true</c>.</summary>
+    public bool CanExecute(object? parameter) => true;
+
+    /// <summary>Invokes the wrapped delegate.</summary>
+    public void Execute(object? parameter) => execute();
 }

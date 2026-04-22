@@ -7,6 +7,90 @@
         <ResourceDictionary Source="ms-appx:///AssistStudio.Controls/Themes/Shared.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 
+    <DataTemplate x:Key="ToolElicitationOptionTemplate">
+        <Button
+            HorizontalAlignment="Stretch"
+            HorizontalContentAlignment="Left"
+            Padding="10,8,10,8"
+            AutomationProperties.AutomationId="ToolElicitationOptionButton"
+            AutomationProperties.Name="{Binding Title}"
+            Command="{Binding SelectCommand}"
+            Style="{StaticResource SubtleButtonStyle}">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <Border
+                    Width="24"
+                    Height="24"
+                    CornerRadius="12"
+                    Background="{Binding BadgeBackgroundBrush}">
+                    <TextBlock
+                        Text="{Binding IndexText}"
+                        FontSize="12"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Foreground="{Binding BadgeForegroundBrush}" />
+                </Border>
+                <TextBlock
+                    Text="{Binding Title}"
+                    VerticalAlignment="Center"
+                    FontWeight="{Binding TitleFontWeight}" />
+            </StackPanel>
+        </Button>
+    </DataTemplate>
+
+    <DataTemplate x:Key="ToolElicitationOptionsFieldTemplate">
+        <StackPanel Spacing="4">
+            <TextBlock
+                Margin="0,0,0,4"
+                Text="{Binding LabelText}"
+                FontWeight="SemiBold"
+                Visibility="{Binding LabelVisibility}" />
+            <ItemsControl ItemsSource="{Binding Options}" ItemTemplate="{StaticResource ToolElicitationOptionTemplate}" />
+        </StackPanel>
+    </DataTemplate>
+
+    <DataTemplate x:Key="ToolElicitationTextFieldTemplate">
+        <StackPanel Spacing="4">
+            <TextBlock
+                Margin="0,0,0,4"
+                Text="{Binding LabelText}"
+                FontWeight="SemiBold"
+                Visibility="{Binding LabelVisibility}" />
+            <TextBox
+                AutomationProperties.AutomationId="ToolElicitationTextField"
+                AutomationProperties.Name="{Binding AccessibilityName}"
+                AcceptsReturn="False"
+                HorizontalAlignment="Stretch"
+                MaxLength="500"
+                PlaceholderText="{Binding PlaceholderText}"
+                Text="{Binding CurrentValue, Mode=TwoWay}"
+                TextWrapping="Wrap" />
+        </StackPanel>
+    </DataTemplate>
+
+    <DataTemplate x:Key="ToolElicitationPasswordFieldTemplate">
+        <StackPanel Spacing="4">
+            <TextBlock
+                Margin="0,0,0,4"
+                Text="{Binding LabelText}"
+                FontWeight="SemiBold"
+                Visibility="{Binding LabelVisibility}" />
+            <PasswordBox
+                AutomationProperties.AutomationId="ToolElicitationPasswordField"
+                AutomationProperties.Name="{Binding AccessibilityName}"
+                HorizontalAlignment="Stretch"
+                MaxLength="500"
+                PasswordRevealMode="Peek"
+                PlaceholderText="{Binding PlaceholderText}"
+                local:PasswordBoxBindingHelper.BoundPassword="{Binding CurrentValue, Mode=TwoWay}" />
+        </StackPanel>
+    </DataTemplate>
+
+    <local:ToolElicitationFieldTemplateSelector
+        x:Key="ToolElicitationFieldTemplateSelector"
+        OptionsTemplate="{StaticResource ToolElicitationOptionsFieldTemplate}"
+        TextTemplate="{StaticResource ToolElicitationTextFieldTemplate}"
+        PasswordTemplate="{StaticResource ToolElicitationPasswordFieldTemplate}" />
+
     <!-- ToolElicitationPanel -->
     <Style TargetType="local:ToolElicitationPanel">
         <Setter Property="Visibility" Value="Collapsed" />
@@ -74,10 +158,16 @@
                                 Visibility="Collapsed" />
 
                             <!-- Row 2: Dynamic fields -->
-                            <StackPanel
+                            <ItemsControl
                                 x:Name="PART_FieldsPanel"
                                 Grid.Row="2"
-                                Spacing="8" />
+                                ItemTemplateSelector="{StaticResource ToolElicitationFieldTemplateSelector}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Spacing="8" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
 
                             <!-- Row 3: Action buttons -->
                             <StackPanel
