@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.Windows.Input;
 using Microsoft.Windows.ApplicationModel.Resources;
 
 namespace FieldCure.AssistStudio.Controls;
@@ -27,9 +28,14 @@ public sealed partial class AttachmentPreviewBar : Control
     private readonly ObservableCollection<ChatAttachment> _attachments = [];
 
     /// <summary>
-    /// The panel obtained from the control template that hosts preview item visuals.
+    /// The collection projected into XAML-friendly preview items.
     /// </summary>
-    private readonly WrapPanel _itemsPanel = new() { HorizontalSpacing = 8, VerticalSpacing = 8 };
+    private readonly ObservableCollection<AttachmentPreviewItemViewModel> _previewItems = [];
+
+    /// <summary>
+    /// The items control obtained from the control template that hosts preview item visuals.
+    /// </summary>
+    private ItemsControl? _itemsHost;
 
     #endregion
 
@@ -114,7 +120,7 @@ public sealed partial class AttachmentPreviewBar : Control
     public void Clear()
     {
         _attachments.Clear();
-        _itemsPanel.Children.Clear();
+        _previewItems.Clear();
     }
 
     #endregion
@@ -125,9 +131,10 @@ public sealed partial class AttachmentPreviewBar : Control
     protected override void OnApplyTemplate()
     {
         base.OnApplyTemplate();
-        if (GetTemplateChild("PART_ItemsHost") is Border host)
+        _itemsHost = GetTemplateChild("PART_ItemsHost") as ItemsControl;
+        if (_itemsHost is not null)
         {
-            host.Child = _itemsPanel;
+            _itemsHost.ItemsSource = _previewItems;
         }
     }
 
@@ -150,28 +157,12 @@ public sealed partial class AttachmentPreviewBar : Control
     /// </summary>
     private void RebuildChips()
     {
-        _itemsPanel.Children.Clear();
+        _previewItems.Clear();
         var showNumbers = _attachments.Count >= 2;
         for (var i = 0; i < _attachments.Count; i++)
         {
             var number = showNumbers ? i + 1 : 0;
-            var chip = CreatePreviewItem(_attachments[i], number);
-            _itemsPanel.Children.Add(chip);
-        }
-    }
-
-    /// <summary>
-    /// Handles the remove button click by removing the associated attachment from the collection and UI.
-    /// </summary>
-    private void OnRemoveClick(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button { Tag: ChatAttachment attachment })
-        {
-            // _attachments.Remove triggers OnAttachmentsChanged → RebuildChips
-            if (_attachments.Remove(attachment))
-            {
-                AttachmentRemoved?.Invoke(this, attachment);
-            }
+            _previewItems.Add(CreatePreviewItem(_attachments[i], number));
         }
     }
 
@@ -184,9 +175,8 @@ public sealed partial class AttachmentPreviewBar : Control
     /// </summary>
     /// <param name="attachment">The attachment to visualize.</param>
     /// <param name="number">1-based index for multi-attachment numbering; 0 to hide.</param>
-    private Grid CreatePreviewItem(ChatAttachment attachment, int number)
-    {
-        var chip = attachment.IsUnsupported
+    private AttachmentPreviewItemViewModel CreatePreviewItem(ChatAttachment attachment, int number)
+        => attachment.IsUnsupported
             ? CreateUnsupportedChip(attachment, number)
             : attachment.Type switch
             {
@@ -194,10 +184,6 @@ public sealed partial class AttachmentPreviewBar : Control
                 AttachmentType.TextFile => CreateTextChip(attachment, number),
                 _ => CreateGenericChip(attachment, number),
             };
-
-        AddRemoveButton(chip, attachment);
-        return chip;
-    }
 
     /// <summary>
     /// Prefixes a display name with a number if applicable (e.g., "1. screenshot.png").
@@ -208,167 +194,80 @@ public sealed partial class AttachmentPreviewBar : Control
     /// <summary>
     /// Creates a compact image chip (48px height) with thumbnail + filename.
     /// </summary>
-    private static Grid CreateImageChip(ChatAttachment attachment, int number)
+    private AttachmentPreviewItemViewModel CreateImageChip(ChatAttachment attachment, int number)
     {
-        var chip = CreateChipContainer();
-
-        var thumb = new Border
-        {
-            Width = 36,
-            Height = 36,
-            CornerRadius = new CornerRadius(6),
-        };
-        var image = new Image { Stretch = Stretch.UniformToFill };
         var bitmapImage = new BitmapImage();
         var stream = new MemoryStream(attachment.Data);
         _ = bitmapImage.SetSourceAsync(stream.AsRandomAccessStream());
-        image.Source = bitmapImage;
-        thumb.Child = image;
-        Grid.SetColumn(thumb, 0);
-        chip.Children.Add(thumb);
-
-        var name = CreateChipName(FormatDisplayName(attachment.FileName, number));
-        Grid.SetColumn(name, 1);
-        chip.Children.Add(name);
-
-        SetChipTooltip(chip, attachment.FileName);
-        AutomationHelper.SetAutomationLiteral(chip, "AttachmentPreviewImageChip",
-            FormatAttachmentAccessibilityName(attachment.FileName));
-        return chip;
+        return new AttachmentPreviewItemViewModel(
+            attachment,
+            automationId: "AttachmentPreviewImageChip",
+            displayName: FormatDisplayName(attachment.FileName, number),
+            tooltipText: attachment.FileName,
+            accessibilityName: FormatAttachmentAccessibilityName(attachment.FileName),
+            removeButtonName: GetRemoveButtonName(),
+            removeAction: RemoveAttachment)
+        {
+            ThumbnailSource = bitmapImage,
+            ImageVisibility = Visibility.Visible,
+            IconVisibility = Visibility.Collapsed,
+            ThumbnailBackgroundBrush = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+        };
     }
 
     /// <summary>
     /// Creates a compact text attachment chip (48px height) with icon + display name.
     /// </summary>
-    private static Grid CreateTextChip(ChatAttachment attachment, int number)
+    private AttachmentPreviewItemViewModel CreateTextChip(ChatAttachment attachment, int number)
     {
-        var chip = CreateChipContainer();
-
-        var thumb = new Border
-        {
-            Width = 36,
-            Height = 36,
-            CornerRadius = new CornerRadius(6),
-            Background = new SolidColorBrush(Microsoft.UI.Colors.SlateGray),
-            Child = new FontIcon
-            {
-                Glyph = attachment.Source == AttachmentSource.Pasted ? "\uE77F" : "\uE8A5",
-                FontSize = 18,
-                Foreground = new SolidColorBrush(Microsoft.UI.Colors.White),
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-            }
-        };
-        Grid.SetColumn(thumb, 0);
-        chip.Children.Add(thumb);
-
         var rawName = attachment.Source == AttachmentSource.Pasted
             ? "Pasted text"
             : attachment.FileName;
-        var name = CreateChipName(FormatDisplayName(rawName, number));
-        Grid.SetColumn(name, 1);
-        chip.Children.Add(name);
-
-        // Tooltip with char/line count
         var tooltipName = attachment.Source == AttachmentSource.Pasted
             ? "Pasted text"
             : attachment.FileName;
         var tooltipText = $"{tooltipName} \u00B7 {attachment.CharCount:N0} chars \u00B7 {attachment.LineCount:N0} lines";
-        SetChipTooltip(chip, tooltipText);
-        AutomationHelper.SetAutomationLiteral(chip, "AttachmentPreviewTextChip",
-            FormatAttachmentAccessibilityName(tooltipText));
-
-        return chip;
+        return CreateIconChip(
+            attachment,
+            automationId: "AttachmentPreviewTextChip",
+            displayName: FormatDisplayName(rawName, number),
+            tooltipText: tooltipText,
+            accessibilityName: FormatAttachmentAccessibilityName(tooltipText),
+            glyph: attachment.Source == AttachmentSource.Pasted ? "\uE77F" : "\uE8A5");
     }
 
     /// <summary>
     /// Creates an error-state chip for unsupported image formats.
     /// Shows strikethrough filename and reduced opacity.
     /// </summary>
-    private static Grid CreateUnsupportedChip(ChatAttachment attachment, int number)
+    private AttachmentPreviewItemViewModel CreateUnsupportedChip(ChatAttachment attachment, int number)
     {
-        var chip = CreateChipContainer();
-        chip.Opacity = 0.5;
-
-        var thumb = new Border
-        {
-            Width = 36,
-            Height = 36,
-            CornerRadius = new CornerRadius(6),
-            Background = new SolidColorBrush(Microsoft.UI.Colors.DarkRed),
-            Child = new FontIcon
-            {
-                Glyph = "\uE783",
-                FontSize = 18,
-                Foreground = new SolidColorBrush(Microsoft.UI.Colors.White),
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-            }
-        };
-        Grid.SetColumn(thumb, 0);
-        chip.Children.Add(thumb);
-
-        var name = CreateChipName(FormatDisplayName(attachment.FileName, number));
-        name.TextDecorations = Windows.UI.Text.TextDecorations.Strikethrough;
-        Grid.SetColumn(name, 1);
-        chip.Children.Add(name);
-
         var unsupportedText = Res.GetString("ComposeBar_AttachmentUnsupportedTooltip") is { Length: > 0 } u
             ? u
             : "Unsupported image format \u2014 will not be sent";
-        SetChipTooltip(chip, unsupportedText);
-        AutomationHelper.SetAutomationLiteral(chip, "AttachmentPreviewUnsupportedChip",
-            FormatAttachmentAccessibilityName($"{attachment.FileName} — {unsupportedText}"));
-        return chip;
+        return CreateIconChip(
+            attachment,
+            automationId: "AttachmentPreviewUnsupportedChip",
+            displayName: FormatDisplayName(attachment.FileName, number),
+            tooltipText: unsupportedText,
+            accessibilityName: FormatAttachmentAccessibilityName($"{attachment.FileName} — {unsupportedText}"),
+            glyph: "\uE783",
+            chipOpacity: 0.5,
+            thumbnailBackgroundBrush: new SolidColorBrush(Microsoft.UI.Colors.DarkRed),
+            nameTextDecorations: Windows.UI.Text.TextDecorations.Strikethrough);
     }
 
     /// <summary>
     /// Creates a generic file chip for Document type attachments.
     /// </summary>
-    private static Grid CreateGenericChip(ChatAttachment attachment, int number)
-    {
-        var chip = CreateChipContainer();
-
-        var thumb = new Border
-        {
-            Width = 36,
-            Height = 36,
-            CornerRadius = new CornerRadius(6),
-            Background = new SolidColorBrush(Microsoft.UI.Colors.SlateGray),
-            Child = new FontIcon
-            {
-                Glyph = "\uE8A5",
-                FontSize = 18,
-                Foreground = new SolidColorBrush(Microsoft.UI.Colors.White),
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-            }
-        };
-        Grid.SetColumn(thumb, 0);
-        chip.Children.Add(thumb);
-
-        var name = CreateChipName(FormatDisplayName(attachment.FileName, number));
-        Grid.SetColumn(name, 1);
-        chip.Children.Add(name);
-
-        SetChipTooltip(chip, attachment.FileName);
-        AutomationHelper.SetAutomationLiteral(chip, "AttachmentPreviewGenericChip",
-            FormatAttachmentAccessibilityName(attachment.FileName));
-        return chip;
-    }
-
-    /// <summary>
-    /// Sets a themed tooltip with <see cref="Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse"/>
-    /// placement on the given chip grid, following the project-wide tooltip convention.
-    /// </summary>
-    private static void SetChipTooltip(Grid chip, string text)
-    {
-        ToolTipService.SetToolTip(chip, new ToolTip
-        {
-            Content = text,
-            Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
-        });
-    }
+    private AttachmentPreviewItemViewModel CreateGenericChip(ChatAttachment attachment, int number)
+        => CreateIconChip(
+            attachment,
+            automationId: "AttachmentPreviewGenericChip",
+            displayName: FormatDisplayName(attachment.FileName, number),
+            tooltipText: attachment.FileName,
+            accessibilityName: FormatAttachmentAccessibilityName(attachment.FileName),
+            glyph: "\uE8A5");
 
     /// <summary>
     /// Builds a localized accessibility announcement for an attachment chip,
@@ -380,67 +279,167 @@ public sealed partial class AttachmentPreviewBar : Control
         return string.IsNullOrEmpty(format) ? value : string.Format(format, value);
     }
 
-    /// <summary>
-    /// Creates the shared chip container grid (48px height, flexible width, rounded border).
-    /// </summary>
-    private static Grid CreateChipContainer()
-    {
-        var grid = new Grid
+    private AttachmentPreviewItemViewModel CreateIconChip(
+        ChatAttachment attachment,
+        string automationId,
+        string displayName,
+        string tooltipText,
+        string accessibilityName,
+        string glyph,
+        double chipOpacity = 1.0,
+        Brush? thumbnailBackgroundBrush = null,
+        Windows.UI.Text.TextDecorations nameTextDecorations = Windows.UI.Text.TextDecorations.None)
+        => new(
+            attachment,
+            automationId,
+            displayName,
+            tooltipText,
+            accessibilityName,
+            GetRemoveButtonName(),
+            RemoveAttachment)
         {
-            Height = 48,
-            MinWidth = 140,
-            MaxWidth = 260,
-            CornerRadius = new CornerRadius(10),
-            BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.Gray),
-            BorderThickness = new Thickness(1),
-            Padding = new Thickness(6, 6, 10, 6),
-            Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+            Glyph = glyph,
+            ChipOpacity = chipOpacity,
+            ThumbnailBackgroundBrush = thumbnailBackgroundBrush ?? new SolidColorBrush(Microsoft.UI.Colors.SlateGray),
+            NameTextDecorations = nameTextDecorations,
         };
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); // thumbnail
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); // name
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); // remove button
-        return grid;
-    }
 
-    /// <summary>
-    /// Creates the display name TextBlock for a chip (up to 2 lines with ellipsis).
-    /// </summary>
-    private static TextBlock CreateChipName(string text) => new()
-    {
-        Text = text,
-        FontSize = 12,
-        TextWrapping = TextWrapping.Wrap,
-        TextTrimming = TextTrimming.CharacterEllipsis,
-        MaxLines = 2,
-        VerticalAlignment = VerticalAlignment.Center,
-        Margin = new Thickness(10, 0, 0, 0),
-    };
+    private string GetRemoveButtonName()
+        => Res.GetString("Attachment_RemoveTooltip") is { Length: > 0 } text ? text : "Remove attachment";
 
-    /// <summary>
-    /// Adds a remove button overlay (hidden until hover) to the chip grid.
-    /// </summary>
-    private void AddRemoveButton(Grid container, ChatAttachment attachment)
+    private void RemoveAttachment(ChatAttachment attachment)
     {
-        var removeButton = new Button
+        if (_attachments.Remove(attachment))
         {
-            Content = new FontIcon { Glyph = "\uE711", FontSize = 10 },
-            Width = 20,
-            Height = 20,
-            Padding = new Thickness(0),
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(4, 0, 0, 0),
-            Opacity = 0,
-            Tag = attachment
-        };
-        AutomationHelper.SetAutomation(removeButton, "AttachmentPreviewRemoveButton",
-            nameKey: "Attachment_RemoveTooltip");
-        removeButton.Click += OnRemoveClick;
-        Grid.SetColumn(removeButton, 2);
-        container.Children.Add(removeButton);
-
-        container.PointerEntered += (_, _) => removeButton.Opacity = 1;
-        container.PointerExited += (_, _) => removeButton.Opacity = 0;
+            AttachmentRemoved?.Invoke(this, attachment);
+        }
     }
 
     #endregion
+}
+
+/// <summary>
+/// XAML-facing projection of an attachment chip. The control keeps the dynamic content
+/// shaping in code, but the visual tree itself now lives in XAML data templates.
+/// </summary>
+public sealed class AttachmentPreviewItemViewModel
+{
+    /// <summary>
+    /// Initializes a new attachment chip view model for the XAML item template.
+    /// </summary>
+    public AttachmentPreviewItemViewModel(
+        ChatAttachment attachment,
+        string automationId,
+        string displayName,
+        string tooltipText,
+        string accessibilityName,
+        string removeButtonName,
+        Action<ChatAttachment> removeAction)
+    {
+        Attachment = attachment;
+        AutomationId = automationId;
+        DisplayName = displayName;
+        TooltipText = tooltipText;
+        AccessibilityName = accessibilityName;
+        RemoveButtonName = removeButtonName;
+        RemoveCommand = new AttachmentPreviewCommand(() => removeAction(attachment));
+    }
+
+    /// <summary>
+    /// Gets the underlying attachment represented by this chip.
+    /// </summary>
+    public ChatAttachment Attachment { get; }
+
+    /// <summary>
+    /// Gets the stable automation id applied to the chip container.
+    /// </summary>
+    public string AutomationId { get; }
+
+    /// <summary>
+    /// Gets the user-visible attachment label shown in the chip.
+    /// </summary>
+    public string DisplayName { get; }
+
+    /// <summary>
+    /// Gets the tooltip text shown for the chip.
+    /// </summary>
+    public string TooltipText { get; }
+
+    /// <summary>
+    /// Gets the localized accessibility name announced for the chip.
+    /// </summary>
+    public string AccessibilityName { get; }
+
+    /// <summary>
+    /// Gets the localized remove button label and tooltip text.
+    /// </summary>
+    public string RemoveButtonName { get; }
+
+    /// <summary>
+    /// Gets the command that removes the represented attachment.
+    /// </summary>
+    public ICommand RemoveCommand { get; }
+
+    /// <summary>
+    /// Gets the image thumbnail source when the attachment is an image.
+    /// </summary>
+    public ImageSource? ThumbnailSource { get; init; }
+
+    /// <summary>
+    /// Gets the glyph shown for non-image attachments.
+    /// </summary>
+    public string Glyph { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the thumbnail background brush used behind icon-based chips.
+    /// </summary>
+    public Brush ThumbnailBackgroundBrush { get; init; } = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+
+    /// <summary>
+    /// Gets the foreground brush used by the icon glyph.
+    /// </summary>
+    public Brush GlyphForegroundBrush { get; init; } = new SolidColorBrush(Microsoft.UI.Colors.White);
+
+    /// <summary>
+    /// Gets the border brush used for the chip container.
+    /// </summary>
+    public Brush ChipBorderBrush { get; init; } = new SolidColorBrush(Microsoft.UI.Colors.Gray);
+
+    /// <summary>
+    /// Gets the background brush used for the chip container.
+    /// </summary>
+    public Brush ChipBackgroundBrush { get; init; } = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+
+    /// <summary>
+    /// Gets the overall opacity applied to the chip.
+    /// </summary>
+    public double ChipOpacity { get; init; } = 1.0;
+
+    /// <summary>
+    /// Gets whether the thumbnail image element should be visible.
+    /// </summary>
+    public Visibility ImageVisibility { get; init; } = Visibility.Collapsed;
+
+    /// <summary>
+    /// Gets whether the icon glyph element should be visible.
+    /// </summary>
+    public Visibility IconVisibility { get; init; } = Visibility.Visible;
+
+    /// <summary>
+    /// Gets any text decorations applied to the display name.
+    /// </summary>
+    public Windows.UI.Text.TextDecorations NameTextDecorations { get; init; } = Windows.UI.Text.TextDecorations.None;
+}
+
+internal sealed class AttachmentPreviewCommand(Action execute) : ICommand
+{
+    public event EventHandler? CanExecuteChanged
+    {
+        add { }
+        remove { }
+    }
+
+    public bool CanExecute(object? parameter) => true;
+
+    public void Execute(object? parameter) => execute();
 }

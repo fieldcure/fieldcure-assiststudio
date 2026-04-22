@@ -9,7 +9,84 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="local:AttachmentPreviewBar">
-                    <Border x:Name="PART_ItemsHost" Padding="4" />
+                    <Border Padding="4">
+                        <ItemsControl x:Name="PART_ItemsHost">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <local:WrapPanel HorizontalSpacing="8" VerticalSpacing="8" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid
+                                        Height="48"
+                                        MinWidth="140"
+                                        MaxWidth="260"
+                                        Padding="6,6,10,6"
+                                        CornerRadius="10"
+                                        BorderThickness="1"
+                                        BorderBrush="{Binding ChipBorderBrush}"
+                                        Background="{Binding ChipBackgroundBrush}"
+                                        Opacity="{Binding ChipOpacity}"
+                                        AutomationProperties.AutomationId="{Binding AutomationId}"
+                                        AutomationProperties.Name="{Binding AccessibilityName}"
+                                        ToolTipService.ToolTip="{Binding TooltipText}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border
+                                            Grid.Column="0"
+                                            Width="36"
+                                            Height="36"
+                                            CornerRadius="6"
+                                            Background="{Binding ThumbnailBackgroundBrush}">
+                                            <Grid>
+                                                <Image
+                                                    Source="{Binding ThumbnailSource}"
+                                                    Stretch="UniformToFill"
+                                                    Visibility="{Binding ImageVisibility}" />
+                                                <FontIcon
+                                                    Glyph="{Binding Glyph}"
+                                                    FontSize="18"
+                                                    Foreground="{Binding GlyphForegroundBrush}"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    Visibility="{Binding IconVisibility}" />
+                                            </Grid>
+                                        </Border>
+
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            Margin="10,0,0,0"
+                                            VerticalAlignment="Center"
+                                            FontSize="12"
+                                            MaxLines="2"
+                                            Text="{Binding DisplayName}"
+                                            TextWrapping="Wrap"
+                                            TextTrimming="CharacterEllipsis"
+                                            TextDecorations="{Binding NameTextDecorations}" />
+
+                                        <Button
+                                            Grid.Column="2"
+                                            Width="20"
+                                            Height="20"
+                                            Margin="4,0,0,0"
+                                            Padding="0"
+                                            VerticalAlignment="Center"
+                                            AutomationProperties.AutomationId="AttachmentPreviewRemoveButton"
+                                            AutomationProperties.Name="{Binding RemoveButtonName}"
+                                            Command="{Binding RemoveCommand}"
+                                            ToolTipService.ToolTip="{Binding RemoveButtonName}">
+                                            <FontIcon Glyph="&#xE711;" FontSize="10" />
+                                        </Button>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Border>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
