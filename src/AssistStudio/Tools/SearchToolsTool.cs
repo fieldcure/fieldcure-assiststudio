@@ -110,7 +110,11 @@ public class SearchToolsTool : IAssistTool, ISearchToolScope
             "Call this before invoking any external tool you don't already know about. " +
             "To execute a tool returned by this search, call 'invoke_tool' with the name " +
             "and an args object — do not say the tool is unreachable or that you lack " +
-            "permission; it is always callable via invoke_tool.";
+            "permission; it is always callable via invoke_tool. " +
+            "IMPORTANT: before calling invoke_tool, request the target tool's input schema " +
+            "by calling this tool again with detail_level='full_schema' (filtering by the " +
+            "exact tool name). Do not guess parameter names from the description alone — " +
+            "the args object must match the tool's declared schema.";
 
         var connected = _registry.Connections
             .Where(c => c.IsConnected && c.Config.IsEnabled)

@@ -30,7 +30,12 @@ public class InvokeToolTool : IAssistTool, ISearchToolScope
         + "This dispatcher is the ONLY way to call tools that are not in your "
         + "top-level tool manifest — do not say you lack permission or that the "
         + "tool is unreachable; call invoke_tool with the name from search_tools. "
-        + "The underlying tool's confirmation and result semantics apply unchanged.";
+        + "The underlying tool's confirmation and result semantics apply unchanged. "
+        + "IMPORTANT: the 'args' object must match the target tool's declared input "
+        + "schema. Fetch that schema first — either via search_tools with "
+        + "detail_level='full_schema' for the exact tool name, or via any "
+        + "schema-describing meta tool the server itself provides (e.g. describe_api). "
+        + "Do not guess parameter names from the tool description alone.";
 
     /// <inheritdoc/>
     public string ParameterSchema => """
