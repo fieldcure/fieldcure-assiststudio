@@ -4,7 +4,6 @@ using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Markup;
 using Microsoft.UI.Xaml.Media;
 using System.Collections;
 using Windows.System;
@@ -590,7 +589,7 @@ public sealed partial class ComposeBar
     private void PresetComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_suppressPresetChanged) return;
-        if (_presetComboBox?.SelectedItem is ComboBoxItem item && item.Tag is ProviderPreset preset)
+        if (_presetComboBox?.SelectedItem is ComposeBarComboBoxItem { ProviderPreset: { } preset })
         {
             SelectedPreset = preset;
             PresetChanged?.Invoke(this, preset);
@@ -603,7 +602,7 @@ public sealed partial class ComposeBar
     private void ProfileComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_suppressPresetChanged) return;
-        if (_profileComboBox?.SelectedItem is ComboBoxItem item && item.Tag is Profile preset)
+        if (_profileComboBox?.SelectedItem is ComposeBarComboBoxItem { Profile: { } preset })
         {
             SelectedProfile = preset;
             ProfileChanged?.Invoke(this, preset);
@@ -632,7 +631,7 @@ public sealed partial class ComposeBar
         _suppressPresetChanged = true;
         foreach (var obj in _profileComboBox.Items)
         {
-            if (obj is ComboBoxItem item && item.Tag is Profile p && p.Name == preset.Name)
+            if (obj is ComposeBarComboBoxItem item && item.Profile is Profile p && p.Name == preset.Name)
             {
                 _profileComboBox.SelectedItem = item;
                 break;
@@ -655,48 +654,26 @@ public sealed partial class ComposeBar
         if (_presetComboBox is null) return;
 
         _suppressPresetChanged = true;
-        _presetComboBox.Items.Clear();
+        var items = new List<ComposeBarComboBoxItem>();
         foreach (var obj in presets)
         {
             if (obj is ProviderPreset preset)
             {
                 var displayName = preset.ProviderType == "Mock" ? "Demo" : preset.Name;
-                var item = new ComboBoxItem { Content = displayName, Tag = preset };
-                _presetComboBox.Items.Add(item);
+                items.Add(ComposeBarComboBoxItem.FromProviderPreset(preset, displayName));
             }
             else if (obj is "-")
             {
-                _presetComboBox.Items.Add(CreateSeparatorItem());
+                items.Add(ComposeBarComboBoxItem.Separator());
             }
         }
+        _presetComboBox.ItemsSource = items;
 
         if (SelectedPreset is not null)
         {
             SelectPresetInCombo(SelectedPreset);
         }
         _suppressPresetChanged = false;
-    }
-
-    /// <summary>
-    /// Creates a disabled ComboBoxItem containing a themed horizontal divider line.
-    /// </summary>
-    private static ComboBoxItem CreateSeparatorItem()
-    {
-        var border = (Border)XamlReader.Load(
-            """
-            <Border xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    Height="1" HorizontalAlignment="Stretch"
-                    Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
-            """);
-        return new ComboBoxItem
-        {
-            IsEnabled = false,
-            IsHitTestVisible = false,
-            MinHeight = 0,
-            Height = 9,
-            Padding = new Thickness(0),
-            Content = border,
-        };
     }
 
     /// <summary>
@@ -709,7 +686,7 @@ public sealed partial class ComposeBar
         _suppressPresetChanged = true;
         foreach (var obj in _presetComboBox.Items)
         {
-            if (obj is ComboBoxItem item && item.Tag is ProviderPreset p && p.Name == preset.Name)
+            if (obj is ComposeBarComboBoxItem item && item.ProviderPreset is ProviderPreset p && p.Name == preset.Name)
             {
                 _presetComboBox.SelectedItem = item;
                 break;
@@ -726,19 +703,20 @@ public sealed partial class ComposeBar
         if (_profileComboBox is null) return;
 
         _suppressPresetChanged = true;
-        _profileComboBox.Items.Clear();
         var presets = AvailableProfiles;
         if (presets is null || presets.Count == 0)
         {
+            _profileComboBox.ItemsSource = null;
             _suppressPresetChanged = false;
             return;
         }
 
+        var items = new List<ComposeBarComboBoxItem>();
         foreach (var preset in presets)
         {
-            var item = new ComboBoxItem { Content = preset.Name, Tag = preset };
-            _profileComboBox.Items.Add(item);
+            items.Add(ComposeBarComboBoxItem.FromProfile(preset));
         }
+        _profileComboBox.ItemsSource = items;
 
         if (SelectedProfile is not null)
         {
