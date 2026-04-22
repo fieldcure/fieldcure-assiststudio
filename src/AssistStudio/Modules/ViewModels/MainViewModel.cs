@@ -113,12 +113,13 @@ public partial class MainViewModel : ObservableObject
     {
         _tabCounter++;
         preset ??= GetDefaultPreset();
+        var filteredPresets = GetFilteredPresets();
 
         var vm = new ChatTabViewModel(
             preset,
             GetActivePromptText(),
             GetCurrentTheme(),
-            new ArrayList(GetFilteredPresets()),
+            filteredPresets,
             _profiles,
             GetActiveProfile(),
             _tabCounter);
@@ -158,9 +159,9 @@ public partial class MainViewModel : ObservableObject
         {
             foreach (var p in filteredPresets)
             {
-                if (p.Name == data.ProviderPresetName)
+                if (p is ProviderPreset presetItem && presetItem.Name == data.ProviderPresetName)
                 {
-                    preset = p;
+                    preset = presetItem;
                     break;
                 }
             }
@@ -373,7 +374,7 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public void RefreshPresetsOnAll()
     {
-        var filtered = new ArrayList(GetFilteredPresets());
+        var filtered = GetFilteredPresets();
         LoggingService.LogInfo($"[Settings] Refreshing presets: {filtered.Count} presets on {Tabs.Count} tabs");
         foreach (var tab in Tabs)
         {
@@ -540,25 +541,24 @@ public partial class MainViewModel : ObservableObject
     private ProviderPreset GetDefaultPreset()
     {
         var presets = GetFilteredPresets();
-        if (presets.Count == 0)
+        var providerPresets = presets.OfType<ProviderPreset>().ToList();
+        if (providerPresets.Count == 0)
             return new ProviderPreset { Name = "Mock", ProviderType = "Mock" };
 
         var preferredType = GetActiveProfile()?.PreferredProviderType;
         if (preferredType is not null)
         {
-            foreach (var p in presets)
+            foreach (var p in providerPresets)
             {
                 if (p.ProviderType == preferredType) return p;
             }
         }
 
         // Preferred provider not available — fall back to first
-        return presets[0];
+        return providerPresets[0];
     }
 
     /// <summary>
-    /// Returns the preset list with unreachable providers (e.g., Ollama) filtered out.
-    /// </summary>
     /// <summary>
     /// Returns the preset list with unusable providers filtered out:
     /// <list type="bullet">
@@ -566,19 +566,53 @@ public partial class MainViewModel : ObservableObject
     ///   <item>Cloud/custom providers — excluded when API key is missing</item>
     ///   <item>Mock — kept for development/testing</item>
     /// </list>
+    /// Separator markers are preserved only between non-empty groups after filtering.
     /// </summary>
-    private List<ProviderPreset> GetFilteredPresets()
+    private ArrayList GetFilteredPresets()
     {
         var all = GetPresets();
-        var result = new List<ProviderPreset>();
+        var cloud = new List<ProviderPreset>();
+        var custom = new List<ProviderPreset>();
+        var local = new List<ProviderPreset>();
+        var demo = new List<ProviderPreset>();
+
         foreach (var obj in all)
         {
             if (obj is not ProviderPreset p) continue;
             if (!_ollamaReachable && p.ProviderType == "Ollama") continue;
             if (p.RequiresApiKey && string.IsNullOrEmpty(p.ApiKey)) continue;
-            result.Add(p);
+
+            if (p.ProviderType == "Mock")
+            {
+                demo.Add(p);
+            }
+            else if (p.ProviderType == "Ollama")
+            {
+                local.Add(p);
+            }
+            else if (p.ProviderType.StartsWith("Custom_", StringComparison.Ordinal))
+            {
+                custom.Add(p);
+            }
+            else
+            {
+                cloud.Add(p);
+            }
         }
+
+        var result = new ArrayList();
+        AddGroup(result, cloud);
+        AddGroup(result, custom);
+        AddGroup(result, local);
+        AddGroup(result, demo);
         return result;
+
+        static void AddGroup(ArrayList list, List<ProviderPreset> group)
+        {
+            if (group.Count == 0) return;
+            if (list.Count > 0) list.Add("-");
+            list.AddRange(group);
+        }
     }
 
     /// <summary>
