@@ -1,4 +1,4 @@
-<Window
+﻿<Window
     x:Class="AnthropicSdkSample.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -26,53 +26,58 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <TextBlock x:Name="AppTitleText"
-                       Text="Anthropic SDK Sample"
-                       Grid.Column="0"
-                       VerticalAlignment="Center"
-                       Style="{StaticResource CaptionTextBlockStyle}"
-                       AutomationProperties.AutomationId="AppTitleText"
-                       AutomationProperties.Name="Application title" />
+            <TextBlock
+                x:Name="AppTitleText"
+                Text="Anthropic SDK Sample"
+                Grid.Column="0"
+                VerticalAlignment="Center"
+                Style="{StaticResource CaptionTextBlockStyle}"
+                AutomationProperties.AutomationId="AppTitleText"
+                AutomationProperties.Name="Application title" />
 
-            <ComboBox x:Name="ModelComboBox"
-                      Grid.Column="2"
-                      VerticalAlignment="Center"
-                      Margin="0,0,8,0"
-                      BorderThickness="0"
-                      Background="Transparent"
-                      SelectionChanged="OnModelSelectionChanged"
-                      AutomationProperties.AutomationId="ModelSelector"
-                      AutomationProperties.Name="Claude model"
-                      AutomationProperties.HelpText="Selects which Claude model handles the conversation" />
+            <ComboBox
+                x:Name="ModelComboBox"
+                Grid.Column="2"
+                VerticalAlignment="Center"
+                Margin="0,0,8,0"
+                BorderThickness="0"
+                Background="Transparent"
+                SelectionChanged="OnModelSelectionChanged"
+                AutomationProperties.AutomationId="ModelSelector"
+                AutomationProperties.Name="Claude model"
+                AutomationProperties.HelpText="Selects which Claude model handles the conversation" />
 
-            <Button x:Name="ExportButton"
-                    Grid.Column="3"
-                    Content="Export"
-                    VerticalAlignment="Center"
-                    Margin="0,0,8,0"
-                    IsEnabled="False"
-                    Click="OnExportClick"
-                    ToolTipService.ToolTip="Copy conversation as Markdown"
-                    AutomationProperties.AutomationId="ExportConversationButton"
-                    AutomationProperties.Name="Export conversation to Markdown"
-                    Style="{StaticResource DefaultButtonStyle}" />
+            <Button
+                x:Name="ExportButton"
+                Grid.Column="3"
+                Content="Export"
+                VerticalAlignment="Center"
+                Margin="0,0,8,0"
+                IsEnabled="False"
+                Click="OnExportClick"
+                ToolTipService.ToolTip="Copy conversation as Markdown"
+                AutomationProperties.AutomationId="ExportConversationButton"
+                AutomationProperties.Name="Export conversation to Markdown"
+                Style="{StaticResource DefaultButtonStyle}" />
 
-            <Button x:Name="ResetApiKeyButton"
-                    Grid.Column="4"
-                    Content="Reset API Key"
-                    VerticalAlignment="Center"
-                    Click="OnResetKeyClicked"
-                    AutomationProperties.AutomationId="ResetApiKeyButton"
-                    AutomationProperties.Name="Reset API key"
-                    AutomationProperties.HelpText="Clears the stored Anthropic API key and prompts for a new one"
-                    Style="{StaticResource DefaultButtonStyle}" />
+            <Button
+                x:Name="ResetApiKeyButton"
+                Grid.Column="4"
+                Content="Reset API Key"
+                VerticalAlignment="Center"
+                Click="OnResetKeyClicked"
+                AutomationProperties.AutomationId="ResetApiKeyButton"
+                AutomationProperties.Name="Reset API key"
+                AutomationProperties.HelpText="Clears the stored Anthropic API key and prompts for a new one"
+                Style="{StaticResource DefaultButtonStyle}" />
         </Grid>
 
-        <TeachingTip x:Name="ExportTip"
-                     Target="{x:Bind ExportButton}"
-                     IsLightDismissEnabled="True"
-                     AutomationProperties.AutomationId="ExportTip"
-                     AutomationProperties.Name="Export result notification" />
+        <TeachingTip
+            x:Name="ExportTip"
+            Target="{x:Bind ExportButton}"
+            IsLightDismissEnabled="True"
+            AutomationProperties.AutomationId="ExportTip"
+            AutomationProperties.Name="Export result notification" />
 
         <controls:ChatPanel
             x:Name="ChatPanel"

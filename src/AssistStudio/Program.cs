@@ -1,4 +1,4 @@
-using Microsoft.Windows.AppLifecycle;
+﻿using Microsoft.Windows.AppLifecycle;
 
 namespace AssistStudio;
 

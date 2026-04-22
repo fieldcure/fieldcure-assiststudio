@@ -14,15 +14,16 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="local:ToolElicitationPanel">
-                    <Border MaxWidth="800"
-                            HorizontalAlignment="Stretch"
-                            Margin="12,0,12,12"
-                            Padding="16"
-                            CornerRadius="8"
-                            BorderThickness="1"
-                            BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"
-                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                            Translation="0,0,16">
+                    <Border
+                        MaxWidth="800"
+                        HorizontalAlignment="Stretch"
+                        Margin="12,0,12,12"
+                        Padding="16"
+                        CornerRadius="8"
+                        BorderThickness="1"
+                        BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        Translation="0,0,16">
                         <Grid RowSpacing="8">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -38,54 +39,63 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                    <FontIcon Glyph="&#xE945;" FontSize="16"
-                                              Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
-                                    <TextBlock x:Name="PART_PromptText"
-                                               Style="{StaticResource BodyStrongTextBlockStyle}"
-                                               VerticalAlignment="Center" />
+                                    <FontIcon
+                                        Glyph="&#xE945;" FontSize="16"
+                                        Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+                                    <TextBlock
+                                        x:Name="PART_PromptText"
+                                        Style="{StaticResource BodyStrongTextBlockStyle}"
+                                        VerticalAlignment="Center" />
                                 </StackPanel>
-                                <Border x:Name="PART_ServerBadge"
-                                        Grid.Column="1"
-                                        HorizontalAlignment="Right"
-                                        VerticalAlignment="Center"
-                                        Visibility="Collapsed"
-                                        Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
-                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="4"
-                                        Padding="8,2">
-                                    <TextBlock x:Name="PART_ServerBadgeText"
-                                               FontSize="12"
-                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <Border
+                                    x:Name="PART_ServerBadge"
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Visibility="Collapsed"
+                                    Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Padding="8,2">
+                                    <TextBlock
+                                        x:Name="PART_ServerBadgeText"
+                                        FontSize="12"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 </Border>
                             </Grid>
 
                             <!-- Row 1: Message -->
-                            <TextBlock x:Name="PART_MessageText"
-                                       Grid.Row="1"
-                                       TextWrapping="Wrap"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                       Visibility="Collapsed" />
+                            <TextBlock
+                                x:Name="PART_MessageText"
+                                Grid.Row="1"
+                                TextWrapping="Wrap"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Visibility="Collapsed" />
 
                             <!-- Row 2: Dynamic fields -->
-                            <StackPanel x:Name="PART_FieldsPanel"
-                                        Grid.Row="2"
-                                        Spacing="8" />
+                            <StackPanel
+                                x:Name="PART_FieldsPanel"
+                                Grid.Row="2"
+                                Spacing="8" />
 
                             <!-- Row 3: Action buttons -->
-                            <StackPanel Grid.Row="3" Orientation="Horizontal"
-                                        HorizontalAlignment="Right" Spacing="8">
-                                <Button x:Name="PART_DeclineButton"
-                                        AutomationProperties.AutomationId="ToolElicitationDeclineButton"
-                                        Style="{StaticResource SubtleButtonStyle}"
-                                        Padding="12,6"
-                                        Content="Skip" />
-                                <Button x:Name="PART_SubmitButton"
-                                        AutomationProperties.AutomationId="ToolElicitationSubmitButton"
-                                        Style="{StaticResource AccentButtonStyle}"
-                                        Padding="16,6"
-                                        Content="Submit"
-                                        Visibility="Collapsed" />
+                            <StackPanel
+                                Grid.Row="3" Orientation="Horizontal"
+                                HorizontalAlignment="Right" Spacing="8">
+                                <Button
+                                    x:Name="PART_DeclineButton"
+                                    AutomationProperties.AutomationId="ToolElicitationDeclineButton"
+                                    Style="{StaticResource SubtleButtonStyle}"
+                                    Padding="12,6"
+                                    Content="Skip" />
+                                <Button
+                                    x:Name="PART_SubmitButton"
+                                    AutomationProperties.AutomationId="ToolElicitationSubmitButton"
+                                    Style="{StaticResource AccentButtonStyle}"
+                                    Padding="16,6"
+                                    Content="Submit"
+                                    Visibility="Collapsed" />
                             </StackPanel>
                         </Grid>
                     </Border>

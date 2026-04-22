@@ -1,4 +1,4 @@
-using Anthropic.Models.Messages;
+﻿using Anthropic.Models.Messages;
 using FieldCure.Ai.Providers.Models;
 using Role = Anthropic.Models.Messages.Role;
 

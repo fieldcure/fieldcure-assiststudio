@@ -9,30 +9,45 @@
 
     <!-- ToolApprovalPanel: Parameter templates -->
     <DataTemplate x:Key="ShortParameterTemplate">
-        <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
-                  Padding="0" Margin="0,4" MinHeight="0" IsEnabled="False">
+        <Expander
+            HorizontalAlignment="Stretch"
+            HorizontalContentAlignment="Stretch"
+            Padding="0" Margin="0,4" MinHeight="0"
+            IsEnabled="False">
             <Expander.Header>
                 <StackPanel Orientation="Horizontal" Spacing="6">
-                    <TextBlock Text="{Binding Name}" FontSize="12"
-                               Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding Display}" FontSize="12" FontFamily="Consolas"
-                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"
-                               MaxLines="1" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    <TextBlock
+                        Text="{Binding Name}"
+                        FontSize="12"
+                        Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                        VerticalAlignment="Center" />
+                    <TextBlock
+                        Text="{Binding Display}"
+                        FontSize="12"
+                        FontFamily="Consolas"
+                        Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                        MaxLines="1"
+                        TextTrimming="CharacterEllipsis"
+                        VerticalAlignment="Center" />
                 </StackPanel>
             </Expander.Header>
         </Expander>
     </DataTemplate>
 
     <DataTemplate x:Key="LongParameterTemplate">
-        <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
-                  Padding="0" Margin="0,4" MinHeight="0">
+        <Expander
+            HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+            Padding="0" Margin="0,4" MinHeight="0">
             <Expander.Header>
                 <StackPanel Orientation="Horizontal" Spacing="6">
-                    <TextBlock Text="{Binding Name}" FontSize="12"
-                               Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding Preview}" FontSize="12" FontFamily="Consolas"
-                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"
-                               MaxLines="1" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    <TextBlock
+                        Text="{Binding Name}" FontSize="12"
+                        Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                    <TextBlock
+                        Text="{Binding Preview}" FontSize="12" FontFamily="Consolas"
+                        Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                        MaxLines="1" TextTrimming="CharacterEllipsis"
+                        VerticalAlignment="Center" />
                 </StackPanel>
             </Expander.Header>
             <TextBlock Text="{Binding Display}" FontSize="12" FontFamily="Consolas"
@@ -42,7 +57,8 @@
         </Expander>
     </DataTemplate>
 
-    <local:ToolParameterTemplateSelector x:Key="ParameterTemplateSelector"
+    <local:ToolParameterTemplateSelector
+        x:Key="ParameterTemplateSelector"
         ShortTemplate="{StaticResource ShortParameterTemplate}"
         LongTemplate="{StaticResource LongParameterTemplate}" />
 
@@ -52,15 +68,16 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="local:ToolApprovalPanel">
-                    <Border MaxWidth="800"
-                            HorizontalAlignment="Stretch"
-                            Margin="12,0,12,12"
-                            Padding="16"
-                            CornerRadius="8"
-                            BorderThickness="1"
-                            BorderBrush="{ThemeResource SystemFillColorCautionBrush}"
-                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                            Translation="0,0,16">
+                    <Border
+                        MaxWidth="800"
+                        HorizontalAlignment="Stretch"
+                        Margin="12,0,12,12"
+                        Padding="16"
+                        CornerRadius="8"
+                        BorderThickness="1"
+                        BorderBrush="{ThemeResource SystemFillColorCautionBrush}"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        Translation="0,0,16">
                         <Grid RowSpacing="8">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -77,60 +94,68 @@
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                    <FontIcon Glyph="&#xE90F;" FontSize="16"
-                                              Foreground="{ThemeResource SystemFillColorCautionBrush}" />
-                                    <TextBlock x:Name="PART_PromptText"
-                                               Style="{StaticResource BodyStrongTextBlockStyle}"
-                                               VerticalAlignment="Center" />
+                                    <FontIcon
+                                        Glyph="&#xE90F;" FontSize="16"
+                                        Foreground="{ThemeResource SystemFillColorCautionBrush}" />
+                                    <TextBlock
+                                        x:Name="PART_PromptText"
+                                        Style="{StaticResource BodyStrongTextBlockStyle}"
+                                        VerticalAlignment="Center" />
                                 </StackPanel>
-                                <Border x:Name="PART_ServerBadge"
-                                        Grid.Column="1"
-                                        HorizontalAlignment="Right"
-                                        VerticalAlignment="Center"
-                                        Visibility="Collapsed"
-                                        Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
-                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="4"
-                                        Padding="8,2">
-                                    <TextBlock x:Name="PART_ServerBadgeText"
-                                               FontSize="12"
-                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <Border
+                                    x:Name="PART_ServerBadge"
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Visibility="Collapsed"
+                                    Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Padding="8,2">
+                                    <TextBlock
+                                        x:Name="PART_ServerBadgeText"
+                                        FontSize="12"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 </Border>
-                                <Button x:Name="PART_ExpandButton"
-                                        AutomationProperties.AutomationId="ToolApprovalExpandButton"
-                                        Grid.Column="2"
-                                        Style="{StaticResource SubtleButtonStyle}"
-                                        Padding="6"
-                                        VerticalAlignment="Center">
+                                <Button
+                                    x:Name="PART_ExpandButton"
+                                    AutomationProperties.AutomationId="ToolApprovalExpandButton"
+                                    Grid.Column="2"
+                                    Style="{StaticResource SubtleButtonStyle}"
+                                    Padding="6"
+                                    VerticalAlignment="Center">
                                     <FontIcon x:Name="PART_ExpandIcon" Glyph="&#xE70D;" FontSize="12" />
                                 </Button>
                             </Grid>
 
                             <!-- Row 1: Parameters preview (collapsed by default) -->
-                            <ScrollViewer x:Name="PART_ArgumentsContainer"
-                                          Grid.Row="1"
-                                          Visibility="Visible"
-                                          MaxHeight="400"
-                                          HorizontalScrollBarVisibility="Disabled"
-                                          VerticalScrollBarVisibility="Auto">
-                                <ItemsControl x:Name="PART_ParametersControl"
-                                              ItemTemplateSelector="{StaticResource ParameterTemplateSelector}" />
+                            <ScrollViewer
+                                x:Name="PART_ArgumentsContainer"
+                                Grid.Row="1"
+                                Visibility="Visible"
+                                MaxHeight="400"
+                                HorizontalScrollBarVisibility="Disabled"
+                                VerticalScrollBarVisibility="Auto">
+                                <ItemsControl
+                                    x:Name="PART_ParametersControl"
+                                    ItemTemplateSelector="{StaticResource ParameterTemplateSelector}" />
                             </ScrollViewer>
 
                             <!-- Row 2: User instruction (always visible, borderless like ComposeBar) -->
-                            <TextBox x:Name="PART_UserNoteBox"
-                                     AutomationProperties.AutomationId="ToolApprovalUserNoteBox"
-                                     Grid.Row="2"
-                                     PlaceholderText="Additional instructions (optional)"
-                                     TextWrapping="Wrap"
-                                     AcceptsReturn="True"
-                                     MaxHeight="120"
-                                     MaxLength="500"
-                                     FontSize="13"
-                                     Padding="4,6"
-                                     BorderThickness="0"
-                                     Background="Transparent">
+                            <TextBox
+                                x:Name="PART_UserNoteBox"
+                                AutomationProperties.AutomationId="ToolApprovalUserNoteBox"
+                                Grid.Row="2"
+                                PlaceholderText="Additional instructions (optional)"
+                                TextWrapping="Wrap"
+                                AcceptsReturn="True"
+                                MaxHeight="120"
+                                MaxLength="500"
+                                FontSize="13"
+                                Padding="4,6"
+                                BorderThickness="0"
+                                Background="Transparent">
                                 <TextBox.Resources>
                                     <SolidColorBrush x:Key="TextControlBackground" Color="Transparent" />
                                     <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="Transparent" />
@@ -144,18 +169,21 @@
                             </TextBox>
 
                             <!-- Row 3: Action buttons -->
-                            <StackPanel Grid.Row="3" Orientation="Horizontal"
-                                        HorizontalAlignment="Right" Spacing="8">
-                                <Button x:Name="PART_RejectButton"
-                                        AutomationProperties.AutomationId="ToolApprovalRejectButton"
-                                        Style="{StaticResource SubtleButtonStyle}"
-                                        Padding="12,6"
-                                        Content="Reject" />
-                                <Button x:Name="PART_ApproveButton"
-                                        AutomationProperties.AutomationId="ToolApprovalApproveButton"
-                                        Style="{StaticResource AccentButtonStyle}"
-                                        Padding="16,6"
-                                        Content="Allow" />
+                            <StackPanel
+                                Grid.Row="3" Orientation="Horizontal"
+                                HorizontalAlignment="Right" Spacing="8">
+                                <Button
+                                    x:Name="PART_RejectButton"
+                                    AutomationProperties.AutomationId="ToolApprovalRejectButton"
+                                    Style="{StaticResource SubtleButtonStyle}"
+                                    Padding="12,6"
+                                    Content="Reject" />
+                                <Button
+                                    x:Name="PART_ApproveButton"
+                                    AutomationProperties.AutomationId="ToolApprovalApproveButton"
+                                    Style="{StaticResource AccentButtonStyle}"
+                                    Padding="16,6"
+                                    Content="Allow" />
                             </StackPanel>
                         </Grid>
                     </Border>

@@ -9,9 +9,10 @@
     DefaultButton="Primary">
 
     <StackPanel Spacing="8" Width="400">
-        <PasswordBox x:Name="ApiKeyInput"
-                     PlaceholderText="sk-ant-api03-..."
-                     HorizontalAlignment="Stretch" />
+        <PasswordBox
+            x:Name="ApiKeyInput"
+            PlaceholderText="sk-ant-api03-..."
+            HorizontalAlignment="Stretch" />
         <TextBlock
             Text="Your key is stored securely in Windows Credential Manager (DPAPI-encrypted) and never leaves this device."
             TextWrapping="Wrap"

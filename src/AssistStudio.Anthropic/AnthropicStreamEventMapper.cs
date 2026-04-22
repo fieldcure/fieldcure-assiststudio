@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using Anthropic.Models.Messages;
 using FieldCure.Ai.Providers.Models;
 

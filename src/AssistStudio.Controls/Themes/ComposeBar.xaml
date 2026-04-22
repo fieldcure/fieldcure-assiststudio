@@ -12,16 +12,17 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="local:ComposeBar">
-                    <Border x:Name="PART_ContainerBorder"
-                            MaxWidth="800"
-                            HorizontalAlignment="Stretch"
-                            Margin="12,0,12,12"
-                            Padding="12"
-                            CornerRadius="8"
-                            BorderThickness="1"
-                            BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
-                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                            Translation="0,0,16">
+                    <Border
+                        x:Name="PART_ContainerBorder"
+                        MaxWidth="800"
+                        HorizontalAlignment="Stretch"
+                        Margin="12,0,12,12"
+                        Padding="12"
+                        CornerRadius="8"
+                        BorderThickness="1"
+                        BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        Translation="0,0,16">
                         <Grid RowSpacing="4">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -33,17 +34,18 @@
                             <local:AttachmentPreviewBar x:Name="PART_PreviewBar" Grid.Row="0" />
 
                             <!-- Row 1: TextBox -->
-                            <TextBox x:Name="PART_MessageTextBox"
-                                     Grid.Row="1"
-                                     AcceptsReturn="True"
-                                     TextWrapping="Wrap"
-                                     FontSize="15"
-                                     MaxHeight="120"
-                                     MinHeight="44"
-                                     Padding="12,8"
-                                     BorderThickness="0"
-                                     Background="Transparent"
-                                     PlaceholderText="{TemplateBinding Placeholder}">
+                            <TextBox
+                                x:Name="PART_MessageTextBox"
+                                Grid.Row="1"
+                                AcceptsReturn="True"
+                                TextWrapping="Wrap"
+                                FontSize="15"
+                                MaxHeight="120"
+                                MinHeight="44"
+                                Padding="12,8"
+                                BorderThickness="0"
+                                Background="Transparent"
+                                PlaceholderText="{TemplateBinding Placeholder}">
                                 <TextBox.Resources>
                                     <SolidColorBrush x:Key="TextControlBackground" Color="Transparent" />
                                     <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="Transparent" />
@@ -64,54 +66,64 @@
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
 
-                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4"
-                                            VerticalAlignment="Center">
-                                    <Button x:Name="PART_AttachButton"
-                                            AutomationProperties.AutomationId="ComposeBarAttachButton"
-                                            Style="{StaticResource SubtleButtonStyle}"
-                                            Padding="6">
+                                <StackPanel
+                                    Grid.Column="0" Orientation="Horizontal" Spacing="4"
+                                    VerticalAlignment="Center">
+                                    <Button
+                                        x:Name="PART_AttachButton"
+                                        AutomationProperties.AutomationId="ComposeBarAttachButton"
+                                        Style="{StaticResource SubtleButtonStyle}"
+                                        Padding="6">
                                         <FontIcon Glyph="&#xE710;" FontSize="14" />
                                     </Button>
-                                    <Button x:Name="PART_ToolButton"
-                                            AutomationProperties.AutomationId="ComposeBarToolButton"
-                                            Style="{StaticResource SubtleButtonStyle}"
-                                            Padding="6"
-                                            Visibility="Collapsed">
+                                    <Button
+                                        x:Name="PART_ToolButton"
+                                        AutomationProperties.AutomationId="ComposeBarToolButton"
+                                        Style="{StaticResource SubtleButtonStyle}"
+                                        Padding="6"
+                                        Visibility="Collapsed">
                                         <FontIcon Glyph="&#xE90F;" FontSize="14" />
                                     </Button>
                                 </StackPanel>
 
-                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4"
-                                            VerticalAlignment="Center">
-                                    <ComboBox x:Name="PART_ProfileComboBox"
-                                              AutomationProperties.AutomationId="ComposeBarProfileSelector"
-                                              MinWidth="100"
-                                              VerticalAlignment="Center"
-                                              BorderThickness="0"
-                                              Background="Transparent"
-                                              Padding="8,4" />
-                                    <ComboBox x:Name="PART_PresetComboBox"
-                                              AutomationProperties.AutomationId="ComposeBarPresetSelector"
-                                              MinWidth="120"
-                                              VerticalAlignment="Center"
-                                              BorderThickness="0"
-                                              Background="Transparent"
-                                              Padding="8,4" />
+                                <StackPanel
+                                    Grid.Column="2" Orientation="Horizontal" Spacing="4"
+                                    VerticalAlignment="Center">
+                                    <ComboBox
+                                        x:Name="PART_ProfileComboBox"
+                                        AutomationProperties.AutomationId="ComposeBarProfileSelector"
+                                        MinWidth="100"
+                                        VerticalAlignment="Center"
+                                        BorderThickness="0"
+                                        Background="Transparent"
+                                        Padding="8,4" />
+                                    <ComboBox
+                                        x:Name="PART_PresetComboBox"
+                                        AutomationProperties.AutomationId="ComposeBarPresetSelector"
+                                        MinWidth="120"
+                                        VerticalAlignment="Center"
+                                        BorderThickness="0"
+                                        Background="Transparent"
+                                        Padding="8,4" />
+
                                     <!-- Send button (visible when idle) -->
-                                    <Button x:Name="PART_SendButton"
-                                            AutomationProperties.AutomationId="ComposeBarSendButton"
-                                            Style="{StaticResource SubtleButtonStyle}"
-                                            VerticalAlignment="Center"
-                                            Padding="6">
+                                    <Button
+                                        x:Name="PART_SendButton"
+                                        AutomationProperties.AutomationId="ComposeBarSendButton"
+                                        Style="{StaticResource SubtleButtonStyle}"
+                                        VerticalAlignment="Center"
+                                        Padding="6">
                                         <FontIcon Glyph="&#xE7EB;" FontSize="16" />
                                     </Button>
+                                    
                                     <!-- Stop button (visible when streaming) -->
-                                    <Button x:Name="PART_StopButton"
-                                            AutomationProperties.AutomationId="ComposeBarStopButton"
-                                            Style="{StaticResource SubtleButtonStyle}"
-                                            VerticalAlignment="Center"
-                                            Padding="6"
-                                            Visibility="Collapsed">
+                                    <Button
+                                        x:Name="PART_StopButton"
+                                        AutomationProperties.AutomationId="ComposeBarStopButton"
+                                        Style="{StaticResource SubtleButtonStyle}"
+                                        VerticalAlignment="Center"
+                                        Padding="6"
+                                        Visibility="Collapsed">
                                         <FontIcon Glyph="&#xE71A;" FontSize="16" />
                                     </Button>
                                 </StackPanel>
