@@ -1,4 +1,4 @@
-using FieldCure.Ai.Providers.Models;
+﻿using FieldCure.Ai.Providers.Models;
 
 namespace FieldCure.AssistStudio.Controls;
 
