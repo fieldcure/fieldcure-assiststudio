@@ -1,13 +1,10 @@
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using FieldCure.Ai.Providers.Models;
+﻿using FieldCure.Ai.Providers.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Data;
-using Microsoft.UI.Xaml.Markup;
-using Microsoft.UI.Xaml.Media;
 using Microsoft.Windows.ApplicationModel.Resources;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 
 namespace FieldCure.AssistStudio.Controls;
 
@@ -27,20 +24,14 @@ internal sealed class ToolSelectionFlyout : Flyout
     /// <summary>Backing collection for the tool rows; bound to the internal <see cref="ItemsControl"/>.</summary>
     private readonly ObservableCollection<ToolToggleItem> _items = [];
 
-    /// <summary>Root content panel hosting either the list or the empty-state text.</summary>
-    private readonly StackPanel _rootPanel;
+    /// <summary>The XAML view hosting the flyout UI.</summary>
+    private readonly ToolSelectionFlyoutContent _contentView;
 
     /// <summary>The items control hosting tool toggle rows.</summary>
     private readonly ItemsControl _itemsControl;
 
     /// <summary>The "Select all / Deselect all" toggle hyperlink shown at the bottom of the flyout.</summary>
     private readonly HyperlinkButton _toggleAllLink;
-
-    /// <summary>The rectangle separator between the list and the toggle-all footer.</summary>
-    private readonly Microsoft.UI.Xaml.Shapes.Rectangle _separator;
-
-    /// <summary>The footer stack panel containing separator and toggle-all link.</summary>
-    private readonly StackPanel _footerPanel;
 
     /// <summary>Localized "Select all" label.</summary>
     private readonly string _selectAllLabel;
@@ -64,9 +55,7 @@ internal sealed class ToolSelectionFlyout : Flyout
     #region Constructor
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ToolSelectionFlyout"/> class and builds
-    /// its content tree. The item template is defined inline via XAML to enable two-way
-    /// binding on the checkbox <c>IsChecked</c> state.
+    /// Initializes a new instance of the <see cref="ToolSelectionFlyout"/> class.
     /// </summary>
     public ToolSelectionFlyout()
     {
@@ -77,63 +66,14 @@ internal sealed class ToolSelectionFlyout : Flyout
         _deselectAllLabel = Res.GetString("ComposeBar_DeselectAll") is { Length: > 0 } d
             ? d : "Deselect all";
 
-        // Inline DataTemplate defined via XamlReader so that IsEnabled/IsChecked can bind
-        // to ToolToggleItem — binding-driven rendering avoids rebuilding the entire flyout
-        // whenever AvailableTools changes.
-        var template = (DataTemplate)XamlReader.Load(
-            """
-            <DataTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
-                <CheckBox Content="{Binding DisplayName}"
-                          IsChecked="{Binding IsEnabled, Mode=TwoWay}"
-                          MinWidth="0" />
-            </DataTemplate>
-            """);
+        _contentView = new ToolSelectionFlyoutContent();
+        _itemsControl = _contentView.ItemsControl;
+        _itemsControl.ItemsSource = _items;
 
-        _itemsControl = new ItemsControl
-        {
-            ItemTemplate = template,
-            ItemsSource = _items,
-        };
-
-        var listPanel = new StackPanel { Spacing = 4 };
-        listPanel.Children.Add(_itemsControl);
-
-        _separator = new Microsoft.UI.Xaml.Shapes.Rectangle
-        {
-            Height = 1,
-            Fill = new SolidColorBrush(Microsoft.UI.Colors.Gray),
-            Opacity = 0.3,
-            Margin = new Thickness(0, 2, 0, 2),
-        };
-
-        _toggleAllLink = new HyperlinkButton
-        {
-            Content = _selectAllLabel,
-            Padding = new Thickness(0),
-            FontSize = 12,
-        };
+        _toggleAllLink = _contentView.ToggleAllLink;
+        _toggleAllLink.Content = _selectAllLabel;
         _toggleAllLink.Click += OnToggleAllClick;
-
-        _footerPanel = new StackPanel
-        {
-            Spacing = 4,
-            Padding = new Thickness(4, 0, 4, 4),
-        };
-        _footerPanel.Children.Add(_separator);
-        _footerPanel.Children.Add(_toggleAllLink);
-
-        var scroll = new ScrollViewer
-        {
-            Content = listPanel,
-            MaxHeight = 400,
-            Padding = new Thickness(0, 0, 8, 0),
-        };
-
-        _rootPanel = new StackPanel { Padding = new Thickness(4) };
-        _rootPanel.Children.Add(scroll);
-        _rootPanel.Children.Add(_footerPanel);
-
-        Content = _rootPanel;
+        Content = _contentView;
     }
 
     #endregion
@@ -186,22 +126,7 @@ internal sealed class ToolSelectionFlyout : Flyout
         var emptyText = Res.GetString("ComposeBar_NoToolsEnabled") is { Length: > 0 } t
             ? t
             : "No tools or servers enabled.\nAdd them in Profile settings.";
-
-        var emptyPanel = new StackPanel
-        {
-            Spacing = 4,
-            Padding = new Thickness(8),
-            MaxWidth = 240,
-        };
-        emptyPanel.Children.Add(new TextBlock
-        {
-            Text = emptyText,
-            TextWrapping = TextWrapping.Wrap,
-            Opacity = 0.6,
-            FontSize = 12,
-        });
-
-        Content = emptyPanel;
+        _contentView.ShowEmptyState(emptyText);
     }
 
     /// <summary>
@@ -210,8 +135,7 @@ internal sealed class ToolSelectionFlyout : Flyout
     /// </summary>
     private void RestoreListLayout()
     {
-        if (!ReferenceEquals(Content, _rootPanel))
-            Content = _rootPanel;
+        _contentView.ShowListLayout();
     }
 
     /// <summary>
