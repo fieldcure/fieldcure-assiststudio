@@ -1244,6 +1244,15 @@
   <data name="Connect_ApiKeyPlaceholder" xml:space="preserve">
     <value>API key</value>
   </data>
+  <data name="Connect_WolframAlpha" xml:space="preserve">
+    <value>Wolfram|Alpha</value>
+  </data>
+  <data name="Connect_WolframAppIdPlaceholder" xml:space="preserve">
+    <value>AppID</value>
+  </data>
+  <data name="Connect_WolframAppIdHint" xml:space="preserve">
+    <value>Full Results API — developer.wolframalpha.com</value>
+  </data>
   <data name="Connect_EmbeddingModel" xml:space="preserve">
     <value>Embedding model</value>
   </data>

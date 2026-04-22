@@ -554,6 +554,7 @@ public static class BuiltInServerHelper
             ("FieldCure:Essentials:SerperApiKey", "SERPER_API_KEY"),
             ("FieldCure:Essentials:SerpApiApiKey", "SERPAPI_API_KEY"),
             ("FieldCure:Essentials:TavilyApiKey", "TAVILY_API_KEY"),
+            ("FieldCure:Essentials:WolframAppId", "WOLFRAM_APPID"),
         ];
 
         foreach (var (vaultKey, envVar) in mappings)

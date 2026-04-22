@@ -18,6 +18,7 @@ public sealed partial class SearchEngineSection : UserControl
     private const string SerperVaultKey = "FieldCure:Essentials:SerperApiKey";
     private const string TavilyVaultKey = "FieldCure:Essentials:TavilyApiKey";
     private const string SerpApiVaultKey = "FieldCure:Essentials:SerpApiApiKey";
+    private const string WolframVaultKey = "FieldCure:Essentials:WolframAppId";
 
     #endregion
 
@@ -233,6 +234,116 @@ public sealed partial class SearchEngineSection : UserControl
         AddPaidEngineRow(panel, "Serper", "serper", SerperVaultKey, currentEngine!, apiKeyPlaceholder);
         AddPaidEngineRow(panel, "Tavily", "tavily", TavilyVaultKey, currentEngine!, apiKeyPlaceholder);
         AddPaidEngineRow(panel, "SerpApi", "serpapi", SerpApiVaultKey, currentEngine!, apiKeyPlaceholder);
+
+        // Wolfram|Alpha — independent optional capability, not part of the search engine group
+        AddWolframRow(panel);
+    }
+
+    /// <summary>
+    /// Adds a Wolfram|Alpha AppID input row. Not part of the search engine radio group —
+    /// it's an independent optional capability. Reconnects the Essentials server on change
+    /// so the <c>WOLFRAM_APPID</c> env var is picked up.
+    /// </summary>
+    private void AddWolframRow(StackPanel parent)
+    {
+        var row = new Grid();
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var existingKey = PasswordVaultHelper.ReadDirectCredential(WolframVaultKey);
+        var hasKey = !string.IsNullOrEmpty(existingKey);
+
+        var label = new TextBlock
+        {
+            Text = _loader.GetString("Connect_WolframAlpha"),
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0),
+        };
+        Grid.SetColumn(label, 0);
+        row.Children.Add(label);
+
+        var clearButton = new Button
+        {
+            Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
+            Padding = new Thickness(6),
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(4, 0, 0, 0),
+            Visibility = hasKey ? Visibility.Visible : Visibility.Collapsed,
+        };
+        clearButton.Content = new FontIcon { Glyph = "\uE74D", FontSize = 14 };
+        clearButton.Click += OnClearApiKey;
+        ToolTipService.SetToolTip(clearButton, new ToolTip
+        {
+            Content = _loader.GetString("Connect_Remove"),
+            Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
+        });
+        Grid.SetColumn(clearButton, 2);
+        row.Children.Add(clearButton);
+
+        var inputStack = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
+        var passwordBox = new PasswordBox
+        {
+            PlaceholderText = _loader.GetString("Connect_WolframAppIdPlaceholder") ?? "AppID",
+            Password = hasKey ? existingKey : "",
+            PasswordRevealMode = PasswordRevealMode.Hidden,
+            Width = 220,
+            Tag = WolframVaultKey,
+            HorizontalAlignment = HorizontalAlignment.Left,
+        };
+        passwordBox.PasswordChanged += OnWolframAppIdChanged;
+        inputStack.Children.Add(passwordBox);
+
+        inputStack.Children.Add(new TextBlock
+        {
+            Text = _loader.GetString("Connect_WolframAppIdHint"),
+            Opacity = 0.5,
+            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+        });
+
+        Grid.SetColumn(inputStack, 1);
+        row.Children.Add(inputStack);
+
+        clearButton.Tag = passwordBox;
+
+        parent.Children.Add(row);
+    }
+
+    /// <summary>
+    /// Persists the Wolfram|Alpha AppID to PasswordVault and reconnects Essentials so the
+    /// new <c>WOLFRAM_APPID</c> env var takes effect.
+    /// </summary>
+    private void OnWolframAppIdChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is not PasswordBox pb) return;
+
+        // Locate the sibling clear button: PasswordBox → StackPanel → Grid row
+        Button? clearButton = null;
+        if (pb.Parent is FrameworkElement fe && fe.Parent is Grid grid)
+        {
+            foreach (var child in grid.Children)
+            {
+                if (child is Button b) { clearButton = b; break; }
+            }
+        }
+
+        var value = pb.Password?.Trim() ?? "";
+        var hasKey = !string.IsNullOrEmpty(value);
+
+        if (hasKey)
+        {
+            PasswordVaultHelper.WriteDirectCredential(WolframVaultKey, value);
+            if (clearButton is not null) clearButton.Visibility = Visibility.Visible;
+            LoggingService.LogInfo("[MCP] Wolfram|Alpha AppID saved");
+        }
+        else
+        {
+            PasswordVaultHelper.DeleteDirectCredential(WolframVaultKey);
+            if (clearButton is not null) clearButton.Visibility = Visibility.Collapsed;
+            LoggingService.LogInfo("[MCP] Wolfram|Alpha AppID removed");
+        }
+
+        _ = ReconnectAsync();
     }
 
     /// <summary>
