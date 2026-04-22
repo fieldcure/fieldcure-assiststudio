@@ -10,6 +10,9 @@ namespace FieldCure.AssistStudio.Controls;
 /// </summary>
 public sealed partial class ComposeBar : Control
 {
+    /// <summary>
+    /// Resource loader for localized strings used by this control library.
+    /// </summary>
     private static readonly ResourceLoader Res =
         new(ResourceLoader.GetDefaultResourceFilePath(), "AssistStudio.Controls/Resources");
 

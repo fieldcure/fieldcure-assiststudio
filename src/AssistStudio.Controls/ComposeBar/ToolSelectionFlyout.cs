@@ -182,6 +182,9 @@ internal sealed class ToolSelectionFlyout : Flyout
 /// </summary>
 internal sealed class ToolToggleItem : INotifyPropertyChanged
 {
+    /// <summary>
+    /// Backing field for the current enabled state.
+    /// </summary>
     private bool _isEnabled;
 
     /// <summary>
