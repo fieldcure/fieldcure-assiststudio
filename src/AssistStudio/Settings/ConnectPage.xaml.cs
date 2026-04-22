@@ -265,6 +265,13 @@ public sealed partial class ConnectPage : Page
             return;
         }
 
+        // For built-in servers, refresh dynamic state (provider keys, search engine
+        // args, workspace folders) before reconnect so the restarted child process
+        // picks up changes made since the first spawn. Matches the "snapshot + refresh"
+        // model: the Reconnect button is the explicit refresh trigger.
+        if (BuiltInServerHelper.TryRebuildBuiltInConfig(connection.Config))
+            LoggingService.LogInfo($"[MCP] Built-in config refreshed before reconnect: {connection.Config.Name}");
+
         try
         {
             await _registry.ReconnectAsync(connection);

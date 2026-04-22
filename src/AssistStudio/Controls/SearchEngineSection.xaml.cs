@@ -434,19 +434,11 @@ public sealed partial class SearchEngineSection : UserControl
 
         try
         {
-            var configs = AppSettings.BuiltInServers;
-            configs.TryGetValue(BuiltInServerHelper.EssentialsKey, out var config);
-            var engine = config?.SearchEngine ?? "default";
-            var newMcpConfig = BuiltInServerHelper.CreateMcpServerConfig(
-                BuiltInServerHelper.EssentialsKey, config ?? new BuiltInServerConfig { IsEnabled = true });
-            if (newMcpConfig is not null)
-            {
-                conn.Config.Arguments = newMcpConfig.Arguments;
-                // Propagate freshly-loaded env vars (WOLFRAM_APPID, SERPER_API_KEY, ...)
-                // so the restarted child process sees the new keys.
-                conn.Config.EnvironmentVariables = newMcpConfig.EnvironmentVariables;
-            }
+            BuiltInServerHelper.TryRebuildBuiltInConfig(conn.Config);
 
+            var engine = AppSettings.BuiltInServers.TryGetValue(BuiltInServerHelper.EssentialsKey, out var config)
+                ? config?.SearchEngine ?? "default"
+                : "default";
             var envKeysStr = conn.Config.EnvironmentVariables is { Count: > 0 } ev
                 ? string.Join(",", ev.Keys) : "";
             LoggingService.LogInfo($"[MCP] Reconnecting Essentials with search engine: {engine}, args: [{string.Join(", ", conn.Config.Arguments ?? [])}], envKeys=[{envKeysStr}]");

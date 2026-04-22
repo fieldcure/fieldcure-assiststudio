@@ -249,6 +249,45 @@ public static class BuiltInServerHelper
     }
 
     /// <summary>
+    /// Rebuilds the <c>Arguments</c>, <c>EnvironmentVariables</c>, and <c>Command</c>
+    /// on a built-in server config from current <see cref="AppSettings"/> and
+    /// PasswordVault state, so a reconnect picks up changes made since the first
+    /// spawn (e.g., rotated Provider keys for RAG, a new Wolfram AppID for Essentials).
+    /// <para>
+    /// Mutates <paramref name="target"/> in place because <see cref="McpServerConnection.Config"/>
+    /// is get-only. Other fields (<c>Id</c>, <c>Name</c>, <c>Description</c>, <c>IsEnabled</c>)
+    /// are intentionally not overwritten — the Reconnect contract is "refresh dynamic
+    /// state, preserve identity".
+    /// </para>
+    /// </summary>
+    /// <returns>
+    /// <see langword="true"/> when <paramref name="target"/> was identified as an enabled
+    /// built-in and its dynamic fields were updated; <see langword="false"/> when the
+    /// id lacks the <c>builtin_</c> prefix, the server is disabled, or
+    /// <see cref="CreateMcpServerConfig"/> would have returned <see langword="null"/>
+    /// (e.g., RAG with no knowledge base).
+    /// </returns>
+    public static bool TryRebuildBuiltInConfig(McpServerConfig target)
+    {
+        const string prefix = "builtin_";
+        if (target.Id is null || !target.Id.StartsWith(prefix, StringComparison.Ordinal))
+            return false;
+
+        var serverKey = target.Id[prefix.Length..];
+        if (!AppSettings.BuiltInServers.TryGetValue(serverKey, out var config) || config is null)
+            return false;
+
+        var rebuilt = CreateMcpServerConfig(serverKey, config);
+        if (rebuilt is null)
+            return false;
+
+        target.Command = rebuilt.Command;
+        target.Arguments = rebuilt.Arguments;
+        target.EnvironmentVariables = rebuilt.EnvironmentVariables;
+        return true;
+    }
+
+    /// <summary>
     /// Returns the <c>dnx</c> invocation spec for a built-in server. Command is
     /// the literal string <c>"dnx"</c> — MCP stdio transports resolve it through
     /// the shell so PATHEXT lookup works. For direct <see cref="Process.Start"/>
