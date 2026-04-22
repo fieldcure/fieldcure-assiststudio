@@ -69,6 +69,12 @@ public sealed partial class ChatPanel : Control, IDisposable
     /// </summary>
     public bool IsInitialized => _isInitialized;
 
+    /// <summary>
+    /// Gets whether this panel was explicitly disposed and therefore needs a fresh
+    /// WebView2 instance when its XAML container is recycled.
+    /// </summary>
+    public bool NeedsWebViewReinitialization => _needsWebViewReinitialization;
+
     private bool _isInitialized;
 
     /// <summary>
@@ -77,6 +83,15 @@ public sealed partial class ChatPanel : Control, IDisposable
     /// so a second entry on the UI thread (after the await yields) sees the flag and returns.
     /// </summary>
     private bool _initializing;
+
+    /// <summary>
+    /// Distinguishes a brand-new panel awaiting its first loaded initialization
+    /// from a recycled panel whose WebView2 was explicitly disposed.
+    /// Keep this separate from <see cref="_isInitialized"/> because both Fresh and
+    /// Disposed panels report false there, but only the disposed case may recreate
+    /// WebView2 before template-loaded initialization has run.
+    /// </summary>
+    private bool _needsWebViewReinitialization;
 
     /// <summary>
     /// Whether restored messages have already been rendered (prevents duplicate rendering).
@@ -272,6 +287,7 @@ public sealed partial class ChatPanel : Control, IDisposable
 
         _isInitialized = false;
         _initializing = false;
+        _needsWebViewReinitialization = true;
         _hasRenderedRestored = false;
         _titleGenerated = false;
 

@@ -375,9 +375,9 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         Panel = panel;
         LoggingService.LogInfo($"[Tab] Panel attached: {Title}, pending={_pendingMessages.Count}, initialized={panel.IsInitialized}");
 
-        // If the panel was previously disposed (WebView2 closed), create a new WebView2.
-        // This happens when TabView recycles a container after the old tab was closed.
-        if (!panel.IsInitialized)
+        // Fresh panels also start with IsInitialized == false, so we only force
+        // reinitialization for containers that were explicitly disposed and recycled.
+        if (panel.NeedsWebViewReinitialization)
         {
             LoggingService.LogInfo("[Tab] Panel needs WebView2 reinitialization (recycled container)");
             await panel.ReinitializeWebViewAsync();

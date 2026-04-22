@@ -1173,6 +1173,7 @@ public sealed partial class ChatPanel
             _initializing = true;
             await _renderer.InitializeAsync(_chatWebView);
             _isInitialized = true;
+            _needsWebViewReinitialization = false;
             await ApplyThemeAsync();
             await ApplyLocaleStringsAsync();
             ApplyChatZoom();

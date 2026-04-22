@@ -247,6 +247,12 @@ Add them in Profile settings.</value>
   <data name="ToolApproval_CollapseTooltip" xml:space="preserve">
     <value>Hide details</value>
   </data>
+  <data name="ToolApproval_ExpandName" xml:space="preserve">
+    <value>Show tool approval details</value>
+  </data>
+  <data name="ToolApproval_UserNoteName" xml:space="preserve">
+    <value>Additional instructions</value>
+  </data>
   <data name="ToolElicitation_Prompt" xml:space="preserve">
     <value>{0} requires input</value>
   </data>
@@ -279,6 +285,27 @@ Add them in Profile settings.</value>
   </data>
   <data name="ChatPanel_TitleFolderTooltip" xml:space="preserve">
     <value>Workspace folders and knowledge base</value>
+  </data>
+  <data name="ChatPanel_EditTitleName" xml:space="preserve">
+    <value>Edit title</value>
+  </data>
+  <data name="ChatPanel_RefreshTitleName" xml:space="preserve">
+    <value>Refresh title</value>
+  </data>
+  <data name="ChatPanel_TitleFolderName" xml:space="preserve">
+    <value>Workspace folders and knowledge base</value>
+  </data>
+  <data name="ComposeBar_AttachName" xml:space="preserve">
+    <value>Attach files</value>
+  </data>
+  <data name="ComposeBar_ToolsName" xml:space="preserve">
+    <value>Tool options</value>
+  </data>
+  <data name="ComposeBar_SendName" xml:space="preserve">
+    <value>Send message</value>
+  </data>
+  <data name="ComposeBar_StopName" xml:space="preserve">
+    <value>Stop generating</value>
   </data>
   <data name="ComposeBar_AttachmentItem" xml:space="preserve">
     <value>Attachment: {0}</value>

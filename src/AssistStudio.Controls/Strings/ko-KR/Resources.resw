@@ -247,6 +247,12 @@
   <data name="ToolApproval_CollapseTooltip" xml:space="preserve">
     <value>상세 숨기기</value>
   </data>
+  <data name="ToolApproval_ExpandName" xml:space="preserve">
+    <value>도구 승인 상세 보기</value>
+  </data>
+  <data name="ToolApproval_UserNoteName" xml:space="preserve">
+    <value>추가 지시사항</value>
+  </data>
   <data name="ToolElicitation_Prompt" xml:space="preserve">
     <value>{0} 입력이 필요합니다</value>
   </data>
@@ -279,6 +285,27 @@
   </data>
   <data name="ChatPanel_TitleFolderTooltip" xml:space="preserve">
     <value>작업 폴더 및 지식 베이스</value>
+  </data>
+  <data name="ChatPanel_EditTitleName" xml:space="preserve">
+    <value>제목 편집</value>
+  </data>
+  <data name="ChatPanel_RefreshTitleName" xml:space="preserve">
+    <value>제목 새로 고침</value>
+  </data>
+  <data name="ChatPanel_TitleFolderName" xml:space="preserve">
+    <value>작업 폴더 및 지식 베이스</value>
+  </data>
+  <data name="ComposeBar_AttachName" xml:space="preserve">
+    <value>파일 첨부</value>
+  </data>
+  <data name="ComposeBar_ToolsName" xml:space="preserve">
+    <value>도구 옵션</value>
+  </data>
+  <data name="ComposeBar_SendName" xml:space="preserve">
+    <value>메시지 보내기</value>
+  </data>
+  <data name="ComposeBar_StopName" xml:space="preserve">
+    <value>생성 중지</value>
   </data>
   <data name="ComposeBar_AttachmentItem" xml:space="preserve">
     <value>첨부 파일: {0}</value>
