@@ -235,12 +235,14 @@ public static class BuiltInServerHelper
             InjectRagApiKeys(mcpConfig.EnvironmentVariables);
         }
 
-        // Essentials reads search API keys from environment variables.
-        // Inject from PasswordVault so the selected paid engine works.
+        // Essentials reads search/Wolfram API keys from environment variables.
+        // Load from the shared McpEnv_{serverId}_{key} slot so Runner-spawned Essentials
+        // picks up the same keys (ADR-001).
         if (serverKey == EssentialsKey)
         {
             mcpConfig.EnvironmentVariables ??= new Dictionary<string, string>();
-            InjectEssentialsApiKeys(mcpConfig.EnvironmentVariables);
+            foreach (var (k, v) in PasswordVaultHelper.LoadMcpEnvVars(mcpConfig.Id, EssentialsEnvKeys))
+                mcpConfig.EnvironmentVariables[k] = v;
         }
 
         return mcpConfig;
@@ -544,26 +546,18 @@ public static class BuiltInServerHelper
     }
 
     /// <summary>
-    /// Injects search API keys from PasswordVault into a dictionary for the Essentials process.
-    /// Essentials v2.0.0+ reads keys from environment variables instead of PasswordVault directly.
+    /// Environment variable keys that the Essentials server consumes.
+    /// Stored under the shared <c>McpEnv_builtin_essentials_{key}</c> PasswordVault slot
+    /// so Runner-spawned Essentials picks up the same values via its own
+    /// <c>CredentialService.GetMcpEnvVar</c> lookup (ADR-001).
     /// </summary>
-    private static void InjectEssentialsApiKeys(IDictionary<string, string> envVars)
-    {
-        (string vaultKey, string envVarName)[] mappings =
-        [
-            ("FieldCure:Essentials:SerperApiKey", "SERPER_API_KEY"),
-            ("FieldCure:Essentials:SerpApiApiKey", "SERPAPI_API_KEY"),
-            ("FieldCure:Essentials:TavilyApiKey", "TAVILY_API_KEY"),
-            ("FieldCure:Essentials:WolframAppId", "WOLFRAM_APPID"),
-        ];
-
-        foreach (var (vaultKey, envVar) in mappings)
-        {
-            var key = PasswordVaultHelper.ReadDirectCredential(vaultKey);
-            if (!string.IsNullOrEmpty(key))
-                envVars[envVar] = key;
-        }
-    }
+    public static readonly string[] EssentialsEnvKeys =
+    [
+        "SERPER_API_KEY",
+        "TAVILY_API_KEY",
+        "SERPAPI_API_KEY",
+        "WOLFRAM_APPID",
+    ];
 
     /// <summary>
     /// Injects API keys from PasswordVault into a dictionary for the RAG process.

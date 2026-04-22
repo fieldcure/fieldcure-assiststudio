@@ -15,10 +15,18 @@ public sealed partial class SearchEngineSection : UserControl
 {
     #region Constants
 
-    private const string SerperVaultKey = "FieldCure:Essentials:SerperApiKey";
-    private const string TavilyVaultKey = "FieldCure:Essentials:TavilyApiKey";
-    private const string SerpApiVaultKey = "FieldCure:Essentials:SerpApiApiKey";
-    private const string WolframVaultKey = "FieldCure:Essentials:WolframAppId";
+    /// <summary>
+    /// ServerId used for the shared McpEnv_{serverId}_{key} credential slot.
+    /// Must match <c>BuiltInServerHelper.CreateMcpServerConfig</c> (builtin_essentials)
+    /// and Runner's auto-detected Essentials id so host-entered keys reach Runner-spawned
+    /// Essentials without any mirror step (ADR-001).
+    /// </summary>
+    private const string EssentialsServerId = "builtin_essentials";
+
+    private const string SerperEnvKey = "SERPER_API_KEY";
+    private const string TavilyEnvKey = "TAVILY_API_KEY";
+    private const string SerpApiEnvKey = "SERPAPI_API_KEY";
+    private const string WolframEnvKey = "WOLFRAM_APPID";
 
     #endregion
 
@@ -90,14 +98,14 @@ public sealed partial class SearchEngineSection : UserControl
     /// </summary>
     private void OnApiKeyChanged(object sender, RadioButton radio, Button clearButton, string engineKey)
     {
-        if (sender is not PasswordBox pb || pb.Tag is not string vaultKey) return;
+        if (sender is not PasswordBox pb || pb.Tag is not string envKey) return;
 
         var value = pb.Password?.Trim() ?? "";
         var hasKey = !string.IsNullOrEmpty(value);
 
         if (hasKey)
         {
-            PasswordVaultHelper.WriteDirectCredential(vaultKey, value);
+            PasswordVaultHelper.SaveMcpEnvVar(EssentialsServerId, envKey, value);
             radio.IsEnabled = true;
             radio.IsChecked = true; // auto-select on key entry
             clearButton.Visibility = Visibility.Visible;
@@ -105,7 +113,7 @@ public sealed partial class SearchEngineSection : UserControl
         }
         else
         {
-            PasswordVaultHelper.DeleteDirectCredential(vaultKey);
+            PasswordVaultHelper.DeleteMcpEnvVar(EssentialsServerId, envKey);
             radio.IsEnabled = false;
             radio.IsChecked = false;
             clearButton.Visibility = Visibility.Collapsed;
@@ -128,10 +136,10 @@ public sealed partial class SearchEngineSection : UserControl
         if (sender is not Button btn || btn.Tag is not PasswordBox pb) return;
 
         pb.Password = "";
-        if (pb.Tag is string vaultKey)
+        if (pb.Tag is string envKey)
         {
-            PasswordVaultHelper.DeleteDirectCredential(vaultKey);
-            LoggingService.LogInfo($"[MCP] API key cleared: {vaultKey}");
+            PasswordVaultHelper.DeleteMcpEnvVar(EssentialsServerId, envKey);
+            LoggingService.LogInfo($"[MCP] API key cleared: {envKey}");
         }
     }
 
@@ -181,14 +189,14 @@ public sealed partial class SearchEngineSection : UserControl
         // Validate: if a paid engine is selected but its API key is missing, fall back to default
         if (currentEngine is not "default")
         {
-            var vaultKey = currentEngine switch
+            var envKey = currentEngine switch
             {
-                "serper" => SerperVaultKey,
-                "tavily" => TavilyVaultKey,
-                "serpapi" => SerpApiVaultKey,
+                "serper" => SerperEnvKey,
+                "tavily" => TavilyEnvKey,
+                "serpapi" => SerpApiEnvKey,
                 _ => null,
             };
-            if (vaultKey is null || string.IsNullOrEmpty(PasswordVaultHelper.ReadDirectCredential(vaultKey)))
+            if (envKey is null || string.IsNullOrEmpty(PasswordVaultHelper.LoadMcpEnvVar(EssentialsServerId, envKey)))
             {
                 LoggingService.LogInfo($"[MCP] Search engine '{currentEngine}' has no API key, resetting to default (Bing/DuckDuckGo)");
                 currentEngine = "default";
@@ -231,9 +239,9 @@ public sealed partial class SearchEngineSection : UserControl
         panel.Children.Add(freeRadio);
 
         // Paid engines
-        AddPaidEngineRow(panel, "Serper", "serper", SerperVaultKey, currentEngine!, apiKeyPlaceholder);
-        AddPaidEngineRow(panel, "Tavily", "tavily", TavilyVaultKey, currentEngine!, apiKeyPlaceholder);
-        AddPaidEngineRow(panel, "SerpApi", "serpapi", SerpApiVaultKey, currentEngine!, apiKeyPlaceholder);
+        AddPaidEngineRow(panel, "Serper", "serper", SerperEnvKey, currentEngine!, apiKeyPlaceholder);
+        AddPaidEngineRow(panel, "Tavily", "tavily", TavilyEnvKey, currentEngine!, apiKeyPlaceholder);
+        AddPaidEngineRow(panel, "SerpApi", "serpapi", SerpApiEnvKey, currentEngine!, apiKeyPlaceholder);
 
         // Wolfram|Alpha — independent optional capability, not part of the search engine group
         AddWolframRow(panel);
@@ -251,7 +259,7 @@ public sealed partial class SearchEngineSection : UserControl
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-        var existingKey = PasswordVaultHelper.ReadDirectCredential(WolframVaultKey);
+        var existingKey = PasswordVaultHelper.LoadMcpEnvVar(EssentialsServerId, WolframEnvKey);
         var hasKey = !string.IsNullOrEmpty(existingKey);
 
         var label = new TextBlock
@@ -288,7 +296,7 @@ public sealed partial class SearchEngineSection : UserControl
             Password = hasKey ? existingKey : "",
             PasswordRevealMode = PasswordRevealMode.Hidden,
             Width = 220,
-            Tag = WolframVaultKey,
+            Tag = WolframEnvKey,
             HorizontalAlignment = HorizontalAlignment.Left,
         };
         passwordBox.PasswordChanged += OnWolframAppIdChanged;
@@ -332,13 +340,13 @@ public sealed partial class SearchEngineSection : UserControl
 
         if (hasKey)
         {
-            PasswordVaultHelper.WriteDirectCredential(WolframVaultKey, value);
+            PasswordVaultHelper.SaveMcpEnvVar(EssentialsServerId, WolframEnvKey, value);
             if (clearButton is not null) clearButton.Visibility = Visibility.Visible;
             LoggingService.LogInfo("[MCP] Wolfram|Alpha AppID saved");
         }
         else
         {
-            PasswordVaultHelper.DeleteDirectCredential(WolframVaultKey);
+            PasswordVaultHelper.DeleteMcpEnvVar(EssentialsServerId, WolframEnvKey);
             if (clearButton is not null) clearButton.Visibility = Visibility.Collapsed;
             LoggingService.LogInfo("[MCP] Wolfram|Alpha AppID removed");
         }
@@ -351,7 +359,7 @@ public sealed partial class SearchEngineSection : UserControl
     /// API key input (reveal disabled), and trash button (hidden until key exists).
     /// </summary>
     private void AddPaidEngineRow(
-        StackPanel parent, string displayName, string engineKey, string vaultKey,
+        StackPanel parent, string displayName, string engineKey, string envKey,
         string currentEngine, string apiKeyPlaceholder)
     {
         var row = new Grid();
@@ -359,7 +367,7 @@ public sealed partial class SearchEngineSection : UserControl
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-        var existingKey = PasswordVaultHelper.ReadDirectCredential(vaultKey);
+        var existingKey = PasswordVaultHelper.LoadMcpEnvVar(EssentialsServerId, envKey);
         var hasKey = !string.IsNullOrEmpty(existingKey);
 
         var radio = new RadioButton
@@ -400,10 +408,10 @@ public sealed partial class SearchEngineSection : UserControl
             Password = hasKey ? existingKey : "",
             PasswordRevealMode = PasswordRevealMode.Hidden,
             Width = 220,
-            Tag = vaultKey,
+            Tag = envKey,
             VerticalAlignment = VerticalAlignment.Center,
         };
-        // Store references for cross-updates: Tag holds vaultKey, but we need radio + clearButton too
+        // Store references for cross-updates: Tag holds envKey, but we need radio + clearButton too
         passwordBox.PasswordChanged += (s, _) => OnApiKeyChanged(s, radio, clearButton, engineKey);
         Grid.SetColumn(passwordBox, 1);
         row.Children.Add(passwordBox);
@@ -432,9 +440,16 @@ public sealed partial class SearchEngineSection : UserControl
             var newMcpConfig = BuiltInServerHelper.CreateMcpServerConfig(
                 BuiltInServerHelper.EssentialsKey, config ?? new BuiltInServerConfig { IsEnabled = true });
             if (newMcpConfig is not null)
+            {
                 conn.Config.Arguments = newMcpConfig.Arguments;
+                // Propagate freshly-loaded env vars (WOLFRAM_APPID, SERPER_API_KEY, ...)
+                // so the restarted child process sees the new keys.
+                conn.Config.EnvironmentVariables = newMcpConfig.EnvironmentVariables;
+            }
 
-            LoggingService.LogInfo($"[MCP] Reconnecting Essentials with search engine: {engine}, args: [{string.Join(", ", conn.Config.Arguments ?? [])}]");
+            var envKeysStr = conn.Config.EnvironmentVariables is { Count: > 0 } ev
+                ? string.Join(",", ev.Keys) : "";
+            LoggingService.LogInfo($"[MCP] Reconnecting Essentials with search engine: {engine}, args: [{string.Join(", ", conn.Config.Arguments ?? [])}], envKeys=[{envKeysStr}]");
             await _registry.ReconnectAsync(conn);
             LoggingService.LogInfo($"[MCP] Essentials reconnected successfully (engine: {engine})");
         }
