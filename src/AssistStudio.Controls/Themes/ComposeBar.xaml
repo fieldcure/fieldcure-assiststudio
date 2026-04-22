@@ -7,35 +7,6 @@
         <ResourceDictionary Source="ms-appx:///AssistStudio.Controls/Themes/Shared.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 
-    <DataTemplate x:Key="ComposeBarComboBoxTextItemTemplate">
-        <TextBlock Text="{Binding DisplayName}" />
-    </DataTemplate>
-
-    <DataTemplate x:Key="ComposeBarComboBoxSeparatorTemplate">
-        <Border
-            Height="1"
-            HorizontalAlignment="Stretch"
-            Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
-    </DataTemplate>
-
-    <Style x:Key="ComposeBarComboBoxSeparatorItemStyle" TargetType="ComboBoxItem">
-        <Setter Property="IsEnabled" Value="False" />
-        <Setter Property="IsHitTestVisible" Value="False" />
-        <Setter Property="MinHeight" Value="0" />
-        <Setter Property="Height" Value="9" />
-        <Setter Property="Padding" Value="0" />
-        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-    </Style>
-
-    <local:ComposeBarComboBoxItemTemplateSelector
-        x:Key="ComposeBarComboBoxItemTemplateSelector"
-        DefaultTemplate="{StaticResource ComposeBarComboBoxTextItemTemplate}"
-        SeparatorTemplate="{StaticResource ComposeBarComboBoxSeparatorTemplate}" />
-
-    <local:ComposeBarComboBoxItemContainerStyleSelector
-        x:Key="ComposeBarComboBoxItemContainerStyleSelector"
-        SeparatorStyle="{StaticResource ComposeBarComboBoxSeparatorItemStyle}" />
-
     <!-- ComposeBar -->
     <Style TargetType="local:ComposeBar">
         <Setter Property="Template">
@@ -125,9 +96,7 @@
                                         VerticalAlignment="Center"
                                         BorderThickness="0"
                                         Background="Transparent"
-                                        Padding="8,4"
-                                        ItemTemplateSelector="{StaticResource ComposeBarComboBoxItemTemplateSelector}"
-                                        ItemContainerStyleSelector="{StaticResource ComposeBarComboBoxItemContainerStyleSelector}" />
+                                        Padding="8,4" />
                                     <ComboBox
                                         x:Name="PART_PresetComboBox"
                                         AutomationProperties.AutomationId="ComposeBarPresetSelector"
@@ -135,9 +104,7 @@
                                         VerticalAlignment="Center"
                                         BorderThickness="0"
                                         Background="Transparent"
-                                        Padding="8,4"
-                                        ItemTemplateSelector="{StaticResource ComposeBarComboBoxItemTemplateSelector}"
-                                        ItemContainerStyleSelector="{StaticResource ComposeBarComboBoxItemContainerStyleSelector}" />
+                                        Padding="8,4" />
 
                                     <!-- Send button (visible when idle) -->
                                     <Button

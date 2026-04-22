@@ -1,5 +1,6 @@
 ﻿using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Controls.Helpers;
+using FieldCure.AssistStudio.Controls.Primitives;
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -589,7 +590,7 @@ public sealed partial class ComposeBar
     private void PresetComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_suppressPresetChanged) return;
-        if (_presetComboBox?.SelectedItem is ComposeBarComboBoxItem { ProviderPreset: { } preset })
+        if (_presetComboBox?.SelectedItem is ComboBoxItem item && item.Tag is ProviderPreset preset)
         {
             SelectedPreset = preset;
             PresetChanged?.Invoke(this, preset);
@@ -602,7 +603,7 @@ public sealed partial class ComposeBar
     private void ProfileComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_suppressPresetChanged) return;
-        if (_profileComboBox?.SelectedItem is ComposeBarComboBoxItem { Profile: { } preset })
+        if (_profileComboBox?.SelectedItem is ComboBoxItem item && item.Tag is Profile preset)
         {
             SelectedProfile = preset;
             ProfileChanged?.Invoke(this, preset);
@@ -631,7 +632,7 @@ public sealed partial class ComposeBar
         _suppressPresetChanged = true;
         foreach (var obj in _profileComboBox.Items)
         {
-            if (obj is ComposeBarComboBoxItem item && item.Profile is Profile p && p.Name == preset.Name)
+            if (obj is ComboBoxItem item && item.Tag is Profile p && p.Name == preset.Name)
             {
                 _profileComboBox.SelectedItem = item;
                 break;
@@ -654,20 +655,21 @@ public sealed partial class ComposeBar
         if (_presetComboBox is null) return;
 
         _suppressPresetChanged = true;
-        var items = new List<ComposeBarComboBoxItem>();
+        _presetComboBox.ItemsSource = null;
+        _presetComboBox.Items.Clear();
         foreach (var obj in presets)
         {
             if (obj is ProviderPreset preset)
             {
                 var displayName = preset.ProviderType == "Mock" ? "Demo" : preset.Name;
-                items.Add(ComposeBarComboBoxItem.FromProviderPreset(preset, displayName));
+                var item = new ComboBoxItem { Content = displayName, Tag = preset };
+                _presetComboBox.Items.Add(item);
             }
             else if (obj is "-")
             {
-                items.Add(ComposeBarComboBoxItem.Separator());
+                _presetComboBox.Items.Add(new ComboBoxSeparatorItem());
             }
         }
-        _presetComboBox.ItemsSource = items;
 
         if (SelectedPreset is not null)
         {
@@ -686,7 +688,7 @@ public sealed partial class ComposeBar
         _suppressPresetChanged = true;
         foreach (var obj in _presetComboBox.Items)
         {
-            if (obj is ComposeBarComboBoxItem item && item.ProviderPreset is ProviderPreset p && p.Name == preset.Name)
+            if (obj is ComboBoxItem item && item.Tag is ProviderPreset p && p.Name == preset.Name)
             {
                 _presetComboBox.SelectedItem = item;
                 break;
@@ -703,20 +705,20 @@ public sealed partial class ComposeBar
         if (_profileComboBox is null) return;
 
         _suppressPresetChanged = true;
+        _profileComboBox.ItemsSource = null;
+        _profileComboBox.Items.Clear();
         var presets = AvailableProfiles;
         if (presets is null || presets.Count == 0)
         {
-            _profileComboBox.ItemsSource = null;
             _suppressPresetChanged = false;
             return;
         }
 
-        var items = new List<ComposeBarComboBoxItem>();
         foreach (var preset in presets)
         {
-            items.Add(ComposeBarComboBoxItem.FromProfile(preset));
+            var item = new ComboBoxItem { Content = preset.Name, Tag = preset };
+            _profileComboBox.Items.Add(item);
         }
-        _profileComboBox.ItemsSource = items;
 
         if (SelectedProfile is not null)
         {
