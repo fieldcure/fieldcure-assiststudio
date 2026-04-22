@@ -67,6 +67,11 @@ public class ToolCallExecutor
     /// <exception cref="InvalidOperationException">Thrown when the requested tool is not found.</exception>
     public async Task<ToolExecutionResult> ExecuteAsync(ToolCall call, CancellationToken ct = default)
     {
+        // invoke_tool dispatcher: unwrap and re-dispatch so the underlying tool's
+        // confirmation and execution path runs normally.
+        if (IsInvokeToolCall(call, out var unwrappedCall))
+            return await ExecuteAsync(unwrappedCall, ct);
+
         var tool = _tools.FirstOrDefault(t => t.Name == call.FunctionName)
             ?? FallbackToolResolver?.Invoke(call.FunctionName)
             ?? throw new InvalidOperationException($"Tool not found: {call.FunctionName}");
@@ -116,6 +121,10 @@ public class ToolCallExecutor
     public async Task<ToolExecutionResult> ExecuteWithoutConfirmationAsync(
         ToolCall call, string? userNote, CancellationToken ct = default)
     {
+        // invoke_tool dispatcher: unwrap and re-dispatch, propagating the no-confirm flow.
+        if (IsInvokeToolCall(call, out var unwrappedCall))
+            return await ExecuteWithoutConfirmationAsync(unwrappedCall, userNote, ct);
+
         var tool = _tools.FirstOrDefault(t => t.Name == call.FunctionName)
             ?? FallbackToolResolver?.Invoke(call.FunctionName)
             ?? throw new InvalidOperationException($"Tool not found: {call.FunctionName}");
@@ -151,6 +160,74 @@ public class ToolCallExecutor
     {
         if (string.IsNullOrEmpty(value)) return "(empty)";
         return value.Length <= maxLength ? value : value[..maxLength] + "…";
+    }
+
+    /// <summary>
+    /// Detects an <c>invoke_tool</c> dispatcher call and produces the unwrapped
+    /// <see cref="ToolCall"/> that targets the inner tool. The dispatcher exists
+    /// only to give Claude-class models a fixed entry in the API <c>tools</c>
+    /// manifest for invoking externally-served MCP tools that live in the
+    /// search_tools / McpTools pool rather than the per-turn manifest.
+    /// </summary>
+    /// <param name="call">The incoming tool call that may be an invoke_tool dispatcher.</param>
+    /// <param name="unwrapped">
+    /// When this method returns <see langword="true"/>, set to a new <see cref="ToolCall"/>
+    /// whose <see cref="ToolCall.FunctionName"/> is the inner tool name and whose
+    /// <see cref="ToolCall.Arguments"/> is the raw JSON of the <c>args</c> object.
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> when the call was an <c>invoke_tool</c> dispatch and
+    /// <paramref name="unwrapped"/> is populated; otherwise <see langword="false"/>.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the invoke_tool payload is missing the required <c>name</c> field
+    /// or cannot be parsed as JSON.
+    /// </exception>
+    private static bool IsInvokeToolCall(ToolCall call, out ToolCall unwrapped)
+    {
+        if (!string.Equals(call.FunctionName, "invoke_tool", StringComparison.Ordinal))
+        {
+            unwrapped = call;
+            return false;
+        }
+
+        string innerName;
+        string innerArgs;
+        try
+        {
+            var argsJson = string.IsNullOrWhiteSpace(call.Arguments) ? "{}" : call.Arguments;
+            using var doc = JsonDocument.Parse(argsJson);
+            var root = doc.RootElement;
+
+            if (!root.TryGetProperty("name", out var nameProp)
+                || nameProp.ValueKind != JsonValueKind.String
+                || string.IsNullOrWhiteSpace(nameProp.GetString()))
+            {
+                throw new InvalidOperationException(
+                    "invoke_tool requires a non-empty 'name' string parameter.");
+            }
+
+            innerName = nameProp.GetString()!;
+
+            innerArgs = root.TryGetProperty("args", out var argsProp)
+                ? argsProp.GetRawText()
+                : "{}";
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidOperationException(
+                "invoke_tool arguments could not be parsed as JSON.", ex);
+        }
+
+        DiagnosticLogger.LogInfo($"[Tool] invoke_tool → {innerName}");
+
+        unwrapped = new ToolCall
+        {
+            Id = call.Id,
+            FunctionName = innerName,
+            Arguments = innerArgs,
+        };
+        return true;
     }
 
     #endregion

@@ -100,6 +100,7 @@ public partial class MainViewModel : ObservableObject
 
         // Register available tools
         ToolRegistry.Register(new SearchToolsTool(App.McpRegistry));
+        ToolRegistry.Register(new InvokeToolTool());
 
         // Fire-and-forget Ollama monitoring for UI dropdown cleanup. We delay and retry
         // because the local server may still be starting while the app is booting.

@@ -107,7 +107,10 @@ public class SearchToolsTool : IAssistTool, ISearchToolScope
     {
         const string baseDesc =
             "Search available tools by keyword. Returns matching tool names and descriptions. " +
-            "Call this before invoking any external tool you don't already know about.";
+            "Call this before invoking any external tool you don't already know about. " +
+            "To execute a tool returned by this search, call 'invoke_tool' with the name " +
+            "and an args object — do not say the tool is unreachable or that you lack " +
+            "permission; it is always callable via invoke_tool.";
 
         var connected = _registry.Connections
             .Where(c => c.IsConnected && c.Config.IsEnabled)

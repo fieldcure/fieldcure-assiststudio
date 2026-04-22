@@ -959,21 +959,28 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             });
         }
 
-        // 2. search_tools — when profile has enabled MCP servers
+        // 2. search_tools + invoke_tool — when profile has enabled MCP servers.
+        // search_tools is discovery; invoke_tool is the dispatcher that lets
+        // Claude-class models actually call tools surfaced by search_tools
+        // (without it, strict manifest-adherent models cannot emit tool_use for
+        // tools that live only in McpTools). ToolCallExecutor unwraps invoke_tool
+        // calls and re-dispatches through the normal confirmation/fallback path.
         var effectiveServerIds = BuildEffectiveServerIds(enabledServerIds);
 
         if (effectiveServerIds.Count > 0)
         {
-            var searchTool = ToolRegistry.Resolve(["search_tools"]).FirstOrDefault();
-            if (searchTool is not null)
-            {
-                if (searchTool is ISearchToolScope scoped)
-                {
-                    var allowedToolNames = GetToolNamesFromServers(effectiveServerIds);
-                    scoped.AllowedToolNames = allowedToolNames.Count > 0 ? allowedToolNames : null;
-                }
+            var allowedToolNames = GetToolNamesFromServers(effectiveServerIds);
+            var scopeSet = allowedToolNames.Count > 0 ? allowedToolNames : null;
 
-                tools.Add(searchTool);
+            foreach (var metaName in new[] { "search_tools", "invoke_tool" })
+            {
+                var metaTool = ToolRegistry.Resolve([metaName]).FirstOrDefault();
+                if (metaTool is null) continue;
+
+                if (metaTool is ISearchToolScope scoped)
+                    scoped.AllowedToolNames = scopeSet;
+
+                tools.Add(metaTool);
             }
         }
 
@@ -1071,22 +1078,29 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         // 1+2. Auto-connect and determine connected servers
         var connectedIds = await AutoConnectServersAsync(effectiveServerIds);
 
-        // 3. Build final tool list from real tools + connected server tools
+        // 3. Build final tool list from real tools + connected server tools.
+        // search_tools and invoke_tool form a discovery/dispatch pair and both
+        // require a live connection to be useful; they are dropped together
+        // when no MCP servers are connected this turn.
         var result = new List<IAssistTool>();
+        var connectedToolNames = connectedIds.Count > 0
+            ? GetToolNamesFromServers(connectedIds)
+            : null;
+
         foreach (var tool in realTools)
         {
-            if (tool.Name == "search_tools")
+            if (tool.Name is "search_tools" or "invoke_tool")
             {
                 if (connectedIds.Count > 0)
                 {
                     if (tool is ISearchToolScope scoped)
-                        scoped.AllowedToolNames = GetToolNamesFromServers(connectedIds);
+                        scoped.AllowedToolNames = connectedToolNames;
                     result.Add(tool);
                 }
             }
             else
             {
-                // Pass through non-placeholder, non-search_tools tools (e.g. delegate_task)
+                // Pass through other meta tools (e.g. delegate_task)
                 result.Add(tool);
             }
         }
