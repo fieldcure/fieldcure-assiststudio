@@ -12,7 +12,9 @@
         <PasswordBox
             x:Name="ApiKeyInput"
             PlaceholderText="sk-ant-api03-..."
-            HorizontalAlignment="Stretch" />
+            HorizontalAlignment="Stretch"
+            AutomationProperties.AutomationId="ApiKeyInput"
+            AutomationProperties.Name="Anthropic API key" />
         <TextBlock
             Text="Your key is stored securely in Windows Credential Manager (DPAPI-encrypted) and never leaves this device."
             TextWrapping="Wrap"
