@@ -15,6 +15,8 @@ public sealed partial class CollapsibleSection : UserControl, INotifyPropertyCha
     #region Fields
 
     private bool _isExpanded = true;
+    private readonly Style _defaultHeaderTextStyle;
+    private readonly Style _compactHeaderTextStyle;
 
     #endregion
 
@@ -26,6 +28,8 @@ public sealed partial class CollapsibleSection : UserControl, INotifyPropertyCha
     public CollapsibleSection()
     {
         InitializeComponent();
+        _defaultHeaderTextStyle = HeaderText.Style;
+        _compactHeaderTextStyle = (Style)Application.Current.Resources["CaptionTextBlockStyle"];
     }
 
     #endregion
@@ -240,7 +244,7 @@ public sealed partial class CollapsibleSection : UserControl, INotifyPropertyCha
     {
         if (compact)
         {
-            HeaderText.Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"];
+            HeaderText.Style = _compactHeaderTextStyle;
             HeaderText.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
             HeaderText.Opacity = 0.7;
             SubHeaderText.FontSize = 11;
@@ -252,7 +256,7 @@ public sealed partial class CollapsibleSection : UserControl, INotifyPropertyCha
         }
         else
         {
-            HeaderText.Style = (Style)Application.Current.Resources["BodyStrongTextBlockStyle"];
+            HeaderText.Style = _defaultHeaderTextStyle;
             HeaderText.Opacity = 1.0;
             SubHeaderText.FontSize = 12;
             SubHeaderText.Opacity = 0.6;
