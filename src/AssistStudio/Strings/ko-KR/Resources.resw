@@ -1221,7 +1221,7 @@
     <value>Slack, Telegram, 이메일, KakaoTalk으로 메시지를 보냅니다.</value>
   </data>
   <data name="Connect_OutboxDescription" xml:space="preserve">
-    <value>AI와의 대화에서 메시지 채널을 추가하고 메시지를 보냅니다.</value>
+    <value>메시지 채널을 관리하고 AI 대화 중에 메시지를 전송합니다.</value>
   </data>
   <data name="Profiles_RunnerHint" xml:space="preserve">
     <value>AI 작업을 예약하고 자동으로 실행할 수 있습니다.</value>

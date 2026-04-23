@@ -1221,7 +1221,7 @@
     <value>Send messages via Slack, Telegram, email, and KakaoTalk.</value>
   </data>
   <data name="Connect_OutboxDescription" xml:space="preserve">
-    <value>Add messaging channels and send messages through AI conversations.</value>
+    <value>Manage messaging channels and send messages during AI conversations.</value>
   </data>
   <data name="Profiles_RunnerHint" xml:space="preserve">
     <value>Schedule AI tasks to run automatically.</value>
