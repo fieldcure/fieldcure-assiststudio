@@ -31,7 +31,8 @@
                 AutomationProperties.Name="{Binding RemoveButtonName}"
                 Command="{Binding RemoveCommand}"
                 Style="{StaticResource SubtleButtonStyle}"
-                ToolTipService.ToolTip="{Binding RemoveTooltip}">
+                ToolTipService.ToolTip="{Binding RemoveTooltip}"
+                ToolTipService.Placement="Mouse">
                 <FontIcon Glyph="&#xE74D;" FontSize="10" />
             </Button>
         </Grid>
