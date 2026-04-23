@@ -1,10 +1,11 @@
-using Anthropic.Models.Messages;
+﻿using Anthropic.Models.Messages;
 using FieldCure.Ai.Providers.Models;
-using FieldCure.AssistStudio.Anthropic;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace FieldCure.AssistStudio.Anthropic.Tests;
 
+/// <summary>
+/// Tests conversion between AssistStudio messages and Anthropic SDK message structures.
+/// </summary>
 [TestClass]
 public class AnthropicMessageConverterTests
 {

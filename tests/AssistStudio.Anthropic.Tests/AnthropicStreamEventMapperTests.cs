@@ -1,10 +1,11 @@
-using Anthropic.Models.Messages;
+﻿using Anthropic.Models.Messages;
 using FieldCure.Ai.Providers.Models;
-using FieldCure.AssistStudio.Anthropic;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace FieldCure.AssistStudio.Anthropic.Tests;
 
+/// <summary>
+/// Tests mapping of Anthropic streaming events into AssistStudio streaming abstractions.
+/// </summary>
 [TestClass]
 public class AnthropicStreamEventMapperTests
 {

@@ -1,9 +1,12 @@
-using Anthropic.Models.Messages;
+﻿using Anthropic.Models.Messages;
 
 namespace FieldCure.AssistStudio.Anthropic.Tests;
 
 /// <summary>
 /// Factory methods for constructing Anthropic SDK streaming event types in tests.
+/// </summary>
+/// <summary>
+/// Test helper factory for constructing Anthropic SDK event payloads.
 /// </summary>
 internal static class SdkEvents
 {
