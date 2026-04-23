@@ -7,6 +7,36 @@
         <ResourceDictionary Source="ms-appx:///AssistStudio.Controls/Themes/Shared.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 
+    <DataTemplate x:Key="ChatPanelFolderItemTemplate">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBlock
+                Grid.Column="0"
+                Margin="8,0,0,0"
+                VerticalAlignment="Center"
+                FontSize="12"
+                Opacity="{Binding RowOpacity}"
+                Text="{Binding FolderPath}"
+                TextTrimming="CharacterEllipsis" />
+
+            <Button
+                Grid.Column="1"
+                Padding="4"
+                VerticalAlignment="Center"
+                AutomationProperties.AutomationId="ChatPanelFolderFlyoutRemoveButton"
+                AutomationProperties.Name="{Binding RemoveButtonName}"
+                Command="{Binding RemoveCommand}"
+                Style="{StaticResource SubtleButtonStyle}"
+                ToolTipService.ToolTip="{Binding RemoveTooltip}">
+                <FontIcon Glyph="&#xE74D;" FontSize="10" />
+            </Button>
+        </Grid>
+    </DataTemplate>
+
     <!-- ChatPanel -->
     <Style TargetType="local:ChatPanel">
         <Setter Property="Template">
@@ -120,8 +150,16 @@
                                                     FontSize="12" TextWrapping="Wrap"
                                                     Margin="0,0,0,4" Visibility="Collapsed" />
 
-                                                <!-- Dynamic folder list (populated in code-behind) -->
-                                                <StackPanel x:Name="PART_FolderList" Spacing="2" />
+                                                <!-- Dynamic folder list -->
+                                                <ItemsControl
+                                                    x:Name="PART_FolderList"
+                                                    ItemTemplate="{StaticResource ChatPanelFolderItemTemplate}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Spacing="2" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                </ItemsControl>
 
                                                 <!-- Workspace empty state -->
                                                 <TextBlock

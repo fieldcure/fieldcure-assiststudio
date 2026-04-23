@@ -6,6 +6,7 @@ using FieldCure.AssistStudio.Controls.Rendering;
 using FieldCure.AssistStudio.Helpers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using System.Windows.Input;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage.Pickers;
@@ -290,7 +291,7 @@ public sealed partial class ChatPanel
         {
             _folderAddButton = FindDescendantByName<Button>(root, "PART_FolderAddButton");
             _folderDisabledHint = FindDescendantByName<TextBlock>(root, "PART_FolderDisabledHint");
-            _folderList = FindDescendantByName<StackPanel>(root, "PART_FolderList");
+            _folderList = FindDescendantByName<ItemsControl>(root, "PART_FolderList");
             _folderEmpty = FindDescendantByName<TextBlock>(root, "PART_FolderEmpty");
             _kbDisabledHint = FindDescendantByName<TextBlock>(root, "PART_KbDisabledHint");
             _kbSelector = FindDescendantByName<ComboBox>(root, "PART_KbSelector");
@@ -302,6 +303,8 @@ public sealed partial class ChatPanel
             // Wire click handlers (once)
             if (_folderAddButton is not null)
                 _folderAddButton.Click += (s, e2) => WorkspaceFolderAddRequested?.Invoke(this, EventArgs.Empty);
+            if (_folderList is not null)
+                _folderList.ItemsSource = _folderItems;
             if (_kbSelector is not null)
             {
                 _kbSelector.SelectionChanged += (s, e2) =>
@@ -352,63 +355,25 @@ public sealed partial class ChatPanel
         if (_folderEmpty is not null)
             _folderEmpty.Visibility = folders.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
-        // Rebuild folder list items
-        _folderList.Children.Clear();
-
         var removeTooltipText = Res.GetString("FolderFlyout_RemoveTooltip") ?? "Remove";
         var removeFolderNameFormat = Res.GetString("FolderFlyout_RemoveFolderAccessibilityName");
         if (string.IsNullOrEmpty(removeFolderNameFormat)) removeFolderNameFormat = "Remove folder: {0}";
 
+        _folderItems.Clear();
         foreach (var folder in folders)
         {
-            var row = new Grid
-            {
-                ColumnDefinitions =
-                {
-                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = GridLength.Auto },
-                },
-            };
-
-            var folderText = new TextBlock
-            {
-                Text = folder,
-                VerticalAlignment = VerticalAlignment.Center,
-                TextTrimming = TextTrimming.CharacterEllipsis,
-                FontSize = 12,
-                Margin = new Thickness(8, 0, 0, 0),
-                Opacity = isEnabled ? 1.0 : 0.5,
-            };
-            Grid.SetColumn(folderText, 0);
-            row.Children.Add(folderText);
-
             var capturedFolder = folder;
-            var removeButton = new Button
-            {
-                Content = new FontIcon { Glyph = "\xE74D", FontSize = 10 },
-                Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
-                Padding = new Thickness(4),
-                VerticalAlignment = VerticalAlignment.Center,
-            };
-            ToolTipService.SetToolTip(removeButton, new ToolTip
-            {
-                Content = removeTooltipText,
-                Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
-            });
-            AutomationHelper.SetAutomationLiteral(
-                removeButton,
-                "ChatPanelFolderFlyoutRemoveButton",
-                string.Format(removeFolderNameFormat, capturedFolder));
-            removeButton.Click += (s, e) =>
-            {
-                var updated = folders.Where(f => f != capturedFolder).ToList();
-                WorkspaceFolders = updated.Count > 0 ? updated : null;
-                WorkspaceFoldersChanged?.Invoke(this, updated);
-            };
-            Grid.SetColumn(removeButton, 1);
-            row.Children.Add(removeButton);
-
-            _folderList.Children.Add(row);
+            _folderItems.Add(new FolderFlyoutItemViewModel(
+                folderPath: capturedFolder,
+                removeTooltip: removeTooltipText,
+                removeButtonName: string.Format(removeFolderNameFormat, capturedFolder),
+                rowOpacity: isEnabled ? 1.0 : 0.5,
+                removeAction: () =>
+                {
+                    var updated = folders.Where(f => f != capturedFolder).ToList();
+                    WorkspaceFolders = updated.Count > 0 ? updated : null;
+                    WorkspaceFoldersChanged?.Invoke(this, updated);
+                }));
         }
 
         // KB section — KB selector (always visible, hint when profile doesn't enable RAG)
@@ -820,4 +785,40 @@ public sealed partial class ChatPanel
     }
 
     #endregion
+}
+
+/// <summary>
+/// XAML-facing projection of one workspace-folder row inside the ChatPanel flyout.
+/// </summary>
+internal sealed class FolderFlyoutItemViewModel
+{
+    /// <summary>Initializes a new folder flyout row view model.</summary>
+    public FolderFlyoutItemViewModel(
+        string folderPath,
+        string removeTooltip,
+        string removeButtonName,
+        double rowOpacity,
+        Action removeAction)
+    {
+        FolderPath = folderPath;
+        RemoveTooltip = removeTooltip;
+        RemoveButtonName = removeButtonName;
+        RowOpacity = rowOpacity;
+        RemoveCommand = new DelegateCommand(removeAction);
+    }
+
+    /// <summary>Gets the displayed folder path.</summary>
+    public string FolderPath { get; }
+
+    /// <summary>Gets the tooltip shown on the remove button.</summary>
+    public string RemoveTooltip { get; }
+
+    /// <summary>Gets the accessibility name for the remove button.</summary>
+    public string RemoveButtonName { get; }
+
+    /// <summary>Gets the row opacity used when workspace access is disabled.</summary>
+    public double RowOpacity { get; }
+
+    /// <summary>Gets the command that removes the folder from the conversation workspace list.</summary>
+    public ICommand RemoveCommand { get; }
 }

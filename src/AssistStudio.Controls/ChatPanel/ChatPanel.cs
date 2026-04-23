@@ -181,11 +181,16 @@ public sealed partial class ChatPanel : Control, IDisposable
     // Folder flyout parts (resolved lazily on first Flyout.Opening)
     private Button? _folderAddButton;
     private TextBlock? _folderDisabledHint;
-    private StackPanel? _folderList;
+    private ItemsControl? _folderList;
     private TextBlock? _folderEmpty;
     private TextBlock? _kbDisabledHint;
     private ComboBox? _kbSelector;
     private TextBlock? _kbEmpty;
+
+    /// <summary>
+    /// XAML-facing projection of workspace folders shown inside the title-bar flyout.
+    /// </summary>
+    private readonly ObservableCollection<FolderFlyoutItemViewModel> _folderItems = [];
 
     private bool _isConversationActive;
     private string? _greetingText;
