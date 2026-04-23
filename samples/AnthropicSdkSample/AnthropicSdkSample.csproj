@@ -22,7 +22,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.*" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.*" />
-    <PackageReference Include="Anthropic" Version="12.13.0" />
+    <PackageReference Include="Anthropic" Version="12.16.0" />
   </ItemGroup>
 
   <ItemGroup>
