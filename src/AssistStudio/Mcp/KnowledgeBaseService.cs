@@ -85,16 +85,29 @@ public sealed class KnowledgeBaseService
     /// </summary>
     public async Task RefreshOrConnectAsync()
     {
-        var connection = _registry.GetBuiltInConnection(BuiltInServerHelper.RagKey);
-        if (connection?.IsConnected == true
-            && BuiltInServerHelper.TryRebuildBuiltInConfig(connection.Config))
+        // Wrapped in try/catch because the returned task is stored on the page
+        // (_ragReadyTask) and observed only via Task.WhenAny in search callers,
+        // which does not unwrap faults — a bare throw here would surface as an
+        // UnobservedTaskException on finalization.
+        try
         {
-            LoggingService.LogInfo("[KB] Rebuilding RAG config with current settings and reconnecting");
-            await _registry.ReconnectAsync(connection);
-            return;
-        }
+            var connection = _registry.GetBuiltInConnection(BuiltInServerHelper.RagKey);
+            if (connection?.IsConnected == true
+                && BuiltInServerHelper.TryRebuildBuiltInConfig(connection.Config))
+            {
+                LoggingService.LogInfo("[KB] Rebuilding RAG config with current settings and reconnecting");
+                await _registry.ReconnectAsync(connection);
+                return;
+            }
 
-        await EnsureConnectedAsync();
+            await EnsureConnectedAsync();
+        }
+        catch (Exception ex)
+        {
+            LoggingService.LogWarning(
+                $"[KB] RefreshOrConnect failed: {ex.GetType().Name}: {ex.Message}");
+            LoggingService.LogException(ex);
+        }
     }
 
     #endregion
