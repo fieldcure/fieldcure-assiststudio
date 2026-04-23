@@ -4,6 +4,7 @@ using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.ApplicationModel.Resources;
+using System.Text.Json;
 
 namespace AssistStudio.Controls;
 
@@ -73,7 +74,14 @@ public sealed partial class SearchEngineSection : UserControl
     }
 
     /// <summary>
-    /// Handles search engine radio button selection changes, persists the choice, and triggers reconnection.
+    /// Handles search engine radio button selection changes: persists the choice
+    /// and applies it to the running Essentials server without a restart when
+    /// possible. Since v2.3.0 Essentials exposes a <c>set_search_engine</c> MCP
+    /// tool that swaps the active engine in place; restarting the server just
+    /// to change the initial CLI <c>--search-engine</c> argument is only needed
+    /// when the runtime swap is unavailable (server not connected, tool call
+    /// fails, or the selection is the free default which has no paid fallback
+    /// considerations).
     /// </summary>
     private void OnSearchEngineChanged(object sender, RoutedEventArgs e)
     {
@@ -90,7 +98,7 @@ public sealed partial class SearchEngineSection : UserControl
         AppSettings.BuiltInServers = configs;
         LoggingService.LogInfo($"[MCP] Search engine changed to: {engineKey}");
 
-        _ = ReconnectAsync();
+        _ = ApplyEngineChangeAsync(engineKey);
     }
 
     /// <summary>
@@ -420,6 +428,91 @@ public sealed partial class SearchEngineSection : UserControl
         clearButton.Tag = passwordBox;
 
         parent.Children.Add(row);
+    }
+
+    /// <summary>
+    /// Applies an engine change by calling the live Essentials server's
+    /// <c>set_search_engine</c> tool (v2.3.0+) instead of restarting the
+    /// process. Falls back to a full reconnect when the server is not
+    /// connected, the tool is unavailable, or the tool call fails —
+    /// preserving correct behaviour for older Essentials builds that do not
+    /// expose the runtime-switch tool.
+    /// </summary>
+    /// <param name="engineKey">
+    /// The engine key selected in the UI (<c>"default"</c> for the free
+    /// Bing/DuckDuckGo fallback, or a paid-engine key like <c>"serper"</c>).
+    /// </param>
+    private async Task ApplyEngineChangeAsync(string engineKey)
+    {
+        if (_registry is null) return;
+
+        var conn = _registry.GetBuiltInConnection(BuiltInServerHelper.EssentialsKey);
+
+        // No live connection to switch on → restart path handles first-time
+        // activation and the "server was never started" edge case.
+        if (conn is null || !conn.IsConnected)
+        {
+            await ReconnectAsync();
+            return;
+        }
+
+        // The free default has no in-server equivalent — Essentials selects
+        // Bing/DuckDuckGo at startup when no --search-engine arg is present,
+        // so the only way to land there at runtime is a reconnect that drops
+        // the arg. (set_search_engine accepts the explicit engines only.)
+        var targetEngine = engineKey switch
+        {
+            "default" => "bing",
+            _ => engineKey,
+        };
+
+        if (await TrySwitchEngineViaToolAsync(conn, targetEngine))
+            return;
+
+        // Tool unavailable or call failed → fall back to the restart path so
+        // the user still gets the engine they asked for, just slower.
+        LoggingService.LogInfo($"[MCP] Runtime engine switch unavailable for '{engineKey}', falling back to reconnect");
+        await ReconnectAsync();
+    }
+
+    /// <summary>
+    /// Attempts to swap the active search engine on a running Essentials
+    /// server via the <c>set_search_engine</c> MCP tool. Returns
+    /// <see langword="false"/> when the tool is not registered (older
+    /// Essentials) or the call fails, so the caller can fall back to a
+    /// restart.
+    /// </summary>
+    /// <param name="conn">The live Essentials server connection.</param>
+    /// <param name="engine">
+    /// Concrete engine name accepted by <c>set_search_engine</c>
+    /// (e.g. <c>"bing"</c>, <c>"duckduckgo"</c>, <c>"serper"</c>).
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> when the tool call succeeded;
+    /// <see langword="false"/> otherwise.
+    /// </returns>
+    private static async Task<bool> TrySwitchEngineViaToolAsync(
+        McpServerConnection conn, string engine)
+    {
+        if (!conn.Tools.Any(t => t.Name == "set_search_engine"))
+            return false;
+
+        try
+        {
+            using var argsDoc = JsonDocument.Parse($"{{\"engine\":\"{engine}\"}}");
+            var result = await conn.CallToolWithProgressAsync(
+                "set_search_engine",
+                argsDoc.RootElement,
+                progress: null,
+                ct: CancellationToken.None);
+            LoggingService.LogInfo($"[MCP] Essentials engine switched in-place to '{engine}' → {result}");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            LoggingService.LogWarning($"[MCP] set_search_engine call failed for '{engine}': {ex.Message}");
+            return false;
+        }
     }
 
     /// <summary>
