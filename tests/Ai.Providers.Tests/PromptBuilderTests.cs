@@ -1,8 +1,10 @@
-﻿using FieldCure.Ai.Providers;
-using FieldCure.Ai.Providers.Models;
+﻿using FieldCure.Ai.Providers.Models;
 
 namespace FieldCure.Ai.Providers.Tests;
 
+/// <summary>
+/// Tests prompt builder composition for base prompts, memory, workspace context, and retrieved chunks.
+/// </summary>
 [TestClass]
 public class PromptBuilderTests
 {

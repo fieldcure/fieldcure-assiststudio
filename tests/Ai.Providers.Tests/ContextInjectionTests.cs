@@ -1,9 +1,11 @@
-﻿using FieldCure.Ai.Providers;
-using FieldCure.Ai.Providers.Models;
+﻿using FieldCure.Ai.Providers.Models;
 using System.Text.Json;
 
 namespace FieldCure.Ai.Providers.Tests;
 
+/// <summary>
+/// Tests prompt context injection behavior for provider requests.
+/// </summary>
 [TestClass]
 public class ContextInjectionTests
 {

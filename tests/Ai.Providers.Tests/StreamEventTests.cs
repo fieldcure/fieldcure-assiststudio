@@ -1,8 +1,10 @@
 ﻿using FieldCure.Ai.Providers.Models;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace FieldCure.Ai.Providers.Tests;
 
+/// <summary>
+/// Tests streamed provider event models and their mapping behavior.
+/// </summary>
 [TestClass]
 public class StreamEventTests
 {

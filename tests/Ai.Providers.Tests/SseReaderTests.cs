@@ -1,8 +1,10 @@
-﻿using FieldCure.Ai.Providers;
-using System.Text;
+﻿using System.Text;
 
 namespace FieldCure.Ai.Providers.Tests;
 
+/// <summary>
+/// Tests server-sent event parsing used by streaming provider integrations.
+/// </summary>
 [TestClass]
 public class SseReaderTests
 {

@@ -1,8 +1,10 @@
 ﻿using FieldCure.Ai.Providers.Models;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace FieldCure.Ai.Providers.Tests;
 
+/// <summary>
+/// Tests token usage accounting and aggregation helpers for provider responses.
+/// </summary>
 [TestClass]
 public class TokenUsageTests
 {

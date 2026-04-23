@@ -1,8 +1,10 @@
 ﻿using FieldCure.Ai.Providers.Models;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace FieldCure.Ai.Providers.Tests;
 
+/// <summary>
+/// Tests response helpers and serialization behavior for AI provider response models.
+/// </summary>
 [TestClass]
 public class AiResponseTests
 {
