@@ -61,9 +61,7 @@ internal sealed partial class TabContextFlyout : MenuFlyout
         Items.Add(new MenuFlyoutSeparator());
         Items.Add(Rename);
 
-        var presenterStyle = new Style(typeof(MenuFlyoutPresenter));
-        presenterStyle.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(0)));
-        MenuFlyoutPresenterStyle = presenterStyle;
+        MenuFlyoutPresenterStyle = (Style)Application.Current.Resources["TabContextMenuFlyoutPresenterStyle"];
 
         // Resolve _tab fresh on every open so we're never stale after container reuse.
         Opening += (_, _) =>
