@@ -763,7 +763,7 @@
     <value>삭제</value>
   </data>
   <data name="KB_FooterHint.Text" xml:space="preserve">
-    <value>지식베이스는 앱이 닫혀도 백그라운드에서 인덱싱됩니다. 임베딩 모델에 따라 시스템이 일시적으로 느려질 수 있습니다.</value>
+    <value>지식베이스는 앱이 닫혀도 백그라운드에서 인덱싱됩니다. 로컬 임베딩 모델 사용 시 시스템이 일시적으로 느려질 수 있습니다.</value>
   </data>
   <data name="KB_DialogName" xml:space="preserve">
     <value>이름</value>
