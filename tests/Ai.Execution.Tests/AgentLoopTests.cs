@@ -1,9 +1,12 @@
-using FieldCure.Ai.Execution.Tests.Mocks;
+﻿using FieldCure.Ai.Execution.Tests.Mocks;
 using FieldCure.Ai.Providers.Models;
 using MockProvider = FieldCure.Ai.Execution.Tests.Mocks.MockProvider;
 
 namespace FieldCure.Ai.Execution.Tests;
 
+/// <summary>
+/// Tests the agent loop's completion, guard, error, and message flow behavior.
+/// </summary>
 [TestClass]
 public sealed class AgentLoopTests
 {

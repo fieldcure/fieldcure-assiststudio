@@ -1,4 +1,4 @@
-using FieldCure.Ai.Execution.Models;
+﻿using FieldCure.Ai.Execution.Models;
 using FieldCure.Ai.Execution.Tests.Mocks;
 using FieldCure.Ai.Providers;
 using FieldCure.Ai.Providers.Models;
@@ -6,6 +6,9 @@ using MockProvider = FieldCure.Ai.Execution.Tests.Mocks.MockProvider;
 
 namespace FieldCure.Ai.Execution.Tests;
 
+/// <summary>
+/// Tests sub-agent execution behavior, including result handling and delegation flow.
+/// </summary>
 [TestClass]
 public sealed class SubAgentExecutorTests
 {

@@ -1,10 +1,10 @@
-using FieldCure.Ai.Providers;
+﻿using FieldCure.Ai.Providers;
 using FieldCure.Ai.Providers.Models;
 
 namespace FieldCure.Ai.Execution.Tests.Mocks;
 
 /// <summary>
-/// Mock provider that delays before responding, for testing timeout behavior.
+/// Mock AI provider that delays responses so execution tests can cover cancellation and timing behavior.
 /// </summary>
 internal sealed class SlowMockProvider : IAiProvider
 {

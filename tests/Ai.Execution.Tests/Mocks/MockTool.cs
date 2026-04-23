@@ -1,10 +1,10 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using FieldCure.Ai.Providers.Models;
 
 namespace FieldCure.Ai.Execution.Tests.Mocks;
 
 /// <summary>
-/// Mock tool that records calls and returns configurable results.
+/// Mock assist tool used by execution tests to simulate successful and failing tool invocations.
 /// </summary>
 internal sealed class MockTool : IAssistTool
 {

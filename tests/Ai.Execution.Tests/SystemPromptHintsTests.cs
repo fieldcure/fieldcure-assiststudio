@@ -1,8 +1,11 @@
-using FieldCure.Ai.Execution.Helpers;
+﻿using FieldCure.Ai.Execution.Helpers;
 using FieldCure.Ai.Execution.Models;
 
 namespace FieldCure.Ai.Execution.Tests;
 
+/// <summary>
+/// Tests system prompt hint generation for execution-time prompt composition.
+/// </summary>
 [TestClass]
 public sealed class SystemPromptHintsTests
 {

@@ -1,11 +1,10 @@
-using System.Text.Json;
-using FieldCure.Ai.Providers;
+﻿using FieldCure.Ai.Providers;
 using FieldCure.Ai.Providers.Models;
 
 namespace FieldCure.Ai.Execution.Tests.Mocks;
 
 /// <summary>
-/// Mock provider that returns pre-configured responses per round.
+/// Mock AI provider used by execution tests to enqueue deterministic responses and tool calls.
 /// </summary>
 internal sealed class MockProvider : IAiProvider
 {
