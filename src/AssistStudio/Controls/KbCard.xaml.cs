@@ -1,11 +1,10 @@
-﻿using AssistStudio.Mcp;
+﻿using AssistStudio.Helpers;
+using AssistStudio.Mcp;
 using AssistStudio.Settings;
 using FieldCure.AssistStudio.Models;
-using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
 using Microsoft.Windows.ApplicationModel.Resources;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -67,6 +66,8 @@ public sealed partial class KbCard : UserControl, INotifyPropertyChanged
     private bool _isLoading;
     private bool _isSearching;
     private bool _isReindexFlyoutOpen;
+    private string _statusBrushKey = "TextFillColorSecondaryBrush";
+    private string _changeSummaryBrushKey = "DefaultTextForegroundThemeBrush";
 
     #endregion
 
@@ -116,6 +117,7 @@ public sealed partial class KbCard : UserControl, INotifyPropertyChanged
         _vm.PropertyChanged += OnVmPropertyChanged;
         Loaded += OnCardLoaded;
         Unloaded += OnCardUnloaded;
+        ThemeHelper.SubscribeThemeChanges(this, RefreshThemeBrushes);
 
         // Re-index button's flyout: keep the action icons visible while
         // the flyout is open even though it renders in a popup outside
@@ -216,7 +218,7 @@ public sealed partial class KbCard : UserControl, INotifyPropertyChanged
     {
         _vm.IsDeferredIndexing = true;
         _vm.StatusText = _loader.GetString("KB_StatusScheduled") ?? "Scheduled";
-        _vm.StatusBrush = new SolidColorBrush(Colors.DodgerBlue);
+        SetStatusBrush("StatusAccentForegroundBrush");
     }
 
     /// <summary>
@@ -454,7 +456,7 @@ public sealed partial class KbCard : UserControl, INotifyPropertyChanged
             _vm.Progress = status.Total > 0 ? (double)status.Current / status.Total * 100 : 0;
             var indexingLabel = _loader.GetString("KB_StatusIndexing") ?? "Indexing";
             _vm.StatusText = $"{indexingLabel} ({status.Current}/{status.Total})";
-            _vm.StatusBrush = new SolidColorBrush(Colors.DodgerBlue);
+            SetStatusBrush("StatusAccentForegroundBrush");
             return;
         }
 
@@ -465,13 +467,13 @@ public sealed partial class KbCard : UserControl, INotifyPropertyChanged
         if (stats is not null)
         {
             _vm.StatusText = _loader.GetString("KB_StatusReady") ?? "Ready";
-            _vm.StatusBrush = new SolidColorBrush(Colors.Gray);
+            SetStatusBrush("TextFillColorSecondaryBrush");
             _vm.StatsText = $"{stats.TotalFiles} files, {stats.TotalChunks} chunks";
         }
         else
         {
             _vm.StatusText = _loader.GetString("KB_StatusNoIndex") ?? "No index";
-            _vm.StatusBrush = new SolidColorBrush(Colors.Gray);
+            SetStatusBrush("TextFillColorSecondaryBrush");
             _vm.StatsText = "";
         }
     }
@@ -511,7 +513,7 @@ public sealed partial class KbCard : UserControl, INotifyPropertyChanged
             _vm.StatusText = info.Current is not null
                 ? $"{indexingLabel} ({info.Current}/{info.Total})"
                 : indexingLabel;
-            _vm.StatusBrush = new SolidColorBrush(Colors.DodgerBlue);
+            SetStatusBrush("StatusAccentForegroundBrush");
             return;
         }
 
@@ -520,7 +522,7 @@ public sealed partial class KbCard : UserControl, INotifyPropertyChanged
             _vm.IsIndexing = Visibility.Collapsed;
             _vm.Progress = 0;
             _vm.StatusText = _loader.GetString("KB_StatusStale") ?? "Prompt stale";
-            _vm.StatusBrush = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"];
+            SetStatusBrush("SystemFillColorCautionBrush");
             return;
         }
 
@@ -534,12 +536,12 @@ public sealed partial class KbCard : UserControl, INotifyPropertyChanged
                 && (_vm.ChangesAdded > 0 || _vm.ChangesModified > 0 || _vm.ChangesDeleted > 0))
             {
                 _vm.StatusText = _loader.GetString("KB_StatusStale") ?? "Prompt stale";
-                _vm.StatusBrush = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"];
+                SetStatusBrush("SystemFillColorCautionBrush");
             }
             else
             {
                 _vm.StatusText = _loader.GetString("KB_StatusReady") ?? "Ready";
-                _vm.StatusBrush = new SolidColorBrush(Colors.Gray);
+                SetStatusBrush("TextFillColorSecondaryBrush");
             }
             return;
         }
@@ -547,7 +549,7 @@ public sealed partial class KbCard : UserControl, INotifyPropertyChanged
         _vm.IsIndexing = Visibility.Collapsed;
         _vm.Progress = 0;
         _vm.StatusText = _loader.GetString("KB_StatusNoIndex") ?? "No index";
-        _vm.StatusBrush = new SolidColorBrush(Colors.Gray);
+        SetStatusBrush("TextFillColorSecondaryBrush");
         _vm.StatsText = "";
     }
 
@@ -608,7 +610,7 @@ public sealed partial class KbCard : UserControl, INotifyPropertyChanged
                 if (!result.IsClean)
                 {
                     _vm.StatusText = _loader.GetString("KB_StatusStale") ?? "Prompt stale";
-                    _vm.StatusBrush = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"];
+                    SetStatusBrush("SystemFillColorCautionBrush");
                 }
             }
         }
@@ -680,7 +682,7 @@ public sealed partial class KbCard : UserControl, INotifyPropertyChanged
         {
             ChangeSummaryText.Text = _loader.GetString("KB_NoChanges") ?? "No changes";
             ChangeSummaryText.Opacity = 0.5;
-            ChangeSummaryText.Foreground = (Brush)Application.Current.Resources["DefaultTextForegroundThemeBrush"];
+            SetChangeSummaryBrush("DefaultTextForegroundThemeBrush");
             return;
         }
 
@@ -696,7 +698,7 @@ public sealed partial class KbCard : UserControl, INotifyPropertyChanged
 
         ChangeSummaryText.Text = string.Join("    ", parts);
         ChangeSummaryText.Opacity = 1.0;
-        ChangeSummaryText.Foreground = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"];
+        SetChangeSummaryBrush("SystemFillColorCautionBrush");
     }
 
     #endregion
@@ -922,8 +924,39 @@ public sealed partial class KbCard : UserControl, INotifyPropertyChanged
         if (!result.IsClean)
         {
             _vm.StatusText = _loader.GetString("KB_StatusStale") ?? "Prompt stale";
-            _vm.StatusBrush = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"];
+            SetStatusBrush("SystemFillColorCautionBrush");
         }
+    }
+
+    #endregion
+
+    #region Theme
+
+    /// <summary>
+    /// Stores the status brush resource key and resolves the current theme's brush.
+    /// </summary>
+    private void SetStatusBrush(string resourceKey)
+    {
+        _statusBrushKey = resourceKey;
+        _vm.StatusBrush = ThemeHelper.GetBrush(resourceKey);
+    }
+
+    /// <summary>
+    /// Stores the change-summary brush resource key and resolves the current theme's brush.
+    /// </summary>
+    private void SetChangeSummaryBrush(string resourceKey)
+    {
+        _changeSummaryBrushKey = resourceKey;
+        ChangeSummaryText.Foreground = ThemeHelper.GetBrush(resourceKey);
+    }
+
+    /// <summary>
+    /// Reapplies code-assigned brushes after a runtime theme switch.
+    /// </summary>
+    private void RefreshThemeBrushes()
+    {
+        _vm.StatusBrush = ThemeHelper.GetBrush(_statusBrushKey);
+        ChangeSummaryText.Foreground = ThemeHelper.GetBrush(_changeSummaryBrushKey);
     }
 
     #endregion
