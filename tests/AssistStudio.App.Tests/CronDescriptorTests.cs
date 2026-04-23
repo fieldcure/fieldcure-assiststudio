@@ -1,8 +1,11 @@
+﻿using AssistStudio.Helpers.Cron;
 using System.Globalization;
-using AssistStudio.Helpers.Cron;
 
 namespace AssistStudio.App.Tests;
 
+/// <summary>
+/// Tests localized cron-expression descriptions used by the AssistStudio scheduling UI.
+/// </summary>
 [TestClass]
 public class CronDescriptorTests
 {
