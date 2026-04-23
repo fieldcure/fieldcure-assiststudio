@@ -156,6 +156,7 @@ public class ToolCallExecutor
 
     #region Private Methods
 
+    /// <summary>Trims a log value to at most <paramref name="maxLength"/> characters, appending an ellipsis when truncated, so tool result logs stay readable.</summary>
     private static string Truncate(string? value, int maxLength)
     {
         if (string.IsNullOrEmpty(value)) return "(empty)";

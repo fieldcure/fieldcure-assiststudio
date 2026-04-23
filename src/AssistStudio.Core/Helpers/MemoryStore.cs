@@ -31,6 +31,7 @@ public sealed class MemoryEntry
 /// </summary>
 internal sealed class MemoryData
 {
+    /// <summary>All memory entries persisted to disk.</summary>
     [JsonPropertyName("entries")]
     public List<MemoryEntry> Entries { get; set; } = [];
 }
@@ -217,6 +218,7 @@ public sealed class MemoryStore
 
     #region Private Methods
 
+    /// <summary>Loads entries from the backing JSON file; falls back to an empty store on any I/O or parse error.</summary>
     private void Load()
     {
         try
@@ -234,6 +236,7 @@ public sealed class MemoryStore
         }
     }
 
+    /// <summary>Persists the current entries to disk, creating the parent directory if needed; failures are swallowed since memory is best-effort.</summary>
     private void Save()
     {
         try

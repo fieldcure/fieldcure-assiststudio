@@ -60,27 +60,35 @@ public static partial class HtmlTextExtractor
 
     #region Generated Regexes
 
+    /// <summary>Matches <c>&lt;script&gt;</c> blocks so their executable content is dropped before text extraction.</summary>
     [GeneratedRegex(@"<script[^>]*>[\s\S]*?</script>", RegexOptions.IgnoreCase)]
     private static partial Regex ScriptRegex();
 
+    /// <summary>Matches <c>&lt;style&gt;</c> blocks so CSS rules don't leak into the extracted prose.</summary>
     [GeneratedRegex(@"<style[^>]*>[\s\S]*?</style>", RegexOptions.IgnoreCase)]
     private static partial Regex StyleRegex();
 
+    /// <summary>Matches the document <c>&lt;head&gt;</c> block so metadata and links don't appear in the output.</summary>
     [GeneratedRegex(@"<head[^>]*>[\s\S]*?</head>", RegexOptions.IgnoreCase)]
     private static partial Regex HeadRegex();
 
+    /// <summary>Matches HTML comments for removal.</summary>
     [GeneratedRegex(@"<!--[\s\S]*?-->")]
     private static partial Regex CommentRegex();
 
+    /// <summary>Matches block-level opening tags that should be converted to line breaks to preserve paragraph structure.</summary>
     [GeneratedRegex(@"<\s*(?:br|p|div|li|h[1-6]|tr|blockquote|section|article|aside|dt|dd|figcaption|details|summary)\b[^>]*/?>", RegexOptions.IgnoreCase)]
     private static partial Regex BlockElementRegex();
 
+    /// <summary>Matches any remaining HTML tag so only text content survives.</summary>
     [GeneratedRegex(@"<[^>]+>")]
     private static partial Regex TagRegex();
 
+    /// <summary>Matches runs of horizontal whitespace (excluding newlines) for collapsing into a single space.</summary>
     [GeneratedRegex(@"[^\S\n]+")]
     private static partial Regex HorizontalWhitespaceRegex();
 
+    /// <summary>Matches three or more consecutive newlines, collapsed to a single blank line.</summary>
     [GeneratedRegex(@"\n{3,}")]
     private static partial Regex BlankLinesRegex();
 
