@@ -85,6 +85,7 @@ public static class MarkdownExporter
 
     #region Frontmatter
 
+    /// <summary>Writes the YAML frontmatter header (title, created timestamp, message count) to the buffer.</summary>
     private static void AppendFrontmatter(
         StringBuilder sb, string? title,
         IReadOnlyList<ChatMessage> messages, int messageCount)
@@ -102,6 +103,7 @@ public static class MarkdownExporter
         sb.AppendLine();
     }
 
+    /// <summary>Escapes backslashes and double quotes for safe embedding inside a YAML double-quoted string.</summary>
     private static string EscapeYamlString(string value)
     {
         return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
@@ -111,6 +113,7 @@ public static class MarkdownExporter
 
     #region User Message
 
+    /// <summary>Renders a user message as a collapsible details block, including attachments and text content.</summary>
     private static void AppendUserMessage(
         StringBuilder sb, ChatMessage msg,
         Dictionary<string, ReadOnlyMemory<byte>> media, ref int mediaCounter)
@@ -140,6 +143,7 @@ public static class MarkdownExporter
 
     #region Assistant Message
 
+    /// <summary>Renders an assistant message with thinking, content, tool calls, and attached tool media.</summary>
     private static void AppendAssistantMessage(
         StringBuilder sb, ChatMessage msg,
         Dictionary<string, string> toolResults,
@@ -200,6 +204,7 @@ public static class MarkdownExporter
         sb.AppendLine();
     }
 
+    /// <summary>Writes a blockquote describing how many prior messages this summary replaces.</summary>
     private static void AppendSummaryBlockquote(StringBuilder sb, SummaryMeta summary)
     {
         var count = summary.CoveredMessageIds.Count;
@@ -218,6 +223,7 @@ public static class MarkdownExporter
 
     #region Tool Blocks
 
+    /// <summary>Builds a lookup of tool result content keyed by <see cref="ChatMessage.ToolCallId"/>.</summary>
     private static Dictionary<string, string> BuildToolResultMap(IReadOnlyList<ChatMessage> messages)
     {
         var map = new Dictionary<string, string>();
@@ -229,6 +235,7 @@ public static class MarkdownExporter
         return map;
     }
 
+    /// <summary>Renders a single tool call as a collapsible block with input JSON and matched result text.</summary>
     private static void AppendToolCallBlock(
         StringBuilder sb, ToolCall tc, Dictionary<string, string> toolResults)
     {
@@ -260,6 +267,7 @@ public static class MarkdownExporter
         sb.AppendLine();
     }
 
+    /// <summary>Renders a tool result message that has no matching assistant tool call.</summary>
     private static void AppendOrphanToolResult(StringBuilder sb, ChatMessage msg)
     {
         sb.AppendLine("<details>");
@@ -277,6 +285,7 @@ public static class MarkdownExporter
 
     #region Attachments
 
+    /// <summary>Renders an attachment inline; images are extracted into the media dictionary with a relative reference.</summary>
     private static void AppendAttachment(
         StringBuilder sb, ChatAttachment att,
         Dictionary<string, ReadOnlyMemory<byte>> media, ref int mediaCounter)
@@ -313,6 +322,7 @@ public static class MarkdownExporter
 
     #region Tool Media
 
+    /// <summary>Renders tool-produced media: decodes data URIs into blobs, preserves external URLs inline.</summary>
     private static void AppendToolMedia(
         StringBuilder sb, MediaContent tm,
         Dictionary<string, ReadOnlyMemory<byte>> media, ref int mediaCounter)
@@ -358,6 +368,7 @@ public static class MarkdownExporter
         return " · " + string.Join(" · ", parts);
     }
 
+    /// <summary>Maps a MIME type to a conventional file extension; unknown types fall back to <c>.bin</c>.</summary>
     private static string MimeToExtension(string? mimeType)
     {
         return mimeType?.ToLowerInvariant() switch
@@ -377,6 +388,7 @@ public static class MarkdownExporter
         };
     }
 
+    /// <summary>Decodes the base64 payload of a <c>data:</c> URI; returns <c>null</c> on malformed input.</summary>
     private static byte[]? DecodeDataUri(string dataUri)
     {
         // Format: data:{mime};base64,{data}
@@ -394,6 +406,7 @@ public static class MarkdownExporter
         }
     }
 
+    /// <summary>Pretty-prints a JSON string; returns the input unchanged if parsing fails.</summary>
     private static string TryPrettyPrintJson(string json)
     {
         try

@@ -590,7 +590,10 @@ public partial class OllamaProvider : IAiProvider, IDisposable
     /// <summary>Mutable state for tracking <c>&lt;think&gt;</c> tag parsing across streamed chunks.</summary>
     private sealed class ThinkTagState
     {
+        /// <summary>Whether the parser is currently inside a <c>&lt;think&gt;</c> block.</summary>
         public bool InsideThink;
+
+        /// <summary>Accumulates characters that may form a complete opening or closing tag.</summary>
         public readonly StringBuilder TagBuffer = new();
     }
 

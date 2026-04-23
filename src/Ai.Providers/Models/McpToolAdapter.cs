@@ -16,6 +16,7 @@ public class McpToolAdapter : IMultiContentTool
 {
     #region Fields
 
+    /// <summary>Delegate that dispatches the tool call to the underlying MCP client.</summary>
     private readonly Func<JsonElement, CancellationToken, Task<ToolExecutionResult>> _executeFunc;
 
     #endregion

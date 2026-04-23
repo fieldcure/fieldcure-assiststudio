@@ -10,10 +10,16 @@ namespace FieldCure.Ai.Providers.Helpers;
 /// </summary>
 internal sealed class ThinkTagParser
 {
+    /// <summary>The opening marker that starts a thinking block.</summary>
     private const string OpenTag = "<think>";
+
+    /// <summary>The closing marker that ends a thinking block.</summary>
     private const string CloseTag = "</think>";
 
+    /// <summary>Tracks whether the parser is currently inside a thinking block.</summary>
     private bool _insideThink;
+
+    /// <summary>Carry-over text from previous feeds that may contain a partial tag.</summary>
     private string _buffer = "";
 
     /// <summary>

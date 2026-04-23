@@ -10,6 +10,7 @@ namespace FieldCure.Ai.Providers.Models;
 /// </remarks>
 public abstract record StreamEvent
 {
+    /// <summary>Prevents external subclassing so the union stays closed to the nested subtypes below.</summary>
     private StreamEvent() { }
 
     /// <summary>A chunk of text content from the assistant.</summary>
