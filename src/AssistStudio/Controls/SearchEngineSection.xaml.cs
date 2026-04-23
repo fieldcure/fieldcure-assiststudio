@@ -11,8 +11,16 @@ using System.Text.Json;
 namespace AssistStudio.Controls;
 
 /// <summary>
-/// Self-contained section for selecting the Essentials MCP search engine and managing API keys.
-/// Designed to be injected into the EssentialsCard's BottomContent slot.
+/// Self-contained section that lets the user pick the Essentials MCP search engine
+/// and manage the API keys for each paid provider. Two responsibilities are kept
+/// visually and behaviourally separate:
+/// <list type="bullet">
+///   <item>An <b>active engine</b> ComboBox picks which engine Essentials routes tool calls through.</item>
+///   <item>An <b>API keys</b> area stores the provider credentials that make each paid engine eligible.</item>
+/// </list>
+/// Entering a key only makes that engine <i>selectable</i>; it never changes the active engine.
+/// The only automatic selection change happens when the active engine loses its key, in which
+/// case the selector falls back to the free Bing/DuckDuckGo engine.
 /// </summary>
 public sealed partial class SearchEngineSection : UserControl
 {
@@ -39,15 +47,23 @@ public sealed partial class SearchEngineSection : UserControl
 
     private readonly ResourceLoader _loader = new();
     private readonly ObservableCollection<PaidEngineRowViewModel> _paidEngines = [];
+
+    /// <summary>
+    /// Maps engine key (e.g. "default", "serper") to the corresponding ComboBoxItem,
+    /// so the paid-engine key handlers can flip IsEnabled and drive <see cref="EngineCombo"/>
+    /// selection without a linear search.
+    /// </summary>
+    private readonly Dictionary<string, ComboBoxItem> _engineItems = new(StringComparer.Ordinal);
+
     private McpServerRegistry? _registry;
     private bool _loaded;
 
     /// <summary>
-    /// Guards <see cref="OnFreeEngineChecked"/> / <see cref="OnPaidEngineChecked"/>
-    /// while the UI is being programmatically synced — either to the live server state
-    /// via <c>get_search_engine</c>, or during mutual-exclusion enforcement after a
-    /// user click. The handlers still fire, but must not persist to AppSettings or
-    /// re-invoke the server.
+    /// Guards <see cref="OnEngineComboSelectionChanged"/> while the UI is being
+    /// programmatically synced — either to the live server state via
+    /// <c>get_search_engine</c>, or to the AppSettings-derived default during
+    /// <see cref="LoadState"/>. The handler still fires, but must not persist
+    /// to AppSettings or re-invoke the server.
     /// </summary>
     private bool _isSyncingFromServer;
 
@@ -92,11 +108,7 @@ public sealed partial class SearchEngineSection : UserControl
     /// <summary>
     /// Handles the section expander being opened for the first time, triggering
     /// lazy state load and (when Essentials is already connected) a one-shot sync
-    /// of the radio selection to the server's live engine. The server's state
-    /// can drift from AppSettings after a mid-conversation <c>set_search_engine</c>
-    /// call, and the saved value is only the next-restart default — without this
-    /// sync the UI would misrepresent what search actually happens when the user
-    /// triggers a tool.
+    /// of the selector to the server's live engine.
     /// </summary>
     private void OnSectionExpanded(object? sender, EventArgs e)
     {
@@ -107,63 +119,27 @@ public sealed partial class SearchEngineSection : UserControl
     }
 
     /// <summary>
-    /// Handles the free (Bing/DuckDuckGo) radio becoming checked by unchecking the
-    /// paid engines and persisting the default selection. See
-    /// <see cref="PersistAndApplyEngineChange(string)"/> for the runtime-swap vs
-    /// reconnect policy.
+    /// Handles the engine ComboBox selection changing by persisting the choice and
+    /// applying it to the running Essentials server.
     /// </summary>
-    private void OnFreeEngineChecked(object sender, RoutedEventArgs e)
+    private void OnEngineComboSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_isSyncingFromServer) return;
-
-        // Mutex — RadioButton GroupName crossing an ItemsControl boundary is unreliable.
-        _isSyncingFromServer = true;
-        try
-        {
-            foreach (var other in _paidEngines)
-                other.IsChecked = false;
-        }
-        finally
-        {
-            _isSyncingFromServer = false;
-        }
-
-        PersistAndApplyEngineChange(DefaultEngineKey);
-    }
-
-    /// <summary>
-    /// Handles a paid-engine radio becoming checked by unchecking the free radio
-    /// and the other paid rows, then persisting the selection and attempting a
-    /// runtime in-place switch via <c>set_search_engine</c>.
-    /// </summary>
-    private void OnPaidEngineChecked(object sender, RoutedEventArgs e)
-    {
-        if (_isSyncingFromServer) return;
-        if (sender is not FrameworkElement fe || fe.DataContext is not PaidEngineRowViewModel vm)
+        if (EngineCombo.SelectedItem is not ComboBoxItem item || item.Tag is not string engineKey)
             return;
 
-        _isSyncingFromServer = true;
-        try
-        {
-            FreeEngineRadio.IsChecked = false;
-            foreach (var other in _paidEngines)
-            {
-                if (!ReferenceEquals(other, vm))
-                    other.IsChecked = false;
-            }
-        }
-        finally
-        {
-            _isSyncingFromServer = false;
-        }
-
-        PersistAndApplyEngineChange(vm.EngineKey);
+        PersistAndApplyEngineChange(engineKey);
     }
 
     /// <summary>
     /// Handles a user keystroke on a paid-engine API key field by persisting to the
-    /// credential vault and reflecting the availability change in the row's enabled
-    /// state, auto-check behaviour, and trash-button visibility.
+    /// credential vault and reflecting the availability change in the ComboBox item's
+    /// enabled state and the row's trash-button visibility.
+    /// <para>
+    /// Entering a key <b>does not</b> switch the active engine — the user must still
+    /// pick the engine from the ComboBox. The only automatic switch is the reverse
+    /// direction: clearing the active engine's key falls back to the free default.
+    /// </para>
     /// <para>
     /// Skips work when the new value matches the view model's stored key, which
     /// suppresses the initial <c>PasswordChanged</c> echo from the OneWay
@@ -176,10 +152,6 @@ public sealed partial class SearchEngineSection : UserControl
             return;
 
         var value = pb.Password?.Trim() ?? "";
-
-        // Initial-load echo: the OneWay Password binding fires PasswordChanged once
-        // when the container is realized with vm.ApiKey. Treat "no delta" as no-op
-        // so a saved key does not re-save and auto-select on every first expand.
         if (string.Equals(value, vm.ApiKey, StringComparison.Ordinal))
             return;
 
@@ -189,66 +161,32 @@ public sealed partial class SearchEngineSection : UserControl
         {
             PasswordVaultHelper.SaveMcpEnvVar(EssentialsServerId, vm.EnvKey, value);
             vm.ApiKey = value;
-            vm.IsEnabled = true;
-            vm.IsChecked = true; // auto-select on key entry — triggers mutex via OnPaidEngineChecked
             vm.ClearVisibility = Visibility.Visible;
-            LoggingService.LogInfo($"[MCP] API key saved for {vm.EngineKey}, auto-selected");
+            SetEngineEnabled(vm.EngineKey, true);
+            LoggingService.LogInfo($"[MCP] API key saved for {vm.EngineKey}");
         }
         else
         {
-            // Capture UI state BEFORE mutating so the fallback decision reflects the
-            // engine the user was actually using — not AppSettings, which may be stale
-            // after a mid-conversation set_search_engine runtime swap.
-            var wasActive = vm.IsChecked;
-
-            PasswordVaultHelper.DeleteMcpEnvVar(EssentialsServerId, vm.EnvKey);
-            vm.ApiKey = "";
-            vm.IsEnabled = false;
-            vm.IsChecked = false;
-            vm.ClearVisibility = Visibility.Collapsed;
-            LoggingService.LogInfo($"[MCP] API key removed for {vm.EngineKey}, radio disabled");
-
-            if (wasActive)
-            {
-                LoggingService.LogInfo($"[MCP] Active engine '{vm.EngineKey}' lost API key, falling back to default");
-                FreeEngineRadio.IsChecked = true;
-            }
+            ClearKeyAndFallbackIfActive(vm);
         }
     }
 
     /// <summary>
     /// Handles the per-row trash button by clearing the stored API key, disabling
-    /// the row, and falling back to the free engine if the cleared row was active
-    /// in the UI (which mirrors live server state after <see cref="SyncFromServerAsync"/>).
+    /// the corresponding ComboBox item, and falling back to the free engine if the
+    /// cleared row was the active engine.
     /// </summary>
     private void OnClearPaidEngine(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement fe || fe.DataContext is not PaidEngineRowViewModel vm)
             return;
 
-        // Capture BEFORE mutating — see OnPaidEngineKeyChanged for the rationale.
-        var wasActive = vm.IsChecked;
-
-        PasswordVaultHelper.DeleteMcpEnvVar(EssentialsServerId, vm.EnvKey);
-        vm.ApiKey = "";
-        vm.IsEnabled = false;
-        vm.IsChecked = false;
-        vm.ClearVisibility = Visibility.Collapsed;
-        LoggingService.LogInfo($"[MCP] API key cleared: {vm.EnvKey}");
-
-        if (wasActive)
-            FreeEngineRadio.IsChecked = true;
+        ClearKeyAndFallbackIfActive(vm);
     }
 
     /// <summary>
     /// Persists the Wolfram|Alpha AppID to PasswordVault and reconnects Essentials so the
     /// new <c>WOLFRAM_APPID</c> env var takes effect.
-    /// <para>
-    /// Compares against <see cref="_wolframLoadedKey"/> to ignore the initial
-    /// <c>PasswordChanged</c> echo when <see cref="LoadState"/> seeds the box with
-    /// the existing key — otherwise every first expand would trigger a gratuitous
-    /// Essentials reconnect.
-    /// </para>
     /// </summary>
     private void OnWolframKeyChanged(object sender, RoutedEventArgs e)
     {
@@ -278,10 +216,8 @@ public sealed partial class SearchEngineSection : UserControl
     }
 
     /// <summary>
-    /// Handles the Wolfram|Alpha trash button by clearing the stored AppID and
-    /// hiding the trash button. The <see cref="OnWolframKeyChanged"/> handler
-    /// picks up the empty value through the subsequent PasswordChanged event
-    /// and reconnects.
+    /// Handles the Wolfram|Alpha trash button by emptying the PasswordBox, which
+    /// causes <see cref="OnWolframKeyChanged"/> to delete the stored AppID and reconnect.
     /// </summary>
     private void OnWolframClear(object sender, RoutedEventArgs e)
     {
@@ -294,12 +230,13 @@ public sealed partial class SearchEngineSection : UserControl
 
     /// <summary>
     /// Localizes labels, validates the persisted engine against available credentials,
-    /// and populates the free-radio state, the three paid-engine view models, and the
-    /// Wolfram|Alpha row. Called once on first expansion.
+    /// populates the engine ComboBox (Free + three paid items with per-item enabled
+    /// state), seeds the three paid-engine view models, and sets up the Wolfram|Alpha
+    /// row. Called once on first expansion.
     /// </summary>
     private void LoadState()
     {
-        // Localized hints + labels
+        // Localized labels + hints
         var runtimeHintText = _loader.GetString("Connect_SearchEngineRuntimeHint");
         if (!string.IsNullOrEmpty(runtimeHintText))
         {
@@ -307,15 +244,15 @@ public sealed partial class SearchEngineSection : UserControl
             RuntimeHintText.Visibility = Visibility.Visible;
         }
 
-        FreeEngineLabel.Text = _loader.GetString("Connect_SearchEngineFree");
-        FreeEngineHint.Text = _loader.GetString("Connect_SearchEngineFreeHint");
+        ActiveEngineLabel.Text = _loader.GetString("Connect_ActiveEngine") ?? "Active engine";
+        ApiKeysHeader.Text = _loader.GetString("Connect_ApiKeysHeader") ?? "API keys";
 
         WolframLabel.Text = _loader.GetString("Connect_WolframAlpha");
         WolframKey.PlaceholderText = _loader.GetString("Connect_WolframAppIdPlaceholder") ?? "AppID";
         WolframHint.Text = _loader.GetString("Connect_WolframAppIdHint");
         WolframRemoveTooltip.Content = _loader.GetString("Connect_Remove");
 
-        // Resolve current engine and validate that the corresponding key is still stored.
+        // Current engine from AppSettings, with fallback if its key is missing.
         var configs = AppSettings.BuiltInServers;
         configs.TryGetValue(BuiltInServerHelper.EssentialsKey, out var essentialsConfig);
         var rawEngine = essentialsConfig?.SearchEngine;
@@ -344,28 +281,31 @@ public sealed partial class SearchEngineSection : UserControl
             }
         }
 
-        // Free radio — set directly without firing the handler so LoadState stays silent.
-        _isSyncingFromServer = true;
-        try
-        {
-            FreeEngineRadio.IsChecked = currentEngine is DefaultEngineKey;
-        }
-        finally
-        {
-            _isSyncingFromServer = false;
-        }
-
-        // Paid engine rows
+        // Paid engine key rows — use key presence to seed the ComboBox enabled state.
         var apiKeyPlaceholder = _loader.GetString("Connect_ApiKeyPlaceholder") ?? "API key";
         var removeTooltip = _loader.GetString("Connect_Remove") ?? "Remove";
         _paidEngines.Clear();
-        _paidEngines.Add(CreatePaidEngineVm("Serper", "serper", SerperEnvKey, currentEngine, apiKeyPlaceholder, removeTooltip));
-        _paidEngines.Add(CreatePaidEngineVm("Tavily", "tavily", TavilyEnvKey, currentEngine, apiKeyPlaceholder, removeTooltip));
-        _paidEngines.Add(CreatePaidEngineVm("SerpApi", "serpapi", SerpApiEnvKey, currentEngine, apiKeyPlaceholder, removeTooltip));
+        var serper = CreatePaidEngineVm("Serper", "serper", SerperEnvKey, apiKeyPlaceholder, removeTooltip);
+        var tavily = CreatePaidEngineVm("Tavily", "tavily", TavilyEnvKey, apiKeyPlaceholder, removeTooltip);
+        var serpApi = CreatePaidEngineVm("SerpApi", "serpapi", SerpApiEnvKey, apiKeyPlaceholder, removeTooltip);
+        _paidEngines.Add(serper);
+        _paidEngines.Add(tavily);
+        _paidEngines.Add(serpApi);
 
-        // Wolfram|Alpha row — seed _wolframLoadedKey BEFORE touching the PasswordBox
-        // so OnWolframKeyChanged's guard recognises the ensuing Password assignment as
-        // the initial echo (not a user edit) and skips the reconnect.
+        // Engine ComboBox — Free always, paid items enabled only when their key exists.
+        _engineItems.Clear();
+        EngineCombo.Items.Clear();
+        var freeDisplay = $"{_loader.GetString("Connect_SearchEngineFree")} {_loader.GetString("Connect_SearchEngineFreeHint")}".Trim();
+        AddEngineItem(DefaultEngineKey, freeDisplay, isEnabled: true);
+        AddEngineItem(serper.EngineKey, serper.DisplayName, !string.IsNullOrEmpty(serper.ApiKey));
+        AddEngineItem(tavily.EngineKey, tavily.DisplayName, !string.IsNullOrEmpty(tavily.ApiKey));
+        AddEngineItem(serpApi.EngineKey, serpApi.DisplayName, !string.IsNullOrEmpty(serpApi.ApiKey));
+
+        // Select the current engine silently — no persist, no server round-trip.
+        SelectEngineInComboSilently(currentEngine);
+
+        // Wolfram|Alpha row — seed _wolframLoadedKey BEFORE touching the PasswordBox so
+        // OnWolframKeyChanged's guard recognises the ensuing assignment as the initial echo.
         var wolframKey = PasswordVaultHelper.LoadMcpEnvVar(EssentialsServerId, WolframEnvKey);
         _wolframLoadedKey = wolframKey ?? "";
         if (!string.IsNullOrEmpty(wolframKey))
@@ -376,12 +316,13 @@ public sealed partial class SearchEngineSection : UserControl
     }
 
     /// <summary>
-    /// Constructs a view model for one paid search engine row, deriving its
-    /// initial state from the stored API key and the caller's active engine.
+    /// Constructs a view model for one paid search engine row, seeding
+    /// <see cref="PaidEngineRowViewModel.ApiKey"/> and the clear-button visibility
+    /// from the stored credential.
     /// </summary>
     private static PaidEngineRowViewModel CreatePaidEngineVm(
         string displayName, string engineKey, string envKey,
-        string currentEngine, string apiKeyPlaceholder, string removeTooltip)
+        string apiKeyPlaceholder, string removeTooltip)
     {
         var existingKey = PasswordVaultHelper.LoadMcpEnvVar(EssentialsServerId, envKey);
         var hasKey = !string.IsNullOrEmpty(existingKey);
@@ -391,10 +332,92 @@ public sealed partial class SearchEngineSection : UserControl
             ApiKey = hasKey ? existingKey : "",
             ApiKeyPlaceholder = apiKeyPlaceholder,
             RemoveTooltip = removeTooltip,
-            IsChecked = currentEngine == engineKey,
-            IsEnabled = hasKey,
             ClearVisibility = hasKey ? Visibility.Visible : Visibility.Collapsed,
         };
+    }
+
+    /// <summary>
+    /// Appends a ComboBoxItem to <see cref="EngineCombo"/> with its engine key stored
+    /// on <see cref="FrameworkElement.Tag"/>, and records it in <see cref="_engineItems"/>.
+    /// </summary>
+    private void AddEngineItem(string engineKey, string display, bool isEnabled)
+    {
+        var item = new ComboBoxItem
+        {
+            Content = display,
+            Tag = engineKey,
+            IsEnabled = isEnabled,
+        };
+        EngineCombo.Items.Add(item);
+        _engineItems[engineKey] = item;
+    }
+
+    /// <summary>
+    /// Flips the enabled state of one paid engine's ComboBox item. Used when the
+    /// user enters or removes a key for that engine.
+    /// </summary>
+    private void SetEngineEnabled(string engineKey, bool isEnabled)
+    {
+        if (_engineItems.TryGetValue(engineKey, out var item))
+            item.IsEnabled = isEnabled;
+    }
+
+    /// <summary>
+    /// Selects the ComboBoxItem whose tag matches <paramref name="engineKey"/>
+    /// without firing the persist/server-apply path. Used by initial load and
+    /// the server-state sync.
+    /// </summary>
+    private void SelectEngineInComboSilently(string engineKey)
+    {
+        if (!_engineItems.TryGetValue(engineKey, out var item))
+            return;
+
+        _isSyncingFromServer = true;
+        try
+        {
+            EngineCombo.SelectedItem = item;
+        }
+        finally
+        {
+            _isSyncingFromServer = false;
+        }
+    }
+
+    /// <summary>
+    /// Removes the stored API key for <paramref name="vm"/> and updates the
+    /// corresponding ComboBox item to disabled. If the cleared engine was the
+    /// currently active one, switches the ComboBox to the free default — which
+    /// fires <see cref="OnEngineComboSelectionChanged"/> and lets the normal
+    /// persist path take over (AppSettings update + server runtime swap).
+    /// </summary>
+    private void ClearKeyAndFallbackIfActive(PaidEngineRowViewModel vm)
+    {
+        var wasActive = IsActiveEngine(vm.EngineKey);
+
+        PasswordVaultHelper.DeleteMcpEnvVar(EssentialsServerId, vm.EnvKey);
+        vm.ApiKey = "";
+        vm.ClearVisibility = Visibility.Collapsed;
+        SetEngineEnabled(vm.EngineKey, false);
+        LoggingService.LogInfo($"[MCP] API key cleared for {vm.EngineKey}");
+
+        if (wasActive)
+        {
+            LoggingService.LogInfo($"[MCP] Active engine '{vm.EngineKey}' lost its key, falling back to default");
+            // Non-silent selection so the normal handler persists + applies.
+            if (_engineItems.TryGetValue(DefaultEngineKey, out var defaultItem))
+                EngineCombo.SelectedItem = defaultItem;
+        }
+    }
+
+    /// <summary>
+    /// Returns <see langword="true"/> when the given engine key matches the
+    /// ComboBox's current selection tag.
+    /// </summary>
+    private bool IsActiveEngine(string engineKey)
+    {
+        return EngineCombo.SelectedItem is ComboBoxItem item
+            && item.Tag is string tag
+            && string.Equals(tag, engineKey, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -409,17 +432,9 @@ public sealed partial class SearchEngineSection : UserControl
 
     /// <summary>
     /// Persists the engine choice to <see cref="AppSettings"/> and applies it to the
-    /// running Essentials server. Since v2.3.0 Essentials exposes a <c>set_search_engine</c>
-    /// MCP tool that swaps the active engine in place; the restart path is only taken when
-    /// the runtime swap is unavailable (server not connected, tool call fails, or the
-    /// selection is the free default which has no paid fallback considerations).
-    /// <para>
-    /// No-ops when the current persisted engine already equals <paramref name="engineKey"/>.
-    /// The initial <c>IsChecked="{x:Bind ... TwoWay}"</c> binding on the paid-row RadioButton
-    /// fires <c>Checked</c> once during container realization even without user interaction,
-    /// which would otherwise re-save AppSettings and issue a redundant <c>set_search_engine</c>
-    /// tool call on every first expand.
-    /// </para>
+    /// running Essentials server. No-ops when the current persisted engine already
+    /// equals <paramref name="engineKey"/> — guards against the <c>SelectionChanged</c>
+    /// event that <see cref="ComboBox"/> raises on initial container realization.
     /// </summary>
     private void PersistAndApplyEngineChange(string engineKey)
     {
@@ -442,12 +457,11 @@ public sealed partial class SearchEngineSection : UserControl
 
     /// <summary>
     /// Queries the live Essentials server's <c>get_search_engine</c> tool
-    /// (v2.4.0+) and flips the matching radio button so the UI reflects the
+    /// (v2.4.0+) and selects the matching ComboBox item so the UI reflects the
     /// actual engine in use. Silently no-ops when the server is not connected,
     /// the tool is unavailable (older Essentials), or the call fails — in those
-    /// cases the radio stays on the AppSettings-derived default that
-    /// <see cref="LoadState"/> already selected, which is the closest
-    /// approximation we have without a live read.
+    /// cases the selector stays on the AppSettings-derived default that
+    /// <see cref="LoadState"/> already selected.
     /// </summary>
     private async Task SyncFromServerAsync()
     {
@@ -481,11 +495,15 @@ public sealed partial class SearchEngineSection : UserControl
             // reports a concrete engine key. Map bing back to "default" only when the
             // user has not explicitly saved a paid engine, so a user who chose Bing
             // and a fallback-produced Bing look the same.
-            var targetTag = ResolveRadioTagForServerKey(serverKey);
-            if (!CheckEngineByTag(targetTag))
-                LoggingService.LogInfo($"[MCP] get_search_engine reported '{serverKey}' but no matching radio; leaving UI as-is");
-            else
-                LoggingService.LogInfo($"[MCP] Search engine UI synced to server state: {serverKey} (radio='{targetTag}')");
+            var targetTag = ResolveComboTagForServerKey(serverKey);
+            if (!_engineItems.TryGetValue(targetTag, out _))
+            {
+                LoggingService.LogInfo($"[MCP] get_search_engine reported '{serverKey}' but no matching combo item; leaving UI as-is");
+                return;
+            }
+
+            SelectEngineInComboSilently(targetTag);
+            LoggingService.LogInfo($"[MCP] Search engine UI synced to server state: {serverKey} (tag='{targetTag}')");
         }
         catch (Exception ex)
         {
@@ -495,14 +513,14 @@ public sealed partial class SearchEngineSection : UserControl
 
     /// <summary>
     /// Maps the canonical engine key returned by <c>get_search_engine</c> to
-    /// the radio tag used in <see cref="LoadState"/>. When the server reports
-    /// <c>bing</c> and the user has not saved a paid engine, the free-default
-    /// radio is selected so the Bing/DDG fallback and an explicit Bing choice
-    /// look identical in the UI.
+    /// the ComboBox item tag used in <see cref="LoadState"/>. When the server
+    /// reports <c>bing</c> and the user has not saved a paid engine, the
+    /// free-default item is selected so the Bing/DDG fallback and an explicit
+    /// Bing choice look identical in the UI.
     /// </summary>
     /// <param name="serverKey">Lowercase canonical key from <c>get_search_engine</c>.</param>
-    /// <returns>The radio tag to check, or the server key itself for paid engines.</returns>
-    private static string ResolveRadioTagForServerKey(string serverKey)
+    /// <returns>The ComboBox item tag to select, or the server key itself for paid engines.</returns>
+    private static string ResolveComboTagForServerKey(string serverKey)
     {
         var saved = GetCurrentEngine();
         if (string.Equals(serverKey, "bing", StringComparison.OrdinalIgnoreCase)
@@ -511,43 +529,6 @@ public sealed partial class SearchEngineSection : UserControl
             return DefaultEngineKey;
         }
         return serverKey;
-    }
-
-    /// <summary>
-    /// Programmatically selects the radio matching <paramref name="tag"/> without
-    /// firing persistence or server-side logic. Used by the server-state sync path.
-    /// </summary>
-    /// <returns><see langword="true"/> when a matching radio was found and toggled;
-    /// otherwise <see langword="false"/>.</returns>
-    private bool CheckEngineByTag(string tag)
-    {
-        _isSyncingFromServer = true;
-        try
-        {
-            if (string.Equals(tag, DefaultEngineKey, StringComparison.OrdinalIgnoreCase))
-            {
-                FreeEngineRadio.IsChecked = true;
-                foreach (var vm in _paidEngines) vm.IsChecked = false;
-                return true;
-            }
-
-            var match = _paidEngines.FirstOrDefault(v =>
-                string.Equals(v.EngineKey, tag, StringComparison.OrdinalIgnoreCase));
-            if (match is null) return false;
-
-            match.IsChecked = true;
-            FreeEngineRadio.IsChecked = false;
-            foreach (var other in _paidEngines)
-            {
-                if (!ReferenceEquals(other, match))
-                    other.IsChecked = false;
-            }
-            return true;
-        }
-        finally
-        {
-            _isSyncingFromServer = false;
-        }
     }
 
     /// <summary>
@@ -568,8 +549,6 @@ public sealed partial class SearchEngineSection : UserControl
 
         var conn = _registry.GetBuiltInConnection(BuiltInServerHelper.EssentialsKey);
 
-        // No live connection to switch on → restart path handles first-time activation
-        // and the "server was never started" edge case.
         if (conn is null || !conn.IsConnected)
         {
             await ReconnectAsync();
@@ -589,8 +568,6 @@ public sealed partial class SearchEngineSection : UserControl
         if (await TrySwitchEngineViaToolAsync(conn, targetEngine))
             return;
 
-        // Tool unavailable or call failed → fall back to the restart path so the user
-        // still gets the engine they asked for, just slower.
         LoggingService.LogInfo($"[MCP] Runtime engine switch unavailable for '{engineKey}', falling back to reconnect");
         await ReconnectAsync();
     }
@@ -601,12 +578,6 @@ public sealed partial class SearchEngineSection : UserControl
     /// when the tool is not registered (older Essentials) or the call fails, so
     /// the caller can fall back to a restart.
     /// </summary>
-    /// <param name="conn">The live Essentials server connection.</param>
-    /// <param name="engine">
-    /// Concrete engine name accepted by <c>set_search_engine</c>
-    /// (e.g. <c>"bing"</c>, <c>"duckduckgo"</c>, <c>"serper"</c>).
-    /// </param>
-    /// <returns><see langword="true"/> when the tool call succeeded; otherwise <see langword="false"/>.</returns>
     private static async Task<bool> TrySwitchEngineViaToolAsync(
         McpServerConnection conn, string engine)
     {
@@ -664,13 +635,17 @@ public sealed partial class SearchEngineSection : UserControl
 }
 
 /// <summary>
-/// View model for one paid search engine row inside <see cref="SearchEngineSection"/>.
-/// Exposes the radio/password/trash state shared by Serper, Tavily, and SerpApi.
+/// View model for one paid search engine's key-management row. Holds the stored
+/// credential plus the localized labels used by the DataTemplate. The engine's
+/// active/inactive state lives on the corresponding <see cref="ComboBoxItem"/>
+/// in the engine ComboBox, not on the row — entering or clearing a key only
+/// flips that item's availability, it does not automatically switch the active
+/// engine.
 /// </summary>
 public sealed partial class PaidEngineRowViewModel : ObservableObject
 {
     /// <summary>Initializes immutable identity fields (display + env mapping).</summary>
-    /// <param name="displayName">Radio label shown to the user (e.g. "Serper").</param>
+    /// <param name="displayName">Row label shown to the user (e.g. "Serper").</param>
     /// <param name="engineKey">Canonical server-side key (e.g. "serper").</param>
     /// <param name="envKey">PasswordVault/env var name (e.g. "SERPER_API_KEY").</param>
     public PaidEngineRowViewModel(string displayName, string engineKey, string envKey)
@@ -680,7 +655,7 @@ public sealed partial class PaidEngineRowViewModel : ObservableObject
         EnvKey = envKey;
     }
 
-    /// <summary>Gets the localized radio label.</summary>
+    /// <summary>Gets the localized row label.</summary>
     public string DisplayName { get; }
 
     /// <summary>Gets the canonical server-side engine key.</summary>
@@ -694,12 +669,6 @@ public sealed partial class PaidEngineRowViewModel : ObservableObject
 
     /// <summary>Gets or sets the tooltip shown on the trash button.</summary>
     public string RemoveTooltip { get; init; } = "";
-
-    /// <summary>Gets or sets whether this row's radio is currently selected.</summary>
-    [ObservableProperty] private bool isChecked;
-
-    /// <summary>Gets or sets whether the radio is enabled (a stored key makes it selectable).</summary>
-    [ObservableProperty] private bool isEnabled;
 
     /// <summary>Gets or sets the stored API key reflected into the bound PasswordBox.</summary>
     [ObservableProperty] private string apiKey = "";

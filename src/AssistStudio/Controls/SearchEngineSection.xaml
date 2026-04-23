@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <UserControl
     x:Class="AssistStudio.Controls.SearchEngineSection"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -20,56 +20,63 @@
                     TextWrapping="Wrap"
                     FontSize="12"
                     Opacity="0.7"
-                    Margin="0,0,0,8" />
+                    Margin="0,0,0,4" />
 
-                <!-- Free engine (Bing / DuckDuckGo). Has no API key. -->
-                <RadioButton
-                    x:Name="FreeEngineRadio"
-                    GroupName="SearchEngine"
-                    Margin="0"
-                    Checked="OnFreeEngineChecked">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <TextBlock x:Name="FreeEngineLabel" VerticalAlignment="Center" />
-                        <TextBlock
-                            x:Name="FreeEngineHint"
-                            VerticalAlignment="Center"
-                            Opacity="0.5"
-                            Style="{StaticResource CaptionTextBlockStyle}" />
-                    </StackPanel>
-                </RadioButton>
+                <!-- Active engine selector -->
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="100" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock
+                        Grid.Column="0"
+                        x:Name="ActiveEngineLabel"
+                        VerticalAlignment="Center" />
+                    <ComboBox
+                        Grid.Column="1"
+                        x:Name="EngineCombo"
+                        HorizontalAlignment="Stretch"
+                        SelectionChanged="OnEngineComboSelectionChanged" />
+                </Grid>
 
-                <!-- Paid engine rows — data-driven (Serper / Tavily / SerpApi share a template). -->
+                <!-- Divider between selection and key-management sections -->
+                <Border
+                    Height="1"
+                    Margin="0,4,0,4"
+                    Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+                <!-- API key management -->
+                <TextBlock
+                    x:Name="ApiKeysHeader"
+                    FontWeight="Bold" />
+
                 <ItemsControl x:Name="PaidEnginesList">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <StackPanel Spacing="10" />
+                            <StackPanel Spacing="8" />
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="controls:PaidEngineRowViewModel">
-                            <Grid>
+                            <Grid ColumnSpacing="8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="100" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
 
-                                <RadioButton
+                                <TextBlock
                                     Grid.Column="0"
-                                    GroupName="SearchEngine"
-                                    Content="{x:Bind DisplayName}"
-                                    IsChecked="{x:Bind IsChecked, Mode=TwoWay}"
-                                    IsEnabled="{x:Bind IsEnabled, Mode=OneWay}"
+                                    Text="{x:Bind DisplayName}"
                                     VerticalAlignment="Center"
-                                    Margin="0"
-                                    Checked="OnPaidEngineChecked" />
+                                    Margin="0" />
 
                                 <PasswordBox
                                     Grid.Column="1"
                                     PlaceholderText="{x:Bind ApiKeyPlaceholder}"
                                     Password="{x:Bind ApiKey, Mode=OneWay}"
                                     PasswordRevealMode="Hidden"
-                                    Width="220"
+                                    HorizontalAlignment="Stretch"
                                     VerticalAlignment="Center"
                                     PasswordChanged="OnPaidEngineKeyChanged" />
 
@@ -78,7 +85,6 @@
                                     Style="{StaticResource SubtleButtonStyle}"
                                     Padding="6"
                                     VerticalAlignment="Center"
-                                    Margin="4,0,0,0"
                                     Visibility="{x:Bind ClearVisibility, Mode=OneWay}"
                                     Click="OnClearPaidEngine">
                                     <FontIcon Glyph="&#xE74D;" FontSize="14" />
@@ -91,8 +97,8 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
-                <!-- Wolfram|Alpha — independent optional AppID (not part of the engine radio group). -->
-                <Grid x:Name="WolframRow">
+                <!-- Wolfram|Alpha — independent optional AppID (not part of the engine selector). -->
+                <Grid x:Name="WolframRow" ColumnSpacing="8">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="100" />
                         <ColumnDefinition Width="*" />
@@ -105,21 +111,12 @@
                         VerticalAlignment="Center"
                         Margin="0" />
 
-                    <StackPanel
+                    <PasswordBox
                         Grid.Column="1"
-                        Spacing="2"
-                        VerticalAlignment="Center">
-                        <PasswordBox
-                            x:Name="WolframKey"
-                            PasswordRevealMode="Hidden"
-                            Width="220"
-                            HorizontalAlignment="Left"
-                            PasswordChanged="OnWolframKeyChanged" />
-                        <TextBlock
-                            x:Name="WolframHint"
-                            Opacity="0.5"
-                            Style="{StaticResource CaptionTextBlockStyle}" />
-                    </StackPanel>
+                        x:Name="WolframKey"
+                        PasswordRevealMode="Hidden"
+                        HorizontalAlignment="Stretch"
+                        PasswordChanged="OnWolframKeyChanged" />
 
                     <Button
                         Grid.Column="2"
@@ -127,7 +124,6 @@
                         Style="{StaticResource SubtleButtonStyle}"
                         Padding="6"
                         VerticalAlignment="Center"
-                        Margin="4,0,0,0"
                         Visibility="Collapsed"
                         Click="OnWolframClear">
                         <FontIcon Glyph="&#xE74D;" FontSize="14" />
@@ -136,6 +132,11 @@
                         </ToolTipService.ToolTip>
                     </Button>
                 </Grid>
+                <TextBlock
+                    x:Name="WolframHint"
+                    Opacity="0.5"
+                    Margin="10,0,0,0"
+                    Style="{StaticResource CaptionTextBlockStyle}" />
             </StackPanel>
         </controls:CollapsibleSection.Body>
     </controls:CollapsibleSection>

@@ -1247,6 +1247,12 @@
   <data name="Connect_ApiKeyPlaceholder" xml:space="preserve">
     <value>API 키</value>
   </data>
+  <data name="Connect_ActiveEngine" xml:space="preserve">
+    <value>활성 엔진</value>
+  </data>
+  <data name="Connect_ApiKeysHeader" xml:space="preserve">
+    <value>API 키 관리</value>
+  </data>
   <data name="Connect_WolframAlpha" xml:space="preserve">
     <value>Wolfram|Alpha</value>
   </data>

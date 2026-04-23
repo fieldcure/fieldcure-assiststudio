@@ -1247,6 +1247,12 @@
   <data name="Connect_ApiKeyPlaceholder" xml:space="preserve">
     <value>API key</value>
   </data>
+  <data name="Connect_ActiveEngine" xml:space="preserve">
+    <value>Active engine</value>
+  </data>
+  <data name="Connect_ApiKeysHeader" xml:space="preserve">
+    <value>API keys</value>
+  </data>
   <data name="Connect_WolframAlpha" xml:space="preserve">
     <value>Wolfram|Alpha</value>
   </data>
