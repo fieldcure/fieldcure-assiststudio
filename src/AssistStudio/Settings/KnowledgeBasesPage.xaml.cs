@@ -58,7 +58,10 @@ public sealed partial class KnowledgeBasesPage : Page
 
         // Must be assigned BEFORE RefreshListAsync so cards created during
         // the refresh pick up a non-null RagReadyTask.
-        _ragReadyTask = new KnowledgeBaseService(App.McpRegistry).EnsureConnectedAsync();
+        // RefreshOrConnectAsync rebuilds RAG config with current Provider keys
+        // on re-entry (already-connected case); first entry falls through to
+        // EnsureConnectedAsync which spawns with fresh keys anyway.
+        _ragReadyTask = new KnowledgeBaseService(App.McpRegistry).RefreshOrConnectAsync();
 
         await RefreshListAsync();
     }

@@ -75,5 +75,27 @@ public sealed class KnowledgeBaseService
         await ConnectIfNeededAsync();
     }
 
+    /// <summary>
+    /// Page-entry refresh: if RAG is already connected, rebuild its config from current
+    /// <see cref="AppSettings"/> / PasswordVault state (picks up rotated Provider keys)
+    /// and reconnect. If not yet connected, falls through to <see cref="EnsureConnectedAsync"/>,
+    /// which spawns a fresh process and therefore already reads the latest keys.
+    /// "Entering the KB page" is treated as an explicit refresh intent per the
+    /// snapshot + explicit policy (doc 80).
+    /// </summary>
+    public async Task RefreshOrConnectAsync()
+    {
+        var connection = _registry.GetBuiltInConnection(BuiltInServerHelper.RagKey);
+        if (connection?.IsConnected == true
+            && BuiltInServerHelper.TryRebuildBuiltInConfig(connection.Config))
+        {
+            LoggingService.LogInfo("[KB] Rebuilding RAG config with current settings and reconnecting");
+            await _registry.ReconnectAsync(connection);
+            return;
+        }
+
+        await EnsureConnectedAsync();
+    }
+
     #endregion
 }
