@@ -19,6 +19,7 @@ public sealed class SpecialistRegistry
     private SpecialistRegistry()
     {
         Register(new WebSearchSpecialist());
+        Register(new JudgmentSpecialist());
     }
 
     /// <summary>

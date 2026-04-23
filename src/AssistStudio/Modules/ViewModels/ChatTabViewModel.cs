@@ -1460,6 +1460,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             return;
 
         SystemPrompt += "\n\n" + Specialists.WebSearchSpecialist.RoutingGuideline;
+        SystemPrompt += "\n\n" + Specialists.JudgmentSpecialist.RoutingGuideline;
     }
 
     #endregion
