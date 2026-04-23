@@ -158,9 +158,10 @@ public sealed partial class ModelSelectionDialog : ThemedContentDialog
     };
 
     /// <summary>
-    /// Returns a themed brush for the given compatibility level.
+    /// Returns a themed brush for the given compatibility level, resolved through the
+    /// theme dictionary so light/dark variants are correct at call time.
     /// </summary>
-    private Brush GetCompatBrush(CompatibilityLevel level)
+    private static Brush GetCompatBrush(CompatibilityLevel level)
     {
         var key = level switch
         {
@@ -170,14 +171,7 @@ public sealed partial class ModelSelectionDialog : ThemedContentDialog
             _ => "SystemFillColorNeutralBrush"
         };
 
-        if (Resources.TryGetValue(key, out var resource) && resource is Brush brush)
-            return brush;
-
-        // Fallback: try application-level resources
-        if (Application.Current.Resources.TryGetValue(key, out resource) && resource is Brush appBrush)
-            return appBrush;
-
-        return new SolidColorBrush(Microsoft.UI.Colors.Gray);
+        return ThemeHelper.GetBrush(key);
     }
 
     /// <summary>
