@@ -13,7 +13,7 @@ namespace FieldCure.AssistStudio.Controls;
 /// Internally uses an <see cref="ItemsControl"/> bound to an <see cref="ObservableCollection{T}"/>
 /// so the item list re-renders via data binding rather than a full rebuild on each change.
 /// </summary>
-internal sealed class ToolSelectionFlyout : Flyout
+internal sealed partial class ToolSelectionFlyout : Flyout
 {
     #region Fields
 
@@ -180,7 +180,7 @@ internal sealed class ToolSelectionFlyout : Flyout
 /// View model for a single tool toggle row in the <see cref="ToolSelectionFlyout"/>.
 /// Implements <see cref="INotifyPropertyChanged"/> so the bound checkbox reflects programmatic changes.
 /// </summary>
-internal sealed class ToolToggleItem : INotifyPropertyChanged
+internal sealed partial class ToolToggleItem : INotifyPropertyChanged
 {
     /// <summary>
     /// Backing field for the current enabled state.

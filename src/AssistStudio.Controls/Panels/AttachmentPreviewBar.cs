@@ -4,10 +4,10 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
+using Microsoft.Windows.ApplicationModel.Resources;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Windows.Input;
-using Microsoft.Windows.ApplicationModel.Resources;
 
 namespace FieldCure.AssistStudio.Controls;
 
@@ -431,7 +431,7 @@ public sealed class AttachmentPreviewItemViewModel
     public Windows.UI.Text.TextDecorations NameTextDecorations { get; init; } = Windows.UI.Text.TextDecorations.None;
 }
 
-internal sealed class AttachmentPreviewCommand(Action execute) : ICommand
+internal sealed partial class AttachmentPreviewCommand(Action execute) : ICommand
 {
     public event EventHandler? CanExecuteChanged
     {
