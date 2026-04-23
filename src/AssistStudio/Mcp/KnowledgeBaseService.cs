@@ -1,4 +1,4 @@
-﻿using AssistStudio.Helpers;
+using AssistStudio.Helpers;
 
 namespace AssistStudio.Mcp;
 
@@ -6,6 +6,14 @@ namespace AssistStudio.Mcp;
 /// Orchestrates the shared RAG MCP server lifecycle.
 /// Connects the multi-KB serve process on app startup when KBs exist.
 /// </summary>
+/// <remarks>
+/// Credential rotation (e.g., the user changing a provider API key in the Models page)
+/// is <b>not</b> handled by restarting the RAG process. Per ADR-001 Principle 5, the
+/// server itself invalidates its cached key on 401/403 and issues an Elicitation back
+/// to the host, which surfaces a prompt through the active ChatPanel. That path keeps
+/// the RAG process cross-platform and alive across rotations — no AssistStudio-side
+/// reconnect hook is required.
+/// </remarks>
 public sealed class KnowledgeBaseService
 {
     #region Fields
@@ -64,7 +72,9 @@ public sealed class KnowledgeBaseService
     }
 
     /// <summary>
-    /// Ensures the shared RAG serve is running. Call after creating the first KB.
+    /// Ensures the shared RAG serve is running. Call after creating the first KB
+    /// or on KB page entry so a subsequent <c>search_documents</c> / <c>get_index_info</c>
+    /// call has a live connection to hit.
     /// </summary>
     public async Task EnsureConnectedAsync()
     {
@@ -73,41 +83,6 @@ public sealed class KnowledgeBaseService
             return;
 
         await ConnectIfNeededAsync();
-    }
-
-    /// <summary>
-    /// Page-entry refresh: if RAG is already connected, rebuild its config from current
-    /// <see cref="AppSettings"/> / PasswordVault state (picks up rotated Provider keys)
-    /// and reconnect. If not yet connected, falls through to <see cref="EnsureConnectedAsync"/>,
-    /// which spawns a fresh process and therefore already reads the latest keys.
-    /// "Entering the KB page" is treated as an explicit refresh intent per the
-    /// snapshot + explicit policy (doc 80).
-    /// </summary>
-    public async Task RefreshOrConnectAsync()
-    {
-        // Wrapped in try/catch because the returned task is stored on the page
-        // (_ragReadyTask) and observed only via Task.WhenAny in search callers,
-        // which does not unwrap faults — a bare throw here would surface as an
-        // UnobservedTaskException on finalization.
-        try
-        {
-            var connection = _registry.GetBuiltInConnection(BuiltInServerHelper.RagKey);
-            if (connection?.IsConnected == true
-                && BuiltInServerHelper.TryRebuildBuiltInConfig(connection.Config))
-            {
-                LoggingService.LogInfo("[KB] Rebuilding RAG config with current settings and reconnecting");
-                await _registry.ReconnectAsync(connection);
-                return;
-            }
-
-            await EnsureConnectedAsync();
-        }
-        catch (Exception ex)
-        {
-            LoggingService.LogWarning(
-                $"[KB] RefreshOrConnect failed: {ex.GetType().Name}: {ex.Message}");
-            LoggingService.LogException(ex);
-        }
     }
 
     #endregion
