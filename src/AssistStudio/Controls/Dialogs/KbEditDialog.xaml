@@ -15,7 +15,37 @@
                     x:Name="FoldersHeader"
                     x:Uid="KbEditDialog_FoldersHeader"
                     Style="{StaticResource ControlHeaderStyle}"/>
-                <StackPanel x:Name="FolderList" Spacing="4"/>
+                <ItemsControl x:Name="FolderList">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="4"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="local:FolderRowViewModel">
+                            <Grid ColumnSpacing="4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock
+                                    Grid.Column="0"
+                                    Text="{x:Bind Path}"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    TextTrimming="CharacterEllipsis"
+                                    VerticalAlignment="Center"/>
+                                <Button
+                                    Grid.Column="1"
+                                    Style="{StaticResource SubtleButtonStyle}"
+                                    Padding="4"
+                                    VerticalAlignment="Center"
+                                    Click="OnRemoveFolderClicked">
+                                    <FontIcon Glyph="&#xE74D;" FontSize="12"/>
+                                </Button>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
                 <Button
                     x:Name="AddFolderButton"
                     x:Uid="KbEditDialog_AddFolderButton"

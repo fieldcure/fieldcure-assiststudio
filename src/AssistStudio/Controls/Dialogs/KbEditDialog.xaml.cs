@@ -2,6 +2,7 @@ using AssistStudio.Mcp;
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using System.Collections.ObjectModel;
 using IOPath = System.IO.Path;
 
 namespace AssistStudio.Controls.Dialogs;
@@ -34,6 +35,7 @@ public sealed partial class KbEditDialog : ThemedContentDialog
 
     private readonly KnowledgeBase? _existing;
     private readonly List<KnowledgeBase> _allKbs;
+    private readonly ObservableCollection<FolderRowViewModel> _folders = [];
     private bool _nameManuallyEdited;
     private bool _userOverrodeTiming;
     private bool _hasFolder;
@@ -112,6 +114,7 @@ public sealed partial class KbEditDialog : ThemedContentDialog
         _allKbs = KnowledgeBaseStore.ListAll();
 
         InitializeComponent();
+        FolderList.ItemsSource = _folders;
 
         CloseButtonText = Loader.GetString("Dialog_Cancel");
 
@@ -160,7 +163,7 @@ public sealed partial class KbEditDialog : ThemedContentDialog
         if (!IsCreate && _existing is not null)
         {
             foreach (var path in _existing.SourcePaths)
-                FolderList.Children.Add(BuildFolderRow(path));
+                _folders.Add(new FolderRowViewModel(path));
             NameBox.Text = _existing.Name;
             _hasFolder = _existing.SourcePaths.Count > 0;
         }
@@ -240,13 +243,13 @@ public sealed partial class KbEditDialog : ThemedContentDialog
         if (currentPaths.Any(p => string.Equals(p, folder.Path, StringComparison.OrdinalIgnoreCase)))
             return;
 
-        FolderList.Children.Add(BuildFolderRow(folder.Path));
+        _folders.Add(new FolderRowViewModel(folder.Path));
         _hasFolder = true;
         RefreshPrimaryButton();
 
         // Create-only: auto-fill the name from the first folder if the user
         // has not typed anything.
-        if (IsCreate && !_nameManuallyEdited && FolderList.Children.Count == 1)
+        if (IsCreate && !_nameManuallyEdited && _folders.Count == 1)
             NameBox.Text = IOPath.GetFileName(folder.Path.TrimEnd(IOPath.DirectorySeparatorChar));
 
         // Warn if this folder is bound to another KB. In edit mode, exclude
@@ -318,55 +321,25 @@ public sealed partial class KbEditDialog : ThemedContentDialog
     }
 
     /// <summary>
-    /// Builds a row showing the folder path with a small remove button. The
-    /// remove button deletes the row from the folder list and re-evaluates
-    /// the primary button state.
+    /// Removes the row whose DataContext initiated the click and re-evaluates
+    /// the primary button state so an empty folder list disables submission.
     /// </summary>
-    private Grid BuildFolderRow(string path)
+    private void OnRemoveFolderClicked(object sender, RoutedEventArgs e)
     {
-        var row = new Grid { ColumnSpacing = 4 };
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        if (sender is not FrameworkElement fe || fe.DataContext is not FolderRowViewModel vm)
+            return;
 
-        var label = new TextBlock
-        {
-            Text = path,
-            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-            TextTrimming = TextTrimming.CharacterEllipsis,
-            VerticalAlignment = VerticalAlignment.Center,
-        };
-        Grid.SetColumn(label, 0);
-        row.Children.Add(label);
-
-        var removeBtn = new Button
-        {
-            Content = new FontIcon { Glyph = "\uE74D", FontSize = 12 },
-            Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
-            Padding = new Thickness(4),
-            VerticalAlignment = VerticalAlignment.Center,
-        };
-        removeBtn.Click += (_, _) =>
-        {
-            FolderList.Children.Remove(row);
-            _hasFolder = FolderList.Children.Count > 0;
-            RefreshPrimaryButton();
-        };
-        Grid.SetColumn(removeBtn, 1);
-        row.Children.Add(removeBtn);
-
-        return row;
+        _folders.Remove(vm);
+        _hasFolder = _folders.Count > 0;
+        RefreshPrimaryButton();
     }
 
     /// <summary>
-    /// Reads the folder paths out of the folder list panel in the order the
-    /// user added them.
+    /// Reads the folder paths out of the folder view-model collection in the
+    /// order the user added them.
     /// </summary>
     private List<string> CollectFolderPaths() =>
-        FolderList.Children
-            .OfType<Grid>()
-            .SelectMany(g => g.Children.OfType<TextBlock>())
-            .Select(t => t.Text)
-            .ToList();
+        _folders.Select(f => f.Path).ToList();
 
     /// <summary>
     /// Opens a folder picker parented to the main window. Returns
@@ -389,4 +362,18 @@ public sealed partial class KbEditDialog : ThemedContentDialog
     }
 
     #endregion
+}
+
+/// <summary>
+/// Immutable view model for one row of <see cref="KbEditDialog"/>'s source folder list.
+/// The <see cref="Path"/> is shown in the row label and used by
+/// <see cref="KbEditDialog.CollectFolderPaths"/> to build <see cref="KbEditDialog.SourcePaths"/>.
+/// </summary>
+public sealed class FolderRowViewModel
+{
+    /// <summary>Initializes a new folder row view model with the given path.</summary>
+    public FolderRowViewModel(string path) => Path = path;
+
+    /// <summary>Gets the absolute folder path displayed in the row.</summary>
+    public string Path { get; }
 }

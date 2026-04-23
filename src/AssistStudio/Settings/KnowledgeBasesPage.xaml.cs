@@ -676,50 +676,6 @@ public sealed partial class KnowledgeBasesPage : Page
     }
 
     /// <summary>
-    /// Builds a folder row with path label and delete button. Used by the
-    /// delete-failed dialog body (still inline because it's a one-off UI).
-    /// </summary>
-    private static Grid BuildFolderRow(string path, StackPanel folderList)
-    {
-        var row = new Grid { ColumnSpacing = 4 };
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-        var label = new TextBlock
-        {
-            Text = path,
-            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-            TextTrimming = TextTrimming.CharacterEllipsis,
-            VerticalAlignment = VerticalAlignment.Center,
-        };
-        Grid.SetColumn(label, 0);
-        row.Children.Add(label);
-
-        var removeBtn = new Button
-        {
-            Content = new FontIcon { Glyph = "\uE74D", FontSize = 12 },
-            Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
-            Padding = new Thickness(4),
-            VerticalAlignment = VerticalAlignment.Center,
-        };
-        removeBtn.Click += (_, _) => folderList.Children.Remove(row);
-        Grid.SetColumn(removeBtn, 1);
-        row.Children.Add(removeBtn);
-
-        return row;
-    }
-
-    /// <summary>
-    /// Collects folder paths from a folder list panel.
-    /// </summary>
-    private static List<string> CollectFolderPaths(StackPanel folderList) =>
-        folderList.Children
-            .OfType<Grid>()
-            .SelectMany(g => g.Children.OfType<TextBlock>())
-            .Select(t => t.Text)
-            .ToList();
-
-    /// <summary>
     /// Returns <paramref name="candidate"/> as-is if unique among existing KB names,
     /// otherwise appends " (2)", " (3)", etc. until a free slot is found.
     /// </summary>
