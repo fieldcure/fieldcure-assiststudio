@@ -37,6 +37,15 @@ public sealed partial class SearchEngineSection : UserControl
     private McpServerRegistry? _registry;
     private bool _loaded;
 
+    /// <summary>
+    /// Guards <see cref="OnSearchEngineChanged"/> while the UI is being
+    /// programmatically synced to the live server state via
+    /// <c>get_search_engine</c>. The checked-radio event still fires, but
+    /// the handler must not persist to AppSettings or re-invoke the server
+    /// — the value it's applying came from the server in the first place.
+    /// </summary>
+    private bool _isSyncingFromServer;
+
     #endregion
 
     #region Constructor
@@ -64,13 +73,20 @@ public sealed partial class SearchEngineSection : UserControl
     #region Event Handlers
 
     /// <summary>
-    /// Handles the section expander being opened for the first time, triggering lazy UI construction.
+    /// Handles the section expander being opened for the first time, triggering
+    /// lazy UI construction and (when Essentials is already connected) a
+    /// one-shot sync of the radio selection to the server's live engine. The
+    /// server's state can drift from AppSettings after a mid-conversation
+    /// <c>set_search_engine</c> call, and the saved value is only the
+    /// next-restart default — without this sync the UI would misrepresent
+    /// what search actually happens when the user triggers a tool.
     /// </summary>
     private void OnSectionExpanded(object? sender, EventArgs e)
     {
         if (_loaded) return;
         _loaded = true;
         BuildUI();
+        _ = SyncFromServerAsync();
     }
 
     /// <summary>
@@ -86,6 +102,13 @@ public sealed partial class SearchEngineSection : UserControl
     private void OnSearchEngineChanged(object sender, RoutedEventArgs e)
     {
         if (sender is not RadioButton radio || radio.Tag is not string engineKey) return;
+
+        // Skip persistence + server call when this event was fired by the
+        // programmatic sync-from-server path: the new value came from the
+        // server, so writing AppSettings would overwrite the user's saved
+        // default with a transient runtime state, and calling set_search_engine
+        // back at the server would be a no-op echo.
+        if (_isSyncingFromServer) return;
 
         var configs = AppSettings.BuiltInServers;
         if (!configs.TryGetValue(BuiltInServerHelper.EssentialsKey, out var config))
@@ -220,6 +243,23 @@ public sealed partial class SearchEngineSection : UserControl
 
         var freeHint = _loader.GetString("Connect_SearchEngineFreeHint");
         var apiKeyPlaceholder = _loader.GetString("Connect_ApiKeyPlaceholder") ?? "API key";
+
+        // Runtime-swap hint — explains why the radio selection may drift during
+        // conversations (tools can change the engine in place) and how restart
+        // behaviour relates to the saved configuration.
+        var runtimeHintText = _loader.GetString("Connect_SearchEngineRuntimeHint");
+        if (!string.IsNullOrEmpty(runtimeHintText))
+        {
+            var hint = new TextBlock
+            {
+                Text = runtimeHintText,
+                TextWrapping = TextWrapping.Wrap,
+                FontSize = 12,
+                Opacity = 0.7,
+                Margin = new Thickness(0, 0, 0, 8),
+            };
+            panel.Children.Add(hint);
+        }
 
         // Bing / DuckDuckGo (free)
         var freeRadio = new RadioButton
@@ -428,6 +468,113 @@ public sealed partial class SearchEngineSection : UserControl
         clearButton.Tag = passwordBox;
 
         parent.Children.Add(row);
+    }
+
+    /// <summary>
+    /// Queries the live Essentials server's <c>get_search_engine</c> tool
+    /// (v2.4.0+) and flips the matching radio button so the UI reflects the
+    /// actual engine in use. Silently no-ops when the server is not
+    /// connected, the tool is unavailable (older Essentials), or the call
+    /// fails — in those cases the radio stays on the AppSettings-derived
+    /// default that <see cref="BuildUI"/> already selected, which is the
+    /// closest approximation we have without a live read.
+    /// </summary>
+    private async Task SyncFromServerAsync()
+    {
+        if (_registry is null) return;
+
+        var conn = _registry.GetBuiltInConnection(BuiltInServerHelper.EssentialsKey);
+        if (conn is null || !conn.IsConnected) return;
+        if (!conn.Tools.Any(t => t.Name == "get_search_engine")) return;
+
+        try
+        {
+            using var argsDoc = JsonDocument.Parse("{}");
+            var resultJson = await conn.CallToolWithProgressAsync(
+                "get_search_engine",
+                argsDoc.RootElement,
+                progress: null,
+                ct: CancellationToken.None);
+
+            using var parsed = JsonDocument.Parse(resultJson);
+            if (!parsed.RootElement.TryGetProperty("key", out var keyProp)
+                || keyProp.ValueKind != JsonValueKind.String)
+            {
+                LoggingService.LogWarning("[MCP] get_search_engine returned no 'key' field; skipping sync");
+                return;
+            }
+
+            var serverKey = keyProp.GetString();
+            if (string.IsNullOrEmpty(serverKey)) return;
+
+            // The "default" UI option has no server-side equivalent — Essentials
+            // always reports a concrete engine key. Map bing back to "default"
+            // only when the user has not explicitly saved a paid engine, so a
+            // user who chose Bing and a fallback-produced Bing look the same.
+            var targetTag = ResolveRadioTagForServerKey(serverKey);
+            var radio = FindRadioByTag(targetTag);
+            if (radio is null)
+            {
+                LoggingService.LogInfo($"[MCP] get_search_engine reported '{serverKey}' but no matching radio; leaving UI as-is");
+                return;
+            }
+            if (radio.IsChecked == true) return;
+
+            _isSyncingFromServer = true;
+            try
+            {
+                radio.IsChecked = true;
+            }
+            finally
+            {
+                _isSyncingFromServer = false;
+            }
+
+            LoggingService.LogInfo($"[MCP] Search engine UI synced to server state: {serverKey} (radio='{targetTag}')");
+        }
+        catch (Exception ex)
+        {
+            LoggingService.LogWarning($"[MCP] get_search_engine call failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Maps the canonical engine key returned by <c>get_search_engine</c> to
+    /// the radio button tag used in <see cref="BuildUI"/>. When the server
+    /// reports <c>bing</c> and the user has not saved a paid engine, the
+    /// free-default radio (<c>"default"</c>) is selected so the Bing/DDG
+    /// fallback and an explicit Bing choice look identical in the UI.
+    /// </summary>
+    /// <param name="serverKey">Lowercase canonical key from <c>get_search_engine</c>.</param>
+    /// <returns>The radio tag to check, or the server key itself for paid engines.</returns>
+    private static string ResolveRadioTagForServerKey(string serverKey)
+    {
+        var saved = GetCurrentEngine();
+        if (string.Equals(serverKey, "bing", StringComparison.OrdinalIgnoreCase)
+            && saved == "default")
+        {
+            return "default";
+        }
+        return serverKey;
+    }
+
+    /// <summary>
+    /// Finds the <see cref="RadioButton"/> in <c>ContentPanel</c> whose
+    /// <see cref="FrameworkElement.Tag"/> matches <paramref name="tag"/>
+    /// (case-insensitive), or <see langword="null"/> when no match exists.
+    /// </summary>
+    private RadioButton? FindRadioByTag(string tag)
+    {
+        foreach (var child in ContentPanel.Children)
+        {
+            if (child is RadioButton rb
+                && rb.Tag is string rbTag
+                && string.Equals(rbTag, tag, StringComparison.OrdinalIgnoreCase))
+            {
+                return rb;
+            }
+        }
+        return null;
     }
 
     /// <summary>

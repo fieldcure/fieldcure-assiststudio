@@ -1235,6 +1235,9 @@
   <data name="Connect_SearchEngine" xml:space="preserve">
     <value>Search engine</value>
   </data>
+  <data name="Connect_SearchEngineRuntimeHint" xml:space="preserve">
+    <value>The selection reflects the engine currently active on the Essentials server. Changes apply immediately without restart. Tools may switch the engine during a conversation; on the next server start Essentials returns to the engine saved here.</value>
+  </data>
   <data name="Connect_SearchEngineFree" xml:space="preserve">
     <value>Bing / DuckDuckGo</value>
   </data>
