@@ -250,7 +250,9 @@ public sealed partial class SearchEngineSection : UserControl
         WolframLabel.Text = _loader.GetString("Connect_WolframAlpha");
         WolframKey.PlaceholderText = _loader.GetString("Connect_WolframAppIdPlaceholder") ?? "AppID";
         WolframHint.Text = _loader.GetString("Connect_WolframAppIdHint");
-        WolframRemoveTooltip.Content = _loader.GetString("Connect_Remove");
+        var removeLabel = _loader.GetString("Connect_Remove") ?? "Remove";
+        WolframRemoveTooltip.Content = removeLabel;
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(WolframClearButton, removeLabel);
 
         // Current engine from AppSettings, with fallback if its key is missing.
         var configs = AppSettings.BuiltInServers;

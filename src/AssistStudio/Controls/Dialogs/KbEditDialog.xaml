@@ -39,8 +39,13 @@
                                     Style="{StaticResource SubtleButtonStyle}"
                                     Padding="4"
                                     VerticalAlignment="Center"
+                                    AutomationProperties.AutomationId="KbFolderRemoveButton"
+                                    AutomationProperties.Name="{x:Bind RemoveTooltip}"
                                     Click="OnRemoveFolderClicked">
                                     <FontIcon Glyph="&#xE74D;" FontSize="12"/>
+                                    <ToolTipService.ToolTip>
+                                        <ToolTip Content="{x:Bind RemoveTooltip}" Placement="Mouse" />
+                                    </ToolTipService.ToolTip>
                                 </Button>
                             </Grid>
                         </DataTemplate>

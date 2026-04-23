@@ -87,6 +87,8 @@
                                     Background="{ThemeResource SubtleFillColorTransparentBrush}"
                                     BorderThickness="0"
                                     Tag="{x:Bind Id}"
+                                    AutomationProperties.AutomationId="ChannelDeleteButton"
+                                    AutomationProperties.Name="{x:Bind DeleteTooltip}"
                                     Click="OnDeleteChannelClick">
                                     <FontIcon Glyph="&#xE74D;" FontSize="12" />
                                     <ToolTipService.ToolTip>

@@ -162,8 +162,9 @@ public sealed partial class KbEditDialog : ThemedContentDialog
 
         if (!IsCreate && _existing is not null)
         {
+            var removeTooltip = Loader.GetString("Connect_Remove") ?? "Remove";
             foreach (var path in _existing.SourcePaths)
-                _folders.Add(new FolderRowViewModel(path));
+                _folders.Add(new FolderRowViewModel(path, removeTooltip));
             NameBox.Text = _existing.Name;
             _hasFolder = _existing.SourcePaths.Count > 0;
         }
@@ -243,7 +244,7 @@ public sealed partial class KbEditDialog : ThemedContentDialog
         if (currentPaths.Any(p => string.Equals(p, folder.Path, StringComparison.OrdinalIgnoreCase)))
             return;
 
-        _folders.Add(new FolderRowViewModel(folder.Path));
+        _folders.Add(new FolderRowViewModel(folder.Path, Loader.GetString("Connect_Remove") ?? "Remove"));
         _hasFolder = true;
         RefreshPrimaryButton();
 
@@ -372,8 +373,15 @@ public sealed partial class KbEditDialog : ThemedContentDialog
 public sealed class FolderRowViewModel
 {
     /// <summary>Initializes a new folder row view model with the given path.</summary>
-    public FolderRowViewModel(string path) => Path = path;
+    public FolderRowViewModel(string path, string removeTooltip)
+    {
+        Path = path;
+        RemoveTooltip = removeTooltip;
+    }
 
     /// <summary>Gets the absolute folder path displayed in the row.</summary>
     public string Path { get; }
+
+    /// <summary>Gets the localized tooltip / automation name shown on the row's remove button.</summary>
+    public string RemoveTooltip { get; }
 }

@@ -86,6 +86,8 @@
                                     Padding="6"
                                     VerticalAlignment="Center"
                                     Visibility="{x:Bind ClearVisibility, Mode=OneWay}"
+                                    AutomationProperties.AutomationId="SearchEnginePaidKeyClearButton"
+                                    AutomationProperties.Name="{x:Bind RemoveTooltip}"
                                     Click="OnClearPaidEngine">
                                     <FontIcon Glyph="&#xE74D;" FontSize="14" />
                                     <ToolTipService.ToolTip>
@@ -125,6 +127,7 @@
                         Padding="6"
                         VerticalAlignment="Center"
                         Visibility="Collapsed"
+                        AutomationProperties.AutomationId="WolframAppIdClearButton"
                         Click="OnWolframClear">
                         <FontIcon Glyph="&#xE74D;" FontSize="14" />
                         <ToolTipService.ToolTip>
