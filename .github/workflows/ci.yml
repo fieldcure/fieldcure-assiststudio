@@ -18,13 +18,24 @@ jobs:
         with:
           dotnet-version: |
             8.0.x
-            10.0.x
+            9.0.x
+
+      # Local dev pins SDK 10 preview via global.json, but windows-latest
+      # ships SDK 10.0.201 as the highest installed and lacks the matching
+      # VS 18 AppxPackage tooling, so WindowsAppSDK's MrtCore.PriGen fails.
+      # Rewrite global.json to pin SDK 9 for CI only.
+      - name: Pin SDK to 9.0 for CI
+        shell: pwsh
+        run: |
+          '{ "sdk": { "version": "9.0.100", "rollForward": "latestFeature" } }' |
+            Set-Content -Path global.json -Encoding utf8
+          dotnet --version
 
       - name: Restore
-        run: dotnet restore src/AssistStudio.Core/AssistStudio.Core.csproj
+        run: dotnet restore FieldCure.AssistStudio.slnx
 
       - name: Build
-        run: dotnet build src/AssistStudio.Core/AssistStudio.Core.csproj --no-restore
+        run: dotnet build FieldCure.AssistStudio.slnx --no-restore --configuration Release
 
       - name: Test
-        run: dotnet test src/AssistStudio.Core.Tests/AssistStudio.Core.Tests.csproj --verbosity normal
+        run: dotnet test FieldCure.AssistStudio.slnx --no-build --configuration Release --verbosity normal
