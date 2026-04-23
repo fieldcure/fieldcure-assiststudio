@@ -1,7 +1,10 @@
-using FieldCure.AssistStudio.Helpers;
+﻿using FieldCure.AssistStudio.Helpers;
 
-namespace FieldCure.AssistStudio.Tests;
+namespace FieldCure.AssistStudio.Core.Tests;
 
+/// <summary>
+/// Tests HTML-to-text extraction behavior, including stripping unsafe or non-content elements.
+/// </summary>
 [TestClass]
 public class HtmlTextExtractorTests
 {

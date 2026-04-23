@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <RootNamespace>FieldCure.AssistStudio.Tests</RootNamespace>
+    <RootNamespace>FieldCure.AssistStudio.Core.Tests</RootNamespace>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <Nullable>enable</Nullable>
@@ -17,8 +17,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\AssistStudio.Core\AssistStudio.Core.csproj" />
-    <ProjectReference Include="..\Ai.Providers\Ai.Providers.csproj" />
+    <ProjectReference Include="..\..\src\Ai.Providers\Ai.Providers.csproj" />
+    <ProjectReference Include="..\..\src\AssistStudio.Core\AssistStudio.Core.csproj" />
   </ItemGroup>
 
 </Project>

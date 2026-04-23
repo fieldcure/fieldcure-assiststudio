@@ -2,8 +2,11 @@
 using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Models;
 
-namespace FieldCure.AssistStudio.Tests;
+namespace FieldCure.AssistStudio.Core.Tests;
 
+/// <summary>
+/// Tests provider preset behavior, including defaults, persistence-facing values, and normalization.
+/// </summary>
 [TestClass]
 public class ProviderPresetTests
 {

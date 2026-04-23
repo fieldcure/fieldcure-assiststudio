@@ -30,11 +30,11 @@
   </Folder>
 
   <Folder Name="/tests/">
-    <Project Path="src/AssistStudio.Core.Tests/AssistStudio.Core.Tests.csproj" />
     <Project Path="tests/Ai.Execution.Tests/Ai.Execution.Tests.csproj" />
     <Project Path="tests/Ai.Providers.Tests/Ai.Providers.Tests.csproj" />
     <Project Path="tests/AssistStudio.App.Tests/AssistStudio.App.Tests.csproj" />
     <Project Path="tests/AssistStudio.Anthropic.Tests/AssistStudio.Anthropic.Tests.csproj" />
+    <Project Path="tests/AssistStudio.Core.Tests/AssistStudio.Core.Tests.csproj" />
     <Project Path="tests/TestMcpServer/TestMcpServer.csproj" />
   </Folder>
 

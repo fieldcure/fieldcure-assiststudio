@@ -1,10 +1,12 @@
-using System.Text.Json;
+﻿using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Helpers;
-using FieldCure.AssistStudio.Models;
-using FieldCure.Ai.Providers.Models;
+using System.Text.Json;
 
-namespace FieldCure.AssistStudio.Tests;
+namespace FieldCure.AssistStudio.Core.Tests;
 
+/// <summary>
+/// Tests tool-call execution behavior, including argument handling, confirmation flow, and failures.
+/// </summary>
 [TestClass]
 public class ToolCallExecutorTests
 {

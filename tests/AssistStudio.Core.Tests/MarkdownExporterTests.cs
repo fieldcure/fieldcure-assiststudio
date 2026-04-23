@@ -1,8 +1,11 @@
-using FieldCure.Ai.Providers.Export;
+﻿using FieldCure.Ai.Providers.Export;
 using FieldCure.Ai.Providers.Models;
 
-namespace FieldCure.AssistStudio.Tests;
+namespace FieldCure.AssistStudio.Core.Tests;
 
+/// <summary>
+/// Tests Markdown export generation for chat transcripts, tool calls, summaries, and attachments.
+/// </summary>
 [TestClass]
 public class MarkdownExporterTests
 {

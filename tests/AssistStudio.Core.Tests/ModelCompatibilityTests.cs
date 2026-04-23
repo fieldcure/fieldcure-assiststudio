@@ -1,8 +1,11 @@
-using System.Runtime.Versioning;
+﻿using System.Runtime.Versioning;
 using FieldCure.AssistStudio.Helpers;
 
-namespace FieldCure.AssistStudio.Tests;
+namespace FieldCure.AssistStudio.Core.Tests;
 
+/// <summary>
+/// Tests model capability and compatibility rules used by AssistStudio core features.
+/// </summary>
 [TestClass]
 [SupportedOSPlatform("windows")]
 public class ModelCompatibilityTests

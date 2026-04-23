@@ -1,9 +1,11 @@
+﻿using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Helpers;
-using FieldCure.AssistStudio.Models;
-using FieldCure.Ai.Providers.Models;
 
-namespace FieldCure.AssistStudio.Tests;
+namespace FieldCure.AssistStudio.Core.Tests;
 
+/// <summary>
+/// Tests streamed tool-call accumulation across partial chunks and completion boundaries.
+/// </summary>
 [TestClass]
 public class StreamToolCallAccumulatorTests
 {
