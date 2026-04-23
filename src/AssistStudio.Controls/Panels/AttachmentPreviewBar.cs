@@ -20,7 +20,8 @@ public sealed partial class AttachmentPreviewBar : Control
     #region Fields
 
     /// <summary>Resource loader for localized strings in this library.</summary>
-    private static readonly ResourceLoader Res = new("AssistStudio.Controls/Resources");
+    private static readonly ResourceLoader Res =
+        new(ResourceLoader.GetDefaultResourceFilePath(), "AssistStudio.Controls/Resources");
 
     /// <summary>
     /// The observable collection backing the displayed attachments.
