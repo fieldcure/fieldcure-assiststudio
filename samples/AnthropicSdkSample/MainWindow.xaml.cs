@@ -4,11 +4,14 @@ using AnthropicSdkSample.Controls;
 using FieldCure.AssistStudio.Controls;
 using FieldCure.AssistStudio.Controls.Anthropic;
 using FieldCure.AssistStudio.Controls.Helpers;
+using Microsoft.UI;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Windows.Security.Credentials;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
+using Windows.Security.Credentials;
+using Windows.UI;
 
 namespace AnthropicSdkSample;
 
@@ -18,6 +21,9 @@ namespace AnthropicSdkSample;
 /// </summary>
 public sealed partial class MainWindow : Window
 {
+    /// <summary>Reference to the underlying app window for caption button theming.</summary>
+    private readonly AppWindow? _appWindow;
+
     /// <summary>Available Anthropic models for the model selector.</summary>
     private static readonly (string Id, string Display)[] AvailableModels =
     [
@@ -28,6 +34,9 @@ public sealed partial class MainWindow : Window
 
     /// <summary>LocalSettings key for the persisted model selection.</summary>
     private const string ModelSettingName = "SelectedModelId";
+
+    /// <summary>LocalSettings key for the persisted app theme selection.</summary>
+    private const string ThemeSettingName = "RequestedTheme";
 
     /// <summary>PasswordVault resource name for credential storage.</summary>
     private const string VaultResource = "AnthropicSdkSample";
@@ -56,9 +65,11 @@ public sealed partial class MainWindow : Window
         ExtendsContentIntoTitleBar = true;
         var titleBar = ((FrameworkElement)Content).FindName("AppTitleBar") as UIElement;
         if (titleBar is not null) SetTitleBar(titleBar);
+        _appWindow = AppWindow;
 
         // Populate model selector
         InitializeModelSelector();
+        InitializeTheme();
 
         ChatPanel.UserMessageSubmitted += OnUserMessageSubmitted;
         ((FrameworkElement)Content).Loaded += OnContentLoaded;
@@ -103,6 +114,109 @@ public sealed partial class MainWindow : Window
 
     #endregion
 
+    #region Theme
+
+    /// <summary>Restores the saved theme or uses the system theme by default.</summary>
+    private void InitializeTheme()
+    {
+        var settings = ApplicationData.Current.LocalSettings;
+        var savedTheme = settings.Values[ThemeSettingName] as string;
+
+        var theme = savedTheme switch
+        {
+            "Light" => ElementTheme.Light,
+            "Dark" => ElementTheme.Dark,
+            _ => Application.Current.RequestedTheme == ApplicationTheme.Dark
+                ? ElementTheme.Dark
+                : ElementTheme.Light,
+        };
+
+        ApplyTheme(theme, persist: false);
+    }
+
+    /// <summary>Toggles between the light and dark themes.</summary>
+    private void OnThemeToggleClick(object sender, RoutedEventArgs e)
+    {
+        var nextTheme = GetEffectiveTheme() == ElementTheme.Dark
+            ? ElementTheme.Light
+            : ElementTheme.Dark;
+
+        ApplyTheme(nextTheme, persist: true);
+    }
+
+    /// <summary>Applies the selected theme to the sample window and chat panel.</summary>
+    private void ApplyTheme(ElementTheme theme, bool persist)
+    {
+        if (Content is FrameworkElement root)
+            root.RequestedTheme = theme;
+
+        ApplyTitleBarTheme(theme);
+        ChatPanel.Theme = theme == ElementTheme.Dark ? ChatTheme.Dark : ChatTheme.Light;
+        UpdateThemeButton(theme);
+
+        if (!persist) return;
+
+        var settings = ApplicationData.Current.LocalSettings;
+        settings.Values[ThemeSettingName] = theme == ElementTheme.Dark ? "Dark" : "Light";
+    }
+
+    /// <summary>Updates the theme button icon and tooltip to reflect the next available theme.</summary>
+    private void UpdateThemeButton(ElementTheme theme)
+    {
+        var nextThemeIsDark = theme != ElementTheme.Dark;
+        ThemeToggleIcon.Glyph = nextThemeIsDark ? "\uE708" : "\uE793";
+        ToolTipService.SetToolTip(
+            ThemeToggleButton,
+            nextThemeIsDark ? "Switch to dark theme" : "Switch to light theme");
+    }
+
+    /// <summary>Gets the effective app theme for the sample window.</summary>
+    private ElementTheme GetEffectiveTheme()
+    {
+        return Content is FrameworkElement root && root.RequestedTheme != ElementTheme.Default
+            ? root.RequestedTheme
+            : Application.Current.RequestedTheme == ApplicationTheme.Dark
+                ? ElementTheme.Dark
+                : ElementTheme.Light;
+    }
+
+    /// <summary>Applies theme-aware colors to the custom title bar and caption buttons.</summary>
+    private void ApplyTitleBarTheme(ElementTheme theme)
+    {
+        if (_appWindow?.TitleBar is not { } titleBar)
+            return;
+
+        var transparent = Colors.Transparent;
+        titleBar.BackgroundColor = transparent;
+        titleBar.ButtonBackgroundColor = transparent;
+        titleBar.InactiveBackgroundColor = transparent;
+        titleBar.ButtonInactiveBackgroundColor = transparent;
+
+        var isDark = theme == ElementTheme.Dark ||
+            (theme == ElementTheme.Default && Application.Current.RequestedTheme == ApplicationTheme.Dark);
+
+        var foreground = isDark ? Colors.White : Colors.Black;
+        var hoverBg = isDark
+            ? Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF)
+            : Color.FromArgb(0x33, 0x00, 0x00, 0x00);
+        var pressedBg = isDark
+            ? Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF)
+            : Color.FromArgb(0x66, 0x00, 0x00, 0x00);
+        var inactiveFg = isDark
+            ? Color.FromArgb(0x99, 0xFF, 0xFF, 0xFF)
+            : Color.FromArgb(0x99, 0x00, 0x00, 0x00);
+
+        titleBar.ForegroundColor = foreground;
+        titleBar.ButtonForegroundColor = foreground;
+        titleBar.ButtonHoverForegroundColor = foreground;
+        titleBar.ButtonHoverBackgroundColor = hoverBg;
+        titleBar.ButtonPressedForegroundColor = foreground;
+        titleBar.ButtonPressedBackgroundColor = pressedBg;
+        titleBar.ButtonInactiveForegroundColor = inactiveFg;
+    }
+
+    #endregion
+
     #region API Key Lifecycle
 
     /// <summary>Loads or prompts for the API key once the visual tree is ready.</summary>
@@ -137,6 +251,7 @@ public sealed partial class MainWindow : Window
             CloseButtonText = "Cancel",
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = Content.XamlRoot,
+            RequestedTheme = GetEffectiveTheme(),
         };
 
         if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
@@ -161,7 +276,7 @@ public sealed partial class MainWindow : Window
         var dialog = new ApiKeyPromptDialog
         {
             XamlRoot = Content.XamlRoot,
-            RequestedTheme = ((FrameworkElement)Content).ActualTheme,
+            RequestedTheme = GetEffectiveTheme(),
         };
 
         var result = await dialog.ShowAsync();
