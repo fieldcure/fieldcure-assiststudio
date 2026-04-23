@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <UserControl
     x:Class="AssistStudio.Controls.SearchEngineSection"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -8,10 +8,135 @@
     <controls:CollapsibleSection
         x:Name="Section"
         IsCompact="True"
-        IsExpanded="False"        
+        IsExpanded="False"
         Expanded="OnSectionExpanded">
         <controls:CollapsibleSection.Body>
-            <StackPanel x:Name="ContentPanel" Spacing="10" />
+            <StackPanel Spacing="10">
+
+                <!-- Runtime-swap hint — tools can change the engine mid-conversation. -->
+                <TextBlock
+                    x:Name="RuntimeHintText"
+                    Visibility="Collapsed"
+                    TextWrapping="Wrap"
+                    FontSize="12"
+                    Opacity="0.7"
+                    Margin="0,0,0,8" />
+
+                <!-- Free engine (Bing / DuckDuckGo). Has no API key. -->
+                <RadioButton
+                    x:Name="FreeEngineRadio"
+                    GroupName="SearchEngine"
+                    Margin="0"
+                    Checked="OnFreeEngineChecked">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock x:Name="FreeEngineLabel" VerticalAlignment="Center" />
+                        <TextBlock
+                            x:Name="FreeEngineHint"
+                            VerticalAlignment="Center"
+                            Opacity="0.5"
+                            Style="{StaticResource CaptionTextBlockStyle}" />
+                    </StackPanel>
+                </RadioButton>
+
+                <!-- Paid engine rows — data-driven (Serper / Tavily / SerpApi share a template). -->
+                <ItemsControl x:Name="PaidEnginesList">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="10" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="controls:PaidEngineRowViewModel">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <RadioButton
+                                    Grid.Column="0"
+                                    GroupName="SearchEngine"
+                                    Content="{x:Bind DisplayName}"
+                                    IsChecked="{x:Bind IsChecked, Mode=TwoWay}"
+                                    IsEnabled="{x:Bind IsEnabled, Mode=OneWay}"
+                                    VerticalAlignment="Center"
+                                    Margin="0"
+                                    Checked="OnPaidEngineChecked" />
+
+                                <PasswordBox
+                                    Grid.Column="1"
+                                    PlaceholderText="{x:Bind ApiKeyPlaceholder}"
+                                    Password="{x:Bind ApiKey, Mode=OneWay}"
+                                    PasswordRevealMode="Hidden"
+                                    Width="220"
+                                    VerticalAlignment="Center"
+                                    PasswordChanged="OnPaidEngineKeyChanged" />
+
+                                <Button
+                                    Grid.Column="2"
+                                    Style="{StaticResource SubtleButtonStyle}"
+                                    Padding="6"
+                                    VerticalAlignment="Center"
+                                    Margin="4,0,0,0"
+                                    Visibility="{x:Bind ClearVisibility, Mode=OneWay}"
+                                    Click="OnClearPaidEngine">
+                                    <FontIcon Glyph="&#xE74D;" FontSize="14" />
+                                    <ToolTipService.ToolTip>
+                                        <ToolTip Content="{x:Bind RemoveTooltip}" Placement="Mouse" />
+                                    </ToolTipService.ToolTip>
+                                </Button>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Wolfram|Alpha — independent optional AppID (not part of the engine radio group). -->
+                <Grid x:Name="WolframRow">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="100" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock
+                        Grid.Column="0"
+                        x:Name="WolframLabel"
+                        VerticalAlignment="Center"
+                        Margin="0" />
+
+                    <StackPanel
+                        Grid.Column="1"
+                        Spacing="2"
+                        VerticalAlignment="Center">
+                        <PasswordBox
+                            x:Name="WolframKey"
+                            PasswordRevealMode="Hidden"
+                            Width="220"
+                            HorizontalAlignment="Left"
+                            PasswordChanged="OnWolframKeyChanged" />
+                        <TextBlock
+                            x:Name="WolframHint"
+                            Opacity="0.5"
+                            Style="{StaticResource CaptionTextBlockStyle}" />
+                    </StackPanel>
+
+                    <Button
+                        Grid.Column="2"
+                        x:Name="WolframClearButton"
+                        Style="{StaticResource SubtleButtonStyle}"
+                        Padding="6"
+                        VerticalAlignment="Center"
+                        Margin="4,0,0,0"
+                        Visibility="Collapsed"
+                        Click="OnWolframClear">
+                        <FontIcon Glyph="&#xE74D;" FontSize="14" />
+                        <ToolTipService.ToolTip>
+                            <ToolTip x:Name="WolframRemoveTooltip" Placement="Mouse" />
+                        </ToolTipService.ToolTip>
+                    </Button>
+                </Grid>
+            </StackPanel>
         </controls:CollapsibleSection.Body>
     </controls:CollapsibleSection>
 </UserControl>

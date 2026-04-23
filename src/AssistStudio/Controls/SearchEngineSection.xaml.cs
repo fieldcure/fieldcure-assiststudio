@@ -1,9 +1,11 @@
 using AssistStudio.Helpers;
 using AssistStudio.Mcp;
+using CommunityToolkit.Mvvm.ComponentModel;
 using FieldCure.AssistStudio.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.ApplicationModel.Resources;
+using System.Collections.ObjectModel;
 using System.Text.Json;
 
 namespace AssistStudio.Controls;
@@ -29,20 +31,23 @@ public sealed partial class SearchEngineSection : UserControl
     private const string SerpApiEnvKey = "SERPAPI_API_KEY";
     private const string WolframEnvKey = "WOLFRAM_APPID";
 
+    private const string DefaultEngineKey = "default";
+
     #endregion
 
     #region Fields
 
     private readonly ResourceLoader _loader = new();
+    private readonly ObservableCollection<PaidEngineRowViewModel> _paidEngines = [];
     private McpServerRegistry? _registry;
     private bool _loaded;
 
     /// <summary>
-    /// Guards <see cref="OnSearchEngineChanged"/> while the UI is being
-    /// programmatically synced to the live server state via
-    /// <c>get_search_engine</c>. The checked-radio event still fires, but
-    /// the handler must not persist to AppSettings or re-invoke the server
-    /// — the value it's applying came from the server in the first place.
+    /// Guards <see cref="OnFreeEngineChecked"/> / <see cref="OnPaidEngineChecked"/>
+    /// while the UI is being programmatically synced — either to the live server state
+    /// via <c>get_search_engine</c>, or during mutual-exclusion enforcement after a
+    /// user click. The handlers still fire, but must not persist to AppSettings or
+    /// re-invoke the server.
     /// </summary>
     private bool _isSyncingFromServer;
 
@@ -50,9 +55,11 @@ public sealed partial class SearchEngineSection : UserControl
 
     #region Constructor
 
+    /// <summary>Initializes the control and binds the paid-engine ItemsControl to its backing collection.</summary>
     public SearchEngineSection()
     {
         InitializeComponent();
+        PaidEnginesList.ItemsSource = _paidEngines;
     }
 
     #endregion
@@ -74,104 +81,169 @@ public sealed partial class SearchEngineSection : UserControl
 
     /// <summary>
     /// Handles the section expander being opened for the first time, triggering
-    /// lazy UI construction and (when Essentials is already connected) a
-    /// one-shot sync of the radio selection to the server's live engine. The
-    /// server's state can drift from AppSettings after a mid-conversation
-    /// <c>set_search_engine</c> call, and the saved value is only the
-    /// next-restart default — without this sync the UI would misrepresent
-    /// what search actually happens when the user triggers a tool.
+    /// lazy state load and (when Essentials is already connected) a one-shot sync
+    /// of the radio selection to the server's live engine. The server's state
+    /// can drift from AppSettings after a mid-conversation <c>set_search_engine</c>
+    /// call, and the saved value is only the next-restart default — without this
+    /// sync the UI would misrepresent what search actually happens when the user
+    /// triggers a tool.
     /// </summary>
     private void OnSectionExpanded(object? sender, EventArgs e)
     {
         if (_loaded) return;
         _loaded = true;
-        BuildUI();
+        LoadState();
         _ = SyncFromServerAsync();
     }
 
     /// <summary>
-    /// Handles search engine radio button selection changes: persists the choice
-    /// and applies it to the running Essentials server without a restart when
-    /// possible. Since v2.3.0 Essentials exposes a <c>set_search_engine</c> MCP
-    /// tool that swaps the active engine in place; restarting the server just
-    /// to change the initial CLI <c>--search-engine</c> argument is only needed
-    /// when the runtime swap is unavailable (server not connected, tool call
-    /// fails, or the selection is the free default which has no paid fallback
-    /// considerations).
+    /// Handles the free (Bing/DuckDuckGo) radio becoming checked by unchecking the
+    /// paid engines and persisting the default selection. See
+    /// <see cref="PersistAndApplyEngineChange(string)"/> for the runtime-swap vs
+    /// reconnect policy.
     /// </summary>
-    private void OnSearchEngineChanged(object sender, RoutedEventArgs e)
+    private void OnFreeEngineChecked(object sender, RoutedEventArgs e)
     {
-        if (sender is not RadioButton radio || radio.Tag is not string engineKey) return;
-
-        // Skip persistence + server call when this event was fired by the
-        // programmatic sync-from-server path: the new value came from the
-        // server, so writing AppSettings would overwrite the user's saved
-        // default with a transient runtime state, and calling set_search_engine
-        // back at the server would be a no-op echo.
         if (_isSyncingFromServer) return;
 
-        var configs = AppSettings.BuiltInServers;
-        if (!configs.TryGetValue(BuiltInServerHelper.EssentialsKey, out var config))
+        // Mutex — RadioButton GroupName crossing an ItemsControl boundary is unreliable.
+        _isSyncingFromServer = true;
+        try
         {
-            config = new BuiltInServerConfig { IsEnabled = true };
-            configs[BuiltInServerHelper.EssentialsKey] = config;
+            foreach (var other in _paidEngines)
+                other.IsChecked = false;
+        }
+        finally
+        {
+            _isSyncingFromServer = false;
         }
 
-        config.SearchEngine = engineKey == "default" ? null : engineKey;
-        AppSettings.BuiltInServers = configs;
-        LoggingService.LogInfo($"[MCP] Search engine changed to: {engineKey}");
-
-        _ = ApplyEngineChangeAsync(engineKey);
+        PersistAndApplyEngineChange(DefaultEngineKey);
     }
 
     /// <summary>
-    /// Persists the API key, enables/selects the radio button, and shows/hides the trash button.
+    /// Handles a paid-engine radio becoming checked by unchecking the free radio
+    /// and the other paid rows, then persisting the selection and attempting a
+    /// runtime in-place switch via <c>set_search_engine</c>.
     /// </summary>
-    private void OnApiKeyChanged(object sender, RadioButton radio, Button clearButton, string engineKey)
+    private void OnPaidEngineChecked(object sender, RoutedEventArgs e)
     {
-        if (sender is not PasswordBox pb || pb.Tag is not string envKey) return;
+        if (_isSyncingFromServer) return;
+        if (sender is not FrameworkElement fe || fe.DataContext is not PaidEngineRowViewModel vm)
+            return;
+
+        _isSyncingFromServer = true;
+        try
+        {
+            FreeEngineRadio.IsChecked = false;
+            foreach (var other in _paidEngines)
+            {
+                if (!ReferenceEquals(other, vm))
+                    other.IsChecked = false;
+            }
+        }
+        finally
+        {
+            _isSyncingFromServer = false;
+        }
+
+        PersistAndApplyEngineChange(vm.EngineKey);
+    }
+
+    /// <summary>
+    /// Handles a user keystroke on a paid-engine API key field by persisting to the
+    /// credential vault and reflecting the availability change in the row's enabled
+    /// state, auto-check behaviour, and trash-button visibility.
+    /// </summary>
+    private void OnPaidEngineKeyChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is not PasswordBox pb || pb.DataContext is not PaidEngineRowViewModel vm)
+            return;
 
         var value = pb.Password?.Trim() ?? "";
         var hasKey = !string.IsNullOrEmpty(value);
 
         if (hasKey)
         {
-            PasswordVaultHelper.SaveMcpEnvVar(EssentialsServerId, envKey, value);
-            radio.IsEnabled = true;
-            radio.IsChecked = true; // auto-select on key entry
-            clearButton.Visibility = Visibility.Visible;
-            LoggingService.LogInfo($"[MCP] API key saved for {engineKey}, auto-selected");
+            PasswordVaultHelper.SaveMcpEnvVar(EssentialsServerId, vm.EnvKey, value);
+            vm.IsEnabled = true;
+            vm.IsChecked = true; // auto-select on key entry — triggers mutex via OnPaidEngineChecked
+            vm.ClearVisibility = Visibility.Visible;
+            LoggingService.LogInfo($"[MCP] API key saved for {vm.EngineKey}, auto-selected");
         }
         else
         {
-            PasswordVaultHelper.DeleteMcpEnvVar(EssentialsServerId, envKey);
-            radio.IsEnabled = false;
-            radio.IsChecked = false;
-            clearButton.Visibility = Visibility.Collapsed;
-            LoggingService.LogInfo($"[MCP] API key removed for {engineKey}, radio disabled");
+            PasswordVaultHelper.DeleteMcpEnvVar(EssentialsServerId, vm.EnvKey);
+            vm.IsEnabled = false;
+            vm.IsChecked = false;
+            vm.ClearVisibility = Visibility.Collapsed;
+            LoggingService.LogInfo($"[MCP] API key removed for {vm.EngineKey}, radio disabled");
 
-            // Fall back to free engine if this was the selected one
-            if (engineKey == GetCurrentEngine())
+            // Fall back to free engine if this row was the active one.
+            if (vm.EngineKey == GetCurrentEngine())
             {
-                LoggingService.LogInfo($"[MCP] Active engine '{engineKey}' lost API key, falling back to default");
-                SelectFreeEngine();
+                LoggingService.LogInfo($"[MCP] Active engine '{vm.EngineKey}' lost API key, falling back to default");
+                FreeEngineRadio.IsChecked = true;
             }
         }
     }
 
     /// <summary>
-    /// Clears the API key from the password box and PasswordVault, disables the radio button.
+    /// Handles the per-row trash button by clearing the stored API key, disabling
+    /// the row, and falling back to the free engine if the cleared row was active.
     /// </summary>
-    private void OnClearApiKey(object sender, RoutedEventArgs e)
+    private void OnClearPaidEngine(object sender, RoutedEventArgs e)
     {
-        if (sender is not Button btn || btn.Tag is not PasswordBox pb) return;
+        if (sender is not FrameworkElement fe || fe.DataContext is not PaidEngineRowViewModel vm)
+            return;
 
-        pb.Password = "";
-        if (pb.Tag is string envKey)
+        PasswordVaultHelper.DeleteMcpEnvVar(EssentialsServerId, vm.EnvKey);
+        vm.ApiKey = "";
+        vm.IsEnabled = false;
+        vm.IsChecked = false;
+        vm.ClearVisibility = Visibility.Collapsed;
+        LoggingService.LogInfo($"[MCP] API key cleared: {vm.EnvKey}");
+
+        if (vm.EngineKey == GetCurrentEngine())
+            FreeEngineRadio.IsChecked = true;
+    }
+
+    /// <summary>
+    /// Persists the Wolfram|Alpha AppID to PasswordVault and reconnects Essentials so the
+    /// new <c>WOLFRAM_APPID</c> env var takes effect.
+    /// </summary>
+    private void OnWolframKeyChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is not PasswordBox pb) return;
+
+        var value = pb.Password?.Trim() ?? "";
+        var hasKey = !string.IsNullOrEmpty(value);
+
+        if (hasKey)
         {
-            PasswordVaultHelper.DeleteMcpEnvVar(EssentialsServerId, envKey);
-            LoggingService.LogInfo($"[MCP] API key cleared: {envKey}");
+            PasswordVaultHelper.SaveMcpEnvVar(EssentialsServerId, WolframEnvKey, value);
+            WolframClearButton.Visibility = Visibility.Visible;
+            LoggingService.LogInfo("[MCP] Wolfram|Alpha AppID saved");
         }
+        else
+        {
+            PasswordVaultHelper.DeleteMcpEnvVar(EssentialsServerId, WolframEnvKey);
+            WolframClearButton.Visibility = Visibility.Collapsed;
+            LoggingService.LogInfo("[MCP] Wolfram|Alpha AppID removed");
+        }
+
+        _ = ReconnectAsync();
+    }
+
+    /// <summary>
+    /// Handles the Wolfram|Alpha trash button by clearing the stored AppID and
+    /// hiding the trash button. The <see cref="OnWolframKeyChanged"/> handler
+    /// picks up the empty value through the subsequent PasswordChanged event
+    /// and reconnects.
+    /// </summary>
+    private void OnWolframClear(object sender, RoutedEventArgs e)
+    {
+        WolframKey.Password = "";
     }
 
     #endregion
@@ -179,46 +251,35 @@ public sealed partial class SearchEngineSection : UserControl
     #region Private Methods
 
     /// <summary>
-    /// Returns the currently configured search engine key from AppSettings.
+    /// Localizes labels, validates the persisted engine against available credentials,
+    /// and populates the free-radio state, the three paid-engine view models, and the
+    /// Wolfram|Alpha row. Called once on first expansion.
     /// </summary>
-    private static string GetCurrentEngine()
+    private void LoadState()
     {
-        var configs = AppSettings.BuiltInServers;
-        configs.TryGetValue(BuiltInServerHelper.EssentialsKey, out var config);
-        return config?.SearchEngine ?? "default";
-    }
-
-    /// <summary>
-    /// Selects the free engine (Bing/DuckDuckGo) radio button and persists the choice.
-    /// </summary>
-    private void SelectFreeEngine()
-    {
-        // Find the free radio button (Tag == "default") in ContentPanel
-        foreach (var child in ContentPanel.Children)
+        // Localized hints + labels
+        var runtimeHintText = _loader.GetString("Connect_SearchEngineRuntimeHint");
+        if (!string.IsNullOrEmpty(runtimeHintText))
         {
-            if (child is RadioButton rb && rb.Tag is string tag && tag == "default")
-            {
-                rb.IsChecked = true; // triggers OnSearchEngineChanged
-                return;
-            }
+            RuntimeHintText.Text = runtimeHintText;
+            RuntimeHintText.Visibility = Visibility.Visible;
         }
-    }
 
-    /// <summary>
-    /// Constructs the search engine selection UI with free and paid engine radio buttons.
-    /// </summary>
-    private void BuildUI()
-    {
-        var panel = ContentPanel;
-        panel.Children.Clear();
+        FreeEngineLabel.Text = _loader.GetString("Connect_SearchEngineFree");
+        FreeEngineHint.Text = _loader.GetString("Connect_SearchEngineFreeHint");
 
+        WolframLabel.Text = _loader.GetString("Connect_WolframAlpha");
+        WolframKey.PlaceholderText = _loader.GetString("Connect_WolframAppIdPlaceholder") ?? "AppID";
+        WolframHint.Text = _loader.GetString("Connect_WolframAppIdHint");
+        WolframRemoveTooltip.Content = _loader.GetString("Connect_Remove");
+
+        // Resolve current engine and validate that the corresponding key is still stored.
         var configs = AppSettings.BuiltInServers;
         configs.TryGetValue(BuiltInServerHelper.EssentialsKey, out var essentialsConfig);
         var rawEngine = essentialsConfig?.SearchEngine;
-        var currentEngine = string.IsNullOrEmpty(rawEngine) ? "default" : rawEngine;
+        var currentEngine = string.IsNullOrEmpty(rawEngine) ? DefaultEngineKey : rawEngine;
 
-        // Validate: if a paid engine is selected but its API key is missing, fall back to default
-        if (currentEngine is not "default")
+        if (currentEngine is not DefaultEngineKey)
         {
             var envKey = currentEngine switch
             {
@@ -230,7 +291,7 @@ public sealed partial class SearchEngineSection : UserControl
             if (envKey is null || string.IsNullOrEmpty(PasswordVaultHelper.LoadMcpEnvVar(EssentialsServerId, envKey)))
             {
                 LoggingService.LogInfo($"[MCP] Search engine '{currentEngine}' has no API key, resetting to default (Bing/DuckDuckGo)");
-                currentEngine = "default";
+                currentEngine = DefaultEngineKey;
                 if (essentialsConfig is not null)
                 {
                     essentialsConfig.SearchEngine = null;
@@ -241,243 +302,97 @@ public sealed partial class SearchEngineSection : UserControl
             }
         }
 
-        var freeHint = _loader.GetString("Connect_SearchEngineFreeHint");
+        // Free radio — set directly without firing the handler so LoadState stays silent.
+        _isSyncingFromServer = true;
+        try
+        {
+            FreeEngineRadio.IsChecked = currentEngine is DefaultEngineKey;
+        }
+        finally
+        {
+            _isSyncingFromServer = false;
+        }
+
+        // Paid engine rows
         var apiKeyPlaceholder = _loader.GetString("Connect_ApiKeyPlaceholder") ?? "API key";
+        var removeTooltip = _loader.GetString("Connect_Remove") ?? "Remove";
+        _paidEngines.Clear();
+        _paidEngines.Add(CreatePaidEngineVm("Serper", "serper", SerperEnvKey, currentEngine, apiKeyPlaceholder, removeTooltip));
+        _paidEngines.Add(CreatePaidEngineVm("Tavily", "tavily", TavilyEnvKey, currentEngine, apiKeyPlaceholder, removeTooltip));
+        _paidEngines.Add(CreatePaidEngineVm("SerpApi", "serpapi", SerpApiEnvKey, currentEngine, apiKeyPlaceholder, removeTooltip));
 
-        // Runtime-swap hint — explains why the radio selection may drift during
-        // conversations (tools can change the engine in place) and how restart
-        // behaviour relates to the saved configuration.
-        var runtimeHintText = _loader.GetString("Connect_SearchEngineRuntimeHint");
-        if (!string.IsNullOrEmpty(runtimeHintText))
+        // Wolfram|Alpha row
+        var wolframKey = PasswordVaultHelper.LoadMcpEnvVar(EssentialsServerId, WolframEnvKey);
+        if (!string.IsNullOrEmpty(wolframKey))
         {
-            var hint = new TextBlock
-            {
-                Text = runtimeHintText,
-                TextWrapping = TextWrapping.Wrap,
-                FontSize = 12,
-                Opacity = 0.7,
-                Margin = new Thickness(0, 0, 0, 8),
-            };
-            panel.Children.Add(hint);
+            WolframKey.Password = wolframKey;
+            WolframClearButton.Visibility = Visibility.Visible;
         }
-
-        // Bing / DuckDuckGo (free)
-        var freeRadio = new RadioButton
-        {
-            GroupName = "SearchEngine",
-            Tag = "default",
-            IsChecked = currentEngine is "default" or "" or null,
-            Margin = new Thickness(0),
-        };
-        var freeContent = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        freeContent.Children.Add(new TextBlock
-        {
-            Text = _loader.GetString("Connect_SearchEngineFree"),
-            VerticalAlignment = VerticalAlignment.Center,
-        });
-        freeContent.Children.Add(new TextBlock
-        {
-            Text = freeHint,
-            Opacity = 0.5,
-            VerticalAlignment = VerticalAlignment.Center,
-            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-        });
-        freeRadio.Content = freeContent;
-        freeRadio.Checked += OnSearchEngineChanged;
-        panel.Children.Add(freeRadio);
-
-        // Paid engines
-        AddPaidEngineRow(panel, "Serper", "serper", SerperEnvKey, currentEngine!, apiKeyPlaceholder);
-        AddPaidEngineRow(panel, "Tavily", "tavily", TavilyEnvKey, currentEngine!, apiKeyPlaceholder);
-        AddPaidEngineRow(panel, "SerpApi", "serpapi", SerpApiEnvKey, currentEngine!, apiKeyPlaceholder);
-
-        // Wolfram|Alpha — independent optional capability, not part of the search engine group
-        AddWolframRow(panel);
     }
 
     /// <summary>
-    /// Adds a Wolfram|Alpha AppID input row. Not part of the search engine radio group —
-    /// it's an independent optional capability. Reconnects the Essentials server on change
-    /// so the <c>WOLFRAM_APPID</c> env var is picked up.
+    /// Constructs a view model for one paid search engine row, deriving its
+    /// initial state from the stored API key and the caller's active engine.
     /// </summary>
-    private void AddWolframRow(StackPanel parent)
+    private static PaidEngineRowViewModel CreatePaidEngineVm(
+        string displayName, string engineKey, string envKey,
+        string currentEngine, string apiKeyPlaceholder, string removeTooltip)
     {
-        var row = new Grid();
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-        var existingKey = PasswordVaultHelper.LoadMcpEnvVar(EssentialsServerId, WolframEnvKey);
-        var hasKey = !string.IsNullOrEmpty(existingKey);
-
-        var label = new TextBlock
-        {
-            Text = _loader.GetString("Connect_WolframAlpha"),
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(0),
-        };
-        Grid.SetColumn(label, 0);
-        row.Children.Add(label);
-
-        var clearButton = new Button
-        {
-            Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
-            Padding = new Thickness(6),
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(4, 0, 0, 0),
-            Visibility = hasKey ? Visibility.Visible : Visibility.Collapsed,
-        };
-        clearButton.Content = new FontIcon { Glyph = "\uE74D", FontSize = 14 };
-        clearButton.Click += OnClearApiKey;
-        ToolTipService.SetToolTip(clearButton, new ToolTip
-        {
-            Content = _loader.GetString("Connect_Remove"),
-            Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
-        });
-        Grid.SetColumn(clearButton, 2);
-        row.Children.Add(clearButton);
-
-        var inputStack = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
-        var passwordBox = new PasswordBox
-        {
-            PlaceholderText = _loader.GetString("Connect_WolframAppIdPlaceholder") ?? "AppID",
-            Password = hasKey ? existingKey : "",
-            PasswordRevealMode = PasswordRevealMode.Hidden,
-            Width = 220,
-            Tag = WolframEnvKey,
-            HorizontalAlignment = HorizontalAlignment.Left,
-        };
-        passwordBox.PasswordChanged += OnWolframAppIdChanged;
-        inputStack.Children.Add(passwordBox);
-
-        inputStack.Children.Add(new TextBlock
-        {
-            Text = _loader.GetString("Connect_WolframAppIdHint"),
-            Opacity = 0.5,
-            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-        });
-
-        Grid.SetColumn(inputStack, 1);
-        row.Children.Add(inputStack);
-
-        clearButton.Tag = passwordBox;
-
-        parent.Children.Add(row);
-    }
-
-    /// <summary>
-    /// Persists the Wolfram|Alpha AppID to PasswordVault and reconnects Essentials so the
-    /// new <c>WOLFRAM_APPID</c> env var takes effect.
-    /// </summary>
-    private void OnWolframAppIdChanged(object sender, RoutedEventArgs e)
-    {
-        if (sender is not PasswordBox pb) return;
-
-        // Locate the sibling clear button: PasswordBox → StackPanel → Grid row
-        Button? clearButton = null;
-        if (pb.Parent is FrameworkElement fe && fe.Parent is Grid grid)
-        {
-            foreach (var child in grid.Children)
-            {
-                if (child is Button b) { clearButton = b; break; }
-            }
-        }
-
-        var value = pb.Password?.Trim() ?? "";
-        var hasKey = !string.IsNullOrEmpty(value);
-
-        if (hasKey)
-        {
-            PasswordVaultHelper.SaveMcpEnvVar(EssentialsServerId, WolframEnvKey, value);
-            if (clearButton is not null) clearButton.Visibility = Visibility.Visible;
-            LoggingService.LogInfo("[MCP] Wolfram|Alpha AppID saved");
-        }
-        else
-        {
-            PasswordVaultHelper.DeleteMcpEnvVar(EssentialsServerId, WolframEnvKey);
-            if (clearButton is not null) clearButton.Visibility = Visibility.Collapsed;
-            LoggingService.LogInfo("[MCP] Wolfram|Alpha AppID removed");
-        }
-
-        _ = ReconnectAsync();
-    }
-
-    /// <summary>
-    /// Adds a paid search engine row with radio button (disabled until key entered),
-    /// API key input (reveal disabled), and trash button (hidden until key exists).
-    /// </summary>
-    private void AddPaidEngineRow(
-        StackPanel parent, string displayName, string engineKey, string envKey,
-        string currentEngine, string apiKeyPlaceholder)
-    {
-        var row = new Grid();
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
         var existingKey = PasswordVaultHelper.LoadMcpEnvVar(EssentialsServerId, envKey);
         var hasKey = !string.IsNullOrEmpty(existingKey);
 
-        var radio = new RadioButton
+        return new PaidEngineRowViewModel(displayName, engineKey, envKey)
         {
-            Content = displayName,
-            GroupName = "SearchEngine",
-            Tag = engineKey,
+            ApiKey = hasKey ? existingKey : "",
+            ApiKeyPlaceholder = apiKeyPlaceholder,
+            RemoveTooltip = removeTooltip,
             IsChecked = currentEngine == engineKey,
             IsEnabled = hasKey,
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(0),
+            ClearVisibility = hasKey ? Visibility.Visible : Visibility.Collapsed,
         };
-        radio.Checked += OnSearchEngineChanged;
-        Grid.SetColumn(radio, 0);
-        row.Children.Add(radio);
+    }
 
-        var clearButton = new Button
+    /// <summary>
+    /// Returns the currently configured search engine key from AppSettings.
+    /// </summary>
+    private static string GetCurrentEngine()
+    {
+        var configs = AppSettings.BuiltInServers;
+        configs.TryGetValue(BuiltInServerHelper.EssentialsKey, out var config);
+        return config?.SearchEngine ?? DefaultEngineKey;
+    }
+
+    /// <summary>
+    /// Persists the engine choice to <see cref="AppSettings"/> and applies it to the
+    /// running Essentials server. Since v2.3.0 Essentials exposes a <c>set_search_engine</c>
+    /// MCP tool that swaps the active engine in place; the restart path is only taken when
+    /// the runtime swap is unavailable (server not connected, tool call fails, or the
+    /// selection is the free default which has no paid fallback considerations).
+    /// </summary>
+    private void PersistAndApplyEngineChange(string engineKey)
+    {
+        var configs = AppSettings.BuiltInServers;
+        if (!configs.TryGetValue(BuiltInServerHelper.EssentialsKey, out var config))
         {
-            Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
-            Padding = new Thickness(6),
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(4, 0, 0, 0),
-            Visibility = hasKey ? Visibility.Visible : Visibility.Collapsed,
-        };
-        clearButton.Content = new FontIcon { Glyph = "\uE74D", FontSize = 14 };
-        clearButton.Click += OnClearApiKey;
-        ToolTipService.SetToolTip(clearButton, new ToolTip
-        {
-            Content = _loader.GetString("Connect_Remove"),
-            Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse,
-        });
-        Grid.SetColumn(clearButton, 2);
-        row.Children.Add(clearButton);
+            config = new BuiltInServerConfig { IsEnabled = true };
+            configs[BuiltInServerHelper.EssentialsKey] = config;
+        }
 
-        var passwordBox = new PasswordBox
-        {
-            PlaceholderText = apiKeyPlaceholder,
-            Password = hasKey ? existingKey : "",
-            PasswordRevealMode = PasswordRevealMode.Hidden,
-            Width = 220,
-            Tag = envKey,
-            VerticalAlignment = VerticalAlignment.Center,
-        };
-        // Store references for cross-updates: Tag holds envKey, but we need radio + clearButton too
-        passwordBox.PasswordChanged += (s, _) => OnApiKeyChanged(s, radio, clearButton, engineKey);
-        Grid.SetColumn(passwordBox, 1);
-        row.Children.Add(passwordBox);
+        config.SearchEngine = engineKey == DefaultEngineKey ? null : engineKey;
+        AppSettings.BuiltInServers = configs;
+        LoggingService.LogInfo($"[MCP] Search engine changed to: {engineKey}");
 
-        // Wire clear button to password box
-        clearButton.Tag = passwordBox;
-
-        parent.Children.Add(row);
+        _ = ApplyEngineChangeAsync(engineKey);
     }
 
     /// <summary>
     /// Queries the live Essentials server's <c>get_search_engine</c> tool
     /// (v2.4.0+) and flips the matching radio button so the UI reflects the
-    /// actual engine in use. Silently no-ops when the server is not
-    /// connected, the tool is unavailable (older Essentials), or the call
-    /// fails — in those cases the radio stays on the AppSettings-derived
-    /// default that <see cref="BuildUI"/> already selected, which is the
-    /// closest approximation we have without a live read.
+    /// actual engine in use. Silently no-ops when the server is not connected,
+    /// the tool is unavailable (older Essentials), or the call fails — in those
+    /// cases the radio stays on the AppSettings-derived default that
+    /// <see cref="LoadState"/> already selected, which is the closest
+    /// approximation we have without a live read.
     /// </summary>
     private async Task SyncFromServerAsync()
     {
@@ -507,30 +422,15 @@ public sealed partial class SearchEngineSection : UserControl
             var serverKey = keyProp.GetString();
             if (string.IsNullOrEmpty(serverKey)) return;
 
-            // The "default" UI option has no server-side equivalent — Essentials
-            // always reports a concrete engine key. Map bing back to "default"
-            // only when the user has not explicitly saved a paid engine, so a
-            // user who chose Bing and a fallback-produced Bing look the same.
+            // The "default" UI option has no server-side equivalent — Essentials always
+            // reports a concrete engine key. Map bing back to "default" only when the
+            // user has not explicitly saved a paid engine, so a user who chose Bing
+            // and a fallback-produced Bing look the same.
             var targetTag = ResolveRadioTagForServerKey(serverKey);
-            var radio = FindRadioByTag(targetTag);
-            if (radio is null)
-            {
+            if (!CheckEngineByTag(targetTag))
                 LoggingService.LogInfo($"[MCP] get_search_engine reported '{serverKey}' but no matching radio; leaving UI as-is");
-                return;
-            }
-            if (radio.IsChecked == true) return;
-
-            _isSyncingFromServer = true;
-            try
-            {
-                radio.IsChecked = true;
-            }
-            finally
-            {
-                _isSyncingFromServer = false;
-            }
-
-            LoggingService.LogInfo($"[MCP] Search engine UI synced to server state: {serverKey} (radio='{targetTag}')");
+            else
+                LoggingService.LogInfo($"[MCP] Search engine UI synced to server state: {serverKey} (radio='{targetTag}')");
         }
         catch (Exception ex)
         {
@@ -540,10 +440,10 @@ public sealed partial class SearchEngineSection : UserControl
 
     /// <summary>
     /// Maps the canonical engine key returned by <c>get_search_engine</c> to
-    /// the radio button tag used in <see cref="BuildUI"/>. When the server
-    /// reports <c>bing</c> and the user has not saved a paid engine, the
-    /// free-default radio (<c>"default"</c>) is selected so the Bing/DDG
-    /// fallback and an explicit Bing choice look identical in the UI.
+    /// the radio tag used in <see cref="LoadState"/>. When the server reports
+    /// <c>bing</c> and the user has not saved a paid engine, the free-default
+    /// radio is selected so the Bing/DDG fallback and an explicit Bing choice
+    /// look identical in the UI.
     /// </summary>
     /// <param name="serverKey">Lowercase canonical key from <c>get_search_engine</c>.</param>
     /// <returns>The radio tag to check, or the server key itself for paid engines.</returns>
@@ -551,30 +451,48 @@ public sealed partial class SearchEngineSection : UserControl
     {
         var saved = GetCurrentEngine();
         if (string.Equals(serverKey, "bing", StringComparison.OrdinalIgnoreCase)
-            && saved == "default")
+            && saved == DefaultEngineKey)
         {
-            return "default";
+            return DefaultEngineKey;
         }
         return serverKey;
     }
 
     /// <summary>
-    /// Finds the <see cref="RadioButton"/> in <c>ContentPanel</c> whose
-    /// <see cref="FrameworkElement.Tag"/> matches <paramref name="tag"/>
-    /// (case-insensitive), or <see langword="null"/> when no match exists.
+    /// Programmatically selects the radio matching <paramref name="tag"/> without
+    /// firing persistence or server-side logic. Used by the server-state sync path.
     /// </summary>
-    private RadioButton? FindRadioByTag(string tag)
+    /// <returns><see langword="true"/> when a matching radio was found and toggled;
+    /// otherwise <see langword="false"/>.</returns>
+    private bool CheckEngineByTag(string tag)
     {
-        foreach (var child in ContentPanel.Children)
+        _isSyncingFromServer = true;
+        try
         {
-            if (child is RadioButton rb
-                && rb.Tag is string rbTag
-                && string.Equals(rbTag, tag, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(tag, DefaultEngineKey, StringComparison.OrdinalIgnoreCase))
             {
-                return rb;
+                FreeEngineRadio.IsChecked = true;
+                foreach (var vm in _paidEngines) vm.IsChecked = false;
+                return true;
             }
+
+            var match = _paidEngines.FirstOrDefault(v =>
+                string.Equals(v.EngineKey, tag, StringComparison.OrdinalIgnoreCase));
+            if (match is null) return false;
+
+            match.IsChecked = true;
+            FreeEngineRadio.IsChecked = false;
+            foreach (var other in _paidEngines)
+            {
+                if (!ReferenceEquals(other, match))
+                    other.IsChecked = false;
+            }
+            return true;
         }
-        return null;
+        finally
+        {
+            _isSyncingFromServer = false;
+        }
     }
 
     /// <summary>
@@ -595,8 +513,8 @@ public sealed partial class SearchEngineSection : UserControl
 
         var conn = _registry.GetBuiltInConnection(BuiltInServerHelper.EssentialsKey);
 
-        // No live connection to switch on → restart path handles first-time
-        // activation and the "server was never started" edge case.
+        // No live connection to switch on → restart path handles first-time activation
+        // and the "server was never started" edge case.
         if (conn is null || !conn.IsConnected)
         {
             await ReconnectAsync();
@@ -609,35 +527,31 @@ public sealed partial class SearchEngineSection : UserControl
         // the arg. (set_search_engine accepts the explicit engines only.)
         var targetEngine = engineKey switch
         {
-            "default" => "bing",
+            DefaultEngineKey => "bing",
             _ => engineKey,
         };
 
         if (await TrySwitchEngineViaToolAsync(conn, targetEngine))
             return;
 
-        // Tool unavailable or call failed → fall back to the restart path so
-        // the user still gets the engine they asked for, just slower.
+        // Tool unavailable or call failed → fall back to the restart path so the user
+        // still gets the engine they asked for, just slower.
         LoggingService.LogInfo($"[MCP] Runtime engine switch unavailable for '{engineKey}', falling back to reconnect");
         await ReconnectAsync();
     }
 
     /// <summary>
-    /// Attempts to swap the active search engine on a running Essentials
-    /// server via the <c>set_search_engine</c> MCP tool. Returns
-    /// <see langword="false"/> when the tool is not registered (older
-    /// Essentials) or the call fails, so the caller can fall back to a
-    /// restart.
+    /// Attempts to swap the active search engine on a running Essentials server
+    /// via the <c>set_search_engine</c> MCP tool. Returns <see langword="false"/>
+    /// when the tool is not registered (older Essentials) or the call fails, so
+    /// the caller can fall back to a restart.
     /// </summary>
     /// <param name="conn">The live Essentials server connection.</param>
     /// <param name="engine">
     /// Concrete engine name accepted by <c>set_search_engine</c>
     /// (e.g. <c>"bing"</c>, <c>"duckduckgo"</c>, <c>"serper"</c>).
     /// </param>
-    /// <returns>
-    /// <see langword="true"/> when the tool call succeeded;
-    /// <see langword="false"/> otherwise.
-    /// </returns>
+    /// <returns><see langword="true"/> when the tool call succeeded; otherwise <see langword="false"/>.</returns>
     private static async Task<bool> TrySwitchEngineViaToolAsync(
         McpServerConnection conn, string engine)
     {
@@ -677,8 +591,8 @@ public sealed partial class SearchEngineSection : UserControl
             BuiltInServerHelper.TryRebuildBuiltInConfig(conn.Config);
 
             var engine = AppSettings.BuiltInServers.TryGetValue(BuiltInServerHelper.EssentialsKey, out var config)
-                ? config?.SearchEngine ?? "default"
-                : "default";
+                ? config?.SearchEngine ?? DefaultEngineKey
+                : DefaultEngineKey;
             var envKeysStr = conn.Config.EnvironmentVariables is { Count: > 0 } ev
                 ? string.Join(",", ev.Keys) : "";
             LoggingService.LogInfo($"[MCP] Reconnecting Essentials with search engine: {engine}, args: [{string.Join(", ", conn.Config.Arguments ?? [])}], envKeys=[{envKeysStr}]");
@@ -692,4 +606,49 @@ public sealed partial class SearchEngineSection : UserControl
     }
 
     #endregion
+}
+
+/// <summary>
+/// View model for one paid search engine row inside <see cref="SearchEngineSection"/>.
+/// Exposes the radio/password/trash state shared by Serper, Tavily, and SerpApi.
+/// </summary>
+public sealed partial class PaidEngineRowViewModel : ObservableObject
+{
+    /// <summary>Initializes immutable identity fields (display + env mapping).</summary>
+    /// <param name="displayName">Radio label shown to the user (e.g. "Serper").</param>
+    /// <param name="engineKey">Canonical server-side key (e.g. "serper").</param>
+    /// <param name="envKey">PasswordVault/env var name (e.g. "SERPER_API_KEY").</param>
+    public PaidEngineRowViewModel(string displayName, string engineKey, string envKey)
+    {
+        DisplayName = displayName;
+        EngineKey = engineKey;
+        EnvKey = envKey;
+    }
+
+    /// <summary>Gets the localized radio label.</summary>
+    public string DisplayName { get; }
+
+    /// <summary>Gets the canonical server-side engine key.</summary>
+    public string EngineKey { get; }
+
+    /// <summary>Gets the PasswordVault / env var name for this engine's API key.</summary>
+    public string EnvKey { get; }
+
+    /// <summary>Gets or sets the placeholder shown when the API key is empty.</summary>
+    public string ApiKeyPlaceholder { get; init; } = "";
+
+    /// <summary>Gets or sets the tooltip shown on the trash button.</summary>
+    public string RemoveTooltip { get; init; } = "";
+
+    /// <summary>Gets or sets whether this row's radio is currently selected.</summary>
+    [ObservableProperty] private bool isChecked;
+
+    /// <summary>Gets or sets whether the radio is enabled (a stored key makes it selectable).</summary>
+    [ObservableProperty] private bool isEnabled;
+
+    /// <summary>Gets or sets the stored API key reflected into the bound PasswordBox.</summary>
+    [ObservableProperty] private string apiKey = "";
+
+    /// <summary>Gets or sets the trash-button visibility (visible only while a key is stored).</summary>
+    [ObservableProperty] private Visibility clearVisibility = Visibility.Collapsed;
 }
