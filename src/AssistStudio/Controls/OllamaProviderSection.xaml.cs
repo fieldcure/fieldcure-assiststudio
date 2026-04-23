@@ -24,6 +24,13 @@ public sealed partial class OllamaProviderSection : UserControl
     private bool _initialized;
     private CancellationTokenSource? _pullCts;
 
+    /// <summary>
+    /// Current <see cref="StatusText"/> foreground brush resource key, or <see langword="null"/>
+    /// when the default foreground applies. Tracking the key (not the resolved brush) lets us
+    /// re-apply the theme-correct brush on every <see cref="FrameworkElement.ActualThemeChanged"/>.
+    /// </summary>
+    private string? _statusBrushKey;
+
     /// <summary>Model names queued for download, shared across page instances.</summary>
     private static readonly List<string> _pendingPulls = [];
 
@@ -58,6 +65,7 @@ public sealed partial class OllamaProviderSection : UserControl
     public OllamaProviderSection()
     {
         InitializeComponent();
+        ThemeHelper.SubscribeThemeChanges(this, RefreshStatusBrush);
     }
 
     #endregion
@@ -121,7 +129,7 @@ public sealed partial class OllamaProviderSection : UserControl
         Spinner.Visibility = Visibility.Visible;
         Spinner.IsActive = true;
         StatusText.Text = L("Models_Checking");
-        StatusText.ClearValue(TextBlock.ForegroundProperty);
+        SetStatusBrush(null);
         StartButton.Visibility = Visibility.Collapsed;
         InstallPanel.Visibility = Visibility.Collapsed;
         ActionButtons.Visibility = Visibility.Collapsed;
@@ -135,7 +143,7 @@ public sealed partial class OllamaProviderSection : UserControl
             if (result.IsValid)
             {
                 StatusText.Text = L("Models_Running");
-                StatusText.Foreground = ThemeHelper.GetBrush("StatusAccentForegroundBrush");
+                SetStatusBrush("StatusAccentForegroundBrush");
                 ActionButtons.Visibility = Visibility.Visible;
                 CloudHint.Visibility = Visibility.Visible;
                 await LoadModelsAsync();
@@ -143,26 +151,26 @@ public sealed partial class OllamaProviderSection : UserControl
             else if (!isRemote && OllamaHelper.IsOllamaInstalled())
             {
                 StatusText.Text = L("Models_InstalledNotRunning");
-                StatusText.Foreground = ThemeHelper.GetBrush("StatusErrorForegroundBrush");
+                SetStatusBrush("StatusErrorForegroundBrush");
                 StartButton.Visibility = Visibility.Visible;
             }
             else if (!isRemote)
             {
                 StatusText.Text = L("Models_NotInstalled");
-                StatusText.Foreground = ThemeHelper.GetBrush("StatusErrorForegroundBrush");
+                SetStatusBrush("StatusErrorForegroundBrush");
                 InstallPanel.Visibility = Visibility.Visible;
             }
             else
             {
                 StatusText.Text = result.ErrorMessage ?? L("Models_Error");
-                StatusText.Foreground = ThemeHelper.GetBrush("StatusErrorForegroundBrush");
+                SetStatusBrush("StatusErrorForegroundBrush");
             }
         }
         catch (Exception ex)
         {
             LoggingService.LogException(ex);
             StatusText.Text = L("Models_Error");
-            StatusText.Foreground = ThemeHelper.GetBrush("StatusErrorForegroundBrush");
+            SetStatusBrush("StatusErrorForegroundBrush");
         }
         finally
         {
@@ -347,14 +355,14 @@ public sealed partial class OllamaProviderSection : UserControl
             else
             {
                 StatusText.Text = L("Models_FailedToStart");
-                StatusText.Foreground = ThemeHelper.GetBrush("StatusErrorForegroundBrush");
+                SetStatusBrush("StatusErrorForegroundBrush");
             }
         }
         catch (Exception ex)
         {
             LoggingService.LogException(ex);
             StatusText.Text = L("Models_ErrorStarting");
-            StatusText.Foreground = ThemeHelper.GetBrush("StatusErrorForegroundBrush");
+            SetStatusBrush("StatusErrorForegroundBrush");
         }
         finally
         {
@@ -704,6 +712,35 @@ public sealed partial class OllamaProviderSection : UserControl
 
     private static string L(string key) =>
         Res.GetString(key) is { Length: > 0 } value ? value : key;
+
+    /// <summary>
+    /// Assigns <see cref="StatusText"/>'s foreground to the theme-resolved brush for
+    /// <paramref name="resourceKey"/>, or clears it (restoring the inherited default)
+    /// when the key is <see langword="null"/>. Remembering the key lets
+    /// <see cref="RefreshStatusBrush"/> re-resolve the brush on theme switches.
+    /// </summary>
+    private void SetStatusBrush(string? resourceKey)
+    {
+        _statusBrushKey = resourceKey;
+        if (resourceKey is null)
+            StatusText.ClearValue(TextBlock.ForegroundProperty);
+        else
+            StatusText.Foreground = ThemeHelper.GetBrush(resourceKey);
+    }
+
+    /// <summary>
+    /// Reapplies the last <see cref="SetStatusBrush"/> key against the current theme.
+    /// Wired to <see cref="FrameworkElement.ActualThemeChanged"/> through
+    /// <see cref="ThemeHelper.SubscribeThemeChanges"/> so status colors track light/dark
+    /// toggles without re-running the status check.
+    /// </summary>
+    private void RefreshStatusBrush()
+    {
+        if (_statusBrushKey is null)
+            StatusText.ClearValue(TextBlock.ForegroundProperty);
+        else
+            StatusText.Foreground = ThemeHelper.GetBrush(_statusBrushKey);
+    }
 
     #endregion
 }

@@ -565,9 +565,15 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Applies a visual theme to the chat panel.
+    /// Applies a visual theme to the chat panel and refreshes the tab icon so the
+    /// dirty-indicator brush (assigned from code via <see cref="ThemeHelper.GetBrush"/>)
+    /// picks up the new theme's accent color.
     /// </summary>
-    public void ApplyTheme(ChatTheme theme) => Theme = theme;
+    public void ApplyTheme(ChatTheme theme)
+    {
+        Theme = theme;
+        OnPropertyChanged(nameof(TabIconSource));
+    }
 
     /// <summary>
     /// Updates the available profiles and selected profile on the chat panel.
