@@ -24,13 +24,20 @@ public sealed partial class MainWindow : Window
     /// <summary>Reference to the underlying app window for caption button theming.</summary>
     private readonly AppWindow? _appWindow;
 
-    /// <summary>Available Anthropic models for the model selector.</summary>
-    private static readonly (string Id, string Display)[] AvailableModels =
+    /// <summary>
+    /// Fallback model list used only when the Anthropic API cannot be queried at startup.
+    /// The live list is fetched from <c>client.Models.List()</c> in <see cref="LoadModelsAsync"/>.
+    /// </summary>
+    private static readonly (string Id, string Display)[] FallbackModels =
     [
+        ("claude-opus-4-7",   "Claude Opus 4.7"),
         ("claude-opus-4-6",   "Claude Opus 4.6"),
         ("claude-sonnet-4-6", "Claude Sonnet 4.6"),
         ("claude-haiku-4-5",  "Claude Haiku 4.5"),
     ];
+
+    /// <summary>Dynamically loaded model list — populated from the Anthropic API on startup.</summary>
+    private List<(string Id, string Display)> _availableModels = [];
 
     /// <summary>LocalSettings key for the persisted model selection.</summary>
     private const string ModelSettingName = "SelectedModelId";
@@ -47,8 +54,8 @@ public sealed partial class MainWindow : Window
     /// <summary>Anthropic SDK client. Null until API key is verified on first load.</summary>
     private AnthropicClient? _client;
 
-    /// <summary>Currently selected model ID.</summary>
-    private string _selectedModelId = AvailableModels[1].Id; // Default: Sonnet
+    /// <summary>Currently selected model ID. Empty until <see cref="LoadModelsAsync"/> completes.</summary>
+    private string _selectedModelId = string.Empty;
 
     /// <summary>Guards against saving during programmatic ComboBox population.</summary>
     private bool _suppressModelChanged;
@@ -67,8 +74,7 @@ public sealed partial class MainWindow : Window
         if (titleBar is not null) SetTitleBar(titleBar);
         _appWindow = AppWindow;
 
-        // Populate model selector
-        InitializeModelSelector();
+        // Theme first; model list is populated once the API key / client is ready (see OnContentLoaded).
         InitializeTheme();
 
         ChatPanel.UserMessageSubmitted += OnUserMessageSubmitted;
@@ -77,25 +83,47 @@ public sealed partial class MainWindow : Window
 
     #region Model Selector
 
-    /// <summary>Populates the model ComboBox and restores the last selection from settings.</summary>
-    private void InitializeModelSelector()
+    /// <summary>
+    /// Fetches the live model list from the Anthropic API, orders it by release date (newest
+    /// first), and populates the ComboBox. Falls back to <see cref="FallbackModels"/> when the
+    /// API call fails so the sample remains usable offline or during transient failures.
+    /// </summary>
+    private async Task LoadModelsAsync()
     {
+        if (_client is null) return;
+
         _suppressModelChanged = true;
 
-        // Restore saved selection
+        try
+        {
+            var page = await _client.Models.List();
+            _availableModels = page.Items
+                .OrderByDescending(m => m.CreatedAt)
+                .Select(m => (m.ID, m.DisplayName))
+                .ToList();
+        }
+        catch
+        {
+            _availableModels = [.. FallbackModels];
+        }
+
         var settings = ApplicationData.Current.LocalSettings;
         var savedModelId = settings.Values[ModelSettingName] as string;
+        var selectedIndex = 0;
 
-        var selectedIndex = 1; // Default: Sonnet
-        for (var i = 0; i < AvailableModels.Length; i++)
+        ModelComboBox.Items.Clear();
+        for (var i = 0; i < _availableModels.Count; i++)
         {
-            ModelComboBox.Items.Add(AvailableModels[i].Display);
-            if (AvailableModels[i].Id == savedModelId)
+            ModelComboBox.Items.Add(_availableModels[i].Display);
+            if (_availableModels[i].Id == savedModelId)
                 selectedIndex = i;
         }
 
-        ModelComboBox.SelectedIndex = selectedIndex;
-        _selectedModelId = AvailableModels[selectedIndex].Id;
+        if (_availableModels.Count > 0)
+        {
+            ModelComboBox.SelectedIndex = selectedIndex;
+            _selectedModelId = _availableModels[selectedIndex].Id;
+        }
 
         _suppressModelChanged = false;
     }
@@ -104,9 +132,9 @@ public sealed partial class MainWindow : Window
     private void OnModelSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_suppressModelChanged) return;
-        if (ModelComboBox.SelectedIndex < 0 || ModelComboBox.SelectedIndex >= AvailableModels.Length) return;
+        if (ModelComboBox.SelectedIndex < 0 || ModelComboBox.SelectedIndex >= _availableModels.Count) return;
 
-        _selectedModelId = AvailableModels[ModelComboBox.SelectedIndex].Id;
+        _selectedModelId = _availableModels[ModelComboBox.SelectedIndex].Id;
 
         var settings = ApplicationData.Current.LocalSettings;
         settings.Values[ModelSettingName] = _selectedModelId;
@@ -239,6 +267,7 @@ public sealed partial class MainWindow : Window
         }
 
         _client = new AnthropicClient { ApiKey = apiKey };
+        await LoadModelsAsync();
     }
 
     /// <summary>Handles the Reset API Key button click.</summary>
@@ -269,6 +298,7 @@ public sealed partial class MainWindow : Window
 
         SaveApiKeyToVault(newKey);
         _client = new AnthropicClient { ApiKey = newKey };
+        await LoadModelsAsync();
     }
 
     /// <summary>Shows a dialog to collect the API key from the user.</summary>
