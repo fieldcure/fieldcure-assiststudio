@@ -375,7 +375,7 @@ public sealed partial class ChatPanel
     /// </summary>
     private async void OnEditRequested(object? sender, (string MessageId, string NewText) e)
     {
-        if (!_isInitialized || Provider is null) return;
+        if (!_isInitialized) return;
 
         var original = _messages.FirstOrDefault(m => m.Role == ChatRole.User && m.Id == e.MessageId);
         if (original is null) return;
@@ -421,6 +421,14 @@ public sealed partial class ChatPanel
         await _renderer.AppendUserMessageAsync(
             edited.Id, edited.Content, edited.Timestamp.ToString("O"),
             edited.Attachments, edited.SiblingIndex, edited.SiblingCount);
+
+        // Notify the host so provider-less integrations (e.g. Anthropic SDK sample driving
+        // the turn via BeginAnthropicTurn) can stream the response themselves.
+        UserMessageSubmitted?.Invoke(this, new MessageSentEventArgs(edited.Content, edited.Attachments));
+
+        // When external code drives the conversation, skip the internal provider flow.
+        if (DisableInternalSendFlow) return;
+        if (Provider is null) return;
 
         // Stream new response
         await StreamAssistantResponseAsync(edited);
