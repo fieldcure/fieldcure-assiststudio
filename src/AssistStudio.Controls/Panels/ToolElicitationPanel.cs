@@ -1,15 +1,13 @@
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Windows.Input;
-using FieldCure.AssistStudio.Controls.Helpers;
+﻿using FieldCure.AssistStudio.Controls.Helpers;
 using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
 using Microsoft.Windows.ApplicationModel.Resources;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using System.Windows.Input;
 
 namespace FieldCure.AssistStudio.Controls;
 
@@ -481,7 +479,7 @@ public static class PasswordBoxBindingHelper
 }
 
 /// <summary>Represents one XAML-facing elicitation field projection.</summary>
-public sealed class ToolElicitationFieldViewModel : INotifyPropertyChanged
+public sealed partial class ToolElicitationFieldViewModel : INotifyPropertyChanged
 {
     private string _currentValue;
 
@@ -547,7 +545,7 @@ public sealed class ToolElicitationFieldViewModel : INotifyPropertyChanged
 }
 
 /// <summary>Represents one selectable option within an option-based elicitation field.</summary>
-public sealed class ToolElicitationOptionViewModel : INotifyPropertyChanged
+public sealed partial class ToolElicitationOptionViewModel : INotifyPropertyChanged
 {
     private bool _isSelected;
 
@@ -595,13 +593,11 @@ public sealed class ToolElicitationOptionViewModel : INotifyPropertyChanged
         }
     }
 
-    /// <summary>Gets the badge background brush for the current selection state.</summary>
-    public Brush BadgeBackgroundBrush =>
-        (Brush)Application.Current.Resources[_isSelected ? "AccentFillColorDefaultBrush" : "SubtleFillColorSecondaryBrush"];
+    /// <summary>Gets the visibility of the selected-state visuals (badge background + text).</summary>
+    public Visibility SelectedVisibility => _isSelected ? Visibility.Visible : Visibility.Collapsed;
 
-    /// <summary>Gets the badge foreground brush for the current selection state.</summary>
-    public Brush BadgeForegroundBrush =>
-        (Brush)Application.Current.Resources[_isSelected ? "TextOnAccentFillColorPrimaryBrush" : "TextFillColorSecondaryBrush"];
+    /// <summary>Gets the visibility of the unselected-state visuals.</summary>
+    public Visibility UnselectedVisibility => _isSelected ? Visibility.Collapsed : Visibility.Visible;
 
     /// <summary>Gets the title font weight for the current selection state.</summary>
     public Windows.UI.Text.FontWeight TitleFontWeight =>
@@ -611,8 +607,8 @@ public sealed class ToolElicitationOptionViewModel : INotifyPropertyChanged
     private void RaiseAllVisualPropertiesChanged()
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected)));
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BadgeBackgroundBrush)));
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BadgeForegroundBrush)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedVisibility)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(UnselectedVisibility)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TitleFontWeight)));
     }
 }

@@ -17,18 +17,30 @@
             Command="{Binding SelectCommand}"
             Style="{StaticResource SubtleButtonStyle}">
             <StackPanel Orientation="Horizontal" Spacing="10">
-                <Border
-                    Width="24"
-                    Height="24"
-                    CornerRadius="12"
-                    Background="{Binding BadgeBackgroundBrush}">
+                <Grid Width="24" Height="24">
+                    <Border
+                        CornerRadius="12"
+                        Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                        Visibility="{Binding UnselectedVisibility}" />
+                    <Border
+                        CornerRadius="12"
+                        Background="{ThemeResource AccentFillColorDefaultBrush}"
+                        Visibility="{Binding SelectedVisibility}" />
                     <TextBlock
                         Text="{Binding IndexText}"
                         FontSize="12"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
-                        Foreground="{Binding BadgeForegroundBrush}" />
-                </Border>
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Visibility="{Binding UnselectedVisibility}" />
+                    <TextBlock
+                        Text="{Binding IndexText}"
+                        FontSize="12"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                        Visibility="{Binding SelectedVisibility}" />
+                </Grid>
                 <TextBlock
                     Text="{Binding Title}"
                     VerticalAlignment="Center"
