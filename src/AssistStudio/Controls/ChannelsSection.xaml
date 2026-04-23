@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <UserControl
     x:Class="AssistStudio.Controls.ChannelsSection"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -7,7 +7,7 @@
 
     <controls:CollapsibleSection x:Name="Section" IsExpanded="False" IsCompact="True" Expanded="OnSectionExpanded">
         <controls:CollapsibleSection.Body>
-            <StackPanel x:Name="ContentPanel" Spacing="6">
+            <StackPanel Spacing="6">
                 <!-- Add channel button with type picker -->
                 <Button x:Name="AddChannelButton"
                         HorizontalAlignment="Left"
@@ -39,8 +39,64 @@
                         Opacity="0.6" VerticalAlignment="Center" />
                 </StackPanel>
 
-                <!-- Channel list -->
-                <StackPanel x:Name="ChannelListPanel" Spacing="4" Visibility="Collapsed" />
+                <!-- Channel list — data-driven from the Outbox MCP server. -->
+                <ItemsControl x:Name="ChannelList" Visibility="Collapsed">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="4" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="controls:ChannelRowViewModel">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="80" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Connected status dot -->
+                                <FontIcon
+                                    Grid.Column="0"
+                                    Glyph="&#xF136;"
+                                    FontSize="10"
+                                    Foreground="{ThemeResource SystemFillColorSuccessBrush}"
+                                    VerticalAlignment="Center"
+                                    Margin="0,0,10,0" />
+
+                                <!-- Channel type label -->
+                                <TextBlock
+                                    Grid.Column="1"
+                                    Text="{x:Bind DisplayType}"
+                                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                                    VerticalAlignment="Center" />
+
+                                <!-- Channel detail (name / from) -->
+                                <TextBlock
+                                    Grid.Column="2"
+                                    Text="{x:Bind DisplayDetail}"
+                                    Opacity="0.7"
+                                    VerticalAlignment="Center"
+                                    TextTrimming="CharacterEllipsis" />
+
+                                <!-- Delete — dispatches to the Outbox CLI remove command. -->
+                                <Button
+                                    Grid.Column="3"
+                                    Padding="6,2,6,2"
+                                    Background="{ThemeResource SubtleFillColorTransparentBrush}"
+                                    BorderThickness="0"
+                                    Tag="{x:Bind Id}"
+                                    Click="OnDeleteChannelClick">
+                                    <FontIcon Glyph="&#xE74D;" FontSize="12" />
+                                    <ToolTipService.ToolTip>
+                                        <ToolTip Content="{x:Bind DeleteTooltip}" Placement="Mouse" />
+                                    </ToolTipService.ToolTip>
+                                </Button>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
 
                 <!-- Empty / error state -->
                 <TextBlock

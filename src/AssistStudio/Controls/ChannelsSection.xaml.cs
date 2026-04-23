@@ -2,11 +2,10 @@ using AssistStudio.Helpers;
 using AssistStudio.Mcp;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
 using Microsoft.Windows.ApplicationModel.Resources;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Text.Json;
-using Windows.UI;
 
 namespace AssistStudio.Controls;
 
@@ -14,14 +13,15 @@ namespace AssistStudio.Controls;
 /// Self-contained section that displays configured Outbox messaging channels.
 /// Reads channels via the <c>list_channels</c> MCP tool. Mutations are delegated
 /// to the Outbox CLI (<c>fieldcure-mcp-outbox add|remove</c>) spawned in a new
-/// console window; after the CLI exits we reconnect the Outbox server so the
-/// list reflects the new channels.json state.
+/// console window; after the CLI exits we reload the list so the UI reflects
+/// the new channels.json state.
 /// </summary>
 public sealed partial class ChannelsSection : UserControl
 {
     #region Fields
 
     private readonly ResourceLoader _loader = new();
+    private readonly ObservableCollection<ChannelRowViewModel> _channels = [];
     private McpServerRegistry? _registry;
     private bool _loaded;
 
@@ -42,9 +42,11 @@ public sealed partial class ChannelsSection : UserControl
 
     #region Constructor
 
+    /// <summary>Initializes the control and binds the channel list to its backing collection.</summary>
     public ChannelsSection()
     {
         InitializeComponent();
+        ChannelList.ItemsSource = _channels;
         AddChannelText.Text = _loader.GetString("Connect_AddChannel") ?? "Add channel";
     }
 
@@ -79,8 +81,7 @@ public sealed partial class ChannelsSection : UserControl
 
     /// <summary>
     /// Launches the Outbox CLI in a new console window to add a channel of the
-    /// selected type, then reconnects the server so the UI picks up the new
-    /// entry.
+    /// selected type, then reloads the list so the UI picks up the new entry.
     /// </summary>
     private async void OnAddChannelTypeClick(object sender, RoutedEventArgs e)
     {
@@ -92,7 +93,7 @@ public sealed partial class ChannelsSection : UserControl
 
     /// <summary>
     /// Launches the Outbox CLI in a new console window to remove a channel,
-    /// then reconnects the server so the UI picks up the removal.
+    /// then reloads the list so the UI picks up the removal.
     /// </summary>
     private async void OnDeleteChannelClick(object sender, RoutedEventArgs e)
     {
@@ -142,7 +143,7 @@ public sealed partial class ChannelsSection : UserControl
                 return;
             }
 
-            BuildChannelList(channels);
+            PopulateChannelList(channels);
         }
         catch (Exception ex)
         {
@@ -168,15 +169,14 @@ public sealed partial class ChannelsSection : UserControl
     }
 
     /// <summary>
-    /// Builds the channel list UI from the MCP tool result, attaching a delete
-    /// button per row that dispatches to the CLI <c>remove</c> command.
+    /// Projects the Outbox <c>list_channels</c> result into <see cref="ChannelRowViewModel"/>
+    /// instances and swaps the panel over to the channel list.
     /// </summary>
-    private void BuildChannelList(JsonElement channels)
+    private void PopulateChannelList(JsonElement channels)
     {
-        ChannelListPanel.Children.Clear();
-
         var deleteTooltip = _loader.GetString("Connect_DeleteChannel") ?? "Delete channel";
 
+        _channels.Clear();
         foreach (var channel in channels.EnumerateArray())
         {
             var id = channel.TryGetProperty("id", out var i) ? i.GetString() ?? "" : "";
@@ -187,65 +187,11 @@ public sealed partial class ChannelsSection : UserControl
             var displayType = TypeDisplayNames.TryGetValue(type, out var dn) ? dn : type;
             var displayDetail = !string.IsNullOrEmpty(from) ? from : name;
 
-            var row = new Grid();
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-            // Green status dot
-            var dot = new FontIcon
-            {
-                Glyph = "\uF136",
-                FontSize = 10,
-                Foreground = new SolidColorBrush(Color.FromArgb(255, 76, 175, 80)),
-                VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, 10, 0),
-            };
-            Grid.SetColumn(dot, 0);
-            row.Children.Add(dot);
-
-            // Channel type label (bold, fixed width)
-            var typeLabel = new TextBlock
-            {
-                Text = displayType,
-                Style = (Style)Application.Current.Resources["BodyStrongTextBlockStyle"],
-                VerticalAlignment = VerticalAlignment.Center,
-            };
-            Grid.SetColumn(typeLabel, 1);
-            row.Children.Add(typeLabel);
-
-            // Channel detail (name/from)
-            var detail = new TextBlock
-            {
-                Text = displayDetail,
-                Opacity = 0.7,
-                VerticalAlignment = VerticalAlignment.Center,
-                TextTrimming = TextTrimming.CharacterEllipsis,
-            };
-            Grid.SetColumn(detail, 2);
-            row.Children.Add(detail);
-
-            // Delete button — CLI remove
-            var deleteButton = new Button
-            {
-                Tag = id,
-                Padding = new Thickness(6, 2, 6, 2),
-                Background = (Brush)Application.Current.Resources["SubtleFillColorTransparentBrush"],
-                BorderThickness = new Thickness(0),
-                Content = new FontIcon { Glyph = "\uE74D", FontSize = 12 },
-            };
-            ToolTipService.SetToolTip(deleteButton, deleteTooltip);
-            ToolTipService.SetPlacement(deleteButton, Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Mouse);
-            deleteButton.Click += OnDeleteChannelClick;
-            Grid.SetColumn(deleteButton, 3);
-            row.Children.Add(deleteButton);
-
-            ChannelListPanel.Children.Add(row);
+            _channels.Add(new ChannelRowViewModel(id, displayType, displayDetail, deleteTooltip));
         }
 
         LoadingPanel.Visibility = Visibility.Collapsed;
-        ChannelListPanel.Visibility = Visibility.Visible;
+        ChannelList.Visibility = Visibility.Visible;
         StatusText.Visibility = Visibility.Collapsed;
     }
 
@@ -318,7 +264,7 @@ public sealed partial class ChannelsSection : UserControl
     private void ShowLoading()
     {
         LoadingPanel.Visibility = Visibility.Visible;
-        ChannelListPanel.Visibility = Visibility.Collapsed;
+        ChannelList.Visibility = Visibility.Collapsed;
         StatusText.Visibility = Visibility.Collapsed;
     }
 
@@ -328,10 +274,42 @@ public sealed partial class ChannelsSection : UserControl
     private void ShowStatus(string message)
     {
         LoadingPanel.Visibility = Visibility.Collapsed;
-        ChannelListPanel.Visibility = Visibility.Collapsed;
+        ChannelList.Visibility = Visibility.Collapsed;
         StatusText.Text = message;
         StatusText.Visibility = Visibility.Visible;
     }
 
     #endregion
+}
+
+/// <summary>
+/// View model for one row inside <see cref="ChannelsSection"/>'s channel list.
+/// Immutable projection of one Outbox <c>list_channels</c> entry.
+/// </summary>
+public sealed class ChannelRowViewModel
+{
+    /// <summary>Initializes the row with display-ready fields resolved from the MCP payload.</summary>
+    /// <param name="id">Channel identifier used by the CLI <c>remove</c> command.</param>
+    /// <param name="displayType">Localized channel type label (bold column).</param>
+    /// <param name="displayDetail">Channel name or <c>from</c> address (ellipsized).</param>
+    /// <param name="deleteTooltip">Tooltip shown on the row's delete button.</param>
+    public ChannelRowViewModel(string id, string displayType, string displayDetail, string deleteTooltip)
+    {
+        Id = id;
+        DisplayType = displayType;
+        DisplayDetail = displayDetail;
+        DeleteTooltip = deleteTooltip;
+    }
+
+    /// <summary>Gets the channel identifier passed back to the CLI <c>remove</c> command.</summary>
+    public string Id { get; }
+
+    /// <summary>Gets the localized channel type label.</summary>
+    public string DisplayType { get; }
+
+    /// <summary>Gets the channel detail (from address or display name).</summary>
+    public string DisplayDetail { get; }
+
+    /// <summary>Gets the tooltip shown on the row's delete button.</summary>
+    public string DeleteTooltip { get; }
 }
