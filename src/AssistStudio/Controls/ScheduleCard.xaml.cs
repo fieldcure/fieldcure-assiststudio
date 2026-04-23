@@ -63,12 +63,18 @@ public sealed partial class ScheduleCard : UserControl
 
     #region Item Rendering
 
+    /// <summary>
+    /// Re-renders the card whenever the bound schedule item changes.
+    /// </summary>
     private static void OnItemChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is ScheduleCard card)
             card.ApplyItem();
     }
 
+    /// <summary>
+    /// Applies the current schedule item to the card's text, visibility, and toggle state.
+    /// </summary>
     private void ApplyItem()
     {
         var item = Item;
@@ -110,6 +116,9 @@ public sealed partial class ScheduleCard : UserControl
         UpdateToggleTooltip(completedOnce, item.IsEnabled);
     }
 
+    /// <summary>
+    /// Builds the secondary detail line that summarizes timing and output channel information.
+    /// </summary>
     private static string BuildDetailText(ScheduleItemViewModel item)
     {
         var parts = new List<string>();
@@ -131,6 +140,9 @@ public sealed partial class ScheduleCard : UserControl
         return string.Join(" · ", parts);
     }
 
+    /// <summary>
+    /// Updates the toggle tooltip based on whether the schedule is completed or enabled.
+    /// </summary>
     private void UpdateToggleTooltip(bool completedOnce, bool isOn)
     {
         string tip;
@@ -149,16 +161,25 @@ public sealed partial class ScheduleCard : UserControl
 
     #region Event Handlers
 
+    /// <summary>
+    /// Reveals the delete button while the pointer is hovering over the card.
+    /// </summary>
     private void OnCardPointerEntered(object sender, PointerRoutedEventArgs e)
     {
         DeleteButton.Visibility = Visibility.Visible;
     }
 
+    /// <summary>
+    /// Hides the delete button when the pointer leaves the card.
+    /// </summary>
     private void OnCardPointerExited(object sender, PointerRoutedEventArgs e)
     {
         DeleteButton.Visibility = Visibility.Collapsed;
     }
 
+    /// <summary>
+    /// Persists the requested enabled state and restores the previous toggle state if the update fails.
+    /// </summary>
     private async void OnToggled(object sender, RoutedEventArgs e)
     {
         if (_suppressToggledEvent || Item is null)
@@ -189,6 +210,9 @@ public sealed partial class ScheduleCard : UserControl
         }
     }
 
+    /// <summary>
+    /// Confirms schedule deletion with the user and removes the item when accepted.
+    /// </summary>
     private async void OnDeleteClicked(object sender, RoutedEventArgs e)
     {
         if (Item is null)

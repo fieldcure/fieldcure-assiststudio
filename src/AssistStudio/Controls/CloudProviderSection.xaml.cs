@@ -76,6 +76,10 @@ public sealed partial class CloudProviderSection : UserControl
         set => SetValue(FallbackModelsStringProperty, value);
     }
 
+    /// <summary>
+    /// Gets the fallback model IDs parsed from <see cref="FallbackModelsString"/>.
+    /// Used when no cached model list is available for the provider.
+    /// </summary>
     private string[] FallbackModels =>
         string.IsNullOrEmpty(FallbackModelsString) ? [] : FallbackModelsString.Split(',');
 
@@ -92,6 +96,7 @@ public sealed partial class CloudProviderSection : UserControl
 
     #region Constructor
 
+    /// <summary>Initializes a new <see cref="CloudProviderSection"/>.</summary>
     public CloudProviderSection()
     {
         InitializeComponent();
@@ -142,6 +147,10 @@ public sealed partial class CloudProviderSection : UserControl
 
     #region API Key Management
 
+    /// <summary>
+    /// Switches between the API-key entry panel and the masked-key display panel
+    /// based on whether a key is currently stored for this provider.
+    /// </summary>
     private void SetKeyState(string key)
     {
         if (!string.IsNullOrEmpty(key))
@@ -161,12 +170,19 @@ public sealed partial class CloudProviderSection : UserControl
         }
     }
 
+    /// <summary>
+    /// Masks an API key for display by keeping only the first and last three characters.
+    /// </summary>
     private static string MaskKey(string key)
     {
         if (key.Length <= 6) return "••••••";
         return key[..3] + "•••" + key[^3..];
     }
 
+    /// <summary>
+    /// Saves the entered API key, updates or creates the corresponding preset,
+    /// and kicks off a background model refresh for the provider.
+    /// </summary>
     private void OnAddKey(object sender, RoutedEventArgs e)
     {
         var key = ApiKeyBox.Password?.Trim();
@@ -204,6 +220,10 @@ public sealed partial class CloudProviderSection : UserControl
         _ = FetchAndCacheModelsAsync(key);
     }
 
+    /// <summary>
+    /// Removes the stored API key and its preset entry for this provider, then
+    /// returns the section to the key-entry state.
+    /// </summary>
     private void OnRemoveKey(object sender, RoutedEventArgs e)
     {
         PasswordVaultHelper.DeleteApiKey(ProviderType);
@@ -221,6 +241,9 @@ public sealed partial class CloudProviderSection : UserControl
 
     #region Model ComboBox
 
+    /// <summary>
+    /// Populates the model ComboBox from cached models or the provider's fallback list.
+    /// </summary>
     private void PopulateModelCombo()
     {
         var cached = AppSettings.GetCachedModels(ProviderType);
@@ -229,6 +252,10 @@ public sealed partial class CloudProviderSection : UserControl
         PopulateCombo(models, savedModel);
     }
 
+    /// <summary>
+    /// Replaces the ComboBox items with <paramref name="models"/> and selects the
+    /// previously saved model when it is still present.
+    /// </summary>
     private void PopulateCombo(string[] models, string? savedModel)
     {
         ModelCombo.Items.Clear();
@@ -244,6 +271,9 @@ public sealed partial class CloudProviderSection : UserControl
             ModelCombo.SelectedIndex = 0;
     }
 
+    /// <summary>
+    /// Persists the selected model when the user changes the ComboBox selection.
+    /// </summary>
     private void OnModelChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_isPopulating) return;
@@ -272,6 +302,10 @@ public sealed partial class CloudProviderSection : UserControl
         ApplyModelSelection(model);
     }
 
+    /// <summary>
+    /// Applies a newly selected model to the current provider preset and persists
+    /// any thinking-related settings that depend on that selection.
+    /// </summary>
     private void ApplyModelSelection(string model)
     {
         _isPopulating = true;
@@ -293,6 +327,10 @@ public sealed partial class CloudProviderSection : UserControl
         PersistPresets();
     }
 
+    /// <summary>
+    /// Fetches the provider's model list, filters it to chat-capable entries, and
+    /// updates the local cache and ComboBox items on the UI thread.
+    /// </summary>
     private async Task FetchAndCacheModelsAsync(string apiKey)
     {
         try
@@ -336,6 +374,9 @@ public sealed partial class CloudProviderSection : UserControl
         }
     }
 
+    /// <summary>
+    /// Creates a temporary provider instance used only for listing available models.
+    /// </summary>
     private IAiProvider CreateProviderForListing(string apiKey)
     {
         // Custom providers: construct OpenAiProvider directly with the passed apiKey
@@ -357,6 +398,9 @@ public sealed partial class CloudProviderSection : UserControl
         };
     }
 
+    /// <summary>
+    /// Filters a provider's model catalog down to the IDs suitable for chat/model selection.
+    /// </summary>
     private List<string> FilterChatModels(IReadOnlyList<AiModel> models) => ProviderType switch
     {
         "Claude" => [.. models.Where(m => m.Id.StartsWith("claude-")).Select(m => m.Id)],
@@ -370,6 +414,9 @@ public sealed partial class CloudProviderSection : UserControl
 
     #region Options
 
+    /// <summary>
+    /// Populates the PDF handling ComboBox and selects the preset's saved capability.
+    /// </summary>
     private void PopulatePdfCombo()
     {
         PdfCombo.Items.Clear();
@@ -380,6 +427,9 @@ public sealed partial class CloudProviderSection : UserControl
         PdfCombo.SelectedIndex = idx >= 0 ? idx : 0;
     }
 
+    /// <summary>
+    /// Loads the saved max-tokens value into the NumberBox for the current preset.
+    /// </summary>
     private void PopulateMaxTokens()
     {
         var preset = FindPreset();
@@ -387,6 +437,9 @@ public sealed partial class CloudProviderSection : UserControl
             MaxTokensBox.Value = preset.MaxTokens;
     }
 
+    /// <summary>
+    /// Initializes the thinking override controls from the current provider preset.
+    /// </summary>
     private void PopulateThinkingToggle()
     {
         ThinkingOverrideCombo.Items.Clear();
@@ -411,6 +464,9 @@ public sealed partial class CloudProviderSection : UserControl
         }
     }
 
+    /// <summary>
+    /// Persists the selected PDF handling mode when the ComboBox selection changes.
+    /// </summary>
     private void OnPdfHandlingChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_isPopulating) return;
@@ -420,6 +476,9 @@ public sealed partial class CloudProviderSection : UserControl
         PersistPresets();
     }
 
+    /// <summary>
+    /// Persists max-token changes from the NumberBox to the current provider preset.
+    /// </summary>
     private void OnMaxTokensChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
         if (_isPopulating || double.IsNaN(args.NewValue)) return;
@@ -429,6 +488,9 @@ public sealed partial class CloudProviderSection : UserControl
         PersistPresets();
     }
 
+    /// <summary>
+    /// Persists the explicit thinking toggle state and updates the budget enablement.
+    /// </summary>
     private void OnThinkingToggled(object sender, RoutedEventArgs e)
     {
         if (_isPopulating || !ThinkingToggle.IsEnabled) return;
@@ -444,6 +506,9 @@ public sealed partial class CloudProviderSection : UserControl
         PersistPresets();
     }
 
+    /// <summary>
+    /// Applies a new thinking override mode and persists the resulting preset state.
+    /// </summary>
     private void OnThinkingOverrideChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_isPopulating) return;
@@ -463,6 +528,9 @@ public sealed partial class CloudProviderSection : UserControl
         PersistPresets();
     }
 
+    /// <summary>
+    /// Persists changes to the thinking budget NumberBox for the current preset.
+    /// </summary>
     private void OnThinkingBudgetChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
         if (_isPopulating) return;
@@ -476,6 +544,10 @@ public sealed partial class CloudProviderSection : UserControl
 
     #region Thinking State
 
+    /// <summary>
+    /// Recomputes whether thinking is available, required, or blocked for the
+    /// selected model and updates the related controls and hint text.
+    /// </summary>
     private void UpdateThinkingState()
     {
         var modelId = ModelCombo.SelectedItem as string;
@@ -536,11 +608,20 @@ public sealed partial class CloudProviderSection : UserControl
 
     #region Private Helpers
 
+    /// <summary>
+    /// Finds the saved preset that belongs to the current provider type.
+    /// </summary>
     private ProviderPreset? FindPreset()
         => _presets.FirstOrDefault(p => p.ProviderType == ProviderType);
 
+    /// <summary>
+    /// Saves the current in-memory provider presets back to application settings.
+    /// </summary>
     private void PersistPresets() => AppSettings.SavePresets(_presets);
 
+    /// <summary>
+    /// Raises the sub-header text update event with the current model and key status.
+    /// </summary>
     private void UpdateSubHeader()
     {
         var model = ModelCombo.SelectedItem as string ?? "";
@@ -554,12 +635,18 @@ public sealed partial class CloudProviderSection : UserControl
         SubHeaderChanged?.Invoke(this, string.Join(" \u00B7 ", parts));
     }
 
+    /// <summary>
+    /// Maps the PDF handling ComboBox selection to its corresponding capability enum.
+    /// </summary>
     private PdfCapability GetPdfCapabilityFromCombo()
     {
         var idx = PdfCombo.SelectedIndex;
         return idx >= 0 && idx < PdfOptions.Length ? PdfOptions[idx].Value : PdfCapability.Auto;
     }
 
+    /// <summary>
+    /// Maps the thinking override ComboBox selection to its corresponding enum value.
+    /// </summary>
     private ThinkingOverride GetThinkingOverrideFromCombo()
     {
         var idx = ThinkingOverrideCombo.SelectedIndex;
@@ -585,6 +672,9 @@ public sealed partial class CloudProviderSection : UserControl
         }
     }
 
+    /// <summary>
+    /// Converts an internal provider identifier into the display name shown in presets.
+    /// </summary>
     private static string ProviderToDisplayName(string provider) => provider switch
     {
         "Claude" => "Anthropic Claude",
@@ -596,6 +686,9 @@ public sealed partial class CloudProviderSection : UserControl
 
     private static readonly ResourceLoader Res = new();
 
+    /// <summary>
+    /// Resolves a localized string for the given resource key, falling back to the key itself.
+    /// </summary>
     private static string L(string key) =>
         Res.GetString(key) is { Length: > 0 } value ? value : key;
 

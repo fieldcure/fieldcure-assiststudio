@@ -60,6 +60,7 @@ public sealed partial class McpServerCard : UserControl
 
     #region Constructor
 
+    /// <summary>Initializes a new <see cref="McpServerCard"/>.</summary>
     public McpServerCard()
     {
         InitializeComponent();
@@ -94,6 +95,10 @@ public sealed partial class McpServerCard : UserControl
 
     #region Private Methods
 
+    /// <summary>
+    /// Rebinds to the active connection and refreshes the card when the displayed
+    /// MCP server connection changes.
+    /// </summary>
     private static void OnConnectionChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is not McpServerCard card) return;
@@ -109,6 +114,9 @@ public sealed partial class McpServerCard : UserControl
         card.UpdateUI();
     }
 
+    /// <summary>
+    /// Queues a UI refresh when a property on the bound connection changes.
+    /// </summary>
     private void OnConnectionPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         DispatcherQueue.TryEnqueue(UpdateUI);
@@ -125,6 +133,10 @@ public sealed partial class McpServerCard : UserControl
                 : Visibility.Collapsed;
     }
 
+    /// <summary>
+    /// Re-renders the card's status, detail text, version, actions, and tooltips
+    /// from the current connection snapshot.
+    /// </summary>
     private void UpdateUI()
     {
         var connection = Connection;
@@ -213,6 +225,9 @@ public sealed partial class McpServerCard : UserControl
         SetMouseToolTip(DeleteButton, _loader.GetString("Connect_Remove"));
     }
 
+    /// <summary>
+    /// Assigns a tooltip that follows the mouse pointer for compact icon buttons.
+    /// </summary>
     private static void SetMouseToolTip(FrameworkElement element, string text)
     {
         ToolTipService.SetToolTip(element, new ToolTip
@@ -226,6 +241,10 @@ public sealed partial class McpServerCard : UserControl
 
     #region Event Handlers
 
+    /// <summary>
+    /// Raises the enable-toggle event after user interaction, unless the control
+    /// is currently synchronizing state programmatically.
+    /// </summary>
     private void EnableToggle_Toggled(object sender, RoutedEventArgs e)
     {
         if (_suppressToggleEvent) return;
@@ -233,18 +252,27 @@ public sealed partial class McpServerCard : UserControl
             EnableToggled?.Invoke(this, Connection);
     }
 
+    /// <summary>
+    /// Raises the edit request event for the current connection.
+    /// </summary>
     private void EditButton_Click(object sender, RoutedEventArgs e)
     {
         if (Connection is not null)
             EditRequested?.Invoke(this, Connection);
     }
 
+    /// <summary>
+    /// Raises the reconnect request event for the current connection.
+    /// </summary>
     private void ReconnectButton_Click(object sender, RoutedEventArgs e)
     {
         if (Connection is not null)
             ReconnectRequested?.Invoke(this, Connection);
     }
 
+    /// <summary>
+    /// Raises the delete request event for the current connection.
+    /// </summary>
     private void DeleteButton_Click(object sender, RoutedEventArgs e)
     {
         if (Connection is not null)
