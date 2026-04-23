@@ -10,6 +10,25 @@ namespace AssistStudio.Helpers;
 public static class ThemeHelper
 {
     /// <summary>
+    /// Wires <paramref name="onThemeChanged"/> to <see cref="FrameworkElement.ActualThemeChanged"/>
+    /// on <paramref name="host"/> and invokes it once immediately for the initial paint.
+    /// <para>
+    /// Use this when a control assigns brushes in code via <see cref="GetBrush"/>: the brush
+    /// captured at assignment time is a concrete <see cref="SolidColorBrush"/>, not a
+    /// <c>{ThemeResource}</c> binding, so it goes stale when the user flips light/dark at runtime.
+    /// The callback runs on the host's lifetime — no manual unsubscribe is required as long as
+    /// the host itself is collected.
+    /// </para>
+    /// </summary>
+    /// <param name="host">The element whose <see cref="FrameworkElement.ActualTheme"/> drives the resolution.</param>
+    /// <param name="onThemeChanged">Re-applies whichever brushes the caller currently needs; invoked once on subscribe and again on every subsequent theme change.</param>
+    public static void SubscribeThemeChanges(FrameworkElement host, Action onThemeChanged)
+    {
+        host.ActualThemeChanged += (_, _) => onThemeChanged();
+        onThemeChanged();
+    }
+
+    /// <summary>
     /// Resolves a brush from <see cref="Application.Current.Resources"/> ThemeDictionaries
     /// based on the current effective theme.
     /// </summary>
