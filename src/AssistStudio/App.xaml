@@ -56,6 +56,25 @@
                 <Setter Property="TextTrimming" Value="CharacterEllipsis" />
                 <Setter Property="TextWrapping" Value="NoWrap" />
             </Style>
+            
+            <!--  ComboBox separator (non-interactive divider line)  -->
+            <Style x:Key="ComboBoxSeparatorItemStyle" TargetType="ComboBoxItem">
+                <Setter Property="IsEnabled" Value="False" />
+                <Setter Property="IsHitTestVisible" Value="False" />
+                <Setter Property="MinHeight" Value="0" />
+                <Setter Property="Height" Value="9" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ComboBoxItem">
+                            <Border
+                                Height="1"
+                                HorizontalAlignment="Stretch"
+                                Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
 
             <!--  Standard Spacing Values  -->
             <x:Double x:Key="SectionContentSpacing">20</x:Double>

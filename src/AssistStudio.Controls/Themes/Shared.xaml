@@ -1,6 +1,7 @@
 ﻿<ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:primitives="using:FieldCure.AssistStudio.Controls.Primitives">
 
     <!--
         SubtleButtonStyle — back-port from WinAppSDK 1.8 generic.xaml.
@@ -172,6 +173,27 @@
                             </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
                     </ContentPresenter>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        Implicit style for ComboBoxSeparatorItem — renders a non-interactive, theme-aware
+        divider line inside a ComboBox drop-down.
+    -->
+    <Style TargetType="primitives:ComboBoxSeparatorItem">
+        <Setter Property="IsEnabled" Value="False" />
+        <Setter Property="IsHitTestVisible" Value="False" />
+        <Setter Property="MinHeight" Value="0" />
+        <Setter Property="Height" Value="9" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="primitives:ComboBoxSeparatorItem">
+                    <Border Height="1"
+                            HorizontalAlignment="Stretch"
+                            Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
                 </ControlTemplate>
             </Setter.Value>
         </Setter>

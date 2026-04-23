@@ -1,30 +1,17 @@
-﻿using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
+﻿using Microsoft.UI.Xaml.Controls;
 
 namespace FieldCure.AssistStudio.Controls.Primitives;
 
 /// <summary>
 /// A non-interactive separator item for use in a <see cref="ComboBox"/>.
+/// Visuals are provided by the implicit style in <c>Themes/Shared.xaml</c>,
+/// which draws a theme-aware divider line via <c>{ThemeResource DividerStrokeColorDefaultBrush}</c>.
 /// </summary>
 public sealed partial class ComboBoxSeparatorItem : ComboBoxItem
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ComboBoxSeparatorItem"/> class
-    /// with a horizontal divider line and all interaction disabled.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="ComboBoxSeparatorItem"/> class.</summary>
     public ComboBoxSeparatorItem()
     {
-        IsEnabled = false;
-        IsHitTestVisible = false;
-        MinHeight = 0;
-        Height = 9;
-        Padding = new Thickness(0);
-        Content = new Border
-        {
-            Height = 1,
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            Background = (Brush)Application.Current.Resources["DividerStrokeColorDefaultBrush"],
-        };
+        DefaultStyleKey = typeof(ComboBoxSeparatorItem);
     }
 }
