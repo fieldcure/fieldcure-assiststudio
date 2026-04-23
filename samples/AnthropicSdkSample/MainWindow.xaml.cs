@@ -160,14 +160,15 @@ public sealed partial class MainWindow : Window
         settings.Values[ThemeSettingName] = theme == ElementTheme.Dark ? "Dark" : "Light";
     }
 
-    /// <summary>Updates the theme button icon and tooltip to reflect the next available theme.</summary>
+    /// <summary>Updates the theme menu item label and icon to reflect the next available theme.</summary>
     private void UpdateThemeButton(ElementTheme theme)
     {
         var nextThemeIsDark = theme != ElementTheme.Dark;
-        ThemeToggleIcon.Glyph = nextThemeIsDark ? "\uE708" : "\uE793";
-        ToolTipService.SetToolTip(
-            ThemeToggleButton,
-            nextThemeIsDark ? "Switch to dark theme" : "Switch to light theme");
+        ThemeMenuItem.Text = nextThemeIsDark ? "Switch to dark" : "Switch to light";
+        ThemeMenuItem.Icon = new FontIcon
+        {
+            Glyph = nextThemeIsDark ? "\uE708" : "\uE793",
+        };
     }
 
     /// <summary>Gets the effective app theme for the sample window.</summary>
@@ -362,7 +363,7 @@ public sealed partial class MainWindow : Window
     {
         if (_client is null) return;
 
-        ExportButton.IsEnabled = false;
+        ExportMenuItem.IsEnabled = false;
 
         var modelId = _selectedModelId;
 
@@ -399,6 +400,6 @@ public sealed partial class MainWindow : Window
             handle.Message.Content += $"\n\n[Error: {ex.Message}]";
         }
 
-        ExportButton.IsEnabled = true;
+        ExportMenuItem.IsEnabled = true;
     }
 }
