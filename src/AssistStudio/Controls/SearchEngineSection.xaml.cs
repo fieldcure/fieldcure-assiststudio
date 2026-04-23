@@ -51,6 +51,16 @@ public sealed partial class SearchEngineSection : UserControl
     /// </summary>
     private bool _isSyncingFromServer;
 
+    /// <summary>
+    /// Last value programmatically assigned to <see cref="WolframKey"/>.Password so
+    /// <see cref="OnWolframKeyChanged"/> can distinguish initial-load echo from a real
+    /// user edit. Seeding the PasswordBox with the stored key during <see cref="LoadState"/>
+    /// fires <c>PasswordChanged</c> exactly once before the user has touched anything;
+    /// without this guard that echo would trigger an Essentials reconnect on every
+    /// first expand when a Wolfram AppID is already saved.
+    /// </summary>
+    private string _wolframLoadedKey = "";
+
     #endregion
 
     #region Constructor
@@ -154,6 +164,11 @@ public sealed partial class SearchEngineSection : UserControl
     /// Handles a user keystroke on a paid-engine API key field by persisting to the
     /// credential vault and reflecting the availability change in the row's enabled
     /// state, auto-check behaviour, and trash-button visibility.
+    /// <para>
+    /// Skips work when the new value matches the view model's stored key, which
+    /// suppresses the initial <c>PasswordChanged</c> echo from the OneWay
+    /// <c>Password</c> binding during container realization.
+    /// </para>
     /// </summary>
     private void OnPaidEngineKeyChanged(object sender, RoutedEventArgs e)
     {
@@ -161,11 +176,19 @@ public sealed partial class SearchEngineSection : UserControl
             return;
 
         var value = pb.Password?.Trim() ?? "";
+
+        // Initial-load echo: the OneWay Password binding fires PasswordChanged once
+        // when the container is realized with vm.ApiKey. Treat "no delta" as no-op
+        // so a saved key does not re-save and auto-select on every first expand.
+        if (string.Equals(value, vm.ApiKey, StringComparison.Ordinal))
+            return;
+
         var hasKey = !string.IsNullOrEmpty(value);
 
         if (hasKey)
         {
             PasswordVaultHelper.SaveMcpEnvVar(EssentialsServerId, vm.EnvKey, value);
+            vm.ApiKey = value;
             vm.IsEnabled = true;
             vm.IsChecked = true; // auto-select on key entry — triggers mutex via OnPaidEngineChecked
             vm.ClearVisibility = Visibility.Visible;
@@ -173,14 +196,19 @@ public sealed partial class SearchEngineSection : UserControl
         }
         else
         {
+            // Capture UI state BEFORE mutating so the fallback decision reflects the
+            // engine the user was actually using — not AppSettings, which may be stale
+            // after a mid-conversation set_search_engine runtime swap.
+            var wasActive = vm.IsChecked;
+
             PasswordVaultHelper.DeleteMcpEnvVar(EssentialsServerId, vm.EnvKey);
+            vm.ApiKey = "";
             vm.IsEnabled = false;
             vm.IsChecked = false;
             vm.ClearVisibility = Visibility.Collapsed;
             LoggingService.LogInfo($"[MCP] API key removed for {vm.EngineKey}, radio disabled");
 
-            // Fall back to free engine if this row was the active one.
-            if (vm.EngineKey == GetCurrentEngine())
+            if (wasActive)
             {
                 LoggingService.LogInfo($"[MCP] Active engine '{vm.EngineKey}' lost API key, falling back to default");
                 FreeEngineRadio.IsChecked = true;
@@ -190,12 +218,16 @@ public sealed partial class SearchEngineSection : UserControl
 
     /// <summary>
     /// Handles the per-row trash button by clearing the stored API key, disabling
-    /// the row, and falling back to the free engine if the cleared row was active.
+    /// the row, and falling back to the free engine if the cleared row was active
+    /// in the UI (which mirrors live server state after <see cref="SyncFromServerAsync"/>).
     /// </summary>
     private void OnClearPaidEngine(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement fe || fe.DataContext is not PaidEngineRowViewModel vm)
             return;
+
+        // Capture BEFORE mutating — see OnPaidEngineKeyChanged for the rationale.
+        var wasActive = vm.IsChecked;
 
         PasswordVaultHelper.DeleteMcpEnvVar(EssentialsServerId, vm.EnvKey);
         vm.ApiKey = "";
@@ -204,19 +236,29 @@ public sealed partial class SearchEngineSection : UserControl
         vm.ClearVisibility = Visibility.Collapsed;
         LoggingService.LogInfo($"[MCP] API key cleared: {vm.EnvKey}");
 
-        if (vm.EngineKey == GetCurrentEngine())
+        if (wasActive)
             FreeEngineRadio.IsChecked = true;
     }
 
     /// <summary>
     /// Persists the Wolfram|Alpha AppID to PasswordVault and reconnects Essentials so the
     /// new <c>WOLFRAM_APPID</c> env var takes effect.
+    /// <para>
+    /// Compares against <see cref="_wolframLoadedKey"/> to ignore the initial
+    /// <c>PasswordChanged</c> echo when <see cref="LoadState"/> seeds the box with
+    /// the existing key — otherwise every first expand would trigger a gratuitous
+    /// Essentials reconnect.
+    /// </para>
     /// </summary>
     private void OnWolframKeyChanged(object sender, RoutedEventArgs e)
     {
         if (sender is not PasswordBox pb) return;
 
         var value = pb.Password?.Trim() ?? "";
+        if (string.Equals(value, _wolframLoadedKey, StringComparison.Ordinal))
+            return;
+
+        _wolframLoadedKey = value;
         var hasKey = !string.IsNullOrEmpty(value);
 
         if (hasKey)
@@ -321,8 +363,11 @@ public sealed partial class SearchEngineSection : UserControl
         _paidEngines.Add(CreatePaidEngineVm("Tavily", "tavily", TavilyEnvKey, currentEngine, apiKeyPlaceholder, removeTooltip));
         _paidEngines.Add(CreatePaidEngineVm("SerpApi", "serpapi", SerpApiEnvKey, currentEngine, apiKeyPlaceholder, removeTooltip));
 
-        // Wolfram|Alpha row
+        // Wolfram|Alpha row — seed _wolframLoadedKey BEFORE touching the PasswordBox
+        // so OnWolframKeyChanged's guard recognises the ensuing Password assignment as
+        // the initial echo (not a user edit) and skips the reconnect.
         var wolframKey = PasswordVaultHelper.LoadMcpEnvVar(EssentialsServerId, WolframEnvKey);
+        _wolframLoadedKey = wolframKey ?? "";
         if (!string.IsNullOrEmpty(wolframKey))
         {
             WolframKey.Password = wolframKey;
@@ -368,9 +413,19 @@ public sealed partial class SearchEngineSection : UserControl
     /// MCP tool that swaps the active engine in place; the restart path is only taken when
     /// the runtime swap is unavailable (server not connected, tool call fails, or the
     /// selection is the free default which has no paid fallback considerations).
+    /// <para>
+    /// No-ops when the current persisted engine already equals <paramref name="engineKey"/>.
+    /// The initial <c>IsChecked="{x:Bind ... TwoWay}"</c> binding on the paid-row RadioButton
+    /// fires <c>Checked</c> once during container realization even without user interaction,
+    /// which would otherwise re-save AppSettings and issue a redundant <c>set_search_engine</c>
+    /// tool call on every first expand.
+    /// </para>
     /// </summary>
     private void PersistAndApplyEngineChange(string engineKey)
     {
+        if (GetCurrentEngine() == engineKey)
+            return;
+
         var configs = AppSettings.BuiltInServers;
         if (!configs.TryGetValue(BuiltInServerHelper.EssentialsKey, out var config))
         {
