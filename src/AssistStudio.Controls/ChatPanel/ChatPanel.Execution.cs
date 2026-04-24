@@ -241,25 +241,24 @@ public sealed partial class ChatPanel
         RegisterInTree(continueMessage);
         _messages.Add(continueMessage);
 
-        // Resume the existing assistant message bubble for continued streaming
-        assistantMessage.IsStreaming = true;
-        await _renderer.ResumeMessageAsync(assistantMessage.Id, assistantMessage.Content);
-
-        if (_inputArea is not null)
-            _inputArea.IsInputEnabled = false;
-        _streamingCts?.Cancel();
-        _streamingCts = new CancellationTokenSource();
-        var ct = _streamingCts.Token;
-
         try
         {
+            // Resume the existing assistant message bubble for continued streaming
+            assistantMessage.IsStreaming = true;
+            await _renderer.ResumeMessageAsync(assistantMessage.Id, assistantMessage.Content);
+
+            if (_inputArea is not null)
+                _inputArea.IsInputEnabled = false;
+            _streamingCts?.Cancel();
+            _streamingCts = new CancellationTokenSource();
+            var ct = _streamingCts.Token;
+
             var request = await CreateRequestAsync([.. _messages]);
+            DiagnosticLogger.LogInfo($"[Chat] Continue → StreamAsync (messages={_messages.Count}, priorContentLen={assistantMessage.Content.Length})");
 
             var priorLength = assistantMessage.Content.Length;
             var result = await ConsumeStreamAsync(Provider.StreamAsync(request, ct), assistantMessage, ct);
-
-            // Remove the continue user message from history -- replace with combined assistant content
-            _messages.Remove(continueMessage);
+            DiagnosticLogger.LogInfo($"[Chat] Continue complete — appended={assistantMessage.Content.Length - priorLength} chars, tokens={result.Usage?.TotalTokens ?? 0}, truncated={result.IsTruncated}");
 
             await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content, result.IsTruncated, result.Usage?.TotalTokens ?? 0);
 
@@ -274,6 +273,7 @@ public sealed partial class ChatPanel
         }
         catch (OperationCanceledException)
         {
+            DiagnosticLogger.LogInfo("[Chat] Continue cancelled by user");
             await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content);
         }
         catch (Exception ex)
@@ -284,6 +284,11 @@ public sealed partial class ChatPanel
         }
         finally
         {
+            // Always drop the ephemeral continue user message from both _messages
+            // and the children tree, even on cancel/exception, so it never survives
+            // into save/load as an orphaned bubble. (GetAllMessages() reads from
+            // _childrenMap, so _messages.Remove alone is not enough.)
+            UnregisterFromTree(continueMessage);
             assistantMessage.IsStreaming = false;
             if (_inputArea is not null)
             {

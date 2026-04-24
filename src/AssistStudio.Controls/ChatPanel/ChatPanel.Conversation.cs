@@ -117,6 +117,50 @@ public sealed partial class ChatPanel
     }
 
     /// <summary>
+    /// Removes a message from both <see cref="_messages"/> and the tree
+    /// (<see cref="_childrenMap"/> + parent <see cref="ChatMessage.ActiveChildId"/>).
+    /// Used for ephemeral internal messages (e.g., the hidden "Continue writing..."
+    /// user message) that must not survive into save/load.
+    /// </summary>
+    private void UnregisterFromTree(ChatMessage msg)
+    {
+        _messages.Remove(msg);
+
+        var key = msg.ParentId ?? TreeRootKey;
+        if (_childrenMap.TryGetValue(key, out var siblings))
+        {
+            siblings.RemoveAll(s => s.Id == msg.Id);
+            if (siblings.Count == 0)
+            {
+                _childrenMap.Remove(key);
+            }
+            else
+            {
+                static bool IsToolInternal(ChatMessage m) =>
+                    m.Role == ChatRole.Tool ||
+                    (m.Role == ChatRole.Assistant && m.ToolCalls is { Count: > 0 });
+                var visibleCount = siblings.Count(s => !IsToolInternal(s));
+                for (var i = 0; i < siblings.Count; i++)
+                {
+                    siblings[i].SiblingIndex = i;
+                    siblings[i].SiblingCount = IsToolInternal(siblings[i]) ? 1 : Math.Max(visibleCount, 1);
+                }
+            }
+        }
+
+        if (msg.ParentId is not null)
+        {
+            var parent = _messages.FirstOrDefault(m => m.Id == msg.ParentId);
+            if (parent is not null && parent.ActiveChildId == msg.Id)
+            {
+                parent.ActiveChildId = _childrenMap.TryGetValue(msg.ParentId, out var remaining) && remaining.Count > 0
+                    ? remaining[^1].Id
+                    : null;
+            }
+        }
+    }
+
+    /// <summary>
     /// Adds a previously saved message to the conversation (for restoring saved conversations).
     /// Messages added before the WebView is initialized will be rendered once initialization completes.
     /// </summary>
