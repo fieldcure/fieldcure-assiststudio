@@ -1,4 +1,5 @@
 using AnthropicSdkSample.Helpers;
+using FieldCure.AssistStudio.Helpers;
 using Microsoft.UI.Xaml;
 using Windows.Storage;
 
@@ -19,6 +20,13 @@ public partial class App : Application
     protected override async void OnLaunched(LaunchActivatedEventArgs args)
     {
         await LoggingService.InitializeAsync(ApplicationData.Current.LocalFolder.Path);
+
+        // Route Core/Controls diagnostics through the sample's LoggingService so they
+        // appear in the same log file as the sample's own messages.
+        DiagnosticLogger.OnException = ex => LoggingService.LogException(ex);
+        DiagnosticLogger.OnWarning = msg => LoggingService.LogWarning(msg);
+        DiagnosticLogger.OnInfo = msg => LoggingService.LogInfo(msg);
+
         LoggingService.LogInfo("[SdkSample] Startup");
 
         _window = new MainWindow();
