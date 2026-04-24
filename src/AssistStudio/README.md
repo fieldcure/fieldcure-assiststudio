@@ -56,7 +56,7 @@ Connect to external MCP servers to extend AI capabilities with custom tools:
 - **Tool approval** — Tools that require confirmation show an inline approval panel with server badge before execution
 - **MCP Elicitation** — MCP servers can request user input via structured form fields
 - **Search tools** — Meta-tool for efficiently searching across large tool sets
-- **Sub-Agent delegation** — `delegate_task` tool for autonomous sub-agent execution with parallel dispatch and specialist routing (e.g., Web Search Specialist)
+- **Sub-Agent delegation** — `delegate_task` for autonomous sub-agent execution. Parallel dispatch (multiple delegations in a single model turn run concurrently, each with a pulsing placeholder that resolves in place), specialist routing (Web Search, Judgment), and truncation-aware result handling (a sub-agent that hits `max_tokens` is reported as `truncated` instead of a silently-cut-off `completed`)
 - **Built-in servers** — Essentials, Filesystem, Knowledge Base, and Outbox servers. Auto-installed and auto-updated via `dotnet tool` with per-tab instances and MCP Roots protocol
 
 ### Workspace Folders & Knowledge Base

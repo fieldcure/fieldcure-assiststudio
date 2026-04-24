@@ -50,6 +50,7 @@ Console.WriteLine(response.Content);
 **Core models**
 - `ChatMessage`, `ChatRole` — conversation messages (with `MediaItems` for media persistence)
 - `AiRequest`, `AiResponse` — LLM request/response
+- `AiResponse.IsTruncated` — `true` when the provider stopped because it hit the `max_tokens` cap (Claude `stop_reason=max_tokens`, OpenAI `finish_reason=length`, Gemini `MAX_TOKENS`, Ollama `done_reason=length`). Consumers should treat the response as incomplete rather than a graceful completion.
 - `ProviderPreset` — provider configuration
 - `CustomProviderConfig` — custom OpenAI-compatible provider registration (Id, DisplayName, BaseUrl)
 

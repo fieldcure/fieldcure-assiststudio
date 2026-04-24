@@ -37,7 +37,7 @@ AssistStudio is two things:
 - **Tool / Function Calling** — Define tools with `IAssistTool`. `ToolCallExecutor` orchestrates execution with confirmation flow and parallel execution.
 - **MCP Integration** — Connect to MCP servers (Stdio / HTTP) to aggregate tools. `McpToolAdapter` bridges MCP tools to `IAssistTool`.
 - **Built-in MCP Servers** — Essentials (12–16 tools), Filesystem, Knowledge Base (RAG), Outbox, and Runner — fetched and run directly from NuGet via `dnx` (.NET 10 SDK), pinned to a major-version range so minor/patch updates flow through on the next launch.
-- **Sub-Agent Delegation** — `delegate_task` tool for autonomous sub-agent execution with parallel dispatch. `ISpecialist` interface for domain-specific routing (e.g., Web Search Specialist).
+- **Sub-Agent Delegation** — `delegate_task` for autonomous sub-agent execution. Parallel dispatch (multiple `delegate_task` blocks in a single model turn run concurrently and each renders a pulsing placeholder that resolves in place), specialist routing (`ISpecialist` — Web Search, Judgment), and truncation-aware result handling (sub-agent `max_tokens` cutoff is propagated as `status: "truncated"` so the parent never forwards a mid-markdown stub as final).
 
 ### UI & Media
 - **Re-templatable WinUI 3 Controls** — `ChatPanel`, `ComposeBar`, `AttachmentPreviewBar`, `ToolApprovalPanel` — all `TemplatedControl`s with `Generic.xaml` override.

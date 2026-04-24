@@ -36,7 +36,7 @@ var result = await loop.RunAsync(new AgentLoopContext
 });
 
 Console.WriteLine(result.Summary);   // Last assistant message
-Console.WriteLine(result.Status);    // Completed, MaxRoundsReached, Failed
+Console.WriteLine(result.Status);    // Completed, Truncated, MaxRoundsReached, Failed
 Console.WriteLine(result.Messages);  // Full conversation for audit logging
 ```
 
@@ -67,8 +67,31 @@ var result = await executor.ExecuteAsync(new SubAgentRequest
 });
 
 Console.WriteLine(result.Report);   // Sub-agent's final report
-Console.WriteLine(result.Status);   // Completed, TimedOut, MaxRoundsReached, Failed
+Console.WriteLine(result.Status);   // Completed, Truncated, TimedOut, MaxRoundsReached, Failed
 ```
+
+## Status values
+
+| Status | `AgentLoopStatus` | `SubAgentStatus` | Meaning |
+|--------|:---:|:---:|---------|
+| `Completed` | ✓ | ✓ | Model produced a response with no tool calls. `Summary` / `Report` is the final text. |
+| `Truncated` | ✓ | ✓ | The terminating response had no tool calls **and** `AiResponse.IsTruncated` was set (provider hit `max_tokens`). The content is partial — do **not** treat as graceful completion. Callers typically retry with a tighter scope or surface the truncation to the user. |
+| `MaxRoundsReached` | ✓ | ✓ | `context.MaxRounds` reached while the model was still emitting tool calls. |
+| `TimedOut` | — | ✓ | Only `SubAgentExecutor` enforces a wall-clock timeout (`SubAgentRequest.Timeout`). AgentLoop itself is timeout-free — cancellation is the caller's responsibility via `CancellationToken`. |
+| `Failed` | ✓ | ✓ | An unhandled exception (other than `OperationCanceledException`, which propagates). `ErrorMessage` (loop) / `Report` (sub-agent) carries the detail. |
+
+Note: when the context guard forces a final summary round (see
+`MaxContextChars`), the terminating response is classified as `Completed`
+even if `IsTruncated` would otherwise flip it — the guard asked for a
+summary on purpose, so the partial marker doesn't apply.
+
+## Tool execution order
+
+Within a single round, AgentLoop executes the model's `tool_use` blocks
+**sequentially** (`foreach` over `response.ToolCalls`). Parallel dispatch
+of independent tool calls is not a responsibility of this package —
+callers that need it (e.g., AssistStudio's ChatPanel for `delegate_task`
+fan-out) implement it at their own level on top of `SubAgentExecutor`.
 
 ## Design Principles
 

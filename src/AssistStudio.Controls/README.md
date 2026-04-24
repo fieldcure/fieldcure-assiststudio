@@ -19,6 +19,7 @@
 - **Tool Approval** — Inline `ToolApprovalPanel` for user confirmation before tool execution, with expandable JSON arguments preview, user instruction input field, and MCP server name badge.
 - **MCP Elicitation** — `ToolElicitationPanel` for MCP server user-input requests with multi-field selection and batch submit.
 - **Tool Block Details** — Expandable tool blocks showing arguments, result, and execution duration with interleave rendering.
+- **Parallel Sub-Agent Rendering** — When the model emits multiple sub-agent (`delegate_task`) calls in a single turn, each tool block renders immediately with a pulsing placeholder and resolves in place as results arrive. Stop / cancellation cleans up in-flight placeholders with an `[interrupted]` marker so the pulse never hangs.
 - **Streaming Elapsed Time** — Real-time elapsed timer displayed in `ComposeBar` during streaming responses.
 - **TemplatedControls** — All controls are `TemplatedControl`s with `PART_` conventions. Override `Generic.xaml` to fully customize.
 - **Theming** — Light, Dark, and System themes. Set `Theme="System"` to follow the app theme.
@@ -69,46 +70,72 @@ The main control. Provides message list (WebView2), input area, streaming, attac
                   WorkspaceContext="{x:Bind ViewModel.Workspace}" />
 ```
 
-**Dependency Properties:**
+**Dependency Properties** — grouped by concern for faster scanning.
+
+**Provider & model**
 
 | Property | Type | Description |
 |----------|------|-------------|
 | `Provider` | `IAiProvider` | Active AI provider for completions and streaming |
+| `UtilityProvider` | `IAiProvider` | Provider for auto-titling and summarization |
 | `SystemPrompt` | `string` | System prompt prepended to every request |
-| `Theme` | `ChatTheme` | Light / Dark / System |
-| `Placeholder` | `string` | Input placeholder text |
-| `Title` | `string` | Title bar text |
 | `AvailablePresets` | `IList` | Provider presets for the selector |
 | `SelectedPreset` | `ProviderPreset` | Currently active preset |
 | `AvailableProfiles` | `IList<Profile>` | Profile list for the selector |
 | `SelectedProfile` | `Profile` | Currently active profile |
-| `RegisteredTools` | `IReadOnlyList<IAssistTool>` | Tools available to the provider |
+
+**Workspace & context**
+
+| Property | Type | Description |
+|----------|------|-------------|
 | `WorkspaceContext` | `IWorkspaceContext` | Dynamic context injection |
-| `ContextProvider` | `IContextProvider` | RAG context retrieval (optional) |
-| `UtilityProvider` | `IAiProvider` | Provider for auto-titling and summarization |
-| `AutoTitle` | `bool` | Auto-generate conversation titles |
-| `AutoSummarize` | `bool` | Auto-summarize long conversations |
-| `MaxInputTokens` | `int` | Token limit for input |
-| `MaxToolCallRounds` | `int` | Max consecutive tool call rounds |
-| `RecentTurnsToKeep` | `int` | Turns to keep after summarization |
-| `IsDebugMode` | `bool` | Show debug info (raw request/response) |
-| `ShowTitleBar` | `bool` | Show/hide the title bar |
-| `AllowAttachments` | `bool` | Enable/disable file attachments |
-| `IsReadOnly` | `bool` | Read-only conversation view |
 | `WorkspaceFolders` | `IList<string>` | Workspace folder paths for the current tab |
 | `IsWorkspaceEnabled` | `bool` | Enable/disable workspace folder features |
+| `ContextProvider` | `IContextProvider` | RAG context retrieval (optional) |
+| `MemoryText` | `string` | Persistent memory text injected into system prompt |
+
+**Knowledge Base**
+
+| Property | Type | Description |
+|----------|------|-------------|
 | `KnowledgeArchiveFolder` | `string` | Knowledge Base folder path (kb_id) for the current conversation |
 | `IsKnowledgeArchiveEnabled` | `bool` | Whether Knowledge Base is enabled in the current profile |
 | `IsArchiveIndexing` | `bool` | Whether the Knowledge Base is currently indexing |
 | `ArchiveIndexingProgress` | `double` | Indexing progress (0–100) |
 | `ArchiveIndexingText` | `string` | Current indexing file name for tooltip display |
 | `IsArchiveLocked` | `bool` | Whether the archive folder is locked by another process |
+
+**Tools & MCP**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `RegisteredTools` | `IReadOnlyList<IAssistTool>` | Tools available to the provider |
 | `McpTools` | `IReadOnlyList<IAssistTool>` | MCP tools from connected servers |
-| `MemoryText` | `string` | Persistent memory text injected into system prompt |
-| `ChatZoomFactor` | `double` | CSS zoom factor for chat rendering (default 1.05) |
-| `AllowAttachments` | `bool` | Enable/disable file attachments |
-| `EmptyStateContent` | `object` | Custom empty state UI |
 | `AvailableServers` | `IList<ServerInfo>` | MCP server status for tools flyout |
+
+**Behavior**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `AutoTitle` | `bool` | Auto-generate conversation titles |
+| `AutoSummarize` | `bool` | Auto-summarize long conversations |
+| `MaxInputTokens` | `int` | Token limit for input |
+| `MaxToolCallRounds` | `int` | Max consecutive tool call rounds |
+| `RecentTurnsToKeep` | `int` | Turns to keep after summarization |
+| `AllowAttachments` | `bool` | Enable/disable file attachments |
+| `IsReadOnly` | `bool` | Read-only conversation view |
+
+**UI & theming**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `Theme` | `ChatTheme` | Light / Dark / System |
+| `Placeholder` | `string` | Input placeholder text |
+| `Title` | `string` | Title bar text |
+| `ShowTitleBar` | `bool` | Show/hide the title bar |
+| `ChatZoomFactor` | `double` | CSS zoom factor for chat rendering (default 1.05) |
+| `EmptyStateContent` | `object` | Custom empty state UI |
+| `IsDebugMode` | `bool` | Show debug info (raw request/response) |
 
 **Events:** `PresetChanged`, `ProfileChanged`, `MessageAdded`, `TitleGenerated`, `TitleEditRequested`, `KeyboardShortcutPressed`
 

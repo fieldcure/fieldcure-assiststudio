@@ -94,6 +94,23 @@ public class WebSearchSpecialist : ISpecialist
 }
 ```
 
+### Routing hints for the parent
+
+`ISpecialist` itself only defines the sub-agent's own contract.
+Implementations can additionally expose a plain `const string` (by
+convention named `RoutingGuideline`) that the host appends to the
+**parent** conversation's system prompt. This is how the host steers
+the parent on when to delegate and how to handle the specialist's
+result — e.g. forward the returned `report` verbatim, re-invoke on
+`status: "truncated"`, or preserve the `specialist` parameter on retry
+instead of falling back to generic `delegate_task` arguments.
+
+`WebSearchSpecialist.RoutingGuideline` and
+`JudgmentSpecialist.RoutingGuideline` in AssistStudio are reference
+patterns. The constant is not part of the `ISpecialist` interface —
+the host that knows about a specialist appends its guideline
+explicitly when building the parent system prompt.
+
 ## Workspace Context
 
 Inject dynamic context into the system prompt based on app state:

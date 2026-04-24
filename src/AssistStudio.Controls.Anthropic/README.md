@@ -11,6 +11,8 @@
 - **`GetConversationAsAnthropicMessages`** — Converts the current conversation to Anthropic SDK `MessageParam` format for the next API call.
 - **Automatic lifecycle** — `AssistantTurnHandle` is `IAsyncDisposable`. Use `await using` for guaranteed finalization (message rendering, input restoration).
 
+> **Scope note.** This package is a thin streaming bridge: raw Anthropic SDK events → ChatPanel rendering. Tool-use dispatch, sub-agent `delegate_task` fan-out, parallel pulse placeholders, and truncation-aware recovery are features of ChatPanel's built-in send flow (when `Provider` is set directly). When you drive Claude through this adapter with `DisableInternalSendFlow="True"`, those behaviors are the caller's responsibility — you handle `tool_use` blocks and decide whether to retry on `stop_reason=max_tokens`.
+
 ## Install
 
 ```bash
