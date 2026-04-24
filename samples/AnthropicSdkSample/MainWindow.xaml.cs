@@ -412,7 +412,7 @@ public sealed partial class MainWindow : Window
         try
         {
             var result = await handle.StreamAnthropicAsync(stream, ct);
-            System.Diagnostics.Debug.WriteLine(
+            Helpers.LoggingService.LogInfo(
                 $"[SdkSample] Response complete — tokens={result.Usage?.TotalTokens ?? 0}, " +
                 $"cache_write={result.Usage?.CacheCreationInputTokens ?? 0}, " +
                 $"cache_read={result.Usage?.CacheReadInputTokens ?? 0}");

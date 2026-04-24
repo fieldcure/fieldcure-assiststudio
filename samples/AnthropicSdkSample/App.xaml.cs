@@ -1,4 +1,7 @@
+using AnthropicSdkSample.Helpers;
+using FieldCure.AssistStudio.Helpers;
 using Microsoft.UI.Xaml;
+using Windows.Storage;
 
 namespace AnthropicSdkSample;
 
@@ -14,8 +17,17 @@ public partial class App : Application
     }
 
     /// <summary>Creates and activates the main window on launch.</summary>
-    protected override void OnLaunched(LaunchActivatedEventArgs args)
+    protected override async void OnLaunched(LaunchActivatedEventArgs args)
     {
+        await LoggingService.InitializeAsync(ApplicationData.Current.LocalFolder.Path);
+
+        // Wire Core/Controls diagnostic logging through the sample's LoggingService
+        DiagnosticLogger.OnException = ex => LoggingService.LogException(ex);
+        DiagnosticLogger.OnWarning = msg => LoggingService.LogWarning(msg);
+        DiagnosticLogger.OnInfo = msg => LoggingService.LogInfo(msg);
+
+        LoggingService.LogInfo("[SdkSample] Startup");
+
         _window = new MainWindow();
         _window.Activate();
     }
