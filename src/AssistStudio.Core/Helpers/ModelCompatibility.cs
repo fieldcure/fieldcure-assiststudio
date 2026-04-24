@@ -1,6 +1,6 @@
-using System.Runtime.Versioning;
+﻿using System.Runtime.Versioning;
 
-namespace FieldCure.AssistStudio.Helpers;
+namespace FieldCure.AssistStudio.Core.Helpers;
 
 /// <summary>
 /// Indicates how compatible a model is with the current hardware.

@@ -1,6 +1,6 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
-namespace FieldCure.AssistStudio.Models;
+namespace FieldCure.AssistStudio.Core.Models;
 
 /// <summary>
 /// Knowledge base configuration stored in <c>{kb-path}/config.json</c>.

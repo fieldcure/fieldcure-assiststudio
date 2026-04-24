@@ -1,8 +1,7 @@
+﻿using FieldCure.Ai.Providers.Models;
 using System.Text;
-using FieldCure.AssistStudio.Models;
-using FieldCure.Ai.Providers.Models;
 
-namespace FieldCure.AssistStudio.Helpers;
+namespace FieldCure.AssistStudio.Core.Helpers;
 
 /// <summary>
 /// Accumulates <see cref="StreamEvent.ToolCallStart"/> and <see cref="StreamEvent.ToolCallDelta"/>

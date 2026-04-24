@@ -1,9 +1,9 @@
-using System.Management;
+﻿using System.Management;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using Microsoft.Win32;
 
-namespace FieldCure.AssistStudio.Helpers;
+namespace FieldCure.AssistStudio.Core.Helpers;
 
 /// <summary>
 /// Contains detected hardware specifications for the current system.

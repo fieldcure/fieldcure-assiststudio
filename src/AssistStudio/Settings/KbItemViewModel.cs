@@ -1,4 +1,4 @@
-using FieldCure.AssistStudio.Models;
+﻿using FieldCure.AssistStudio.Core.Models;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 

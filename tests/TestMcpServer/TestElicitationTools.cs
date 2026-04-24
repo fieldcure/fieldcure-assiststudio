@@ -1,7 +1,7 @@
+﻿using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 using System.ComponentModel;
 using System.Text.Json;
-using ModelContextProtocol.Protocol;
-using ModelContextProtocol.Server;
 using static ModelContextProtocol.Protocol.ElicitRequestParams;
 
 namespace TestMcpServer;

@@ -1,5 +1,4 @@
 ﻿using Anthropic;
-using Anthropic.Models.Messages;
 using AnthropicSdkSample.Controls;
 using FieldCure.AssistStudio.Controls;
 using FieldCure.AssistStudio.Controls.Anthropic;
@@ -9,8 +8,8 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Windows.ApplicationModel.DataTransfer;
-using Windows.Storage;
 using Windows.Security.Credentials;
+using Windows.Storage;
 using Windows.UI;
 
 namespace AnthropicSdkSample;

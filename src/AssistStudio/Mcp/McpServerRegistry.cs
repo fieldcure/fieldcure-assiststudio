@@ -1,9 +1,9 @@
-using System.Collections.ObjectModel;
-using AssistStudio.Helpers;
-using FieldCure.AssistStudio.Models;
+﻿using AssistStudio.Helpers;
 using FieldCure.Ai.Providers.Models;
+using FieldCure.AssistStudio.Core.Models;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.ApplicationModel.Resources;
+using System.Collections.ObjectModel;
 
 namespace AssistStudio.Mcp;
 

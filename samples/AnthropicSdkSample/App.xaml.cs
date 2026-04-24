@@ -1,5 +1,5 @@
-using AnthropicSdkSample.Helpers;
-using FieldCure.AssistStudio.Helpers;
+﻿using AnthropicSdkSample.Helpers;
+using FieldCure.AssistStudio.Core.Helpers;
 using Microsoft.UI.Xaml;
 using Windows.Storage;
 

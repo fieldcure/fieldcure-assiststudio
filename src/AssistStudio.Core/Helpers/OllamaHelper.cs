@@ -1,6 +1,6 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
-namespace FieldCure.AssistStudio.Helpers;
+namespace FieldCure.AssistStudio.Core.Helpers;
 
 /// <summary>
 /// Utility methods for detecting, starting, and managing the local Ollama installation.

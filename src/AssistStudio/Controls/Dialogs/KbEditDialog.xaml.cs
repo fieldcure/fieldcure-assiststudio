@@ -1,5 +1,5 @@
-using AssistStudio.Mcp;
-using FieldCure.AssistStudio.Models;
+﻿using AssistStudio.Mcp;
+using FieldCure.AssistStudio.Core.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using System.Collections.ObjectModel;

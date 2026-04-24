@@ -1,4 +1,4 @@
-using AssistStudio.Modules.ViewModels;
+﻿using AssistStudio.Modules.ViewModels;
 using FieldCure.AssistStudio.Controls;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -91,7 +91,7 @@ public sealed partial class ChatTabView : UserControl
         Panel.KnowledgeBaseIdChanged += vm.OnKnowledgeBaseIdChanged;
         Panel.KbItemsProvider = () =>
             Mcp.KnowledgeBaseStore.ListAll()
-                .Select(kb => new FieldCure.AssistStudio.Controls.KbItem { Id = kb.Id, Name = kb.Name })
+                .Select(kb => new KbItem { Id = kb.Id, Name = kb.Name })
                 .ToList();
     }
 

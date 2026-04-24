@@ -1,11 +1,10 @@
+﻿using AssistStudio.Models;
+using FieldCure.Ai.Providers.Models;
+using FieldCure.AssistStudio.Core.Models;
 using System.IO.Compression;
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
-using AssistStudio.Models;
-using FieldCure.AssistStudio.Models;
-using FieldCure.Ai.Providers.Models;
 
 namespace AssistStudio.Helpers;
 

@@ -1,4 +1,4 @@
-namespace FieldCure.AssistStudio.Models;
+﻿namespace FieldCure.AssistStudio.Core.Models;
 
 /// <summary>
 /// Configuration for a built-in MCP server (e.g., Filesystem, RAG).

@@ -1,6 +1,6 @@
-using System.Text.Json;
-using FieldCure.AssistStudio.Models;
+﻿using FieldCure.AssistStudio.Core.Models;
 using Microsoft.Data.Sqlite;
+using System.Text.Json;
 
 namespace AssistStudio.Mcp;
 

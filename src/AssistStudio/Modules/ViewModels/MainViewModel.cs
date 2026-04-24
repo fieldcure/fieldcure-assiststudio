@@ -5,7 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using FieldCure.Ai.Providers;
 using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Controls;
-using FieldCure.AssistStudio.Models;
+using FieldCure.AssistStudio.Core.Models;
 using Microsoft.UI.Dispatching;
 using System.Collections;
 using System.Collections.ObjectModel;

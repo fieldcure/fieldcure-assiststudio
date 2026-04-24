@@ -1,5 +1,5 @@
 ﻿using System.Runtime.Versioning;
-using FieldCure.AssistStudio.Helpers;
+using FieldCure.AssistStudio.Core.Helpers;
 
 namespace FieldCure.AssistStudio.Core.Tests;
 

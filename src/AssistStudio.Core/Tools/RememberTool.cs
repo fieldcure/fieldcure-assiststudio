@@ -1,9 +1,8 @@
+﻿using FieldCure.Ai.Providers.Models;
+using FieldCure.AssistStudio.Core.Helpers;
 using System.Text.Json;
-using FieldCure.AssistStudio.Helpers;
-using FieldCure.AssistStudio.Models;
-using FieldCure.Ai.Providers.Models;
 
-namespace FieldCure.AssistStudio.Tools;
+namespace FieldCure.AssistStudio.Core.Tools;
 
 /// <summary>
 /// Saves information to persistent memory for use across conversations.

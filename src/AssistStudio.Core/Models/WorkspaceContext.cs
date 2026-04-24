@@ -1,4 +1,4 @@
-namespace FieldCure.AssistStudio.Models;
+﻿namespace FieldCure.AssistStudio.Core.Models;
 
 /// <summary>
 /// Provides the host application's current workspace state to be automatically

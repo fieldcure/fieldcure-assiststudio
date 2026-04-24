@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <RootNamespace>FieldCure.AssistStudio</RootNamespace>
+    <RootNamespace>FieldCure.AssistStudio.Core</RootNamespace>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>

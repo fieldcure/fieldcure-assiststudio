@@ -1,4 +1,4 @@
-namespace FieldCure.AssistStudio.Core;
+﻿namespace FieldCure.AssistStudio.Core;
 
 /// <summary>
 /// Defines a built-in specialist that runs as an auto-approved Sub-Agent.

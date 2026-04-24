@@ -1,5 +1,5 @@
+﻿using AssistStudio.Settings;
 using System.Text.Json;
-using AssistStudio.Settings;
 using IOPath = System.IO.Path;
 
 namespace AssistStudio.Mcp;

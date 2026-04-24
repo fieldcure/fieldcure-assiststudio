@@ -1,16 +1,16 @@
-﻿using System.Runtime.InteropServices;
-using System.Web;
-using AssistStudio.Helpers;
+﻿using AssistStudio.Helpers;
 using AssistStudio.Mcp;
-using FieldCure.AssistStudio.Helpers;
+using FieldCure.Ai.Providers;
+using FieldCure.AssistStudio.Controls;
+using FieldCure.AssistStudio.Core.Helpers;
+using FieldCure.DocumentParsers.Imaging;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.Windows.AppLifecycle;
+using System.Runtime.InteropServices;
+using System.Web;
 using Windows.ApplicationModel.Activation;
 using Windows.Storage;
-using FieldCure.Ai.Providers;
-using FieldCure.AssistStudio.Controls;
-using FieldCure.DocumentParsers.Imaging;
 using WindowHelper = FieldCure.AssistStudio.Controls.Helpers.WindowHelper;
 
 namespace AssistStudio;

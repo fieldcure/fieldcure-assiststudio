@@ -1,6 +1,6 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
-namespace FieldCure.AssistStudio.Helpers;
+namespace FieldCure.AssistStudio.Core.Helpers;
 
 /// <summary>
 /// Lightweight diagnostic logger that delegates to a consumer-provided callback.

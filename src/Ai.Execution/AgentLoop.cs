@@ -1,5 +1,5 @@
+﻿using FieldCure.Ai.Providers.Models;
 using System.Text.Json;
-using FieldCure.Ai.Providers.Models;
 
 namespace FieldCure.Ai.Execution;
 

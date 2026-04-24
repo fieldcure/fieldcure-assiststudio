@@ -1,7 +1,7 @@
-using System.Text.Json.Serialization;
-using AssistStudio.Models;
-using FieldCure.AssistStudio.Models;
+﻿using AssistStudio.Models;
 using FieldCure.Ai.Providers.Models;
+using FieldCure.AssistStudio.Core.Models;
+using System.Text.Json.Serialization;
 
 namespace AssistStudio.Helpers;
 

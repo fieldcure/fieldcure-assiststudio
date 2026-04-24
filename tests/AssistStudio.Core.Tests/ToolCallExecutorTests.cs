@@ -1,5 +1,5 @@
 ﻿using FieldCure.Ai.Providers.Models;
-using FieldCure.AssistStudio.Helpers;
+using FieldCure.AssistStudio.Core.Helpers;
 using System.Text.Json;
 
 namespace FieldCure.AssistStudio.Core.Tests;

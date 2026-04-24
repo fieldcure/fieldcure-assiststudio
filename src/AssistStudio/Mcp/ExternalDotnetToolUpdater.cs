@@ -1,7 +1,7 @@
+﻿using AssistStudio.Helpers;
+using FieldCure.AssistStudio.Core.Models;
 using System.Diagnostics;
 using System.Text;
-using AssistStudio.Helpers;
-using FieldCure.AssistStudio.Models;
 
 namespace AssistStudio.Mcp;
 

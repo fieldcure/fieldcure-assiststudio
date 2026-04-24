@@ -8,8 +8,8 @@ using FieldCure.Ai.Providers;
 using FieldCure.Ai.Providers.Export;
 using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Controls;
-using FieldCure.AssistStudio.Helpers;
-using FieldCure.AssistStudio.Models;
+using FieldCure.AssistStudio.Core.Helpers;
+using FieldCure.AssistStudio.Core.Models;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.ApplicationModel.Resources;
 using System.Collections;
@@ -1144,7 +1144,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// Resolves tools for a sub-agent session by connecting MCP servers and collecting tools.
-    /// Matches <see cref="FieldCure.Ai.Execution.SubAgentExecutor.ToolResolver"/> delegate signature.
+    /// Matches <see cref="SubAgentExecutor.ToolResolver"/> delegate signature.
     /// </summary>
     private async Task<IReadOnlyList<IAssistTool>> ResolveToolsForSubAgentAsync(
         IReadOnlyList<string>? mcpServers,
@@ -1310,7 +1310,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// Fetches memory entries from Essentials MCP server and formats for system prompt injection.
     /// Returns null if no memories exist.
     /// </summary>
-    private static async Task<string?> FetchMemoryTextAsync(Mcp.McpServerConnection essentialsConn)
+    private static async Task<string?> FetchMemoryTextAsync(McpServerConnection essentialsConn)
     {
         var listMemoriesTool = essentialsConn.Tools.FirstOrDefault(t => t.Name == "list_memories");
         if (listMemoriesTool is null)
@@ -1450,7 +1450,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// Appends the specialist routing guideline to the system prompt
     /// if the profile has Essentials enabled and the specialist setting is on.
     /// </summary>
-    private void AppendSpecialistGuideline(FieldCure.AssistStudio.Models.Profile profile)
+    private void AppendSpecialistGuideline(Profile profile)
     {
         if (!AppSettings.WebSearchSpecialistEnabled)
             return;

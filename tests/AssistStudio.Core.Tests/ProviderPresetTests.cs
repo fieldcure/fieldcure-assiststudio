@@ -1,6 +1,6 @@
-﻿using System.Text.Json;
-using FieldCure.Ai.Providers.Models;
-using FieldCure.AssistStudio.Models;
+﻿using FieldCure.Ai.Providers.Models;
+using FieldCure.AssistStudio.Core.Models;
+using System.Text.Json;
 
 namespace FieldCure.AssistStudio.Core.Tests;
 

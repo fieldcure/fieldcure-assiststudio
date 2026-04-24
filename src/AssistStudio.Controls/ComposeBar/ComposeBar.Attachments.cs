@@ -1,7 +1,7 @@
 ﻿using FieldCure.Ai.Providers.Helpers;
 using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Controls.Helpers;
-using FieldCure.AssistStudio.Helpers;
+using FieldCure.AssistStudio.Core.Helpers;
 using FieldCure.DocumentParsers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;

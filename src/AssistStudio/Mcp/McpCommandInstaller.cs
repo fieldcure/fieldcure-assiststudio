@@ -1,10 +1,10 @@
-using System.Diagnostics;
-using System.Text;
-using AssistStudio.Helpers;
-using FieldCure.AssistStudio.Models;
+﻿using AssistStudio.Helpers;
+using FieldCure.AssistStudio.Core.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.ApplicationModel.Resources;
+using System.Diagnostics;
+using System.Text;
 
 namespace AssistStudio.Mcp;
 

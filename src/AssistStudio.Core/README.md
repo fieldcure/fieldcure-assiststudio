@@ -1,4 +1,4 @@
-# FieldCure.AssistStudio.Core
+﻿# FieldCure.AssistStudio.Core
 
 **App-level helpers and models for AssistStudio** — tool orchestration, specialist agents, workspace context, and MCP server management. AI providers live in [`FieldCure.Ai.Providers`](https://www.nuget.org/packages/FieldCure.Ai.Providers).
 
@@ -29,7 +29,7 @@ dotnet add package FieldCure.AssistStudio.Core
 `ToolCallExecutor` runs tool calls with optional user confirmation and parallel execution:
 
 ```csharp
-using FieldCure.AssistStudio.Helpers;
+using FieldCure.AssistStudio.Core.Helpers;
 
 var executor = new ToolCallExecutor([weatherTool, fileTool, searchTool]);
 
@@ -54,7 +54,7 @@ foreach (var media in result.MediaItems)
 `ToolResolver` merges built-in tools with MCP tools, prefixing names on conflict:
 
 ```csharp
-using FieldCure.AssistStudio.Helpers;
+using FieldCure.AssistStudio.Core.Helpers;
 
 // Built-in "read_file" + MCP "read_file" → MCP tool becomes "filesystem_read_file"
 var tools = ToolResolver.Resolve(builtInTools, mcpTools, conversationState);
@@ -65,7 +65,7 @@ var tools = ToolResolver.Resolve(builtInTools, mcpTools, conversationState);
 Define domain-specific specialists for sub-agent routing via `ISpecialist`:
 
 ```csharp
-using FieldCure.AssistStudio;
+using FieldCure.AssistStudio.Core;
 
 public class WebSearchSpecialist : ISpecialist
 {

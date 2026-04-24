@@ -34,7 +34,7 @@ public sealed partial class KbViewModel : INotifyPropertyChanged
 
     #region Properties
 
-    /// <summary>Stable identifier of the underlying <see cref="FieldCure.AssistStudio.Models.KnowledgeBase"/>.</summary>
+    /// <summary>Stable identifier of the underlying <see cref="AssistStudio.Models.KnowledgeBase"/>.</summary>
     public string Id
     {
         get => _id;

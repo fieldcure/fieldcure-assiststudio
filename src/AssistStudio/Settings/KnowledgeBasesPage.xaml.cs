@@ -2,12 +2,10 @@
 using AssistStudio.Controls.Dialogs;
 using AssistStudio.Helpers;
 using AssistStudio.Mcp;
-using FieldCure.AssistStudio.Models;
+using FieldCure.AssistStudio.Core.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
-using Microsoft.UI.Xaml.Shapes;
 using Microsoft.Windows.ApplicationModel.Resources;
 using System.Collections.ObjectModel;
 using System.Text.Json;

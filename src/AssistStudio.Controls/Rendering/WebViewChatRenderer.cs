@@ -1,6 +1,6 @@
 ﻿using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Controls.Helpers;
-using FieldCure.AssistStudio.Helpers;
+using FieldCure.AssistStudio.Core.Helpers;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Web.WebView2.Core;
 using System.Diagnostics;

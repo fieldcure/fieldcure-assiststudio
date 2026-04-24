@@ -14,7 +14,6 @@ using Windows.Foundation;
 using Windows.Graphics;
 using Windows.Storage.Pickers;
 using Windows.System;
-using Windows.UI;
 using WinRT.Interop;
 
 namespace AssistStudio;

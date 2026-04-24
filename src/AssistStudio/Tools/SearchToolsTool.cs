@@ -1,5 +1,4 @@
-using AssistStudio.Mcp;
-using FieldCure.AssistStudio.Models;
+﻿using AssistStudio.Mcp;
 using FieldCure.Ai.Providers.Models;
 using System.Text;
 using System.Text.Encodings.Web;

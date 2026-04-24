@@ -1,9 +1,8 @@
+﻿using FieldCure.Ai.Providers.Models;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
-using FieldCure.AssistStudio.Models;
-using FieldCure.Ai.Providers.Models;
 
-namespace FieldCure.AssistStudio.Helpers;
+namespace FieldCure.AssistStudio.Core.Helpers;
 
 /// <summary>
 /// Probes available system RAM and GPU VRAM for model fit classification.

@@ -1,5 +1,5 @@
-using AssistStudio.Mcp.ModelAvailability;
-using FieldCure.AssistStudio.Models;
+﻿using AssistStudio.Mcp.ModelAvailability;
+using FieldCure.AssistStudio.Core.Models;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.ApplicationModel.Resources;
 

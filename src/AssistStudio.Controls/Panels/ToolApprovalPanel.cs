@@ -1,9 +1,8 @@
-﻿using System.Collections.Generic;
-using System.Text.Json;
-using FieldCure.AssistStudio.Controls.Helpers;
+﻿using FieldCure.AssistStudio.Controls.Helpers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.ApplicationModel.Resources;
+using System.Text.Json;
 
 namespace FieldCure.AssistStudio.Controls;
 

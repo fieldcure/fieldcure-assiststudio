@@ -1,8 +1,8 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace FieldCure.AssistStudio.Helpers;
+namespace FieldCure.AssistStudio.Core.Helpers;
 
 /// <summary>
 /// A single memory entry stored in the persistent memory file.

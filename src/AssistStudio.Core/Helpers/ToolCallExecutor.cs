@@ -1,8 +1,7 @@
+﻿using FieldCure.Ai.Providers.Models;
 using System.Text.Json;
-using FieldCure.AssistStudio.Models;
-using FieldCure.Ai.Providers.Models;
 
-namespace FieldCure.AssistStudio.Helpers;
+namespace FieldCure.AssistStudio.Core.Helpers;
 
 /// <summary>
 /// Orchestrates the execution of tool calls requested by an AI model.

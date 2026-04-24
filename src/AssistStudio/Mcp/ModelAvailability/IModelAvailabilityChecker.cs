@@ -1,4 +1,4 @@
-using FieldCure.AssistStudio.Models;
+﻿using FieldCure.AssistStudio.Core.Models;
 
 namespace AssistStudio.Mcp.ModelAvailability;
 

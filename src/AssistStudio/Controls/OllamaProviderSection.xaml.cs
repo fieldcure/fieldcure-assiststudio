@@ -2,7 +2,7 @@
 using AssistStudio.Helpers;
 using FieldCure.Ai.Providers;
 using FieldCure.Ai.Providers.Models;
-using FieldCure.AssistStudio.Helpers;
+using FieldCure.AssistStudio.Core.Helpers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.ApplicationModel.Resources;

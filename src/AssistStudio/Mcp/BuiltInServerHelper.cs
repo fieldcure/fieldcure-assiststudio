@@ -1,5 +1,5 @@
 ﻿using AssistStudio.Helpers;
-using FieldCure.AssistStudio.Models;
+using FieldCure.AssistStudio.Core.Models;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.ApplicationModel.Resources;
 using System.Text.Json;

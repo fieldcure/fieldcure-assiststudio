@@ -1,4 +1,5 @@
-using AssistStudio.Helpers;
+﻿using AssistStudio.Helpers;
+using FieldCure.AssistStudio.Core.Models;
 
 namespace AssistStudio.Mcp;
 
@@ -48,7 +49,7 @@ public sealed class KnowledgeBaseService
         // Auto-enable RAG server when KBs exist
         var builtIn = AppSettings.BuiltInServers;
         var ragConfig = builtIn.GetValueOrDefault(BuiltInServerHelper.RagKey)
-                        ?? new FieldCure.AssistStudio.Models.BuiltInServerConfig();
+                        ?? new BuiltInServerConfig();
         if (!ragConfig.IsEnabled)
         {
             ragConfig.IsEnabled = true;

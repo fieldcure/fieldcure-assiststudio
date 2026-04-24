@@ -1,7 +1,7 @@
-using FieldCure.Ai.Providers;
+﻿using FieldCure.Ai.Providers;
 using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Controls;
-using FieldCure.AssistStudio.Helpers;
+using FieldCure.AssistStudio.Core.Helpers;
 using System.Collections;
 
 namespace AssistStudio.Helpers;

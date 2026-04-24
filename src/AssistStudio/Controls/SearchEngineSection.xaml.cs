@@ -1,7 +1,7 @@
-using AssistStudio.Helpers;
+﻿using AssistStudio.Helpers;
 using AssistStudio.Mcp;
 using CommunityToolkit.Mvvm.ComponentModel;
-using FieldCure.AssistStudio.Models;
+using FieldCure.AssistStudio.Core.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.ApplicationModel.Resources;

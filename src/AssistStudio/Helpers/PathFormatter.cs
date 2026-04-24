@@ -1,7 +1,4 @@
-﻿using System.IO;
-using System.Linq;
-
-namespace AssistStudio.Helpers;
+﻿namespace AssistStudio.Helpers;
 
 /// <summary>
 /// Provides methods for formatting file paths for display in UI elements.

@@ -1,6 +1,6 @@
-using AssistStudio.Helpers;
+﻿using AssistStudio.Helpers;
 using FieldCure.Ai.Providers;
-using FieldCure.AssistStudio.Models;
+using FieldCure.AssistStudio.Core.Models;
 
 namespace AssistStudio.Mcp.ModelAvailability;
 

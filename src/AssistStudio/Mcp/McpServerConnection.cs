@@ -1,12 +1,12 @@
-﻿using System.ComponentModel;
+﻿using AssistStudio.Helpers;
+using FieldCure.Ai.Providers.Models;
+using FieldCure.AssistStudio.Core.Models;
+using ModelContextProtocol.Client;
+using ModelContextProtocol.Protocol;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
-using AssistStudio.Helpers;
-using FieldCure.AssistStudio.Models;
-using FieldCure.Ai.Providers.Models;
-using ModelContextProtocol.Client;
-using ModelContextProtocol.Protocol;
 
 namespace AssistStudio.Mcp;
 
@@ -425,7 +425,7 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
         return argsDict;
     }
 
-    private static string ExtractTextResult(ModelContextProtocol.Protocol.CallToolResult result)
+    private static string ExtractTextResult(CallToolResult result)
     {
         if (result.Content is { Count: > 0 } content)
         {

@@ -1,11 +1,10 @@
-using System.ComponentModel;
-using AssistStudio.Mcp;
-using FieldCure.AssistStudio.Models;
-using FieldCure.Ai.Providers.Models;
+﻿using AssistStudio.Mcp;
+using FieldCure.AssistStudio.Core.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.Windows.ApplicationModel.Resources;
+using System.ComponentModel;
 using Windows.UI;
 
 namespace AssistStudio.Controls;

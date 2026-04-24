@@ -1,7 +1,7 @@
-using FieldCure.AssistStudio.Models;
-using FieldCure.Ai.Providers.Models;
+﻿using FieldCure.Ai.Providers.Models;
+using FieldCure.AssistStudio.Core.Models;
 
-namespace FieldCure.AssistStudio.Helpers;
+namespace FieldCure.AssistStudio.Core.Helpers;
 
 /// <summary>
 /// Resolves the final tool list at send time.

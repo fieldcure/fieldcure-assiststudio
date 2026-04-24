@@ -1,5 +1,5 @@
-﻿using FieldCure.AssistStudio.Models;
-using FieldCure.Ai.Providers.Models;
+﻿using FieldCure.Ai.Providers.Models;
+using FieldCure.AssistStudio.Core.Models;
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.Text.Json;

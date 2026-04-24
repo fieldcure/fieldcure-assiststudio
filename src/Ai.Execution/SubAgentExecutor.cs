@@ -1,8 +1,8 @@
-using System.Diagnostics;
-using FieldCure.Ai.Execution.Helpers;
+﻿using FieldCure.Ai.Execution.Helpers;
 using FieldCure.Ai.Execution.Models;
 using FieldCure.Ai.Providers;
 using FieldCure.Ai.Providers.Models;
+using System.Diagnostics;
 
 namespace FieldCure.Ai.Execution;
 

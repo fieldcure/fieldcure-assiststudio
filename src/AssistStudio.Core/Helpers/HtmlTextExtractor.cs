@@ -1,7 +1,7 @@
-using System.Net;
+﻿using System.Net;
 using System.Text.RegularExpressions;
 
-namespace FieldCure.AssistStudio.Helpers;
+namespace FieldCure.AssistStudio.Core.Helpers;
 
 /// <summary>
 /// Lightweight HTML-to-text extractor with no external dependencies.

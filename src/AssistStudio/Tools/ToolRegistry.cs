@@ -1,5 +1,4 @@
-﻿using FieldCure.AssistStudio.Models;
-using FieldCure.Ai.Providers.Models;
+﻿using FieldCure.Ai.Providers.Models;
 
 namespace AssistStudio.Tools;
 

@@ -1,4 +1,4 @@
-namespace FieldCure.AssistStudio.Models;
+﻿namespace FieldCure.AssistStudio.Core.Models;
 
 /// <summary>
 /// A named profile that bundles a system prompt with optional preferred provider, model, and tools.

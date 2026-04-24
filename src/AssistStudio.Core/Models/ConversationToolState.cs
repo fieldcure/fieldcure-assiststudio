@@ -1,4 +1,4 @@
-namespace FieldCure.AssistStudio.Models;
+﻿namespace FieldCure.AssistStudio.Core.Models;
 
 /// <summary>
 /// Tracks per-conversation tool overrides.
