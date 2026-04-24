@@ -260,6 +260,71 @@ internal partial class WebViewChatRenderer
     }
 
     /// <summary>
+    /// Renders a pending tool block (pulsing header, no result yet) on an
+    /// assistant message and tags it with <paramref name="callId"/> so
+    /// <see cref="ResolveToolBlockAsync"/> can later fill it in. Use this at
+    /// the moment a tool starts executing to give the user immediate feedback,
+    /// especially for long-running calls where the result would otherwise
+    /// arrive seconds or minutes later. The wrapper is generic (not
+    /// sub-agent specific) so any tool can adopt the pending/resolve pattern.
+    /// </summary>
+    /// <param name="id">Assistant message id.</param>
+    /// <param name="callId">Unique tool-call id (typically provider-issued).</param>
+    /// <param name="toolName">Tool name shown in the header.</param>
+    /// <param name="arguments">Optional arguments JSON shown in the preview.</param>
+    public Task BeginToolBlockAsync(
+        string id,
+        string callId,
+        string toolName,
+        string? arguments = null)
+    {
+        var info = new System.Text.Json.Nodes.JsonObject
+        {
+            ["name"] = toolName,
+            ["args"] = arguments,
+        };
+        var script = $"window.assistChat.beginToolBlock({Js(id)}, {Js(callId)}, {info.ToJsonString(WebViewJsonOptions)})";
+        return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
+    /// <summary>
+    /// Fills a previously-rendered pending tool block (created via
+    /// <see cref="BeginToolBlockAsync"/>) with its result, stopping the
+    /// pulse animation and rewriting the block as a collapsible details
+    /// section in the same DOM position. If the pending block is not
+    /// found (e.g., the message was re-rendered from saved state), the
+    /// JS side falls back to <c>appendToolBlock</c> so the result still
+    /// surfaces — the caller does not need to branch on that case.
+    /// </summary>
+    /// <param name="id">Assistant message id.</param>
+    /// <param name="callId">Tool-call id used in <see cref="BeginToolBlockAsync"/>.</param>
+    /// <param name="toolName">Tool name shown in the header.</param>
+    /// <param name="arguments">Optional arguments JSON shown in Arguments section.</param>
+    /// <param name="result">Tool result text (truncated to 500 chars for preview, same policy as <see cref="AppendToolBlockAsync"/>).</param>
+    /// <param name="durationMs">Optional elapsed milliseconds shown in header.</param>
+    /// <param name="isError">Whether the tool failed.</param>
+    public Task ResolveToolBlockAsync(
+        string id,
+        string callId,
+        string toolName,
+        string? arguments = null,
+        string? result = null,
+        long? durationMs = null,
+        bool isError = false)
+    {
+        var info = new System.Text.Json.Nodes.JsonObject
+        {
+            ["name"] = toolName,
+            ["args"] = arguments,
+            ["result"] = result is { Length: > 500 } ? result[..500] + "…" : result,
+            ["ms"] = durationMs,
+            ["error"] = isError,
+        };
+        var script = $"window.assistChat.resolveToolBlock({Js(id)}, {Js(callId)}, {info.ToJsonString(WebViewJsonOptions)})";
+        return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
+    /// <summary>
     /// Appends a markdown-rendered text segment to the assistant message bubble.
     /// Used during restore to interleave text between tool blocks.
     /// </summary>

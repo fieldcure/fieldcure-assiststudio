@@ -958,8 +958,19 @@ public sealed partial class ChatPanel
             {
                 var approved = new List<(ToolCall Call, string? UserNote, Task<ToolExecutionResult> Task)>();
                 var rejected = new List<(ToolCall Call, string RejectionText)>();
+                // IDs of pending tool blocks that have been rendered but not yet
+                // resolved. Each successful Resolve in 2c removes itself. Anything
+                // left when control exits — via cancellation, exception, or partial
+                // completion — is swept by the finally below with an "[interrupted]"
+                // marker so the DOM never keeps a pulse going forever.
+                var pendingCallIds = new List<string>();
 
-                // 2a: Sequential approval, immediate execution start
+                try
+                {
+                // 2a: Sequential approval, immediate execution start.
+                // For each approved call we render a pending tool block *before*
+                // awaiting so the user sees a pulsing placeholder instead of a
+                // silent UI while sub-agents run (often tens of seconds).
                 foreach (var call in subAgentCalls)
                 {
                     DiagnosticLogger.LogInfo($"[Tool] Sub-Agent approval: {call.FunctionName} (id={call.Id})");
@@ -970,6 +981,9 @@ public sealed partial class ChatPanel
                         if (isApproved)
                         {
                             DiagnosticLogger.LogInfo($"[Tool] Sub-Agent approved, starting parallel: {call.Id}");
+                            await _renderer.BeginToolBlockAsync(
+                                assistantMessage.Id, call.Id, call.FunctionName, call.Arguments);
+                            pendingCallIds.Add(call.Id);
                             var task = executor.ExecuteWithoutConfirmationAsync(call, userNote, ct);
                             approved.Add((call, userNote, task));
                         }
@@ -984,6 +998,9 @@ public sealed partial class ChatPanel
                     }
                     else
                     {
+                        await _renderer.BeginToolBlockAsync(
+                            assistantMessage.Id, call.Id, call.FunctionName, call.Arguments);
+                        pendingCallIds.Add(call.Id);
                         var task = executor.ExecuteWithoutConfirmationAsync(call, null, ct);
                         approved.Add((call, null, task));
                     }
@@ -1042,14 +1059,45 @@ public sealed partial class ChatPanel
                     RegisterInTree(toolResultMsg);
                     _messages.Add(toolResultMsg);
 
-                    await _renderer.AppendToolBlockAsync(
-                        assistantMessage.Id, call.FunctionName, call.Arguments,
+                    // For approved calls a pending block was rendered in 2a — resolve
+                    // it in-place. For rejected calls no pending block exists (we skip
+                    // BeginToolBlock on rejection), so append the rejection result via
+                    // the finished-block path; resolveToolBlock falls back to
+                    // appendToolBlock when no pending block matches callId, so calling
+                    // the resolve API is safe either way.
+                    await _renderer.ResolveToolBlockAsync(
+                        assistantMessage.Id, call.Id, call.FunctionName, call.Arguments,
                         toolResult, null, isError);
+                    pendingCallIds.Remove(call.Id);
 
                     if (execResult.MediaContents is { Count: > 0 } mediaItems)
                     {
                         foreach (var media in mediaItems)
                             await _renderer.AppendToolMediaAsync(assistantMessage.Id, media);
+                    }
+                }
+                }
+                finally
+                {
+                    // Sweep any pending blocks that never reached a normal Resolve.
+                    // Reasons: user hit Stop mid-flight, an exception escaped 2a/2b/2c,
+                    // or the 2c loop aborted between iterations. Inner try/catch is
+                    // required because the renderer may already be torn down during
+                    // shutdown paths and we don't want this cleanup to itself throw.
+                    foreach (var callId in pendingCallIds)
+                    {
+                        try
+                        {
+                            await _renderer.ResolveToolBlockAsync(
+                                assistantMessage.Id, callId, "[interrupted]",
+                                arguments: null, result: null,
+                                durationMs: null, isError: true);
+                        }
+                        catch (Exception sweepEx)
+                        {
+                            DiagnosticLogger.LogWarning(
+                                $"[Tool] Pending block sweep failed for {callId}: {sweepEx.Message}");
+                        }
                     }
                 }
             }

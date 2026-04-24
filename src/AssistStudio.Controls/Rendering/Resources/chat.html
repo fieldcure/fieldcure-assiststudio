@@ -2222,6 +2222,130 @@
             doScroll('instant');
         },
 
+        /**
+         * Renders a pending tool block (no result yet) with a pulsing header.
+         * Used to give the user immediate feedback when a tool starts executing,
+         * especially for long-running calls (sub-agents). The block is tagged
+         * with data-call-id so resolveToolBlock can later fill it in.
+         *
+         * Naming is generic (not sub-agent specific) because any tool whose
+         * execution is slow enough to warrant a visible pending state may
+         * eventually adopt this pattern.
+         *
+         * @param {string} id     - Assistant message id
+         * @param {string} callId - Unique tool-call id (from provider, e.g. toolu_…)
+         * @param {object|string} info - { name, args? } or tool name string.
+         *                               Pass args for a richer header preview.
+         */
+        beginToolBlock: function(id, callId, info) {
+            var msg = document.getElementById('msg-' + id);
+            if (!msg) return;
+            var bubble = msg.querySelector('.message-bubble');
+            if (!bubble) return;
+
+            // Stop pulse on previous tool header (same logic as appendToolBlock)
+            var prev = bubble.querySelector('.tool-header.tool-running');
+            if (prev) prev.classList.remove('tool-running');
+
+            if (typeof info === 'string') info = { name: info };
+
+            // ── Freeze current .content into .content-segment (same as appendToolBlock) ──
+            var contentSpan = bubble.querySelector('.content');
+            if (contentSpan) {
+                var rawText = getContentRawText(id, contentSpan);
+                if (rawText.trim()) {
+                    var segment = document.createElement('div');
+                    segment.className = 'content-segment rendered';
+                    segment.setAttribute('data-raw-length', rawText.length);
+                    segment.innerHTML = renderMarkdown(rawText);
+                    addCopyButtons(segment);
+                    wrapAllImages(segment);
+                    bubble.insertBefore(segment, contentSpan);
+                }
+                contentSpan.remove();
+                var ps = _progressiveState[id];
+                if (ps) {
+                    clearTimeout(ps.timer);
+                    delete _progressiveState[id];
+                }
+            }
+
+            // ── Insert pending tool block (pulsing header, no details) ──
+            var block = document.createElement('div');
+            block.className = 'tool-block tool-block-pending';
+            block.setAttribute('data-call-id', callId);
+
+            var header = document.createElement('div');
+            header.className = 'tool-header tool-running';
+            header.innerHTML = buildSummaryHTML(info);
+            block.appendChild(header);
+
+            bubble.appendChild(block);
+
+            // ── Create new .content for next streaming chunk ──
+            var newContent = document.createElement('div');
+            newContent.className = 'content';
+            newContent.innerHTML = '<div class="rendered-zone"></div><span class="tail-zone"></span><span class="cursor">&#9612;</span>';
+            bubble.appendChild(newContent);
+
+            doScroll('instant');
+        },
+
+        /**
+         * Fills a previously-rendered pending tool block with its result.
+         * Finds the block by data-call-id; if not found (e.g. message was
+         * re-rendered from persisted state), falls back to appendToolBlock
+         * so the result still shows up.
+         *
+         * Does NOT touch content flow — it only rewrites the target block.
+         *
+         * @param {string} id     - Assistant message id
+         * @param {string} callId - Tool-call id used in beginToolBlock
+         * @param {object} info   - { name, args?, result?, elapsedMs?, isError? }
+         */
+        resolveToolBlock: function(id, callId, info) {
+            var msg = document.getElementById('msg-' + id);
+            if (!msg) return;
+            var bubble = msg.querySelector('.message-bubble');
+            if (!bubble) return;
+
+            if (typeof info === 'string') info = { name: info };
+
+            var block = bubble.querySelector(
+                '.tool-block-pending[data-call-id="' + callId + '"]');
+            if (!block) {
+                // Fallback: pending block is gone (re-render, branch swap, etc.) —
+                // append a finished block so the user still sees the result.
+                api.appendToolBlock(id, info);
+                return;
+            }
+
+            // Stop pulse and re-render as a completed details block.
+            block.classList.remove('tool-block-pending');
+            block.innerHTML = '';
+
+            var det = document.createElement('details');
+            var sum = document.createElement('summary');
+            sum.className = 'tool-header';
+            sum.innerHTML = buildSummaryHTML(info);
+            det.appendChild(sum);
+
+            var content = document.createElement('div');
+            content.className = 'tool-details';
+            if (info.args) {
+                content.innerHTML += '<div class="tool-details-label">Arguments</div>'
+                    + '<pre>' + escapeHtml(formatJson(info.args)) + '</pre>';
+            }
+            if (info.result) {
+                content.innerHTML += '<div class="tool-details-label">Result</div>'
+                    + formatToolResult(info.result);
+            }
+            det.appendChild(content);
+            block.appendChild(det);
+
+            doScroll('instant');
+        },
+
         appendToolMedia: function(id, mediaUri, kind, mimeType) {
             var msg = document.getElementById('msg-' + id);
             if (!msg) return;
