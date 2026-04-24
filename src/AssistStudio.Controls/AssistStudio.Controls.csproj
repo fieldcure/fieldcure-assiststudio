@@ -9,7 +9,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
-    <Version>0.17.0</Version>
+    <Version>0.17.1</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
@@ -25,7 +25,7 @@
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;chat;winui;winui3;controls;claude;openai;gemini;ollama;webview2</PackageTags>
-    <PackageReleaseNotes>v0.17.0: ToolElicitationPanel auto-renders secret-looking string fields as PasswordBox. Fix AuxProvider preset lookup race and title sanitization. Knowledge Archive → Knowledge Base rename reflected in UI strings. Migrate Anthropic model IDs to Claude 4.6 family. Drop tool name localization in ComposeBar tool flyout. WinUI 3 ResourceLoader consolidation. Rebuild against Core 0.17.0 + Ai.Providers 0.5.0 (transitive DocumentParsers 2.x).</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.17.1: Add BeginToolBlockAsync / ResolveToolBlockAsync — two-stage tool block render with a pulsing placeholder that rewrites in place when the result arrives. ChatPanel uses this for sub-agent (delegate_task) calls so parallel fan-outs no longer leave the UI silent for tens of seconds. Cancellation sweep replaces any still-pending block with an [interrupted] marker. Fix orphaned "Continue writing..." user message surviving into .astx saves — UnregisterFromTree prunes both _messages and the children tree, recomputes sibling indices, and rewires parent ActiveChildId. Continue flow now runs ResumeMessageAsync / CTS setup inside try so finally-driven cleanup covers every path. Additive API surface; existing AppendToolBlockAsync callers unchanged.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

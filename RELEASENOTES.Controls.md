@@ -1,5 +1,20 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Controls.WinUI
 
+## v0.17.1 (2026-04-24)
+
+### Added
+- **`WebViewChatRenderer.BeginToolBlockAsync` / `ResolveToolBlockAsync`** — public wrappers for a two-stage tool block render. `Begin` places a pulsing placeholder tagged with a call id; `Resolve` rewrites the same block in place when the result arrives. `ChatPanel` now uses this pair for sub-agent (`delegate_task`) calls so parallel fan-outs no longer leave the UI silent for tens of seconds.
+- Cleanup safety net for sub-agent tool blocks: anything still pending when Phase 2 exits (cancellation, exception, partial completion) is swept with an `[interrupted]` block so the pulse never hangs.
+
+### Fixed
+- **Orphaned "Continue writing from where you left off." user message** — the ephemeral continue prompt survived into `.astx` saves because it was only removed from `_messages` and not from the children tree (`GetAllMessages` reads from the tree). Added `UnregisterFromTree` that prunes both sides, recomputes sibling indices, and rewires the parent's `ActiveChildId` if it pointed to the removed message. Continue flow also moves `ResumeMessageAsync` / CTS setup inside the `try` block so the `finally`-driven cleanup runs on every path.
+- Added diagnostic logs around the Continue stream round, which previously bypassed `StreamAndExecuteAsync` and so produced no "Request start" / "Stream completed" entries.
+
+### Migration
+- Additive API surface. Existing callers of `AppendToolBlockAsync` are unchanged. The new `Begin`/`Resolve` pair is opt-in.
+
+---
+
 ## v0.17.0 (2026-04-21)
 
 ### Added
