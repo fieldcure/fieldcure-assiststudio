@@ -1,5 +1,21 @@
 ﻿# Release Notes — AssistStudio App
 
+## v0.16.0 (2026-04-24)
+
+### Added
+- **Parallel sub-agent UI feedback** — when the model dispatches multiple `delegate_task` calls in a single turn, each tool block renders immediately with a pulsing placeholder and resolves in place as results arrive. Slowest agent keeps pulsing until its own result lands; cancellation replaces any still-pending block with an `[interrupted]` marker so the pulse never hangs.
+- **Truncation-aware sub-agent handling** — when a sub-agent's final report is cut off at `max_tokens`, the tool result now carries `status: "truncated"` instead of being silently classified as completed. The Judgment Specialist's routing guideline instructs the parent to surface the truncation to the user and retry with a tighter scope rather than forward a mid-markdown cutoff as the final answer.
+- **Strengthened Judgment Specialist routing** — parent conversation now forwards the specialist's `report` verbatim inside a fenced block, caps its own commentary, and re-invokes with the same `specialist` parameter on incomplete reports (instead of falling through to raw `delegate_task` arguments and losing the specialist system prompt).
+
+### Fixed
+- **Continue flow no longer leaves orphaned user messages in saved conversations** — the hidden "Continue writing from where you left off." prompt used to survive into `.astx` when save raced with the stream (or when Continue was interrupted). Now pruned from both `_messages` and the conversation tree in a `finally` block so cancellation, exception, and partial completion all clean up. Also fixes the re-open case where the orphan was rendered as a visible user bubble with a branch indicator.
+
+### Rebuilt against
+- `FieldCure.AssistStudio.Controls.WinUI` 0.17.1
+- `FieldCure.Ai.Execution` 0.3.2
+
+---
+
 ## v0.15.0 (2026-04-10)
 
 ### Added
