@@ -52,7 +52,7 @@ jobs:
         run: dotnet restore FieldCure.AssistStudio.slnx
 
       - name: Build
-        run: dotnet build FieldCure.AssistStudio.slnx --no-restore --configuration Release
+        run: dotnet build FieldCure.AssistStudio.slnx --no-restore --configuration Release -p:PublishProfile= -p:PublishReadyToRun=false
 
       - name: Test
         run: dotnet test FieldCure.AssistStudio.slnx --no-build --configuration Release --verbosity normal
