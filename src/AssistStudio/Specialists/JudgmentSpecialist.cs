@@ -41,23 +41,33 @@ public sealed class JudgmentSpecialist : ISpecialist
 
     /// <summary>
     /// Routing guideline injected into the parent conversation's system prompt
-    /// when the specialist is available.
+    /// when the specialist is available. Controls when to delegate, how to
+    /// handle the returned report, and how to re-invoke when the sub-agent
+    /// terminates before writing the Final Report.
     /// </summary>
     public const string RoutingGuideline =
         """
-        ## Critique & Specialists
+        ## Critique & Specialists — Judgment
 
         For requests that require structured criticism rather than a quick answer,
-        you may delegate to the Judgment Specialist.
+        delegate via
+        `delegate_task(prompt: "...", specialist: "judgment_specialist")`.
 
-        - Use `delegate_task(prompt: "...", specialist: "judgment_specialist")`
-          when the user wants a document, corpus, codebase, plan, or proposition
-          to be stress-tested from multiple angles.
-        - Good fits include: "critique this paper", "pressure-test this plan",
-          "find weak points in this argument", "analyze what survives vs fails",
-          and "review this folder and challenge its core claims".
-        - Prefer direct answering for simple opinions, short summaries, or when
-          the user only wants a lightweight reaction.
+        Good fits: "critique this paper", "pressure-test this plan",
+        "find weak points in this argument", "analyze what survives vs fails",
+        "review this folder and challenge its core claims".
+        For simple opinions or lightweight reactions, answer directly.
+
+        Result handling (STRICT):
+        - Forward the specialist's `report` field verbatim inside a fenced block.
+        - Do NOT paraphrase, summarize, re-structure, or add your own synthesis.
+        - Your own commentary must stay under 3 sentences total.
+
+        Re-invocation rules:
+        - If the report lacks a "## Final Report" section, re-invoke with the
+          SAME `specialist: "judgment_specialist"` parameter, never with raw
+          `delegate_task` arguments (mcp_servers / allowed_tools / max_rounds).
+        - Do NOT re-invoke just to "verify" a completed report.
         """;
 
     /// <inheritdoc />
