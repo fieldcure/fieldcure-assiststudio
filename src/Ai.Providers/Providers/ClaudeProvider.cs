@@ -131,7 +131,11 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
         {
             tokenUsage = new TokenUsage(
                 usage.GetProperty("input_tokens").GetInt32(),
-                usage.GetProperty("output_tokens").GetInt32());
+                usage.GetProperty("output_tokens").GetInt32())
+            {
+                CacheCreationInputTokens = TryGetCacheTokens(usage, "cache_creation_input_tokens"),
+                CacheReadInputTokens = TryGetCacheTokens(usage, "cache_read_input_tokens"),
+            };
             LastUsage = tokenUsage;
         }
 
@@ -187,6 +191,7 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
         using var stream = await response.Content.ReadAsStreamAsync(ct);
 
         int inputTokens = 0, outputTokens = 0;
+        long? cacheCreationInputTokens = null, cacheReadInputTokens = null;
         IsTruncated = false;
         var responseSb = new StringBuilder();
         var blockToolCallIds = new Dictionary<int, string>();
@@ -251,6 +256,8 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
                     msg.TryGetProperty("usage", out var usage))
                 {
                     inputTokens = usage.GetProperty("input_tokens").GetInt32();
+                    cacheCreationInputTokens = TryGetCacheTokens(usage, "cache_creation_input_tokens");
+                    cacheReadInputTokens = TryGetCacheTokens(usage, "cache_read_input_tokens");
                 }
             }
             else if (sse.EventType == "message_delta")
@@ -269,7 +276,11 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
             }
             else if (sse.EventType == "message_stop")
             {
-                LastUsage = new TokenUsage(inputTokens, outputTokens);
+                LastUsage = new TokenUsage(inputTokens, outputTokens)
+                {
+                    CacheCreationInputTokens = cacheCreationInputTokens,
+                    CacheReadInputTokens = cacheReadInputTokens,
+                };
                 LastRawResponse = responseSb.ToString();
                 yield return new StreamEvent.Usage(LastUsage);
                 yield return new StreamEvent.StreamCompleted(IsTruncated);
@@ -277,7 +288,11 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
             }
         }
 
-        LastUsage = new TokenUsage(inputTokens, outputTokens);
+        LastUsage = new TokenUsage(inputTokens, outputTokens)
+        {
+            CacheCreationInputTokens = cacheCreationInputTokens,
+            CacheReadInputTokens = cacheReadInputTokens,
+        };
         LastRawResponse = responseSb.ToString();
         yield return new StreamEvent.Usage(LastUsage);
         yield return new StreamEvent.StreamCompleted(IsTruncated);
@@ -525,8 +540,24 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
             body["tools"] = tools;
         }
 
+        // Prompt caching: top-level marker delegates breakpoint placement to the API.
+        // See https://docs.claude.com/en/docs/build-with-claude/prompt-caching
+        body["cache_control"] = new JsonObject
+        {
+            ["type"] = "ephemeral"
+        };
+
         return body.ToJsonString();
     }
+
+    /// <summary>
+    /// Extracts an Anthropic prompt-cache token count from a usage JSON element, returning
+    /// <see langword="null"/> when the field is absent or not a JSON number.
+    /// </summary>
+    private static long? TryGetCacheTokens(JsonElement usage, string propertyName)
+        => usage.TryGetProperty(propertyName, out var el) && el.ValueKind == JsonValueKind.Number
+            ? el.GetInt64()
+            : null;
 
     /// <summary>Sends an HTTP POST request to the Claude API and validates the response.</summary>
     private async Task<HttpResponseMessage> SendRequestAsync(

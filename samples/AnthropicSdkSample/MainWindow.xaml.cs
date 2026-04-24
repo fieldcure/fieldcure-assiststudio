@@ -400,24 +400,22 @@ public sealed partial class MainWindow : Window
         // Begin an assistant turn — this creates the message bubble and shows the streaming cursor
         await using var handle = ChatPanel.BeginAnthropicTurn("Claude", modelId);
 
-        // Convert the current conversation to Anthropic SDK format
-        var conv = ChatPanel.GetConversationAsAnthropicMessages();
+        // Build SDK params via the Controls.Anthropic helper. The helper enables Anthropic
+        // prompt caching by default, so consumers benefit from cache hits on repeated prefixes
+        // (system prompt, attachments, tool results) simply by using this entry point.
+        var parameters = ChatPanel.BuildAnthropicParams(modelId, maxTokens: 4096);
 
         // Stream directly from the Anthropic SDK, wired to the Stop button
         var ct = handle.CancellationToken;
-        var stream = _client.Messages.CreateStreaming(new MessageCreateParams
-        {
-            Model = modelId,
-            System = conv.SystemPrompt is not null
-                ? new MessageCreateParamsSystem(conv.SystemPrompt)
-                : null,
-            Messages = conv.Messages,
-            MaxTokens = 4096,
-        }, ct);
+        var stream = _client.Messages.CreateStreaming(parameters, ct);
 
         try
         {
-            await handle.StreamAnthropicAsync(stream, ct);
+            var result = await handle.StreamAnthropicAsync(stream, ct);
+            System.Diagnostics.Debug.WriteLine(
+                $"[SdkSample] Response complete — tokens={result.Usage?.TotalTokens ?? 0}, " +
+                $"cache_write={result.Usage?.CacheCreationInputTokens ?? 0}, " +
+                $"cache_read={result.Usage?.CacheReadInputTokens ?? 0}");
         }
         catch (OperationCanceledException)
         {

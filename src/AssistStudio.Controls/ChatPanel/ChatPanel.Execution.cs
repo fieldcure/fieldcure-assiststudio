@@ -177,7 +177,7 @@ public sealed partial class ChatPanel
                 assistantMessage.TokenCount = result.Usage?.TotalTokens;
                 await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content,
                     result.IsTruncated, result.Usage?.TotalTokens ?? 0);
-                DiagnosticLogger.LogInfo($"[Chat] Response complete — tokens={result.Usage?.TotalTokens ?? 0}, truncated={result.IsTruncated}");
+                DiagnosticLogger.LogInfo($"[Chat] Response complete — tokens={result.Usage?.TotalTokens ?? 0}, truncated={result.IsTruncated}, cache_write={result.Usage?.CacheCreationInputTokens ?? 0}, cache_read={result.Usage?.CacheReadInputTokens ?? 0}");
             }
 
             if (IsDebugMode)
@@ -866,7 +866,7 @@ public sealed partial class ChatPanel
                 DiagnosticLogger.LogInfo($"[Chat][Debug] mcpTools=[{string.Join(",", (McpTools ?? []).Select(t => t.Name))}]");
             }
             result = await ConsumeStreamAsync(Provider!.StreamAsync(request, ct), assistantMessage, ct);
-            DiagnosticLogger.LogInfo($"[Chat] Stream completed — tokens={result.Usage?.TotalTokens ?? 0}, truncated={result.IsTruncated}, hasToolCalls={result.HasToolCalls}");
+            DiagnosticLogger.LogInfo($"[Chat] Stream completed — tokens={result.Usage?.TotalTokens ?? 0}, truncated={result.IsTruncated}, hasToolCalls={result.HasToolCalls}, cache_write={result.Usage?.CacheCreationInputTokens ?? 0}, cache_read={result.Usage?.CacheReadInputTokens ?? 0}");
 
             if (!result.HasToolCalls || executor is null)
                 break;

@@ -19,6 +19,12 @@ public sealed class AnthropicStreamEventMapper
     /// <summary>Final output token count from the message delta event (not incremental — overwrites on each delta).</summary>
     private long _outputTokens;
 
+    /// <summary>Prompt-cache write tokens reported in the message start event, if any.</summary>
+    private long? _cacheCreationInputTokens;
+
+    /// <summary>Prompt-cache read tokens reported in the message start event, if any.</summary>
+    private long? _cacheReadInputTokens;
+
     /// <summary>Guards against emitting duplicate <see cref="StreamEvent.StreamCompleted"/> events.</summary>
     private bool _streamCompleted;
 
@@ -84,7 +90,11 @@ public sealed class AnthropicStreamEventMapper
             if (raw.TryPickDelta(out var msgDelta))
             {
                 _outputTokens = msgDelta.Usage.OutputTokens;
-                var usage = new TokenUsage(ClampToInt(_inputTokens), ClampToInt(_outputTokens));
+                var usage = new TokenUsage(ClampToInt(_inputTokens), ClampToInt(_outputTokens))
+                {
+                    CacheCreationInputTokens = _cacheCreationInputTokens,
+                    CacheReadInputTokens = _cacheReadInputTokens,
+                };
                 yield return new StreamEvent.Usage(usage);
 
                 var isTruncated = msgDelta.Delta.StopReason is { } sr && sr.Value() == StopReason.MaxTokens;
@@ -98,6 +108,8 @@ public sealed class AnthropicStreamEventMapper
             {
                 _inputTokens = msgStart.Message.Usage.InputTokens;
                 _outputTokens = msgStart.Message.Usage.OutputTokens;
+                _cacheCreationInputTokens = msgStart.Message.Usage.CacheCreationInputTokens;
+                _cacheReadInputTokens = msgStart.Message.Usage.CacheReadInputTokens;
                 continue;
             }
 

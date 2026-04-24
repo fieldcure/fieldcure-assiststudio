@@ -16,4 +16,22 @@ public partial record TokenUsage(
     public int TotalTokens => InputTokens + OutputTokens;
 
     #endregion
+
+    #region Prompt Caching (Anthropic)
+
+    /// <summary>
+    /// Tokens written to the prompt cache in this request. Null when the provider
+    /// did not report cache metrics (non-Anthropic providers, or caching skipped
+    /// due to minimum token threshold). Type is <see langword="long"/>? to align
+    /// with the official Anthropic SDK contract.
+    /// </summary>
+    public long? CacheCreationInputTokens { get; init; }
+
+    /// <summary>
+    /// Tokens read from the prompt cache in this request. Null when the provider
+    /// did not report cache metrics.
+    /// </summary>
+    public long? CacheReadInputTokens { get; init; }
+
+    #endregion
 }

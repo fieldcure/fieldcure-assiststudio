@@ -30,6 +30,36 @@ public static class ChatPanelExtensions
         => AnthropicMessageConverter.Convert(panel.GetConversationSnapshot());
 
     /// <summary>
+    /// Builds a ready-to-send <see cref="MessageCreateParams"/> from the current conversation,
+    /// with Anthropic prompt caching enabled by default. Consumers who invoke this helper
+    /// automatically benefit from cache hits on repeated prefixes (system prompt, attachments,
+    /// tool results). To opt out of caching, assign <c>CacheControl = null</c> to the returned
+    /// params before sending.
+    /// </summary>
+    /// <param name="panel">The chat panel.</param>
+    /// <param name="model">Model identifier (e.g., "claude-sonnet-4-6").</param>
+    /// <param name="maxTokens">Maximum output tokens.</param>
+    /// <returns>Populated <see cref="MessageCreateParams"/> suitable for <c>client.Messages.CreateAsync</c> or streaming.</returns>
+    public static MessageCreateParams BuildAnthropicParams(
+        this ChatPanel panel, string model, long maxTokens)
+    {
+        var conv = panel.GetConversationAsAnthropicMessages();
+        return new MessageCreateParams
+        {
+            Model = model,
+            MaxTokens = maxTokens,
+            Messages = conv.Messages,
+            System = conv.SystemPrompt is null ? null : new MessageCreateParamsSystem(conv.SystemPrompt),
+
+            // v1.0 attachment caching — top-level marker enables Anthropic automatic
+            // prompt caching. API places the breakpoint at the last cacheable block
+            // and advances it as the conversation grows. See:
+            // https://docs.claude.com/en/docs/build-with-claude/prompt-caching
+            CacheControl = new CacheControlEphemeral { Ttl = Ttl.Ttl5m },
+        };
+    }
+
+    /// <summary>
     /// Streams an Anthropic SDK raw event stream into the assistant turn,
     /// mapping SDK events to Controls <see cref="StreamEvent"/> instances.
     /// A new <see cref="AnthropicStreamEventMapper"/> is created internally per call.

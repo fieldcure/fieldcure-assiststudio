@@ -73,7 +73,11 @@ internal static class SdkEvents
     public static RawMessageStreamEvent BlockStop(long index) =>
         new RawContentBlockStopEvent { Index = index };
 
-    public static RawMessageStreamEvent MessageStart(long inputTokens = 0, long outputTokens = 0) =>
+    public static RawMessageStreamEvent MessageStart(
+        long inputTokens = 0,
+        long outputTokens = 0,
+        long? cacheCreationInputTokens = null,
+        long? cacheReadInputTokens = null) =>
         new RawMessageStartEvent(new Message
         {
             ID = "msg_test",
@@ -88,8 +92,8 @@ internal static class SdkEvents
                 InputTokens = inputTokens,
                 OutputTokens = outputTokens,
                 CacheCreation = null,
-                CacheCreationInputTokens = null,
-                CacheReadInputTokens = null,
+                CacheCreationInputTokens = cacheCreationInputTokens,
+                CacheReadInputTokens = cacheReadInputTokens,
                 ServerToolUse = null,
                 ServiceTier = UsageServiceTier.Standard,
                 InferenceGeo = null,
