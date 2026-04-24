@@ -63,6 +63,16 @@ public sealed class JudgmentSpecialist : ISpecialist
         - Do NOT paraphrase, summarize, re-structure, or add your own synthesis.
         - Your own commentary must stay under 3 sentences total.
 
+        Status handling:
+        - `status: "completed"` → forward verbatim as above.
+        - `status: "truncated"` → the report is CUT OFF mid-generation. Do NOT
+          forward the partial text as if it were the final answer. Instead, tell
+          the user the specialist's output was truncated, show whatever partial
+          content exists, and offer to re-invoke with a tighter scope (fewer
+          perspectives, single round, shorter output).
+        - `status: "timed_out" | "max_rounds_reached" | "failed"` → report the
+          failure honestly and do not fabricate missing sections.
+
         Re-invocation rules:
         - If the report lacks a "## Final Report" section, re-invoke with the
           SAME `specialist: "judgment_specialist"` parameter, never with raw

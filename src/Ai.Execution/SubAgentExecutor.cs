@@ -173,6 +173,7 @@ public sealed class SubAgentExecutor : ISubAgentExecutor
     static SubAgentStatus MapStatus(AgentLoopStatus loopStatus) => loopStatus switch
     {
         AgentLoopStatus.Completed => SubAgentStatus.Completed,
+        AgentLoopStatus.Truncated => SubAgentStatus.Truncated,
         AgentLoopStatus.MaxRoundsReached => SubAgentStatus.MaxRoundsReached,
         AgentLoopStatus.Failed => SubAgentStatus.Failed,
         _ => SubAgentStatus.Failed,

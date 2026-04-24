@@ -244,6 +244,7 @@ public sealed class SubAgentTool : IAssistTool
         var statusText = result.Status switch
         {
             SubAgentStatus.Completed => "completed",
+            SubAgentStatus.Truncated => "truncated",
             SubAgentStatus.TimedOut => "timed_out",
             SubAgentStatus.MaxRoundsReached => "max_rounds_reached",
             SubAgentStatus.Failed => "failed",

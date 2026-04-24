@@ -94,12 +94,24 @@ public sealed class AgentLoop : IAgentLoop
 
                 var response = await context.Provider.CompleteAsync(request, cancellationToken);
 
-                // No tool calls or forced finish → task complete
+                // No tool calls or forced finish → task complete.
+                // BUT: if the provider cut the response off at max_tokens, the summary
+                // is partial — never mistake that for graceful completion. Callers that
+                // forward this to a parent conversation must be told so they don't
+                // present a mid-markdown cutoff as a finished report.
                 if (!response.HasToolCalls || forceFinish)
                 {
                     lastSummary = response.Content?.Trim();
-                    status = AgentLoopStatus.Completed;
+                    status = response.IsTruncated && !forceFinish
+                        ? AgentLoopStatus.Truncated
+                        : AgentLoopStatus.Completed;
                     roundsExecuted = round;
+                    if (status == AgentLoopStatus.Truncated)
+                    {
+                        Log(
+                            $"[AgentLoop] Response truncated at max_tokens in round {round} "
+                            + $"(content={lastSummary?.Length ?? 0} chars). Reporting partial summary.");
+                    }
                     break;
                 }
 

@@ -51,6 +51,14 @@ public enum AgentLoopStatus
     /// <summary>LLM responded with no tool calls — task complete.</summary>
     Completed,
 
+    /// <summary>
+    /// LLM response was cut off by the provider's max-tokens limit
+    /// (stop_reason = max_tokens / length / MAX_TOKENS). The content in
+    /// <see cref="AgentLoopResult.Summary"/> is partial and must not be
+    /// treated as a graceful completion.
+    /// </summary>
+    Truncated,
+
     /// <summary>Maximum rounds reached without LLM completing naturally.</summary>
     MaxRoundsReached,
 

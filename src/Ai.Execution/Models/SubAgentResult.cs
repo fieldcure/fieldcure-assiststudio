@@ -45,6 +45,13 @@ public enum SubAgentStatus
     /// <summary>Task completed successfully.</summary>
     Completed,
 
+    /// <summary>
+    /// Provider cut the sub-agent's final message off at its max-tokens
+    /// limit. <see cref="SubAgentResult.Report"/> is partial and must be
+    /// flagged as such to any consumer (parent LLM, UI, log).
+    /// </summary>
+    Truncated,
+
     /// <summary>Execution exceeded the configured timeout.</summary>
     TimedOut,
 
