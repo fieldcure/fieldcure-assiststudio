@@ -1,5 +1,19 @@
 ﻿# Release Notes — FieldCure.Ai.Execution
 
+## v0.3.2 (2026-04-24)
+
+### Added
+- **`AgentLoopStatus.Truncated`** / **`SubAgentStatus.Truncated`** — new terminal status emitted when the model's final (tool-free) response was cut off by the provider's `max_tokens` cap. Previously this case fell through to `Completed` with a partial summary, so callers could not distinguish a graceful end from a mid-generation cutoff.
+- `AgentLoop` now logs the truncation event with the partial content length.
+
+### Behavior
+- Context-guard forced-finish rounds (`MaxContextChars` threshold) remain classified as `Completed` even if `IsTruncated` is set — the summary was requested on purpose, so the partial marker does not apply.
+
+### Migration
+- Additive change only. Existing consumers continue to compile; `switch` statements that are exhaustive over the status enum may raise a warning for the new value and should add a case if they care about the distinction.
+
+---
+
 ## v0.3.1 (2026-04-21)
 
 ### Changed

@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
-    <Version>0.3.1</Version>
+    <Version>0.3.2</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CA1416</NoWarn>
 
@@ -22,7 +22,7 @@
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;agent;execution;sub-agent;tool-use;llm</PackageTags>
-    <PackageReleaseNotes>v0.3.1: Rebuild against Ai.Providers 0.5.0 (transitive DocumentParsers 2.x). Sync RAG system-prompt hint label with the "Knowledge Base" rename in the rest of the stack. No public API changes.</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.3.2: Add Truncated status to AgentLoopStatus and SubAgentStatus — emitted when the terminating tool-free response was cut off by the provider's max_tokens cap (previously misclassified as Completed with a partial summary). AgentLoop now logs the truncation event with partial content length. Context-guard forced-finish rounds remain Completed. Additive change only; exhaustive switch statements may warn on the new value.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
