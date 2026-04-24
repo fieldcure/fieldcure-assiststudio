@@ -111,6 +111,27 @@ patterns. The constant is not part of the `ISpecialist` interface —
 the host that knows about a specialist appends its guideline
 explicitly when building the parent system prompt.
 
+### Tip: model choice per specialist
+
+Different LLM families handle long structured protocols differently.
+Specialists that spell out an elaborate multi-phase dialectic (e.g. the
+Judgment protocol's `ASSERT → CHALLENGE → SYNTHESIZE` loop) behave
+noticeably differently depending on the underlying model:
+
+- **Compression-oriented models** tend to execute the protocol with
+  purpose-first summarization — they produce the final report inside
+  a single `max_tokens` budget and return `status: "completed"`.
+- **Verbatim-oriented models** tend to follow the protocol section by
+  section and more easily hit `max_tokens` mid-synthesis, returning
+  `status: "truncated"`. The routing guideline's re-invocation rule
+  still recovers a usable report, but at higher token cost.
+
+This is not a correctness issue — the pipeline handles both paths —
+but it's worth considering when picking the provider preset a
+specialist runs under. The host already exposes this knob via the
+`specialistPresetProvider` delegate passed to `SubAgentTool`; a future
+revision of `ISpecialist` may also carry a `PreferredProvider` hint.
+
 ## Workspace Context
 
 Inject dynamic context into the system prompt based on app state:
