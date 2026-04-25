@@ -34,6 +34,7 @@ public sealed class ModelAvailabilityChecker : IModelAvailabilityChecker
     private readonly object _ollamaGate = new();
     private bool? _hasOpenAiKey;
     private bool? _hasClaudeKey;
+    private bool? _hasGeminiKey;
 
     public ModelAvailabilityChecker(string ollamaBaseUrl = "http://localhost:11434")
     {
@@ -53,6 +54,7 @@ public sealed class ModelAvailabilityChecker : IModelAvailabilityChecker
                 "ollama" => await IsOllamaInstalledAsync(modelId, ct),
                 "openai" => HasOpenAiKey(),
                 "anthropic" => HasClaudeKey(),
+                "gemini" => HasGeminiKey(),
                 _ => true, // unknown provider → permissive
             };
         }
@@ -141,6 +143,12 @@ public sealed class ModelAvailabilityChecker : IModelAvailabilityChecker
     {
         _hasClaudeKey ??= SafeHasApiKey("Claude");
         return _hasClaudeKey.Value;
+    }
+
+    private bool HasGeminiKey()
+    {
+        _hasGeminiKey ??= SafeHasApiKey("Gemini");
+        return _hasGeminiKey.Value;
     }
 
     private static bool SafeHasApiKey(string preset)

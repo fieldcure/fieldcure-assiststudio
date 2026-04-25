@@ -46,6 +46,7 @@ public sealed partial class EmbeddingModelSelector : UserControl
         ("qwen3-embedding:8b", "Ollama", "qwen3-embedding:8b", "4096d \u00b7 ~5GB \u00b7 32k ctx", true),
         ("text-embedding-3-small", "OpenAI", "text-embedding-3-small", "1536d", false),
         ("text-embedding-3-large", "OpenAI", "text-embedding-3-large", "3072d", false),
+        ("gemini-embedding-2", "Gemini", "gemini-embedding-2", "1536d \u00b7 8k ctx", true),
     ];
 
     private static readonly (string Id, string Provider, string Label, string Meta, bool IsMultilingual)[] ContextualizerModels =
@@ -64,6 +65,7 @@ public sealed partial class EmbeddingModelSelector : UserControl
         ["qwen3-embedding:8b"] = ("ollama", null),
         ["text-embedding-3-small"] = ("openai", "OpenAI"),
         ["text-embedding-3-large"] = ("openai", "OpenAI"),
+        ["gemini-embedding-2"] = ("gemini", "Gemini"),
         ["gemma3:4b"] = ("ollama", null),
         ["qwen3:4b"] = ("ollama", null),
         ["gpt-4o-mini"] = ("openai", "OpenAI"),
@@ -203,8 +205,14 @@ public sealed partial class EmbeddingModelSelector : UserControl
     /// </summary>
     public KbProviderConfig GetEmbeddingConfig()
     {
+        // Gemini embedding-2 supports Matryoshka dimension truncation. 1536 is
+        // the documented sweet spot — matches MTEB score of full 3072 at half
+        // the storage. Users wanting 768 (further compression) or 3072 (max
+        // quality) can edit config.json directly; the dialog has no dim picker.
+        var dimension = _selectedEmbeddingId == "gemini-embedding-2" ? 1536 : 0;
+
         if (ProviderMap.TryGetValue(_selectedEmbeddingId, out var info))
-            return new KbProviderConfig { Provider = info.Provider, Model = _selectedEmbeddingId, ApiKeyPreset = info.ApiKeyPreset };
+            return new KbProviderConfig { Provider = info.Provider, Model = _selectedEmbeddingId, ApiKeyPreset = info.ApiKeyPreset, Dimension = dimension };
         return new KbProviderConfig { Provider = "ollama", Model = _selectedEmbeddingId };
     }
 
@@ -299,6 +307,7 @@ public sealed partial class EmbeddingModelSelector : UserControl
         "Ollama" => "ollama",
         "OpenAI" => "openai",
         "Claude" => "anthropic",
+        "Gemini" => "gemini",
         _ => displayProvider.ToLowerInvariant(),
     };
 
