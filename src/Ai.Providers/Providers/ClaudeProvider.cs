@@ -505,7 +505,9 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
             ["stream"] = stream
         };
 
-        // Extended thinking: omit temperature (Claude requires it absent) and add thinking config
+        // Extended thinking: add thinking config (temperature must be absent
+        // when thinking is on). Newer Claude models (opus-4-7 and up) have
+        // also deprecated the temperature parameter entirely.
         if (request.ThinkingEnabled)
         {
             body["thinking"] = new JsonObject
@@ -514,7 +516,7 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
                 ["budget_tokens"] = thinkingBudget
             };
         }
-        else
+        else if (!IsTemperatureDeprecated(ModelId))
         {
             body["temperature"] = request.Temperature;
         }
@@ -554,6 +556,24 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
     /// Extracts an Anthropic prompt-cache token count from a usage JSON element, returning
     /// <see langword="null"/> when the field is absent or not a JSON number.
     /// </summary>
+    /// <summary>
+    /// Returns true for Claude models that have deprecated the
+    /// <c>temperature</c> parameter (Opus 4.7 and newer). Sending
+    /// <c>temperature</c> to these models yields a 400 with
+    /// <c>"temperature is deprecated for this model"</c>.
+    /// </summary>
+    private static bool IsTemperatureDeprecated(string modelId)
+    {
+        if (string.IsNullOrEmpty(modelId)) return false;
+        var match = System.Text.RegularExpressions.Regex.Match(
+            modelId, @"^claude-opus-(\d+)-(\d+)",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (!match.Success) return false;
+        if (!int.TryParse(match.Groups[1].Value, out var major)) return false;
+        if (!int.TryParse(match.Groups[2].Value, out var minor)) return false;
+        return major > 4 || (major == 4 && minor >= 7);
+    }
+
     private static long? TryGetCacheTokens(JsonElement usage, string propertyName)
         => usage.TryGetProperty(propertyName, out var el) && el.ValueKind == JsonValueKind.Number
             ? el.GetInt64()
