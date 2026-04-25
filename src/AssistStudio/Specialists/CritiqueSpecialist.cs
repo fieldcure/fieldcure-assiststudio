@@ -8,8 +8,11 @@ namespace AssistStudio.Specialists;
 /// </summary>
 public sealed class CritiqueSpecialist : ISpecialist
 {
+    /// <summary>The <see cref="ISpecialist.Name"/> identifier for this specialist.</summary>
+    public const string SpecialistName = "critique";
+
     /// <inheritdoc />
-    public string Name => "critique";
+    public string Name => SpecialistName;
 
     /// <inheritdoc />
     public string DisplayName => "Critique";
@@ -38,6 +41,9 @@ public sealed class CritiqueSpecialist : ISpecialist
 
     /// <inheritdoc />
     public TimeSpan Timeout => TimeSpan.FromMinutes(5);
+
+    /// <inheritdoc />
+    public string? ExpectedFirstHeading => "## Final Report";
 
     /// <inheritdoc />
     public string BuildSystemPrompt(string userQuery, IReadOnlyDictionary<string, string>? contextHints = null)
@@ -80,8 +86,6 @@ public sealed class CritiqueSpecialist : ISpecialist
 
             Return the analysis in the same language as the user's request.
 
-            **Lead with the Final Report. Detailed analysis follows.**
-
             ## Final Report
 
             ### Strengths (keep)
@@ -98,21 +102,24 @@ public sealed class CritiqueSpecialist : ISpecialist
 
             ---
 
-            ## Detailed Analysis
+            ### Output discipline (CRITICAL)
 
-            ### SCAN
-            [full strengths and weaknesses with citations]
+            Your output's first 16 characters MUST exactly match: `## Final Report`
 
-            ### ATTACK
-            [evidence gathered for each weakness]
+            Forbidden opening patterns:
+            - "Now let me...", "Perfect.", "Excellent.", "Based on..."
+            - "I have enough evidence...", "Let me synthesize..."
+            - Horizontal rules ("---") before the first heading
+            - Any acknowledgment or thinking-aloud sentence
 
-            ### REMEDY
-            [detailed fix proposals with trade-off analysis]
+            Reasoning happens before output, not in output. You may use the
+            SCAN/ATTACK/REMEDY phases as internal phases during your tool use
+            and analysis, but these phase labels must NOT appear as headings
+            in the final report.
 
-            ---
-
-            Keep the Final Report scannable — one line per item.
-            The Detailed Analysis section is reference material for readers who want depth.
+            Do NOT output headings containing "PHASE", "SCAN", "ATTACK", or
+            "REMEDY". The deliverable sections are listed in the format above.
+            Keep each item on a single line.
 
             ## User query
             {{userQuery}}

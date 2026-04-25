@@ -1,6 +1,9 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.RegularExpressions;
+using AssistStudio.Helpers;
 using AssistStudio.Specialists;
+using FieldCure.AssistStudio.Core;
 using FieldCure.Ai.Execution;
 using FieldCure.Ai.Execution.Models;
 using FieldCure.Ai.Providers.Models;
@@ -154,6 +157,7 @@ public sealed class SubAgentTool : IAssistTool
             };
 
             var result = await _executor.ExecuteAsync(request, ct);
+            result = NormalizeSpecialistReport(result, specialist);
             return FormatResult(result);
         }
 
@@ -221,6 +225,168 @@ public sealed class SubAgentTool : IAssistTool
         {
             [ContextHintKeys.KbId] = kbId,
         };
+    }
+
+    /// <summary>
+    /// Normalizes a specialist's report by:
+    /// <list type="number">
+    /// <item>Stripping any preamble before
+    /// <see cref="ISpecialist.ExpectedFirstHeading"/>.</item>
+    /// <item>Stripping any forbidden trailing section per
+    /// <see cref="ISpecialist.ForbiddenTrailingHeadings"/>.</item>
+    /// </list>
+    /// Both stages are independent opt-ins. A specialist can declare either,
+    /// both, or neither. Logging records what was stripped for each stage to
+    /// aid future prompt-vs-postprocess decisions.
+    /// </summary>
+    private static SubAgentResult NormalizeSpecialistReport(
+        SubAgentResult result, ISpecialist specialist)
+    {
+        if (string.IsNullOrEmpty(result.Report))
+            return result;
+
+        var report = result.Report;
+        report = StripLeadingPreamble(report, specialist);
+        report = StripForbiddenTrailingSection(report, specialist);
+
+        if (ReferenceEquals(report, result.Report))
+            return result;
+
+        return new SubAgentResult
+        {
+            Report = report,
+            Status = result.Status,
+            ToolCallCount = result.ToolCallCount,
+            Duration = result.Duration,
+            RoundsExecuted = result.RoundsExecuted,
+            UsedPreset = result.UsedPreset,
+        };
+    }
+
+    /// <summary>
+    /// Strips leaked preamble (transitional sentences, internal phase headings,
+    /// horizontal rules) before <see cref="ISpecialist.ExpectedFirstHeading"/>.
+    /// Small models often ignore prompt-level discipline rules and emit
+    /// "Now let me…", "## PHASE 3: …", or similar before the deliverable —
+    /// this is the deterministic backstop. Returns the report unchanged when
+    /// the specialist declares no expected heading or when the heading is not
+    /// found (even via fuzzy match).
+    /// </summary>
+    private static string StripLeadingPreamble(string report, ISpecialist specialist)
+    {
+        var heading = specialist.ExpectedFirstHeading;
+        if (string.IsNullOrEmpty(heading))
+            return report;
+
+        var idx = FindExpectedHeadingStart(report, heading);
+        if (idx <= 0)
+            return report;
+
+        var preamble = report[..idx];
+        var stripped = report[idx..].TrimStart('\n', '\r', ' ', '\t');
+
+        // Sample the first 80 chars (single-line) of the stripped preamble
+        // so we can later analyze whether leak patterns are predictable
+        // enough to address at the prompt level.
+        var sample = preamble.Replace('\n', ' ').Replace('\r', ' ').Trim();
+        if (sample.Length > 80) sample = sample[..80] + "…";
+
+        LoggingService.LogInfo(
+            $"[Specialist:{specialist.Name}] Stripped {idx} chars before '{heading}'. " +
+            $"Preamble: \"{sample}\"");
+
+        return stripped;
+    }
+
+    /// <summary>
+    /// Searches for any forbidden trailing heading and truncates the report at
+    /// that position. Matches only top-level (##) or sub (###) headings
+    /// anchored to end-of-line, case-insensitive.
+    /// <para>
+    /// If multiple forbidden headings appear, truncates at the EARLIEST
+    /// occurrence — once a forbidden section starts, everything after it is
+    /// suspect (often the model continues with more remediation content under
+    /// different headings).
+    /// </para>
+    /// <para>
+    /// Preserves the report unchanged if no match is found (safe fallback).
+    /// </para>
+    /// </summary>
+    private static string StripForbiddenTrailingSection(string report, ISpecialist specialist)
+    {
+        var forbidden = specialist.ForbiddenTrailingHeadings;
+        if (forbidden is null || forbidden.Count == 0)
+            return report;
+
+        var earliestMatchIndex = -1;
+        string? matchedHeading = null;
+
+        foreach (var heading in forbidden)
+        {
+            var pattern = $@"(^|\n)#{{2,3}}\s*{Regex.Escape(heading)}\s*(\r?\n|$)";
+            var match = Regex.Match(report, pattern, RegexOptions.IgnoreCase);
+            if (!match.Success)
+                continue;
+
+            var matchStart = match.Value.StartsWith('\n') ? match.Index + 1 : match.Index;
+            if (earliestMatchIndex == -1 || matchStart < earliestMatchIndex)
+            {
+                earliestMatchIndex = matchStart;
+                matchedHeading = heading;
+            }
+        }
+
+        if (earliestMatchIndex == -1)
+            return report;
+
+        var trimmed = report[earliestMatchIndex..];
+        var kept = report[..earliestMatchIndex].TrimEnd();
+        var trimmedCount = report.Length - kept.Length;
+
+        var sample = trimmed.Replace('\n', ' ').Replace('\r', ' ');
+        if (sample.Length > 120) sample = sample[..120] + "…";
+
+        LoggingService.LogInfo(
+            $"[Specialist:{specialist.Name}] Trimmed trailing section '{matchedHeading}' " +
+            $"({trimmedCount} chars). Content: \"{sample}\"");
+
+        return kept;
+    }
+
+    /// <summary>
+    /// Locates the expected first heading in the report, tolerating common
+    /// formatting variations:
+    /// <list type="bullet">
+    /// <item>Heading levels: <c>#</c> vs <c>##</c> vs <c>###</c> (Markdown level mismatch)</item>
+    /// <item>Case: "Final Report" vs "FINAL REPORT" vs "Final report"</item>
+    /// <item>Whitespace: trailing/leading spaces, varied newlines</item>
+    /// <item>Bold-instead-of-heading: <c>**Final Report**</c></item>
+    /// </list>
+    /// Returns the index where the heading line begins, or -1 if not found.
+    /// Even when found via fuzzy match, the strip preserves the heading in
+    /// its original form (does not rewrite to canonical).
+    /// </summary>
+    private static int FindExpectedHeadingStart(string report, string expectedHeading)
+    {
+        // Extract just the title text, e.g. "Final Report" from "## Final Report"
+        var titleText = expectedHeading.TrimStart('#', ' ').Trim();
+        if (string.IsNullOrEmpty(titleText))
+            return -1;
+
+        // (^|\n)  start of report or start of line
+        // \s*     optional leading whitespace
+        // (#{1,6}|\*\*)  one of: 1–6 hashes, or '**' (bold marker)
+        // \s*     gap
+        // {title} the literal title (case-insensitive)
+        // \s*(\*\*)?  optional trailing bold close, optional whitespace
+        // ($|\n)  end of report or end of line
+        var pattern = $@"(^|\n)\s*(#{{1,6}}|\*\*)\s*{Regex.Escape(titleText)}\s*(\*\*)?\s*($|\n)";
+        var match = Regex.Match(report, pattern, RegexOptions.IgnoreCase);
+        if (!match.Success)
+            return -1;
+
+        // Skip a leading newline so the result starts at the heading line itself.
+        return match.Value.StartsWith('\n') ? match.Index + 1 : match.Index;
     }
 
     private static IReadOnlyList<string>? ParseStringArray(JsonElement parameters, string propertyName)

@@ -1,4 +1,5 @@
 using AssistStudio.Helpers;
+using AssistStudio.Specialists;
 using FieldCure.AssistStudio.Controls;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -60,10 +61,10 @@ public sealed partial class AppTasksPage : Page
             AppSettings.SubAgentPreset);
 
         // Specialists
-        LoadSpecialistSelector(WebSearchSpecialistSelector, "web_search_specialist");
-        LoadSpecialistSelector(CritiqueSpecialistSelector, "critique");
-        LoadSpecialistSelector(RedTeamSpecialistSelector, "red_team");
-        LoadSpecialistSelector(DevilsAdvocateSpecialistSelector, "devils_advocate");
+        LoadSpecialistSelector(WebSearchSpecialistSelector, WebSearchSpecialist.SpecialistName);
+        LoadSpecialistSelector(CritiqueSpecialistSelector, CritiqueSpecialist.SpecialistName);
+        LoadSpecialistSelector(RedTeamSpecialistSelector, RedTeamSpecialist.SpecialistName);
+        LoadSpecialistSelector(DevilsAdvocateSpecialistSelector, DevilsAdvocateSpecialist.SpecialistName);
 
         // Load toggles
         AutoTitleToggle.IsOn = AppSettings.AppAutoTitle;
@@ -148,16 +149,16 @@ public sealed partial class AppTasksPage : Page
     }
 
     private void OnWebSearchSpecialistSettingsChanged(object? sender, EventArgs e)
-        => SaveSpecialistSelector(WebSearchSpecialistSelector, "web_search_specialist");
+        => SaveSpecialistSelector(WebSearchSpecialistSelector, WebSearchSpecialist.SpecialistName);
 
     private void OnCritiqueSpecialistSettingsChanged(object? sender, EventArgs e)
-        => SaveSpecialistSelector(CritiqueSpecialistSelector, "critique");
+        => SaveSpecialistSelector(CritiqueSpecialistSelector, CritiqueSpecialist.SpecialistName);
 
     private void OnRedTeamSpecialistSettingsChanged(object? sender, EventArgs e)
-        => SaveSpecialistSelector(RedTeamSpecialistSelector, "red_team");
+        => SaveSpecialistSelector(RedTeamSpecialistSelector, RedTeamSpecialist.SpecialistName);
 
     private void OnDevilsAdvocateSpecialistSettingsChanged(object? sender, EventArgs e)
-        => SaveSpecialistSelector(DevilsAdvocateSpecialistSelector, "devils_advocate");
+        => SaveSpecialistSelector(DevilsAdvocateSpecialistSelector, DevilsAdvocateSpecialist.SpecialistName);
 
     /// <summary>
     /// Handles the auto-title toggle and updates panel visibility.

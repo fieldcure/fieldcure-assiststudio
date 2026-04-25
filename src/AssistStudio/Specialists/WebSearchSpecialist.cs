@@ -8,8 +8,11 @@ namespace AssistStudio.Specialists;
 /// </summary>
 public sealed class WebSearchSpecialist : ISpecialist
 {
+    /// <summary>The <see cref="ISpecialist.Name"/> identifier for this specialist.</summary>
+    public const string SpecialistName = "web_search_specialist";
+
     /// <inheritdoc />
-    public string Name => "web_search_specialist";
+    public string Name => SpecialistName;
 
     /// <inheritdoc />
     public string DisplayName => "Web Search Specialist";
@@ -44,8 +47,8 @@ public sealed class WebSearchSpecialist : ISpecialist
     /// when the specialist is enabled. Guides the AI on when to search directly
     /// vs. delegate to the specialist.
     /// </summary>
-    public const string RoutingGuideline =
-        """
+    public static readonly string RoutingGuideline =
+        $$"""
         ## Web Search & Specialists
 
         You have two options for web information:
@@ -54,10 +57,10 @@ public sealed class WebSearchSpecialist : ISpecialist
           (e.g. "current price of X", "who is the CEO of Y").
           Fast, lightweight, stays in this conversation.
 
-        - **Web Search Specialist**: Delegate to `web_search_specialist` via `delegate_task` for
+        - **Web Search Specialist**: Delegate to `{{SpecialistName}}` via `delegate_task` for
           in-depth research requiring multiple sources
           (e.g. "analyze recent trends in X", "compare A vs B with latest data").
-          Use: `delegate_task(prompt: "...", specialist: "web_search_specialist")`
+          Use: `delegate_task(prompt: "...", specialist: "{{SpecialistName}}")`
           Takes longer but returns a structured report with sources.
 
         **Do NOT search** when:

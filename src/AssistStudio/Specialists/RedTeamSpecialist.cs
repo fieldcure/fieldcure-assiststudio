@@ -8,8 +8,11 @@ namespace AssistStudio.Specialists;
 /// </summary>
 public sealed class RedTeamSpecialist : ISpecialist
 {
+    /// <summary>The <see cref="ISpecialist.Name"/> identifier for this specialist.</summary>
+    public const string SpecialistName = "red_team";
+
     /// <inheritdoc />
-    public string Name => "red_team";
+    public string Name => SpecialistName;
 
     /// <inheritdoc />
     public string DisplayName => "Red Team";
@@ -35,6 +38,29 @@ public sealed class RedTeamSpecialist : ISpecialist
 
     /// <inheritdoc />
     public TimeSpan Timeout => TimeSpan.FromMinutes(5);
+
+    /// <inheritdoc />
+    public string? ExpectedFirstHeading => "## Threat Report";
+
+    /// <summary>
+    /// Trailing remediation section headings that violate RedTeam's
+    /// "pure offense" contract. The specialist's system prompt forbids
+    /// suggesting fixes, but small models (especially Claude Haiku)
+    /// occasionally append these sections at report end despite explicit
+    /// instructions. Conservative list — only patterns observed in actual
+    /// evaluation runs (v4, v5). Expand only when new leak patterns are
+    /// confirmed in subsequent evaluations.
+    /// </summary>
+    public IReadOnlyList<string>? ForbiddenTrailingHeadings { get; } =
+    [
+        "Immediate action items",
+        "Action items",
+        "Key fixes",
+        "Recommendations",
+        "Mitigations",
+        "Remediation",
+        "Next steps",
+    ];
 
     /// <inheritdoc />
     public string BuildSystemPrompt(string userQuery, IReadOnlyDictionary<string, string>? contextHints = null)
@@ -90,10 +116,24 @@ public sealed class RedTeamSpecialist : ISpecialist
 
             ---
 
-            ## Detailed Reconnaissance
-            [full analysis of attack surface and evidence]
+            ### Output discipline (CRITICAL)
 
-            ---
+            Your output's first 16 characters MUST exactly match: `## Threat Report`
+
+            Forbidden opening patterns:
+            - "Now let me...", "Perfect.", "Excellent.", "Based on..."
+            - "I have enough evidence...", "Let me synthesize..."
+            - Horizontal rules ("---") before the first heading
+            - Any acknowledgment or thinking-aloud sentence
+
+            Reasoning happens before output, not in output. You may use the
+            RECONNAISSANCE/ATTACK/THREAT REPORT phases as internal phases during
+            your tool use and analysis, but these phase labels must NOT appear
+            as headings in the final report.
+
+            Do NOT output headings containing "PHASE" or "RECONNAISSANCE".
+            The deliverable section is listed in the format above.
+            Keep each vulnerability on a single line.
 
             No fixes. No encouragement. Pure offense.
 

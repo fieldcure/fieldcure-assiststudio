@@ -1447,19 +1447,17 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     #region Specialist Helpers
 
     /// <summary>
-    /// Appends the specialist routing guideline to the system prompt
-    /// if the profile has Essentials enabled and the specialist setting is on.
+    /// Appends specialist routing guidelines to the system prompt.
+    /// Specialists are self-contained — each declares its own
+    /// <see cref="ISpecialist.FallbackServers"/> / <see cref="ISpecialist.AllowedTools"/>
+    /// which the sub-agent merges in regardless of the parent profile, so
+    /// guidelines are injected independent of which servers the parent has enabled.
     /// </summary>
     private void AppendSpecialistGuideline(Profile profile)
     {
-        if (!AppSettings.WebSearchSpecialistEnabled)
-            return;
+        if (AppSettings.WebSearchSpecialistEnabled)
+            SystemPrompt += "\n\n" + Specialists.WebSearchSpecialist.RoutingGuideline;
 
-        var essentialsId = $"builtin_{BuiltInServerHelper.EssentialsKey}";
-        if (!profile.EnabledServers.Contains(essentialsId))
-            return;
-
-        SystemPrompt += "\n\n" + Specialists.WebSearchSpecialist.RoutingGuideline;
         SystemPrompt += "\n\n" + Specialists.JudgmentRoutingGuide.RoutingGuideline;
     }
 

@@ -8,8 +8,11 @@ namespace AssistStudio.Specialists;
 /// </summary>
 public sealed class DevilsAdvocateSpecialist : ISpecialist
 {
+    /// <summary>The <see cref="ISpecialist.Name"/> identifier for this specialist.</summary>
+    public const string SpecialistName = "devils_advocate";
+
     /// <inheritdoc />
-    public string Name => "devils_advocate";
+    public string Name => SpecialistName;
 
     /// <inheritdoc />
     public string DisplayName => "Devil's Advocate";
@@ -35,6 +38,9 @@ public sealed class DevilsAdvocateSpecialist : ISpecialist
 
     /// <inheritdoc />
     public TimeSpan Timeout => TimeSpan.FromMinutes(5);
+
+    /// <inheritdoc />
+    public string? ExpectedFirstHeading => "## Proposition";
 
     /// <inheritdoc />
     public string BuildSystemPrompt(string userQuery, IReadOnlyDictionary<string, string>? contextHints = null)
@@ -77,6 +83,12 @@ public sealed class DevilsAdvocateSpecialist : ISpecialist
             ## Proposition
             [single clear statement being debated]
 
+            ## Case FOR
+            [evidence with [Strong] / [Moderate] / [Weak] ratings]
+
+            ## Case AGAINST
+            [counter-evidence with [Strong] / [Moderate] / [Weak] ratings]
+
             ## Verdict Summary
             | Point | For | Against | Assessment |
             |-------|-----|---------|------------|
@@ -89,18 +101,25 @@ public sealed class DevilsAdvocateSpecialist : ISpecialist
 
             ---
 
-            ## Detailed Arguments
+            ### Output discipline (CRITICAL)
 
-            ### Case FOR
-            [full argument with sources]
+            Your output's first 16 characters MUST exactly match: `## Proposition`
 
-            ### Case AGAINST
-            [full argument with sources]
+            Forbidden opening patterns:
+            - "Now let me...", "Perfect.", "Excellent.", "Based on..."
+            - "I have enough evidence...", "Let me synthesize..."
+            - Horizontal rules ("---") before the first heading
+            - Any acknowledgment or thinking-aloud sentence
 
-            ### Point-by-Point Comparison
-            [detailed comparison]
+            Reasoning happens before output, not in output. You may use the
+            FRAME/CASE FOR/CASE AGAINST/COMPARISON phases as internal phases
+            during your tool use and analysis, but phase labels must NOT
+            appear as headings in the final report.
 
-            ---
+            Do NOT output headings prefixed with "PHASE" (e.g.,
+            "## PHASE 1: FRAME"). The deliverable sections — `## Proposition`,
+            `## Case FOR`, `## Case AGAINST`, `## Verdict Summary`,
+            `## Key Tension` — must use these exact headings.
 
             No recommendation. No preference. Present both sides at their strongest.
 
