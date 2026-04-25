@@ -1029,13 +1029,59 @@ public static class AppSettings
     }
 
     /// <summary>
-    /// Gets or sets the provider preset name for specialist execution.
-    /// Null = fall back to delegate_task's preset_name or parent conversation preset.
+    /// Gets or sets the provider source for the named specialist
+    /// ("Inherit" or "Specific"). Inherit means fall back to the
+    /// general Sub-Agent setting / parent conversation provider.
     /// </summary>
-    public static string? WebSearchSpecialistPreset
+    public static string GetSpecialistSource(string specialistName)
+        => Settings.Values[$"Specialist_{specialistName}_Source"] as string ?? "Inherit";
+
+    /// <summary>
+    /// Sets the provider source for the named specialist.
+    /// </summary>
+    public static void SetSpecialistSource(string specialistName, string source)
     {
-        get => Settings.Values["WebSearchSpecialistPreset"] as string;
-        set => Settings.Values["WebSearchSpecialistPreset"] = value;
+        Settings.Values[$"Specialist_{specialistName}_Source"] = source;
+        TaskSettingsChanged?.Invoke(null, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Gets or sets the preset name for the named specialist when
+    /// <see cref="GetSpecialistSource"/> is "Specific".
+    /// </summary>
+    public static string GetSpecialistPreset(string specialistName)
+        => Settings.Values[$"Specialist_{specialistName}_Preset"] as string ?? "";
+
+    /// <summary>
+    /// Sets the preset name for the named specialist.
+    /// </summary>
+    public static void SetSpecialistPreset(string specialistName, string preset)
+    {
+        Settings.Values[$"Specialist_{specialistName}_Preset"] = preset;
+        TaskSettingsChanged?.Invoke(null, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Resolves the provider preset for a specialist using the fallback
+    /// chain: per-specialist override → general sub-agent setting →
+    /// <see langword="null"/> (parent conversation provider).
+    /// </summary>
+    public static string? ResolveSpecialistPreset(string specialistName)
+    {
+        // 1. Per-specialist override (only when Source == "Specific")
+        if (GetSpecialistSource(specialistName) == "Specific")
+        {
+            var preset = GetSpecialistPreset(specialistName);
+            if (!string.IsNullOrEmpty(preset))
+                return preset;
+        }
+
+        // 2. General sub-agent default
+        if (SubAgentSource == "Specific" && !string.IsNullOrEmpty(SubAgentPreset))
+            return SubAgentPreset;
+
+        // 3. Parent conversation preset (null = inherit)
+        return null;
     }
 
     #endregion

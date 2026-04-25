@@ -21,7 +21,7 @@ public sealed class SubAgentTool : IAssistTool
     private readonly ISubAgentExecutor _executor;
     private readonly Func<string?> _kbIdProvider;
     private readonly SpecialistRegistry _registry;
-    private readonly Func<string?> _specialistPresetProvider;
+    private readonly Func<string, string?> _specialistPresetProvider;
     private readonly Func<string?> _subAgentPresetProvider;
 
     #endregion
@@ -38,7 +38,7 @@ public sealed class SubAgentTool : IAssistTool
     /// </param>
     /// <param name="registry">Registry of built-in specialists for auto-approve lookup.</param>
     /// <param name="specialistPresetProvider">
-    /// Returns the preferred provider preset for specialist execution,
+    /// Resolves the preferred provider preset for the given specialist name,
     /// or <c>null</c> to inherit the parent conversation's provider.
     /// </param>
     /// <param name="subAgentPresetProvider">
@@ -49,7 +49,7 @@ public sealed class SubAgentTool : IAssistTool
         ISubAgentExecutor executor,
         Func<string?> kbIdProvider,
         SpecialistRegistry registry,
-        Func<string?> specialistPresetProvider,
+        Func<string, string?> specialistPresetProvider,
         Func<string?> subAgentPresetProvider)
     {
         _executor = executor;
@@ -145,7 +145,7 @@ public sealed class SubAgentTool : IAssistTool
                 Prompt = specialist.BuildSystemPrompt(prompt, contextHints),
                 // Specialist: use specialist-specific preset, or null to inherit parent.
                 // Per-task Sub-Agent setting is NOT applied here.
-                PresetName = _specialistPresetProvider(),
+                PresetName = _specialistPresetProvider(specialist.Name),
                 McpServers = specialist.FallbackServers.ToList(),
                 AllowedTools = specialist.AllowedTools.ToList(),
                 MaxRounds = specialist.MaxRounds,

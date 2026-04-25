@@ -375,6 +375,24 @@
   <data name="AppTasks_SubAgentSection.Header" xml:space="preserve">
     <value>Sub-Agent</value>
   </data>
+  <data name="AppTasks_SpecialistsSection.Header" xml:space="preserve">
+    <value>Specialists</value>
+  </data>
+  <data name="AppTasks_SpecialistsHint.Text" xml:space="preserve">
+    <value>Override the provider used for each specialist. Inherit falls back to the Sub-Agent setting above.</value>
+  </data>
+  <data name="AppTasks_Specialist_WebSearch.Text" xml:space="preserve">
+    <value>Web Search</value>
+  </data>
+  <data name="AppTasks_Specialist_Critique.Text" xml:space="preserve">
+    <value>Critique</value>
+  </data>
+  <data name="AppTasks_Specialist_RedTeam.Text" xml:space="preserve">
+    <value>Red Team</value>
+  </data>
+  <data name="AppTasks_Specialist_DevilsAdvocate.Text" xml:space="preserve">
+    <value>Devil's Advocate</value>
+  </data>
   <data name="TaskPreset_ProviderSettings.Text" xml:space="preserve">
     <value>Provider settings</value>
   </data>

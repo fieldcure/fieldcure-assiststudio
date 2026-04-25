@@ -19,7 +19,9 @@ public sealed class SpecialistRegistry
     private SpecialistRegistry()
     {
         Register(new WebSearchSpecialist());
-        Register(new JudgmentSpecialist());
+        Register(new CritiqueSpecialist());
+        Register(new RedTeamSpecialist());
+        Register(new DevilsAdvocateSpecialist());
     }
 
     /// <summary>

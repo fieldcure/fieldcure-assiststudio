@@ -1460,7 +1460,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             return;
 
         SystemPrompt += "\n\n" + Specialists.WebSearchSpecialist.RoutingGuideline;
-        SystemPrompt += "\n\n" + Specialists.JudgmentSpecialist.RoutingGuideline;
+        SystemPrompt += "\n\n" + Specialists.JudgmentRoutingGuide.RoutingGuideline;
     }
 
     #endregion
@@ -1480,7 +1480,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                 ResolveToolsForSubAgentAsync),
             () => _cachedKbId,
             Specialists.SpecialistRegistry.Instance,
-            () => AppSettings.WebSearchSpecialistPreset,
+            AppSettings.ResolveSpecialistPreset,
             () => ResolveTaskPreset(AppSettings.SubAgentSource, AppSettings.SubAgentPreset));
     }
 

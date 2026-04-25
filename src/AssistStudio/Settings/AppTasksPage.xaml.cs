@@ -59,6 +59,12 @@ public sealed partial class AppTasksPage : Page
             ParseSource(AppSettings.SubAgentSource),
             AppSettings.SubAgentPreset);
 
+        // Specialists
+        LoadSpecialistSelector(WebSearchSpecialistSelector, "web_search_specialist");
+        LoadSpecialistSelector(CritiqueSpecialistSelector, "critique");
+        LoadSpecialistSelector(RedTeamSpecialistSelector, "red_team");
+        LoadSpecialistSelector(DevilsAdvocateSpecialistSelector, "devils_advocate");
+
         // Load toggles
         AutoTitleToggle.IsOn = AppSettings.AppAutoTitle;
         AutoSummaryToggle.IsOn = AppSettings.AppAutoSummary;
@@ -120,6 +126,38 @@ public sealed partial class AppTasksPage : Page
         AppSettings.SubAgentSource = SourceToString(SubAgentSelector.Source);
         AppSettings.SubAgentPreset = SubAgentSelector.PresetName;
     }
+
+    /// <summary>
+    /// Loads source/preset for the named specialist into the given selector.
+    /// </summary>
+    private static void LoadSpecialistSelector(TaskPresetSelector selector, string specialistName)
+    {
+        selector.Load(
+            ParseSource(AppSettings.GetSpecialistSource(specialistName)),
+            AppSettings.GetSpecialistPreset(specialistName));
+    }
+
+    /// <summary>
+    /// Persists per-specialist source and preset when changed.
+    /// </summary>
+    private void SaveSpecialistSelector(TaskPresetSelector selector, string specialistName)
+    {
+        if (_suppressEvents) return;
+        AppSettings.SetSpecialistSource(specialistName, SourceToString(selector.Source));
+        AppSettings.SetSpecialistPreset(specialistName, selector.PresetName);
+    }
+
+    private void OnWebSearchSpecialistSettingsChanged(object? sender, EventArgs e)
+        => SaveSpecialistSelector(WebSearchSpecialistSelector, "web_search_specialist");
+
+    private void OnCritiqueSpecialistSettingsChanged(object? sender, EventArgs e)
+        => SaveSpecialistSelector(CritiqueSpecialistSelector, "critique");
+
+    private void OnRedTeamSpecialistSettingsChanged(object? sender, EventArgs e)
+        => SaveSpecialistSelector(RedTeamSpecialistSelector, "red_team");
+
+    private void OnDevilsAdvocateSpecialistSettingsChanged(object? sender, EventArgs e)
+        => SaveSpecialistSelector(DevilsAdvocateSpecialistSelector, "devils_advocate");
 
     /// <summary>
     /// Handles the auto-title toggle and updates panel visibility.

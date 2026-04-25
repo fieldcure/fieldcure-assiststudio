@@ -116,6 +116,60 @@
                     </controls:CollapsibleSection.Body>
                 </controls:CollapsibleSection>
 
+                <!-- Specialists -->
+                <controls:CollapsibleSection
+                    x:Name="SpecialistsSection"
+                    x:Uid="AppTasks_SpecialistsSection"
+                    Header="Specialists"
+                    IsExpanded="True">
+                    <controls:CollapsibleSection.Body>
+                        <StackPanel Spacing="20" Padding="0">
+                            <TextBlock
+                                x:Uid="AppTasks_SpecialistsHint"
+                                Text="Override the provider used for each specialist. Inherit falls back to the Sub-Agent setting above."
+                                Style="{StaticResource CaptionTextBlockStyle}"
+                                TextWrapping="Wrap"
+                                Opacity="0.6" />
+
+                            <StackPanel Spacing="6">
+                                <TextBlock x:Uid="AppTasks_Specialist_WebSearch"
+                                           Text="Web Search"
+                                           Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                <local:TaskPresetSelector
+                                    x:Name="WebSearchSpecialistSelector"
+                                    SettingsChanged="OnWebSearchSpecialistSettingsChanged" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="6">
+                                <TextBlock x:Uid="AppTasks_Specialist_Critique"
+                                           Text="Critique"
+                                           Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                <local:TaskPresetSelector
+                                    x:Name="CritiqueSpecialistSelector"
+                                    SettingsChanged="OnCritiqueSpecialistSettingsChanged" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="6">
+                                <TextBlock x:Uid="AppTasks_Specialist_RedTeam"
+                                           Text="Red Team"
+                                           Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                <local:TaskPresetSelector
+                                    x:Name="RedTeamSpecialistSelector"
+                                    SettingsChanged="OnRedTeamSpecialistSettingsChanged" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="6">
+                                <TextBlock x:Uid="AppTasks_Specialist_DevilsAdvocate"
+                                           Text="Devil's Advocate"
+                                           Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                <local:TaskPresetSelector
+                                    x:Name="DevilsAdvocateSpecialistSelector"
+                                    SettingsChanged="OnDevilsAdvocateSpecialistSettingsChanged" />
+                            </StackPanel>
+                        </StackPanel>
+                    </controls:CollapsibleSection.Body>
+                </controls:CollapsibleSection>
+
             </StackPanel>
         </ScrollViewer>
     </Grid>
