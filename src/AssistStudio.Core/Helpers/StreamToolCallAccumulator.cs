@@ -9,11 +9,11 @@ namespace FieldCure.AssistStudio.Core.Helpers;
 /// </summary>
 public sealed class StreamToolCallAccumulator
 {
-    private readonly Dictionary<string, (string FunctionName, StringBuilder Arguments)> _pending = new();
+    private readonly Dictionary<string, (string FunctionName, StringBuilder Arguments, string? ProviderSignature)> _pending = new();
 
     /// <summary>Registers a new tool call from a <see cref="StreamEvent.ToolCallStart"/> event.</summary>
     public void HandleStart(StreamEvent.ToolCallStart start)
-        => _pending[start.Id] = (start.FunctionName, new StringBuilder());
+        => _pending[start.Id] = (start.FunctionName, new StringBuilder(), start.ProviderSignature);
 
     /// <summary>Appends an argument chunk from a <see cref="StreamEvent.ToolCallDelta"/> event.</summary>
     public void HandleDelta(StreamEvent.ToolCallDelta delta)
@@ -31,13 +31,14 @@ public sealed class StreamToolCallAccumulator
     public List<ToolCall> Drain()
     {
         var result = new List<ToolCall>(_pending.Count);
-        foreach (var (id, (funcName, args)) in _pending)
+        foreach (var (id, (funcName, args, signature)) in _pending)
         {
             result.Add(new ToolCall
             {
                 Id = id,
                 FunctionName = funcName,
-                Arguments = args.ToString()
+                Arguments = args.ToString(),
+                ProviderSignature = signature,
             });
         }
         _pending.Clear();

@@ -16,5 +16,12 @@ public class ToolCall
     /// <summary>The raw JSON string of arguments to pass to the tool.</summary>
     public required string Arguments { get; init; }
 
+    /// <summary>
+    /// Opaque, provider-specific token that must be echoed back to the model
+    /// alongside the tool call on the follow-up request. Gemini 2.x uses this
+    /// for its <c>thoughtSignature</c>; other providers leave it null.
+    /// </summary>
+    public string? ProviderSignature { get; init; }
+
     #endregion
 }

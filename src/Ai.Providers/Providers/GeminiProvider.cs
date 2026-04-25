@@ -180,7 +180,8 @@ public partial class GeminiProvider : IAiProvider, IDisposable
                         // uniqueness when multiple calls exist.
                         Id = fcCount > 1 ? $"{funcName}_{fcIndex}" : funcName,
                         FunctionName = funcName,
-                        Arguments = fc.GetProperty("args").GetRawText()
+                        Arguments = fc.GetProperty("args").GetRawText(),
+                        ProviderSignature = ExtractThoughtSignature(part),
                     });
                     fcIndex++;
                 }
@@ -258,7 +259,8 @@ public partial class GeminiProvider : IAiProvider, IDisposable
                             var funcName = fc.GetProperty("name").GetString()!;
                             var id = fcCount > 1 ? $"{funcName}_{fcIndex}" : funcName;
                             var argsJson = fc.GetProperty("args").GetRawText();
-                            yield return new StreamEvent.ToolCallStart(id, funcName);
+                            var signature = ExtractThoughtSignature(part);
+                            yield return new StreamEvent.ToolCallStart(id, funcName, signature);
                             yield return new StreamEvent.ToolCallDelta(id, argsJson);
                             fcIndex++;
                         }
@@ -408,14 +410,22 @@ public partial class GeminiProvider : IAiProvider, IDisposable
             {
                 foreach (var tc in msg.ToolCalls)
                 {
-                    parts.Add(new JsonObject
+                    var part = new JsonObject
                     {
                         ["functionCall"] = new JsonObject
                         {
                             ["name"] = tc.FunctionName,
                             ["args"] = JsonNode.Parse(string.IsNullOrWhiteSpace(tc.Arguments) ? "{}" : tc.Arguments)
                         }
-                    });
+                    };
+                    // Gemini 2.x requires the original thoughtSignature to be
+                    // echoed back, otherwise it rejects the request with
+                    // "Function call is missing a thought_signature".
+                    if (!string.IsNullOrEmpty(tc.ProviderSignature))
+                    {
+                        part["thoughtSignature"] = tc.ProviderSignature;
+                    }
+                    parts.Add(part);
                 }
             }
 
@@ -529,6 +539,30 @@ public partial class GeminiProvider : IAiProvider, IDisposable
     /// converts such arrays to the first non-null scalar type and removes unsupported
     /// keywords (<c>default</c>, <c>$schema</c>).
     /// </summary>
+    /// <summary>
+    /// Extracts the <c>thoughtSignature</c> from a functionCall <c>part</c>
+    /// element. Gemini emits it either at the part level (newer SDK) or
+    /// nested inside the <c>functionCall</c> object (older). The signature
+    /// must be echoed back verbatim on the follow-up request.
+    /// </summary>
+    private static string? ExtractThoughtSignature(JsonElement part)
+    {
+        if (part.TryGetProperty("thoughtSignature", out var partLevel)
+            && partLevel.ValueKind == JsonValueKind.String)
+        {
+            return partLevel.GetString();
+        }
+
+        if (part.TryGetProperty("functionCall", out var fc)
+            && fc.TryGetProperty("thoughtSignature", out var nested)
+            && nested.ValueKind == JsonValueKind.String)
+        {
+            return nested.GetString();
+        }
+
+        return null;
+    }
+
     private static JsonNode? NormalizeSchemaForGemini(JsonNode? node)
     {
         if (node is not JsonObject obj) return node;

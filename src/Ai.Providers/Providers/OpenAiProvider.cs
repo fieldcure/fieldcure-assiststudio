@@ -485,11 +485,13 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
             }
         }
 
-        var isOSeries = ModelId.StartsWith("o", StringComparison.OrdinalIgnoreCase);
+        var isOSeries = IsOSeriesModel(ModelId);
+        var isReasoningModel = isOSeries || IsGpt5OrNewer(ModelId);
 
-        // o-series: max_completion_tokens covers BOTH reasoning + output tokens combined.
-        // When thinking is enabled, sum output + thinking budget so reasoning doesn't starve output.
-        // e.g. user sets output=4096, budget=16384 → max_completion_tokens=20480
+        // Reasoning models (o-series + gpt-5+) require max_completion_tokens
+        // instead of max_tokens. For the o-series specifically the parameter
+        // also covers reasoning + output combined, so we add the thinking
+        // budget when extended thinking is enabled to keep output from starving.
         var maxTokens = request.MaxTokens;
         if (isOSeries && request.ThinkingEnabled)
         {
@@ -500,13 +502,14 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
         var body = new JsonObject
         {
             ["model"] = ModelId,
-            [isOSeries ? "max_completion_tokens" : "max_tokens"] = maxTokens,
+            [isReasoningModel ? "max_completion_tokens" : "max_tokens"] = maxTokens,
             ["messages"] = messages,
             ["stream"] = stream
         };
 
-        // o-series models do not support temperature parameter
-        if (!isOSeries)
+        // Reasoning models (o-series + gpt-5+) only allow the default
+        // temperature (1.0) and reject any explicit value.
+        if (!isReasoningModel)
         {
             body["temperature"] = request.Temperature;
         }
@@ -601,6 +604,35 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
             string.IsNullOrEmpty(content) ? null : content,
             string.IsNullOrEmpty(thinking) ? null : thinking
         );
+    }
+
+    /// <summary>
+    /// Returns true for the o-series reasoning models (o1, o3, o4, …).
+    /// These models do not support <c>temperature</c>, require
+    /// <c>max_completion_tokens</c>, and accept <c>reasoning_effort</c>.
+    /// </summary>
+    private static bool IsOSeriesModel(string modelId)
+    {
+        if (string.IsNullOrEmpty(modelId)) return false;
+        if (!modelId.StartsWith('o') && !modelId.StartsWith('O')) return false;
+        // Require digit or dash after the leading 'o' so we don't match
+        // unrelated names that happen to start with the letter.
+        return modelId.Length > 1 && (char.IsDigit(modelId[1]) || modelId[1] == '-');
+    }
+
+    /// <summary>
+    /// Returns true for <c>gpt-5</c> and newer flagship models. These
+    /// follow the reasoning-model contract and require
+    /// <c>max_completion_tokens</c> instead of <c>max_tokens</c>.
+    /// </summary>
+    private static bool IsGpt5OrNewer(string modelId)
+    {
+        if (string.IsNullOrEmpty(modelId)) return false;
+        var match = System.Text.RegularExpressions.Regex.Match(
+            modelId, @"^gpt-(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        return match.Success
+            && int.TryParse(match.Groups[1].Value, out var major)
+            && major >= 5;
     }
 
     #endregion

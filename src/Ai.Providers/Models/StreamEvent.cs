@@ -24,7 +24,12 @@ public abstract record StreamEvent
     /// <summary>Signals the start of a streamed tool call.</summary>
     /// <param name="Id">The tool call identifier.</param>
     /// <param name="FunctionName">The function name being invoked.</param>
-    public sealed record ToolCallStart(string Id, string FunctionName) : StreamEvent;
+    /// <param name="ProviderSignature">
+    /// Opaque, provider-specific token that must be echoed back on the
+    /// follow-up request (Gemini's <c>thoughtSignature</c>). Null for
+    /// providers that don't use this mechanism.
+    /// </param>
+    public sealed record ToolCallStart(string Id, string FunctionName, string? ProviderSignature = null) : StreamEvent;
 
     /// <summary>A chunk of arguments JSON for an in-progress tool call.</summary>
     /// <param name="Id">The tool call identifier this chunk belongs to.</param>
