@@ -52,8 +52,6 @@ internal sealed class KnowledgeBaseSearchService
                 ? cn.GetString() ?? "" : "";
             var chunkId = item.TryGetProperty("chunk_id", out var ci)
                 ? ci.GetString() : null;
-            var score = item.TryGetProperty("score", out var sc)
-                ? sc.GetDouble() : 0.0;
 
             var displayName = IOPath.GetFileName(sourcePath);
             if (string.IsNullOrEmpty(displayName)) displayName = sourcePath;
@@ -61,7 +59,6 @@ internal sealed class KnowledgeBaseSearchService
             list.Add(new ChunkMatchViewModel(
                 SourceName: displayName,
                 Snippet: content.Length <= 200 ? content : content[..200] + "\u2026",
-                Score: score,
                 ChunkId: chunkId));
         }
 

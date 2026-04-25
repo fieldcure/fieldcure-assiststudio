@@ -806,15 +806,14 @@ public sealed partial class KbCard : UserControl, INotifyPropertyChanged
     }
 
     /// <summary>
-    /// Builds one match row: icon + source name + snippet + score. Done
-    /// in code because the row count is dynamic per hit.
+    /// Builds one match row: icon + source name + snippet. Done in code
+    /// because the row count is dynamic per hit.
     /// </summary>
     private static Grid BuildMatchRow(ChunkMatchViewModel hit)
     {
         var row = new Grid { Padding = new Thickness(0, 3, 0, 3), ColumnSpacing = 8 };
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
         var icon = new FontIcon
         {
@@ -844,17 +843,6 @@ public sealed partial class KbCard : UserControl, INotifyPropertyChanged
         });
         Grid.SetColumn(textPanel, 1);
         row.Children.Add(textPanel);
-
-        var scoreText = new TextBlock
-        {
-            Text = hit.ScoreText,
-            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-            Opacity = 0.5,
-            VerticalAlignment = VerticalAlignment.Top,
-            Margin = new Thickness(0, 2, 0, 0),
-        };
-        Grid.SetColumn(scoreText, 2);
-        row.Children.Add(scoreText);
 
         return row;
     }
