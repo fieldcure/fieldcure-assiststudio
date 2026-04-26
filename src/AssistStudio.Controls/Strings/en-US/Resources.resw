@@ -171,11 +171,8 @@
   <data name="Chat_ImageCopy" xml:space="preserve">
     <value>Copy to clipboard</value>
   </data>
-  <data name="Chat_ImageExpand" xml:space="preserve">
-    <value>View full size</value>
-  </data>
-  <data name="Chat_ImageClose" xml:space="preserve">
-    <value>Close</value>
+  <data name="Chat_ImageSaveLabel" xml:space="preserve">
+    <value>Save</value>
   </data>
   <data name="Chat_ImageSaved" xml:space="preserve">
     <value>Image saved</value>

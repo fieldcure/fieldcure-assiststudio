@@ -371,72 +371,6 @@
         display: block;
     }
 
-    /* ===== Image Wrapper + Toolbar ===== */
-    .image-wrapper {
-        position: relative;
-        display: inline-block;
-    }
-    .image-toolbar {
-        position: absolute;
-        top: 16px;
-        right: 8px;
-        display: flex;
-        gap: 2px;
-        opacity: 0;
-        transition: opacity 0.2s;
-        background: var(--bg-primary);
-        border-radius: 6px;
-        padding: 2px;
-        box-shadow: var(--shadow);
-    }
-    .image-wrapper:hover .image-toolbar {
-        opacity: 1;
-    }
-
-    /* ===== Image Popover ===== */
-    .image-popover-backdrop {
-        position: fixed;
-        inset: 0;
-        backdrop-filter: blur(8px);
-        z-index: 9998;
-    }
-    [data-theme="light"] .image-popover-backdrop {
-        background: rgba(255, 255, 255, 0.6);
-    }
-    [data-theme="dark"] .image-popover-backdrop {
-        background: rgba(0, 0, 0, 0.7);
-    }
-    .image-popover-card {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 9999;
-        background: var(--bg-primary);
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-        padding: 12px;
-        max-width: 85vw;
-        max-height: 85vh;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-    }
-    .image-popover-header {
-        display: flex;
-        justify-content: flex-end;
-        gap: 4px;
-        padding-bottom: 8px;
-    }
-    .image-popover-card img {
-        max-width: 100%;
-        max-height: calc(85vh - 80px);
-        min-height: 0;
-        object-fit: contain;
-        border-radius: 8px;
-    }
-
     /* ===== Image Toast ===== */
     .image-toast {
         position: fixed;
@@ -784,13 +718,8 @@
         background: var(--code-bg);
         border: 1px solid var(--border-color);
         border-radius: 10px;
-        cursor: pointer;
         transition: background 0.15s, border-color 0.15s;
         box-sizing: border-box;
-    }
-    .attachment-chip:hover {
-        background: var(--bg-hover);
-        border-color: var(--link-color);
     }
     .attachment-chip-thumb {
         width: 36px;
@@ -966,7 +895,8 @@
         border: 1px solid var(--code-border);
     }
     .diagram-block .svg-block,
-    .diagram-block pre.mermaid {
+    .diagram-block pre.mermaid,
+    .diagram-block .image-frame {
         display: flex;
         justify-content: center;
         margin: 0;
@@ -974,7 +904,8 @@
         background: var(--code-bg);
     }
     .diagram-block .svg-block svg,
-    .diagram-block pre.mermaid svg {
+    .diagram-block pre.mermaid svg,
+    .diagram-block .image-frame img {
         max-width: 100%;
         height: auto;
     }
@@ -1143,7 +1074,10 @@
         diagramSaveSvg: 'Save as SVG',
         diagramSavePng: 'Save as PNG',
         diagramCopyLabel: 'Copy',
-        diagramCopyTooltip: 'Copy SVG source'
+        diagramCopyTooltip: 'Copy SVG source',
+        imageSaveLabel: 'Save',
+        imageSave: 'Save image',
+        imageCopy: 'Copy to clipboard'
     };
 
     var _debugMode = false;
@@ -1268,61 +1202,46 @@
         return map[mimeType.toLowerCase()] || '';
     }
 
-    // ===== Image Toolbar & Modal =====
+    // ===== Image Block (diagram-block style header) =====
 
+    /// Wraps an <img> in a .diagram-block with an "image | Copy | Save" header.
+    /// Idempotent — already-wrapped images are skipped.
     function wrapImageWithToolbar(img) {
-        if (img.parentElement && img.parentElement.classList.contains('image-wrapper')) return;
-        var wrapper = document.createElement('div');
-        wrapper.className = 'image-wrapper';
+        if (img.closest('.diagram-block')) return;
+
+        var L = window._L || {};
+        var block = document.createElement('div');
+        block.className = 'diagram-block';
+        block.setAttribute('data-kind', 'image');
+
+        var header = document.createElement('div');
+        header.className = 'code-header';
+        header.innerHTML =
+            '<span class="code-lang">image</span>' +
+            '<span class="diagram-actions">' +
+                '<button class="diagram-btn" data-act="copy" title="' + (L.imageCopy || 'Copy to clipboard') + '">' + (L.diagramCopyLabel || 'Copy') + '</button>' +
+                '<button class="diagram-btn" data-act="save" title="' + (L.imageSave || 'Save image') + '">' + (L.imageSaveLabel || 'Save') + '</button>' +
+            '</span>';
+
+        var frame = document.createElement('div');
+        frame.className = 'image-frame';
+
         if (img.parentNode) {
-            img.parentNode.insertBefore(wrapper, img);
+            img.parentNode.insertBefore(block, img);
         }
-        wrapper.appendChild(img);
+        frame.appendChild(img);
+        block.appendChild(header);
+        block.appendChild(frame);
 
-        var toolbar = document.createElement('div');
-        toolbar.className = 'image-toolbar';
-
-        // Copy button
-        var copyBtn = document.createElement('button');
-        copyBtn.className = 'msg-action-btn';
-        copyBtn.setAttribute('data-tooltip', _L.imageCopy || 'Copy to clipboard');
-        copyBtn.textContent = '\uE8C8';
+        var copyBtn = block.querySelector('[data-act="copy"]');
+        var saveBtn = block.querySelector('[data-act="save"]');
         copyBtn.addEventListener('click', function(e) {
             e.stopPropagation();
             copyImage(img, copyBtn);
         });
-        toolbar.appendChild(copyBtn);
-
-        // Save button
-        var saveBtn = document.createElement('button');
-        saveBtn.className = 'msg-action-btn';
-        saveBtn.setAttribute('data-tooltip', _L.imageSave || 'Save image');
-        saveBtn.textContent = '\uE74E';
         saveBtn.addEventListener('click', function(e) {
             e.stopPropagation();
             downloadImage(img);
-        });
-        toolbar.appendChild(saveBtn);
-
-        // Expand button
-        var expandBtn = document.createElement('button');
-        expandBtn.className = 'msg-action-btn';
-        expandBtn.setAttribute('data-tooltip', _L.imageExpand || 'View full size');
-        expandBtn.textContent = '\uE740';
-        expandBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            openImageModal(img);
-        });
-        toolbar.appendChild(expandBtn);
-
-        wrapper.appendChild(toolbar);
-
-        // Click image to expand
-        img.style.cursor = 'pointer';
-        img.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            openImageModal(img);
         });
     }
 
@@ -1369,99 +1288,12 @@
 
     function flashCopyBtn(btn) {
         var orig = btn.textContent;
-        btn.textContent = '\uE73E';
+        btn.textContent = window._L.copied || 'Copied!';
         btn.classList.add('copied');
         setTimeout(function() {
             btn.textContent = orig;
             btn.classList.remove('copied');
-        }, 2000);
-    }
-
-    function openImageModal(imgEl) {
-        closeImageModal();
-        var cachedDataUri = imgToDataUri(imgEl);
-
-        // Backdrop
-        var backdrop = document.createElement('div');
-        backdrop.className = 'image-popover-backdrop';
-        backdrop.id = 'image-popover-backdrop';
-        backdrop.addEventListener('click', closeImageModal);
-
-        // Card
-        var card = document.createElement('div');
-        card.className = 'image-popover-card';
-        card.id = 'image-popover-card';
-
-        // Header with buttons
-        var header = document.createElement('div');
-        header.className = 'image-popover-header';
-
-        var saveBtn = document.createElement('button');
-        saveBtn.className = 'msg-action-btn';
-        saveBtn.setAttribute('data-tooltip', _L.imageSave || 'Save image');
-        saveBtn.textContent = '\uE74E';
-        saveBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            if (cachedDataUri) window.chrome.webview.postMessage('saveImage:' + cachedDataUri);
-            else if (imgEl.src) window.chrome.webview.postMessage('saveImageUrl:' + imgEl.src);
-        });
-        header.appendChild(saveBtn);
-
-        var copyBtn = document.createElement('button');
-        copyBtn.className = 'msg-action-btn';
-        copyBtn.setAttribute('data-tooltip', _L.imageCopy || 'Copy to clipboard');
-        copyBtn.textContent = '\uE8C8';
-        copyBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            if (cachedDataUri) window.chrome.webview.postMessage('copyImage:' + cachedDataUri);
-            else if (imgEl.src) window.chrome.webview.postMessage('copyImageUrl:' + imgEl.src);
-            flashCopyBtn(copyBtn);
-        });
-        header.appendChild(copyBtn);
-
-        var closeBtn = document.createElement('button');
-        closeBtn.className = 'msg-action-btn';
-        closeBtn.setAttribute('data-tooltip', _L.imageClose || 'Close');
-        closeBtn.textContent = '\uE711';
-        closeBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            closeImageModal();
-        });
-        header.appendChild(closeBtn);
-
-        var img = document.createElement('img');
-        img.src = cachedDataUri || imgEl.src;
-
-        card.appendChild(header);
-        card.appendChild(img);
-
-        document.body.appendChild(backdrop);
-        document.body.appendChild(card);
-        document.addEventListener('keydown', _imageModalEscHandler);
-    }
-
-    function closeImageModal() {
-        var backdrop = document.getElementById('image-popover-backdrop');
-        var card = document.getElementById('image-popover-card');
-        if (backdrop) backdrop.remove();
-        if (card) card.remove();
-        document.removeEventListener('keydown', _imageModalEscHandler);
-    }
-
-    function _imageModalEscHandler(e) {
-        if (e.key === 'Escape') {
-            e.preventDefault();
-            closeImageModal();
-        }
-    }
-
-    // Opens image modal from a chip element's data attributes (base64 + mime)
-    function openImageModalFromBase64(chipEl) {
-        var base64 = chipEl.getAttribute('data-base64');
-        var mime = chipEl.getAttribute('data-mime') || 'image/png';
-        if (!base64) return;
-        var img = chipEl.querySelector('img');
-        if (img) openImageModal(img);
+        }, 1500);
     }
 
     function showImageToast(message) {
@@ -1515,8 +1347,7 @@
     // id is Math.random generated (alphanumeric only) — no sanitization needed
     function renderImageChip(att, num) {
         var displayName = formatChipName(att.fileName || 'Image', num);
-        return '<div class="attachment-chip" onclick="openImageModalFromBase64(this)"' +
-            ' data-base64="' + att.base64 + '" data-mime="' + escapeHtml(att.mimeType || 'image/png') + '">' +
+        return '<div class="attachment-chip">' +
             '<img class="attachment-chip-thumb" src="data:' +
             escapeHtml(att.mimeType || 'image/png') + ';base64,' + att.base64 + '" />' +
             '<div class="attachment-chip-name">' + escapeHtml(displayName) + '</div>' +
@@ -2741,10 +2572,6 @@
 
         showImageToast: function(message) {
             showImageToast(message);
-        },
-
-        closeImageModal: function() {
-            closeImageModal();
         },
 
         setTheme: function(isDark) {

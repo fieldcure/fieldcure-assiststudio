@@ -527,12 +527,6 @@ internal partial class WebViewChatRenderer
             $"document.documentElement.style.setProperty('--font-size-base', '{fontSize}px');").AsTask();
     }
 
-    /// <summary>
-    /// Closes the image popover/modal if open.
-    /// </summary>
-    public Task CloseImageModalAsync()
-        => _webView.ExecuteScriptAsync("window.assistChat.closeImageModal()").AsTask();
-
     #endregion
 
     #region Event Handlers

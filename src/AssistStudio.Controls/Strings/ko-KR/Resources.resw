@@ -171,11 +171,8 @@
   <data name="Chat_ImageCopy" xml:space="preserve">
     <value>클립보드에 복사</value>
   </data>
-  <data name="Chat_ImageExpand" xml:space="preserve">
-    <value>원본 크기로 보기</value>
-  </data>
-  <data name="Chat_ImageClose" xml:space="preserve">
-    <value>닫기</value>
+  <data name="Chat_ImageSaveLabel" xml:space="preserve">
+    <value>저장</value>
   </data>
   <data name="Chat_ImageSaved" xml:space="preserve">
     <value>이미지 저장됨</value>

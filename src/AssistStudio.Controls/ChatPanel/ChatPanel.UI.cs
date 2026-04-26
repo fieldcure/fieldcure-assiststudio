@@ -1077,10 +1077,6 @@ public sealed partial class ChatPanel
         // Attach event handlers and sync current property values
         if (_inputArea is not null)
         {
-            _inputArea.InputFocused += async (_, _) =>
-            {
-                if (_isInitialized) await _renderer.CloseImageModalAsync();
-            };
             _inputArea.MessageSent += OnMessageSent;
             _inputArea.PresetChanged += OnInputPresetChanged;
             _inputArea.ProfileChanged += OnInputProfileChanged;
@@ -1305,8 +1301,7 @@ public sealed partial class ChatPanel
                 ["showLess"] = Res.GetString("Chat_ShowLess"),
                 ["imageSave"] = Res.GetString("Chat_ImageSave"),
                 ["imageCopy"] = Res.GetString("Chat_ImageCopy"),
-                ["imageExpand"] = Res.GetString("Chat_ImageExpand"),
-                ["imageClose"] = Res.GetString("Chat_ImageClose"),
+                ["imageSaveLabel"] = Res.GetString("Chat_ImageSaveLabel"),
                 ["imageSaved"] = Res.GetString("Chat_ImageSaved"),
                 ["imageCopied"] = Res.GetString("Chat_ImageCopied"),
                 ["seconds"] = Res.GetString("Chat_Seconds"),
