@@ -119,6 +119,40 @@ public class MockProvider : IAiProvider
 
         > This is a blockquote. It demonstrates the styling of quoted text.
 
+        ### Diagram (Mermaid)
+
+        ```mermaid
+        flowchart LR
+            A[User] -->|sends message| B(ChatPanel)
+            B --> C{Provider?}
+            C -->|Claude| D[ClaudeProvider]
+            C -->|Gemini| E[GeminiProvider]
+            C -->|Mock| F[MockProvider]
+            D & E & F --> G[Stream tokens]
+            G --> B
+        ```
+
+        ### Inline SVG
+
+        ```svg
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 80" width="200" height="80">
+            <rect x="10" y="10" width="60" height="60" fill="#4a90e2" rx="8"/>
+            <circle cx="120" cy="40" r="28" fill="#e94e77"/>
+            <polygon points="170,10 190,70 150,70" fill="#7ed957"/>
+        </svg>
+        ```
+
+        ```mermaid
+        sequenceDiagram
+            participant U as User
+            participant C as ComposeBar
+            participant P as ChatPanel
+            U->>C: Type & Send
+            C->>P: MessageSent
+            P->>P: Stream response
+            P-->>U: Render markdown
+        ```
+
         ---
 
         That's the end of the demo!

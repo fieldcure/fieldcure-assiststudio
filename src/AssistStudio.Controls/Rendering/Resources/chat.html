@@ -957,6 +957,18 @@
         color: #2ea043;
     }
 
+    /* Inline SVG / Mermaid block layout */
+    .svg-block, pre.mermaid {
+        display: flex;
+        justify-content: center;
+        margin: 12px 0;
+        background: transparent;
+    }
+    .svg-block svg, pre.mermaid svg {
+        max-width: 100%;
+        height: auto;
+    }
+
     /* Edit mode: target message dimming (host's compose bar handles the actual editing) */
     .message[data-edit-target="true"] {
         opacity: 0.5;
@@ -1750,10 +1762,40 @@
 
     function renderMarkdown(fullText) {
         if (typeof marked !== 'undefined' && typeof hljs !== 'undefined') {
-            return fixCjkEmphasis(marked.parse(fullText));
+            var html = fixCjkEmphasis(marked.parse(fullText));
+            // Schedule mermaid rendering for any newly inserted .mermaid blocks
+            if (html.indexOf('class="mermaid"') !== -1) {
+                setTimeout(runMermaid, 0);
+            }
+            return html;
         }
         // Fallback: plain text
         return '<span class="content">' + escapeHtml(fullText) + '</span>';
+    }
+
+    function runMermaid() {
+        if (typeof mermaid === 'undefined') return;
+        try {
+            // Preserve original source so theme switches can re-render
+            var pending = document.querySelectorAll('.mermaid:not([data-processed="true"])');
+            for (var i = 0; i < pending.length; i++) {
+                if (!pending[i].hasAttribute('data-mermaid-source')) {
+                    pending[i].setAttribute('data-mermaid-source', pending[i].textContent);
+                }
+            }
+            mermaid.run({ querySelector: '.mermaid:not([data-processed="true"])' })
+                .catch(function() { /* invalid diagram syntax — leave as code text */ });
+        } catch (e) { /* mermaid init failed */ }
+    }
+
+    function rerenderMermaidWithCurrentTheme() {
+        if (typeof mermaid === 'undefined') return;
+        var els = document.querySelectorAll('[data-mermaid-source]');
+        for (var i = 0; i < els.length; i++) {
+            els[i].removeAttribute('data-processed');
+            els[i].textContent = els[i].getAttribute('data-mermaid-source');
+        }
+        runMermaid();
     }
 
     function createActionBtn(icon, title, onClick) {
@@ -2568,6 +2610,16 @@
 
         setTheme: function(isDark) {
             document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+            if (typeof mermaid !== 'undefined') {
+                mermaid.initialize({
+                    startOnLoad: false,
+                    theme: isDark ? 'dark' : 'default',
+                    securityLevel: 'loose',
+                    fontFamily: 'inherit'
+                });
+                // Re-render existing diagrams from the preserved source
+                rerenderMermaidWithCurrentTheme();
+            }
         },
 
         setDebugMode: function(enabled) {

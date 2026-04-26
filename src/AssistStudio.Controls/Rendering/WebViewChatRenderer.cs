@@ -751,6 +751,23 @@ internal partial class WebViewChatRenderer
         await _webView.ExecuteScriptAsync(katexJs).AsTask();
         await InjectKatexCssAsync();
 
+        // Inject Mermaid + initialize with current theme
+        var mermaidJs = LoadEmbeddedResource("mermaid.min.js");
+        await _webView.ExecuteScriptAsync(mermaidJs).AsTask();
+        const string mermaidInit = """
+            (function() {
+                if (typeof mermaid === 'undefined') return;
+                var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                mermaid.initialize({
+                    startOnLoad: false,
+                    theme: isDark ? 'dark' : 'default',
+                    securityLevel: 'loose',
+                    fontFamily: 'inherit'
+                });
+            })();
+            """;
+        await _webView.ExecuteScriptAsync(mermaidInit).AsTask();
+
         // Configure marked with highlight.js + KaTeX math extensions
         var configScript = """
             (function() {
@@ -839,6 +856,25 @@ internal partial class WebViewChatRenderer
                 renderer.code = function(token) {
                     var code = token.text || '';
                     var lang = (token.lang || '').trim();
+
+                    // Mermaid: emit a <pre class="mermaid"> for window.assistChat to process
+                    if (lang === 'mermaid') {
+                        var entityEscaped = code
+                            .replace(/&/g, '&amp;')
+                            .replace(/</g, '&lt;')
+                            .replace(/>/g, '&gt;');
+                        return '<pre class="mermaid">' + entityEscaped + '</pre>';
+                    }
+
+                    // SVG: render inline. Strip <script> tags to prevent XSS from
+                    // model- or user-authored markup. Other vectors (event handler
+                    // attributes, javascript: URLs) are not currently sanitized;
+                    // accept a small risk in exchange for inline diagram rendering.
+                    if (lang === 'svg') {
+                        var sanitized = code.replace(/<script[\s\S]*?<\/script>/gi, '');
+                        return '<div class="svg-block">' + sanitized + '</div>';
+                    }
+
                     var highlighted;
                     if (lang && hljs.getLanguage(lang)) {
                         try { highlighted = hljs.highlight(code, { language: lang }).value; }

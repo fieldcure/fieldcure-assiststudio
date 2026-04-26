@@ -52,6 +52,7 @@
     <EmbeddedResource Include="Rendering\Resources\vendor\marked.min.js" />
     <EmbeddedResource Include="Rendering\Resources\vendor\highlight.min.js" />
     <EmbeddedResource Include="Rendering\Resources\vendor\katex.min.js" />
+    <EmbeddedResource Include="Rendering\Resources\vendor\mermaid.min.js" />
     <EmbeddedResource Include="Rendering\Resources\vendor\katex.min.css" />
     <EmbeddedResource Include="Rendering\Resources\vendor\katex-fonts\*.woff2" />
   </ItemGroup>
