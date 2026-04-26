@@ -1205,9 +1205,9 @@
     // ===== Image Block (diagram-block style header) =====
 
     /// Wraps an <img> in a .diagram-block with an "image | Copy | Save" header.
-    /// Idempotent — already-wrapped images are skipped.
+    /// Idempotent — already-wrapped images are skipped. Returns the outer .diagram-block.
     function wrapImageWithToolbar(img) {
-        if (img.closest('.diagram-block')) return;
+        if (img.closest('.diagram-block')) return img.closest('.diagram-block');
 
         var L = window._L || {};
         var block = document.createElement('div');
@@ -1243,6 +1243,8 @@
             e.stopPropagation();
             downloadImage(img);
         });
+
+        return block;
     }
 
     function imgToDataUri(imgEl) {
@@ -2278,8 +2280,7 @@
                 img.className = 'tool-result-image';
                 img.src = mediaUri;
                 img.alt = 'Tool result image';
-                wrapImageWithToolbar(img);
-                element = img.parentElement;
+                element = wrapImageWithToolbar(img);
             } else if (kind === 'audio') {
                 var audio = document.createElement('audio');
                 audio.className = 'tool-result-audio';
