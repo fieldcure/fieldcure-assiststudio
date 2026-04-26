@@ -3,7 +3,9 @@
 A minimal sample app that streams directly from the Anthropic C# SDK into a `ChatPanel`.
 Demonstrates real-world usage of the `FieldCure.AssistStudio.Controls.WinUI.Anthropic` package.
 
-![Screenshot](docs/screenshot_vision.png)
+<p align="center">
+  <img src="docs/screenshot_Euler.png" alt="Screenshot — Euler's identity derivation" width="600">
+</p>
 
 ## Prerequisites
 
