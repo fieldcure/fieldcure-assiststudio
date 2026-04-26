@@ -126,7 +126,17 @@ The entire integration lives in a single method: `OnUserMessageSubmitted` in `Ma
 
 ## Examples
 
-| Code Analysis with Mermaid | Image Attachment & Vision |
-|:---:|:---:|
-| ![Code Analysis](docs/screenshot_code_analysis.png) | ![Vision](docs/screenshot_vision.png) |
-| Paste code → class diagram + suggestions | Attach an image → detailed analysis |
+<table>
+  <tr>
+    <th align="center">Code Analysis with Mermaid</th>
+    <th align="center">Image Attachment &amp; Vision</th>
+  </tr>
+  <tr valign="top">
+    <td align="center"><img src="docs/screenshot_code_analysis.png" alt="Code Analysis"></td>
+    <td align="center"><img src="docs/screenshot_vision.png" alt="Vision"></td>
+  </tr>
+  <tr valign="top">
+    <td align="center">Paste code → class diagram + suggestions</td>
+    <td align="center">Attach an image → detailed analysis</td>
+  </tr>
+</table>
