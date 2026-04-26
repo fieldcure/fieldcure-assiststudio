@@ -342,9 +342,13 @@ public partial class GeminiProvider : IAiProvider, IDisposable
             // Tool result messages use functionResponse
             if (msg.Role == ChatRole.Tool)
             {
+                // Gemini's function_response.response field requires an object.
+                // If the tool returns a JSON array or scalar, wrap it under "result".
                 JsonNode? responseNode;
                 try { responseNode = JsonNode.Parse(msg.Content); }
                 catch { responseNode = new JsonObject { ["result"] = msg.Content }; }
+                if (responseNode is not JsonObject)
+                    responseNode = new JsonObject { ["result"] = responseNode };
 
                 // Strip index suffix (e.g. "scan_directory_0" → "scan_directory")
                 var toolCallId = msg.ToolCallId ?? "unknown";
