@@ -46,6 +46,17 @@
                 <Button.Flyout>
                     <MenuFlyout Placement="BottomEdgeAlignedLeft">
                         <MenuFlyoutItem
+                            x:Name="NewChatMenuItem"
+                            Text="New Chat"
+                            Click="OnNewChatClick"
+                            AutomationProperties.AutomationId="NewChatMenuItem"
+                            AutomationProperties.Name="Start a new chat">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon Glyph="&#xE8F4;" />
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutSeparator />
+                        <MenuFlyoutItem
                             x:Name="ExportMenuItem"
                             Text="Export"
                             IsEnabled="False"

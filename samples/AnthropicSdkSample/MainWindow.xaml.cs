@@ -360,6 +360,15 @@ public sealed partial class MainWindow : Window
     /// Exports the active conversation as Markdown and copies it to the clipboard.
     /// Shows a brief confirmation via TeachingTip.
     /// </summary>
+    /// <summary>
+    /// Handles the New Chat menu click by clearing the conversation and resetting the panel.
+    /// </summary>
+    private void OnNewChatClick(object sender, RoutedEventArgs e)
+    {
+        ChatPanel.ClearConversation();
+        ExportMenuItem.IsEnabled = false;
+    }
+
     private void OnExportClick(object sender, RoutedEventArgs e)
     {
         var messages = ChatPanel.GetMessages();
