@@ -957,16 +957,46 @@
         color: #2ea043;
     }
 
-    /* Inline SVG / Mermaid block layout */
-    .svg-block, pre.mermaid {
+    /* Diagram block: reuse .code-block visual structure for header consistency */
+    .diagram-block {
+        margin: 10px 0;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid var(--code-border);
+    }
+    .diagram-block .svg-block,
+    .diagram-block pre.mermaid {
         display: flex;
         justify-content: center;
-        margin: 12px 0;
-        background: transparent;
+        margin: 0;
+        padding: 12px;
+        background: var(--code-bg);
     }
-    .svg-block svg, pre.mermaid svg {
+    .diagram-block .svg-block svg,
+    .diagram-block pre.mermaid svg {
         max-width: 100%;
         height: auto;
+    }
+    .diagram-actions {
+        display: flex;
+        gap: 4px;
+    }
+    .diagram-btn {
+        background: var(--copy-btn-bg);
+        border: none;
+        color: var(--text-primary);
+        padding: 3px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        font-family: 'Segoe UI Variable', 'Segoe UI', sans-serif;
+        transition: background 0.15s;
+    }
+    .diagram-btn:hover {
+        background: var(--copy-btn-hover);
+    }
+    .diagram-btn.copied {
+        color: #2ea043;
     }
 
     /* Edit mode: target message dimming (host's compose bar handles the actual editing) */
@@ -1108,7 +1138,11 @@
         editBranchHint: 'Editing this message will create a new conversation branch. Use the arrow navigation buttons to switch between branches.',
         editCancel: 'Cancel',
         editSave: 'Save',
-        summaryHeader: 'Conversation summary'
+        summaryHeader: 'Conversation summary',
+        diagramSaveSvg: 'Save as SVG',
+        diagramSavePng: 'Save as PNG',
+        diagramCopyLabel: 'Copy',
+        diagramCopyTooltip: 'Copy SVG source'
     };
 
     var _debugMode = false;
@@ -1763,9 +1797,13 @@
     function renderMarkdown(fullText) {
         if (typeof marked !== 'undefined' && typeof hljs !== 'undefined') {
             var html = fixCjkEmphasis(marked.parse(fullText));
-            // Schedule mermaid rendering for any newly inserted .mermaid blocks
-            if (html.indexOf('class="mermaid"') !== -1) {
-                setTimeout(runMermaid, 0);
+            // Diagram blocks (mermaid + svg) share the same wrapper class.
+            // Schedule mermaid rendering and toolbar wiring after innerHTML is set.
+            if (html.indexOf('class="diagram-block"') !== -1) {
+                setTimeout(function() {
+                    runMermaid();           // also calls attachDiagramToolbars on .then
+                    attachDiagramToolbars(); // covers svg-only blocks (no mermaid)
+                }, 0);
             }
             return html;
         }
@@ -1784,7 +1822,8 @@
                 }
             }
             mermaid.run({ querySelector: '.mermaid:not([data-processed="true"])' })
-                .catch(function() { /* invalid diagram syntax — leave as code text */ });
+                .then(attachDiagramToolbars)
+                .catch(function() { attachDiagramToolbars(); });
         } catch (e) { /* mermaid init failed */ }
     }
 
@@ -1794,8 +1833,107 @@
         for (var i = 0; i < els.length; i++) {
             els[i].removeAttribute('data-processed');
             els[i].textContent = els[i].getAttribute('data-mermaid-source');
+            // Toolbar children are removed by mermaid's innerHTML rewrite — no cleanup needed
         }
         runMermaid();
+    }
+
+    /// Wires SVG/PNG/Copy buttons inside each .diagram-block once.
+    /// Called after renderMarkdown produces .diagram-block and after mermaid.run completes.
+    function attachDiagramToolbars() {
+        var blocks = document.querySelectorAll('.diagram-block:not([data-bound="true"])');
+        for (var i = 0; i < blocks.length; i++) {
+            wireDiagramBlock(blocks[i]);
+        }
+    }
+
+    function wireDiagramBlock(block) {
+        block.setAttribute('data-bound', 'true');
+        var inner = block.querySelector('.svg-block, pre.mermaid');
+        if (!inner) return;
+
+        var btns = block.querySelectorAll('.diagram-btn');
+        for (var i = 0; i < btns.length; i++) {
+            (function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    var act = btn.getAttribute('data-act');
+                    if (act === 'svg') {
+                        var svg = serializeContainerSvg(inner);
+                        if (svg) window.chrome.webview.postMessage('save-svg:' + svg);
+                    } else if (act === 'png') {
+                        rasterizeContainerSvgToPng(inner, function(base64) {
+                            if (base64) window.chrome.webview.postMessage('saveImage:data:image/png;base64,' + base64);
+                        });
+                    } else if (act === 'copy') {
+                        var svg2 = serializeContainerSvg(inner);
+                        if (!svg2) return;
+                        window.chrome.webview.postMessage('copy-svg:' + svg2);
+                        var orig = btn.textContent;
+                        btn.textContent = window._L.copied || 'Copied!';
+                        btn.classList.add('copied');
+                        setTimeout(function() {
+                            btn.textContent = orig;
+                            btn.classList.remove('copied');
+                        }, 1500);
+                    }
+                });
+            })(btns[i]);
+        }
+    }
+
+    /// Returns the SVG string from a diagram container, ensuring xmlns is present.
+    function serializeContainerSvg(container) {
+        var svgEl = container.querySelector('svg');
+        if (!svgEl) return null;
+        var clone = svgEl.cloneNode(true);
+        if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        if (!clone.getAttribute('xmlns:xlink')) clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+        return new XMLSerializer().serializeToString(clone);
+    }
+
+    /// Rasterizes the container's SVG to a 2x PNG and invokes callback(base64) when ready.
+    function rasterizeContainerSvgToPng(container, callback) {
+        var svgEl = container.querySelector('svg');
+        if (!svgEl) { callback(null); return; }
+
+        var rect = svgEl.getBoundingClientRect();
+        var width = Math.max(1, rect.width);
+        var height = Math.max(1, rect.height);
+        var scale = 2;
+
+        var svgString = serializeContainerSvg(container);
+        var blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+
+        var canvas = document.createElement('canvas');
+        canvas.width = Math.round(width * scale);
+        canvas.height = Math.round(height * scale);
+        var ctx = canvas.getContext('2d');
+        ctx.scale(scale, scale);
+
+        var img = new Image();
+        img.onload = function() {
+            // Solid background — transparent PNGs render badly when pasted into many apps
+            var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            ctx.fillStyle = isDark ? '#1e1e1e' : '#ffffff';
+            ctx.fillRect(0, 0, width, height);
+            ctx.drawImage(img, 0, 0, width, height);
+            URL.revokeObjectURL(url);
+            try {
+                var dataUrl = canvas.toDataURL('image/png');
+                callback(dataUrl.split(',')[1]);
+            } catch (e) {
+                console.error('PNG export failed:', e);
+                callback(null);
+            }
+        };
+        img.onerror = function() {
+            URL.revokeObjectURL(url);
+            console.error('Failed to rasterize SVG');
+            callback(null);
+        };
+        img.src = url;
     }
 
     function createActionBtn(icon, title, onClick) {

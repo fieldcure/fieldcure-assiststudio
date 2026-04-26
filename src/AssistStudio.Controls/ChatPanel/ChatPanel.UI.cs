@@ -1312,7 +1312,11 @@ public sealed partial class ChatPanel
                 ["seconds"] = Res.GetString("Chat_Seconds"),
                 ["minutes"] = Res.GetString("Chat_Minutes"),
                 ["hours"] = Res.GetString("Chat_Hours"),
-                ["summaryHeader"] = Res.GetString("Chat_SummaryHeader")
+                ["summaryHeader"] = Res.GetString("Chat_SummaryHeader"),
+                ["diagramSaveSvg"] = Res.GetString("Chat_DiagramSaveSvg"),
+                ["diagramSavePng"] = Res.GetString("Chat_DiagramSavePng"),
+                ["diagramCopyLabel"] = Res.GetString("Chat_DiagramCopyLabel"),
+                ["diagramCopyTooltip"] = Res.GetString("Chat_DiagramCopyTooltip")
             };
 
             // Filter out empty strings (key not found returns empty)

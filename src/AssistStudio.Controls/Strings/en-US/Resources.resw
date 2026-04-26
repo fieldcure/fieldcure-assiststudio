@@ -183,6 +183,18 @@
   <data name="Chat_ImageCopied" xml:space="preserve">
     <value>Copied to clipboard</value>
   </data>
+  <data name="Chat_DiagramSaveSvg" xml:space="preserve">
+    <value>Save as SVG</value>
+  </data>
+  <data name="Chat_DiagramSavePng" xml:space="preserve">
+    <value>Save as PNG</value>
+  </data>
+  <data name="Chat_DiagramCopyLabel" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="Chat_DiagramCopyTooltip" xml:space="preserve">
+    <value>Copy SVG source</value>
+  </data>
   <data name="Chat_Seconds" xml:space="preserve">
     <value>s</value>
   </data>

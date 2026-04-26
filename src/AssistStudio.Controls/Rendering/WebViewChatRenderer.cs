@@ -106,6 +106,17 @@ internal partial class WebViewChatRenderer
     /// </summary>
     public event EventHandler<string>? ImageCopyRequested;
 
+    /// <summary>
+    /// Occurs when the user requests to save a Mermaid/SVG diagram as an .svg file.
+    /// Payload is the raw SVG markup (already serialized by the WebView).
+    /// </summary>
+    public event EventHandler<string>? DiagramSvgSaveRequested;
+
+    /// <summary>
+    /// Occurs when the user requests to copy raw SVG markup to the clipboard.
+    /// </summary>
+    public event EventHandler<string>? DiagramSvgCopyRequested;
+
     #endregion
 
     #region Public Methods
@@ -661,6 +672,10 @@ internal partial class WebViewChatRenderer
                 ImageCopyRequested?.Invoke(this, message["copyImage:".Length..]);
             else if (message?.StartsWith("saveMedia:") == true)
                 ImageSaveRequested?.Invoke(this, message["saveMedia:".Length..]);
+            else if (message?.StartsWith("save-svg:") == true)
+                DiagramSvgSaveRequested?.Invoke(this, message["save-svg:".Length..]);
+            else if (message?.StartsWith("copy-svg:") == true)
+                DiagramSvgCopyRequested?.Invoke(this, message["copy-svg:".Length..]);
         }
         catch (Exception ex)
         {
@@ -857,13 +872,29 @@ internal partial class WebViewChatRenderer
                     var code = token.text || '';
                     var lang = (token.lang || '').trim();
 
-                    // Mermaid: emit a <pre class="mermaid"> for window.assistChat to process
+                    // Diagram blocks (Mermaid / SVG): wrap with the same .code-header
+                    // structure as code blocks so the SVG/PNG/Copy actions feel native.
+                    function diagramHeader(label) {
+                        var L = window._L || {};
+                        return '<div class="code-header">' +
+                                '<span class="code-lang">' + label + '</span>' +
+                                '<span class="diagram-actions">' +
+                                    '<button class="diagram-btn" data-act="svg" title="' + (L.diagramSaveSvg || 'Save as SVG') + '">SVG</button>' +
+                                    '<button class="diagram-btn" data-act="png" title="' + (L.diagramSavePng || 'Save as PNG') + '">PNG</button>' +
+                                    '<button class="diagram-btn" data-act="copy" title="' + (L.diagramCopyTooltip || 'Copy SVG source') + '">' + (L.diagramCopyLabel || 'Copy') + '</button>' +
+                                '</span>' +
+                               '</div>';
+                    }
+
                     if (lang === 'mermaid') {
                         var entityEscaped = code
                             .replace(/&/g, '&amp;')
                             .replace(/</g, '&lt;')
                             .replace(/>/g, '&gt;');
-                        return '<pre class="mermaid">' + entityEscaped + '</pre>';
+                        return '<div class="diagram-block" data-kind="mermaid">' +
+                                diagramHeader('mermaid') +
+                                '<pre class="mermaid">' + entityEscaped + '</pre>' +
+                               '</div>';
                     }
 
                     // SVG: render inline. Strip <script> tags to prevent XSS from
@@ -872,7 +903,10 @@ internal partial class WebViewChatRenderer
                     // accept a small risk in exchange for inline diagram rendering.
                     if (lang === 'svg') {
                         var sanitized = code.replace(/<script[\s\S]*?<\/script>/gi, '');
-                        return '<div class="svg-block">' + sanitized + '</div>';
+                        return '<div class="diagram-block" data-kind="svg">' +
+                                diagramHeader('svg') +
+                                '<div class="svg-block">' + sanitized + '</div>' +
+                               '</div>';
                     }
 
                     var highlighted;

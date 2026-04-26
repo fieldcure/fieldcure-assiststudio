@@ -248,6 +248,8 @@ public sealed partial class ChatPanel : Control, IDisposable
         _renderer.BranchSwitchRequested += OnBranchSwitchRequested;
         _renderer.ImageSaveRequested += OnImageSaveRequested;
         _renderer.ImageCopyRequested += OnImageCopyRequested;
+        _renderer.DiagramSvgSaveRequested += OnDiagramSvgSaveRequested;
+        _renderer.DiagramSvgCopyRequested += OnDiagramSvgCopyRequested;
         _renderer.KeyboardShortcutPressed += (_, shortcut) =>
         {
             if (shortcut == "Ctrl+F")

@@ -716,6 +716,66 @@ public sealed partial class ChatPanel
     }
 
     /// <summary>
+    /// Handles the SVG diagram save request by writing the markup to a user-chosen .svg file.
+    /// </summary>
+    private async void OnDiagramSvgSaveRequested(object? sender, string svgMarkup)
+    {
+        try
+        {
+            var picker = new FileSavePicker();
+            picker.SuggestedStartLocation = PickerLocationId.Downloads;
+            picker.SuggestedFileName = $"diagram_{DateTimeOffset.Now.ToUnixTimeMilliseconds()}";
+            picker.FileTypeChoices.Add("SVG Image", [".svg"]);
+
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(GetWindow());
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+
+            var file = await picker.PickSaveFileAsync();
+            if (file is null) return;
+
+            Windows.Storage.CachedFileManager.DeferUpdates(file);
+            await Windows.Storage.FileIO.WriteTextAsync(file, svgMarkup);
+            var status = await Windows.Storage.CachedFileManager.CompleteUpdatesAsync(file);
+
+            if (status != Windows.Storage.Provider.FileUpdateStatus.Complete)
+            {
+                DiagnosticLogger.LogWarning($"[Diagram] SVG save not completed: {status}");
+                return;
+            }
+
+            NotificationRequested?.Invoke(this, (
+                Res.GetString("Chat_ImageSaved") ?? "Saved",
+                file.Name));
+        }
+        catch (Exception ex)
+        {
+            DiagnosticLogger.LogWarning($"[Diagram] SVG save failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Handles the SVG diagram copy request by placing the raw SVG markup on the clipboard as text.
+    /// </summary>
+    private void OnDiagramSvgCopyRequested(object? sender, string svgMarkup)
+    {
+        try
+        {
+            var dp = new DataPackage();
+            dp.SetText(svgMarkup);
+            Clipboard.SetContent(dp);
+            Clipboard.Flush();
+
+            NotificationRequested?.Invoke(this, (
+                Res.GetString("Chat_ImageCopied") ?? "Copied to clipboard",
+                ""));
+        }
+        catch (Exception ex)
+        {
+            DiagnosticLogger.LogWarning($"[Diagram] SVG copy failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// Handles the message copy request from the renderer by copying message content to the clipboard.
     /// </summary>
     private void OnMessageCopyRequested(object? sender, string messageId)
