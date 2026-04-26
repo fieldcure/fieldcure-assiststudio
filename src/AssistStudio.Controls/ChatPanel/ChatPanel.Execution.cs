@@ -130,6 +130,13 @@ public sealed partial class ChatPanel
         if (!_isInitialized) return;
         if (string.IsNullOrWhiteSpace(e.Text) && e.Attachments.Count == 0) return;
 
+        // Edit-mode confirm: create sibling branch instead of appending a new turn.
+        if (IsEditingMessage)
+        {
+            await ConfirmEditAsync(e.Text, e.Attachments);
+            return;
+        }
+
         SwitchToChatLayout();
 
         var userMessage = await AddUserMessageCoreAsync(e.Text, e.Attachments);
@@ -165,6 +172,7 @@ public sealed partial class ChatPanel
 
         if (_inputArea is not null)
             _inputArea.IsInputEnabled = false;
+        await _renderer.SetStreamingAsync(true);
         _streamingCts?.Cancel();
         _streamingCts = new CancellationTokenSource();
         var ct = _streamingCts.Token;
@@ -208,6 +216,7 @@ public sealed partial class ChatPanel
             elapsedSw.Stop();
             assistantMessage.ElapsedSeconds = elapsedSw.Elapsed.TotalSeconds;
             assistantMessage.IsStreaming = false;
+            await _renderer.SetStreamingAsync(false);
             if (_inputArea is not null)
             {
                 _inputArea.IsInputEnabled = true;
@@ -290,6 +299,7 @@ public sealed partial class ChatPanel
             // _childrenMap, so _messages.Remove alone is not enough.)
             UnregisterFromTree(continueMessage);
             assistantMessage.IsStreaming = false;
+            await _renderer.SetStreamingAsync(false);
             if (_inputArea is not null)
             {
                 _inputArea.IsInputEnabled = true;
@@ -1132,6 +1142,7 @@ public sealed partial class ChatPanel
 
         if (_inputArea is not null)
             _inputArea.IsInputEnabled = false;
+        await _renderer.SetStreamingAsync(true);
         _streamingCts?.Cancel();
         _streamingCts = new CancellationTokenSource();
         var ct = _streamingCts.Token;
@@ -1169,6 +1180,7 @@ public sealed partial class ChatPanel
             elapsedSw.Stop();
             assistantMessage.ElapsedSeconds = elapsedSw.Elapsed.TotalSeconds;
             assistantMessage.IsStreaming = false;
+            await _renderer.SetStreamingAsync(false);
             if (_inputArea is not null)
             {
                 _inputArea.IsInputEnabled = true;

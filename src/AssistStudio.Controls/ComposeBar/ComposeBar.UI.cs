@@ -89,6 +89,13 @@ public sealed partial class ComposeBar
         DependencyProperty.Register(nameof(PasteAsAttachmentThreshold), typeof(int), typeof(ComposeBar),
             new PropertyMetadata(500));
 
+    /// <summary>
+    /// Identifies the <see cref="IsEditing"/> dependency property. Toggles the edit banner.
+    /// </summary>
+    public static readonly DependencyProperty IsEditingProperty =
+        DependencyProperty.Register(nameof(IsEditing), typeof(bool), typeof(ComposeBar),
+            new PropertyMetadata(false, OnIsEditingChanged));
+
     #endregion
 
     #region Public Properties
@@ -221,6 +228,30 @@ public sealed partial class ComposeBar
         set => SetValue(PasteAsAttachmentThresholdProperty, value);
     }
 
+    /// <summary>
+    /// Gets or sets whether the compose bar is currently in edit mode (editing an existing message).
+    /// When true, the edit banner is visible above the input area.
+    /// </summary>
+    public bool IsEditing
+    {
+        get => (bool)GetValue(IsEditingProperty);
+        set => SetValue(IsEditingProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the current text in the message text box.
+    /// Passthrough used by external edit-mode controllers.
+    /// </summary>
+    public string Text
+    {
+        get => _messageTextBox?.Text ?? string.Empty;
+        set
+        {
+            if (_messageTextBox is not null)
+                _messageTextBox.Text = value ?? string.Empty;
+        }
+    }
+
     #endregion
 
     #region Events
@@ -249,6 +280,13 @@ public sealed partial class ComposeBar
     /// Occurs when the message text box receives focus.
     /// </summary>
     public event EventHandler? InputFocused;
+
+    /// <summary>
+    /// Occurs when the user clicks the cancel button on the edit banner or presses Escape
+    /// while in edit mode. The host is responsible for setting <see cref="IsEditing"/> = false
+    /// and restoring conversation state.
+    /// </summary>
+    public event EventHandler? EditCanceled;
 
     #endregion
 
@@ -290,6 +328,14 @@ public sealed partial class ComposeBar
         if (_toolButton is not null)
             _toolButton.Click += (_, _) => RefreshToolsFlyout();
 
+        if (_editBannerCancelButton is not null)
+            _editBannerCancelButton.Click -= EditBannerCancelButton_Click;
+        _editBanner = GetTemplateChild("PART_EditBanner") as Grid;
+        _editBannerLabel = GetTemplateChild("PART_EditBannerLabel") as TextBlock;
+        _editBannerCancelButton = GetTemplateChild("PART_EditBannerCancelButton") as Button;
+        if (_editBannerCancelButton is not null)
+            _editBannerCancelButton.Click += EditBannerCancelButton_Click;
+
         // Apply ThemeShadow in code (XAML compiler crashes with ThemeShadow in ControlTemplate.Resources)
         if (_containerBorder is not null)
         {
@@ -322,6 +368,9 @@ public sealed partial class ComposeBar
             SetTooltip(_stopButton, Res.GetString("ComposeBar_StopTooltip"));
             SetTooltip(_sendButton, Res.GetString("ComposeBar_SendTooltip"));
             SetTooltip(_toolButton, Res.GetString("ComposeBar_ToolsTooltip"));
+            SetTooltip(_editBannerCancelButton, Res.GetString("ComposeBar_EditBanner_CancelTooltip"));
+            if (_editBannerLabel is not null)
+                _editBannerLabel.Text = Res.GetString("ComposeBar_EditBanner_Label") ?? string.Empty;
         }
         catch { /* Resource not found — tooltips will be empty */ }
 
@@ -333,6 +382,12 @@ public sealed partial class ComposeBar
             AutomationHelper.SetAutomation(_sendButton, "ComposeBarSendButton", nameKey: "ComposeBar_SendName");
         if (_stopButton is not null)
             AutomationHelper.SetAutomation(_stopButton, "ComposeBarStopButton", nameKey: "ComposeBar_StopName");
+        if (_editBannerCancelButton is not null)
+            AutomationHelper.SetAutomation(_editBannerCancelButton, "ComposeBarEditCancelButton", nameKey: "ComposeBar_EditBanner_CancelName");
+
+        // Apply current IsEditing state (XAML default Visibility="Collapsed" already correct for false)
+        if (_editBanner is not null)
+            _editBanner.Visibility = IsEditing ? Visibility.Visible : Visibility.Collapsed;
 
         // Apply deferred property values
         if (_pendingMaxLength.HasValue && _messageTextBox is not null)
@@ -520,6 +575,19 @@ public sealed partial class ComposeBar
         }
     }
 
+    /// <summary>
+    /// Called when <see cref="IsEditing"/> changes to show or hide the edit banner.
+    /// </summary>
+    private static void OnIsEditingChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ComposeBar self && self._editBanner is not null)
+        {
+            self._editBanner.Visibility = (bool)e.NewValue
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+    }
+
     #endregion
 
     #region Loaded Handler
@@ -553,11 +621,26 @@ public sealed partial class ComposeBar
     /// </summary>
     private void MessageTextBox_PreviewKeyDown(object sender, KeyRoutedEventArgs e)
     {
+        if (e.Key == VirtualKey.Escape && IsEditing)
+        {
+            e.Handled = true;
+            EditCanceled?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
         if (e.Key == VirtualKey.Enter && !IsShiftPressed())
         {
             e.Handled = true;
             TrySend();
         }
+    }
+
+    /// <summary>
+    /// Handles the cancel-edit button click on the edit banner.
+    /// </summary>
+    private void EditBannerCancelButton_Click(object sender, RoutedEventArgs e)
+    {
+        EditCanceled?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>
@@ -620,6 +703,31 @@ public sealed partial class ComposeBar
     public void FocusInput()
     {
         _messageTextBox?.Focus(FocusState.Programmatic);
+    }
+
+    /// <summary>
+    /// Adds an attachment to the preview bar. Passthrough to <see cref="AttachmentPreviewBar.AddAttachment"/>.
+    /// </summary>
+    public void AddAttachment(ChatAttachment attachment)
+    {
+        _previewBar?.AddAttachment(attachment);
+    }
+
+    /// <summary>
+    /// Clears all attachments from the preview bar.
+    /// </summary>
+    public void ClearAttachments()
+    {
+        _previewBar?.Clear();
+    }
+
+    /// <summary>
+    /// Returns a snapshot of the currently attached items (excluding unsupported entries).
+    /// </summary>
+    public IReadOnlyList<ChatAttachment> GetAttachments()
+    {
+        if (_previewBar is null) return [];
+        return [.. _previewBar.Attachments.Where(a => !a.IsUnsupported)];
     }
 
     /// <summary>

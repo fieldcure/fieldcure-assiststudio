@@ -78,9 +78,11 @@ internal partial class WebViewChatRenderer
     public event EventHandler<string>? RetryRequested;
 
     /// <summary>
-    /// Occurs when the user edits a user message, providing the message ID and new text.
+    /// Occurs when the user requests to edit a user message. Payload is the message ID.
+    /// The host should populate the compose bar with the message content and enter edit mode;
+    /// the actual text/attachment changes are read from the compose bar at confirm time.
     /// </summary>
-    public event EventHandler<(string MessageId, string NewText)>? EditRequested;
+    public event EventHandler<string>? EditRequested;
 
     /// <summary>
     /// Occurs when a keyboard shortcut is pressed inside the WebView2 that should be handled by the app.
@@ -372,6 +374,36 @@ internal partial class WebViewChatRenderer
     }
 
     /// <summary>
+    /// Marks the message with <c>data-edit-target</c> (dimmed via CSS) and hides
+    /// all subsequent message bubbles. Used when entering edit mode.
+    /// </summary>
+    public Task BeginEditAsync(string messageId)
+    {
+        var script = $"window.assistChat.beginEdit({Js(messageId)})";
+        return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
+    /// <summary>
+    /// Removes the <c>data-edit-target</c> marker and restores all hidden bubbles.
+    /// Must be called on both cancel AND confirm.
+    /// </summary>
+    public Task EndEditAsync()
+    {
+        return _webView.ExecuteScriptAsync("window.assistChat.endEdit()").AsTask();
+    }
+
+    /// <summary>
+    /// Toggles a body-level <c>data-streaming</c> flag. The chat HTML uses this to
+    /// disable Edit/Retry buttons while a response is streaming.
+    /// </summary>
+    public Task SetStreamingAsync(bool isStreaming)
+    {
+        var flag = isStreaming ? "true" : "false";
+        var script = $"document.body.setAttribute('data-streaming', '{flag}')";
+        return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
+    /// <summary>
     /// Finalizes an assistant message with the full markdown content, truncation status, and token count.
     /// </summary>
     public Task FinalizeMessageAsync(string id, string fullMarkdown, bool truncated = false, int tokenCount = 0,
@@ -593,16 +625,10 @@ internal partial class WebViewChatRenderer
                 var messageId = message["retry:".Length..];
                 RetryRequested?.Invoke(this, messageId);
             }
-            else if (message?.StartsWith("edit:") == true)
+            else if (message?.StartsWith("edit-request:") == true)
             {
-                var payload = message["edit:".Length..];
-                var colonIdx = payload.IndexOf(':');
-                if (colonIdx > 0)
-                {
-                    var messageId = payload[..colonIdx];
-                    var newText = payload[(colonIdx + 1)..];
-                    EditRequested?.Invoke(this, (messageId, newText));
-                }
+                var messageId = message["edit-request:".Length..];
+                EditRequested?.Invoke(this, messageId);
             }
             else if (message?.StartsWith("branch:") == true)
             {

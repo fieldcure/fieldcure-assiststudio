@@ -1,4 +1,5 @@
 ﻿using FieldCure.AssistStudio.Controls.Helpers;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.ApplicationModel.Resources;
 
@@ -91,6 +92,21 @@ public sealed partial class ComposeBar : Control
     /// The button that opens the tool toggle flyout.
     /// </summary>
     private Button? _toolButton;
+
+    /// <summary>
+    /// The edit-mode banner shown above the input area.
+    /// </summary>
+    private Grid? _editBanner;
+
+    /// <summary>
+    /// The label inside the edit banner.
+    /// </summary>
+    private TextBlock? _editBannerLabel;
+
+    /// <summary>
+    /// The cancel-edit button on the edit banner.
+    /// </summary>
+    private Button? _editBannerCancelButton;
 
     #endregion
 

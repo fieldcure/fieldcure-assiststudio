@@ -415,27 +415,100 @@ public sealed partial class ChatPanel
     }
 
     /// <summary>
-    /// Handles the edit request from the renderer to update a user message and re-stream a response.
+    /// The user message currently being edited via the compose bar, or null if not in edit mode.
     /// </summary>
-    private async void OnEditRequested(object? sender, (string MessageId, string NewText) e)
+    private ChatMessage? _editingMessage;
+
+    /// <summary>
+    /// Whether the compose bar is currently in edit-mode for an existing user message.
+    /// </summary>
+    internal bool IsEditingMessage => _editingMessage is not null;
+
+    /// <summary>
+    /// Handles the edit request from the renderer (Edit button click in chat HTML).
+    /// Enters edit mode by populating the compose bar with the message content; the
+    /// actual branch creation happens later in <see cref="ConfirmEditAsync"/> when the
+    /// user presses Send.
+    /// </summary>
+    private async void OnEditRequested(object? sender, string messageId)
     {
         if (!_isInitialized) return;
+        if (_inputArea is null) return;
 
-        var original = _messages.FirstOrDefault(m => m.Role == ChatRole.User && m.Id == e.MessageId);
+        var original = _messages.FirstOrDefault(m => m.Role == ChatRole.User && m.Id == messageId);
         if (original is null) return;
 
-        // Create sibling message (same ParentId as original → branching)
-        var edited = new ChatMessage(ChatRole.User, e.NewText)
+        // If already editing a different message, cancel that edit first.
+        if (_editingMessage is not null && _editingMessage.Id != original.Id)
+            await CancelEditAsync();
+
+        _editingMessage = original;
+
+        await _renderer.BeginEditAsync(original.Id);
+
+        // Populate compose bar. ChatMessage.Content holds the original user text —
+        // attachment labels are merged in only at provider call time, never stored.
+        _inputArea.Text = original.Content ?? string.Empty;
+        _inputArea.ClearAttachments();
+        if (original.Attachments is { Count: > 0 })
+        {
+            foreach (var att in original.Attachments)
+                _inputArea.AddAttachment(att);
+        }
+        _inputArea.IsEditing = true;
+        _inputArea.FocusInput();
+    }
+
+    /// <summary>
+    /// Handles the EditCanceled event from the compose bar (cancel button or Escape).
+    /// </summary>
+    private async void OnComposeBarEditCanceled(object? sender, EventArgs e)
+    {
+        await CancelEditAsync();
+    }
+
+    /// <summary>
+    /// Exits edit mode without applying changes. Restores the WebView (un-dims the
+    /// target message and reveals hidden bubbles) and clears the compose bar.
+    /// </summary>
+    private async Task CancelEditAsync()
+    {
+        if (_editingMessage is null || _inputArea is null) return;
+
+        await _renderer.EndEditAsync();
+
+        _inputArea.Text = string.Empty;
+        _inputArea.ClearAttachments();
+        _inputArea.IsEditing = false;
+
+        _editingMessage = null;
+    }
+
+    /// <summary>
+    /// Confirms the edit by creating a sibling branch with the modified text/attachments.
+    /// Mirrors the original OnEditRequested branching logic, then either streams a new
+    /// assistant response (internal provider) or notifies the host (external SDK adapter).
+    /// </summary>
+    private async Task ConfirmEditAsync(string newText, IReadOnlyList<ChatAttachment> newAttachments)
+    {
+        if (_editingMessage is null) return;
+
+        var original = _editingMessage;
+        _editingMessage = null;
+
+        if (_inputArea is not null)
+            _inputArea.IsEditing = false;
+
+        // Create sibling message (same ParentId → branching)
+        var edited = new ChatMessage(ChatRole.User, newText)
         {
             ParentId = original.ParentId,
-            Attachments = original.Attachments,
+            Attachments = [.. newAttachments],
         };
         RegisterInTree(edited);
 
-        // Explicitly point the parent's active child to the new branch.
-        // RegisterInTree does this via _messages lookup, but the parent may be
-        // a tool-internal message deep in a tool loop chain. By searching the tree
-        // directly we ensure the pointer is set regardless of _messages state.
+        // Explicitly point the parent's active child to the new branch (handles
+        // tool-internal parents that RegisterInTree's _messages lookup may miss).
         if (edited.ParentId is not null)
         {
             var parentInTree = _childrenMap.Values
@@ -452,10 +525,9 @@ public sealed partial class ChatPanel
             _messages.RemoveAt(_messages.Count - 1);
         _messages.Add(edited);
 
-        // Update renderer: remove old messages, render new branch with navigator.
-        // Tool loop messages (Assistant+ToolCalls, Tool results) are rendered inline
-        // within a single Assistant bubble — they don't have their own DOM element.
-        // Walk backwards to find the root Assistant bubble that actually exists in DOM.
+        // Restore WebView: clear data-edit-target marker + reveal hidden bubbles,
+        // then splice the DOM and append the new user bubble.
+        await _renderer.EndEditAsync();
         var removeAfterId = FindRenderedMessageBefore(idx);
         if (removeAfterId is not null)
             await _renderer.RemoveMessagesAfterAsync(removeAfterId);
@@ -470,11 +542,10 @@ public sealed partial class ChatPanel
         // the turn via BeginAnthropicTurn) can stream the response themselves.
         UserMessageSubmitted?.Invoke(this, new MessageSentEventArgs(edited.Content, edited.Attachments));
 
-        // When external code drives the conversation, skip the internal provider flow.
+        // External driver → skip internal provider flow
         if (DisableInternalSendFlow) return;
         if (Provider is null) return;
 
-        // Stream new response
         await StreamAssistantResponseAsync(edited);
     }
 

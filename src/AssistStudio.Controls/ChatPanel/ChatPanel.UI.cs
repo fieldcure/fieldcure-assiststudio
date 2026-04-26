@@ -944,6 +944,7 @@ public sealed partial class ChatPanel
             _inputArea.PresetChanged -= OnInputPresetChanged;
             _inputArea.ProfileChanged -= OnInputProfileChanged;
             _inputArea.StopRequested -= OnStopRequested;
+            _inputArea.EditCanceled -= OnComposeBarEditCanceled;
         }
         if (_approvalPanel is not null)
         {
@@ -1084,6 +1085,7 @@ public sealed partial class ChatPanel
             _inputArea.PresetChanged += OnInputPresetChanged;
             _inputArea.ProfileChanged += OnInputProfileChanged;
             _inputArea.StopRequested += OnStopRequested;
+            _inputArea.EditCanceled += OnComposeBarEditCanceled;
             // Push current values (may have been set before template was applied)
             if (AvailablePresets is { } presets)
                 _inputArea.AvailablePresets = presets;

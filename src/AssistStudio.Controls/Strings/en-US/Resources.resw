@@ -216,6 +216,15 @@
   <data name="ComposeBar_ToolsTooltip" xml:space="preserve">
     <value>Tools</value>
   </data>
+  <data name="ComposeBar_EditBanner_Label" xml:space="preserve">
+    <value>Editing message</value>
+  </data>
+  <data name="ComposeBar_EditBanner_CancelTooltip" xml:space="preserve">
+    <value>Cancel edit (Esc)</value>
+  </data>
+  <data name="ComposeBar_EditBanner_CancelName" xml:space="preserve">
+    <value>Cancel edit</value>
+  </data>
   <data name="ComposeBar_SelectAll" xml:space="preserve">
     <value>Select all</value>
   </data>
