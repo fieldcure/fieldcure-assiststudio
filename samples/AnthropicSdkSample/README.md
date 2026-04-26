@@ -3,7 +3,7 @@
 A minimal sample app that streams directly from the Anthropic C# SDK into a `ChatPanel`.
 Demonstrates real-world usage of the `FieldCure.AssistStudio.Controls.WinUI.Anthropic` package.
 
-![Screenshot](docs/screenshot.png)
+![Screenshot](docs/screenshot_vision.png)
 
 ## Prerequisites
 
@@ -123,3 +123,10 @@ User types a message
 ```
 
 The entire integration lives in a single method: `OnUserMessageSubmitted` in `MainWindow.xaml.cs`.
+
+## Examples
+
+| Code Analysis with Mermaid | Image Attachment & Vision |
+|:---:|:---:|
+| ![Code Analysis](docs/screenshot_code_analysis.png) | ![Vision](docs/screenshot_vision.png) |
+| Paste code → class diagram + suggestions | Attach an image → detailed analysis |
