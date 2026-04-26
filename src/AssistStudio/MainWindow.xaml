@@ -41,7 +41,10 @@
                     AddTabButtonClick="OnAddTab"
                     TabCloseRequested="OnCloseTab"
                     TabWidthMode="SizeToContent"
-                    VerticalAlignment="Stretch">
+                    VerticalAlignment="Stretch"
+                    AllowDrop="True"
+                    DragOver="OnTabsDragOver"
+                    Drop="OnTabsDrop">
 
                     <TabView.TabItemTemplate>
                         <DataTemplate x:DataType="vm:ChatTabViewModel">

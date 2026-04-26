@@ -123,6 +123,9 @@
   <data name="Menu_Open.Text" xml:space="preserve">
     <value>불러오기...</value>
   </data>
+  <data name="Tabs_DropToOpenCaption" xml:space="preserve">
+    <value>대화 열기</value>
+  </data>
   <data name="Menu_RecentConversations.Text" xml:space="preserve">
     <value>최근 대화</value>
   </data>

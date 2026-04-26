@@ -860,6 +860,44 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// Accepts file drops on the tab strip area when at least one is an .astx conversation file.
+    /// </summary>
+    private void OnTabsDragOver(object sender, DragEventArgs e)
+    {
+        if (!e.DataView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems))
+            return;
+
+        e.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
+        if (e.DragUIOverride is not null)
+        {
+            e.DragUIOverride.Caption = Res.GetString("Tabs_DropToOpenCaption");
+            e.DragUIOverride.IsCaptionVisible = true;
+            e.DragUIOverride.IsContentVisible = true;
+        }
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// Handles dropped files on the tab strip: opens .astx files as new conversation tabs.
+    /// </summary>
+    private async void OnTabsDrop(object sender, DragEventArgs e)
+    {
+        if (!e.DataView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems))
+            return;
+
+        e.Handled = true;
+        var items = await e.DataView.GetStorageItemsAsync();
+        foreach (var item in items)
+        {
+            if (item is Windows.Storage.StorageFile file &&
+                Path.GetExtension(file.Path).Equals(ConversationManager.FileExtension, StringComparison.OrdinalIgnoreCase))
+            {
+                OpenFileFromActivation(file.Path);
+            }
+        }
+    }
+
     #endregion
 
 }
