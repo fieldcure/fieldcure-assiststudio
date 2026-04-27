@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
-    <Version>0.3.2</Version>
+    <Version>0.3.3</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CA1416</NoWarn>
 
@@ -22,7 +22,7 @@
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;agent;execution;sub-agent;tool-use;llm</PackageTags>
-    <PackageReleaseNotes>v0.3.2: Add Truncated status to AgentLoopStatus and SubAgentStatus — emitted when the terminating tool-free response was cut off by the provider's max_tokens cap (previously misclassified as Completed with a partial summary). AgentLoop now logs the truncation event with partial content length. Context-guard forced-finish rounds remain Completed. Additive change only; exhaustive switch statements may warn on the new value.</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.3.3: Rebuild against Ai.Providers 0.6.0 (Anthropic prompt caching, gpt-5+ reasoning, Gemini thoughtSignature round-trip) and AssistStudio.Core 0.18.0 (.Core namespace segment). No public API changes in this package.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

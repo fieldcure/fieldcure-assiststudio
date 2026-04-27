@@ -1,5 +1,12 @@
 ﻿# Release Notes — FieldCure.Ai.Execution
 
+## v0.3.3 (2026-04-27)
+
+### Changed
+- Rebuilt against **FieldCure.Ai.Providers 0.6.0** (Anthropic prompt caching, gpt-5+ reasoning, Gemini `thoughtSignature` round-trip) and **FieldCure.AssistStudio.Core 0.18.0** (`.Core` namespace segment). Two `using` statements in `AgentLoop` and `SubAgentExecutor` updated to the new `FieldCure.AssistStudio.Core.*` namespaces. No public API changes in this package.
+
+---
+
 ## v0.3.2 (2026-04-24)
 
 ### Added
