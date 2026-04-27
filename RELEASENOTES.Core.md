@@ -1,5 +1,58 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Core
 
+## v0.18.0 (2026-04-27)
+
+### Breaking — namespace rename
+
+Public namespaces now include the `.Core` segment, matching the package
+name `FieldCure.AssistStudio.Core`. External consumers must update
+`using` statements:
+
+| Before | After |
+|---|---|
+| `FieldCure.AssistStudio.Helpers` | `FieldCure.AssistStudio.Core.Helpers` |
+| `FieldCure.AssistStudio.Models`  | `FieldCure.AssistStudio.Core.Models`  |
+| `FieldCure.AssistStudio.Tools`   | `FieldCure.AssistStudio.Core.Tools`   |
+
+Quick migration (PowerShell, run from your repo root):
+
+```powershell
+Get-ChildItem -Recurse -Include *.cs |
+  ForEach-Object {
+    (Get-Content $_.FullName) `
+      -replace 'FieldCure\.AssistStudio\.Helpers','FieldCure.AssistStudio.Core.Helpers' `
+      -replace 'FieldCure\.AssistStudio\.Models','FieldCure.AssistStudio.Core.Models' `
+      -replace 'FieldCure\.AssistStudio\.Tools','FieldCure.AssistStudio.Core.Tools' |
+    Set-Content $_.FullName
+  }
+```
+
+No type names or signatures changed — only the namespace prefix.
+
+### Added
+- **`invoke_tool` dispatcher** — meta tool exposed alongside `search_tools`
+  so Claude-class models can reach external MCP tools (PublicData.Kr,
+  user-added servers) without going through `delegate_task`. Fixed schema
+  `(name, args)`; `ToolCallExecutor` unwraps the inner call and re-dispatches
+  through the same path as built-in tools (confirmation, multimedia routing,
+  fallback resolution all unchanged).
+- **`ToolCall.ProviderSignature`** — opaque round-trip token for Gemini 2.x
+  `thoughtSignature`. Other providers leave it null.
+- **Judgment specialist hardening** — `ISpecialist` gains
+  `ExpectedFirstHeading` and `ForbiddenTrailingHeadings` for output-discipline
+  post-processing; per-specialist constants (`SpecialistName`) replace
+  duplicate string literals across routing/settings.
+- XML doc comments across `AssistStudio.Core.Helpers` (surface unchanged).
+
+### Changed
+- Documented union semantics on `ISpecialist`: `FallbackServers` /
+  `AllowedTools` are the specialist's responsibility, never gated by the
+  parent profile.
+- `StreamToolCallAccumulator` carries `thoughtSignature` for Gemini and
+  recognises gpt-5+ as a reasoning-model family alongside the o-series.
+
+---
+
 ## v0.17.0 (2026-04-21)
 
 ### Added
