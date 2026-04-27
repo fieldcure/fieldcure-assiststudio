@@ -97,6 +97,17 @@ graph TD
 > diagrams — they have no FieldCure internal package dependencies (external
 > NuGet only).
 
+**Preview packages excluded**: `FieldCure.AssistStudio.Anthropic` and
+`FieldCure.AssistStudio.Controls.WinUI.Anthropic` are currently in preview
+and intentionally omitted from the dependency graph above. They form an
+**independent extension cluster**: Anthropic depends on `Ai.Providers`, and
+`Controls.WinUI.Anthropic` depends on both `Anthropic` and `Controls.WinUI`.
+Neither is referenced by AssistStudio App — they exist for external consumers
+who need Anthropic-specific UI controls, and the in-repo
+[`samples/AnthropicSdkSample`](../samples/AnthropicSdkSample/) demo app
+consumes `Controls.WinUI.Anthropic` directly as the canonical integration
+reference. They will be added to the main graph when promoted to stable.
+
 ### DocumentParsers package history
 
 The old `DocumentParsers.Pdf` / `DocumentParsers.Pdf.Ocr` packages were

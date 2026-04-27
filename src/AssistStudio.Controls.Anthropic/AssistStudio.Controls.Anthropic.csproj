@@ -9,7 +9,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
-    <Version>0.1.0-preview.1</Version>
+    <Version>0.1.0-preview.2</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
     <!-- NuGet Package Metadata -->
@@ -22,7 +22,7 @@
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;chat;winui;anthropic;claude;controls</PackageTags>
-    <PackageReleaseNotes>v0.1.0-preview.1: Initial preview. ChatPanelExtensions wires the Anthropic SDK stream into ChatPanel via BeginAnthropicTurn + StreamAnthropicAsync. GetConversationAsAnthropicMessages snapshots the panel conversation into MessageParam format. Requires AssistStudio.Anthropic 0.1.0-preview.1 and Controls.WinUI 0.17.0+.</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.1.0-preview.2: Add BuildAnthropicParams helper that builds MessageCreateParams with cache_control markers on system prompt, conversation prefix, and tool manifest, so SDK-direct callers get the same prompt-caching behaviour as the AssistStudio Claude provider (smoke verified ~67% prefix-token savings on 3-turn PDF conversations). Rebuild against AssistStudio.Anthropic 0.1.0-preview.2 (Anthropic SDK 12.16.0), Controls.WinUI 0.18.0 (Mermaid/SVG, diagram action header, compose-bar reuse), Ai.Providers 0.6.0, and AssistStudio.Core 0.18.0 (.Core namespace segment).</PackageReleaseNotes>
     <PackageIcon>icon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
