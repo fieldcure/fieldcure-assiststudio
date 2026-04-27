@@ -20,7 +20,7 @@ AssistStudio is two things:
 
 ### Architecture Overview
 
-![AssistStudio Ecosystem](docs/ecosystem.png)
+![AssistStudio Architecture](docs/architecture.png)
 
 ---
 
