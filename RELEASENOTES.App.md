@@ -1,5 +1,25 @@
 ﻿# Release Notes — AssistStudio App
 
+## v0.17.0 (2026-04-27)
+
+### Added
+- **Split judgment specialist** — the single `JudgmentSpecialist` is now three distinct specialists: **Critique**, **RedTeam**, and **DevilsAdvocate**. Each carries its own system prompt, output format, and routing guideline (shared via `JudgmentRoutingGuide`); each is selectable independently in *Settings → App Tasks → Specialists*.
+- **Output-discipline backstop** for Critique / RedTeam / DevilsAdvocate — `ISpecialist.ExpectedFirstHeading` and `ForbiddenTrailingHeadings` post-processing strip duplicate phase labels and forbidden opening patterns before the report reaches the parent. Per-specialist `SpecialistName` constants replace duplicate string literals across routing and settings.
+- **Per-specialist provider preset** — *Settings → App Tasks → Specialists* now exposes a per-specialist provider override (WebSearch / Critique / RedTeam / DevilsAdvocate) with Inherit-fallback through SubAgent → parent.
+- **Gemini embedding option in KB dialog** — Gemini models can now be selected for the embedder when creating or editing a Knowledge Base.
+- **Drop-to-open for `.astx`** — dragging an `.astx` file onto the tab strip opens it as a new conversation tab.
+
+### Changed
+- **KB search hits drop the score column** — the relevance score column was removed from the KB search hits panel; ordering still reflects the score, the column was visual noise.
+
+### Rebuilt against
+- `FieldCure.AssistStudio.Controls.WinUI` 0.18.0 (Mermaid/SVG rendering, diagram action header, compose-bar reuse)
+- `FieldCure.Ai.Execution` 0.3.3
+- `FieldCure.Ai.Providers` 0.6.0 (Anthropic prompt caching, gpt-5+ reasoning, Gemini `thoughtSignature` round-trip)
+- `FieldCure.AssistStudio.Core` 0.18.0 (`.Core` namespace segment)
+
+---
+
 ## v0.16.0 (2026-04-24)
 
 ### Added
