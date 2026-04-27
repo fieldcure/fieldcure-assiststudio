@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
-    <Version>0.5.0</Version>
+    <Version>0.6.0</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CA1416</NoWarn>
 
@@ -22,7 +22,7 @@
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;claude;openai;gemini;ollama;llm;provider;streaming</PackageTags>
-    <PackageReleaseNotes>v0.5.0: FieldCure.DocumentParsers 1.x → 2.x upgrade. PDF text extraction now served by the core DocumentParsers package (PdfPig auto-registered); `IMediaDocumentParser` (used by `AttachmentProcessor.RenderPdfPages`) is resolved via the host-registered `DocumentParsers.Imaging` package. Consumers must rebuild against the new transitive type locations.</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.6.0: Anthropic prompt caching across Claude system prompt / conversation prefix / tool manifests (lower input-token cost on long sessions). gpt-5+ recognised as reasoning-model family (max_completion_tokens, default temperature 1.0); o-series detection tightened. Gemini 2.x thoughtSignature round-trip via ToolCall.ProviderSignature (fixes "Function call is missing a thought_signature" on tool follow-ups). Claude Opus 4.7+ omits temperature (server now rejects it). Fix Gemini function_response wrapping for JSON-array tool returns. XML docs across internals; rebuild against AssistStudio.Core 0.18.0.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

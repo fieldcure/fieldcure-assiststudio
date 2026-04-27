@@ -1,5 +1,24 @@
 ﻿# Release Notes — FieldCure.Ai.Providers
 
+## v0.6.0 (2026-04-27)
+
+### Added
+- **Anthropic prompt caching** — Claude provider paths now emit `cache_control` markers across system prompt, conversation prefix, and tool manifests. Reduces input-token cost on long-running conversations and tool-heavy turns. Cache hit metrics surface through usage events.
+- **gpt-5+ reasoning support** — recognised as a reasoning-model family alongside the o-series. Reasoning models reject `max_tokens` (require `max_completion_tokens`) and only accept the default temperature (1.0). Tightened o-series detection so unrelated names starting with `o` no longer match.
+- **Gemini `thoughtSignature` round-trip** — Gemini 2.x rejects follow-up tool requests with "Function call is missing a thought_signature" when the original signature isn't echoed back. The opaque token now flows through the streaming pipeline (`StreamEvent.ToolCallStart` → `StreamToolCallAccumulator` → `ToolCall.ProviderSignature`) and is replayed on the next request. Other providers leave the field null.
+
+### Changed
+- **Claude Opus 4.7+ drops `temperature`** — Anthropic now rejects explicit temperature on Opus 4.7 and later. The provider omits the field entirely for these models.
+
+### Fixed
+- **Gemini `function_response` JSON array handling** — when a tool returns a JSON array, the response is now wrapped correctly so Gemini does not reject the follow-up.
+
+### Internal
+- XML doc comments added across `Ai.Providers` internals (no public surface change).
+- Rebuilt against `FieldCure.AssistStudio.Core` 0.18.0 (transitive `.Core` namespace rename — no code change in Providers).
+
+---
+
 ## v0.5.0 (2026-04-21)
 
 ### Changed
