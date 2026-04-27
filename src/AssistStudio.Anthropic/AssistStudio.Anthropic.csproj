@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
-    <Version>0.1.0-preview.1</Version>
+    <Version>0.1.0-preview.2</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
     <!-- NuGet Package Metadata -->
@@ -19,7 +19,7 @@
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;anthropic;claude;streaming;adapter</PackageTags>
-    <PackageReleaseNotes>v0.1.0-preview.1: Initial preview. AnthropicStreamEventMapper translates Anthropic SDK RawMessageStreamEvent into Controls StreamEvent (text/thinking/tool-use deltas, usage, truncation). AnthropicMessageConverter bridges ChatMessage to MessageParam (system prompt extraction, image + text attachments). net8.0/net9.0, platform-agnostic.</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.1.0-preview.2: Bump Anthropic SDK 12.15.x → 12.16.0 (rebuild only; RawMessageStreamEvent surface unchanged). Rebuild against Ai.Providers 0.6.0 and AssistStudio.Core 0.18.0 (.Core namespace segment). No public API changes in this package. Prompt-caching is an Ai.Providers Claude-provider feature and is not reached through this adapter.</PackageReleaseNotes>
     <PackageIcon>icon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>

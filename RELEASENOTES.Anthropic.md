@@ -1,5 +1,17 @@
 # Release Notes — FieldCure.AssistStudio.Anthropic
 
+## v0.1.0-preview.2 (2026-04-27)
+
+### Changed
+- **Anthropic SDK 12.15.x → 12.16.0** — picks up upstream message and stream-event surface tweaks. The `RawMessageStreamEvent` envelope shape used by `AnthropicStreamEventMapper` is unchanged; rebuild only.
+- Rebuilt against **FieldCure.Ai.Providers 0.6.0** (Anthropic prompt caching, gpt-5+ reasoning, Gemini `thoughtSignature` round-trip) and **FieldCure.AssistStudio.Core 0.18.0** (`.Core` namespace segment). Two `using` statements in `AnthropicStreamEventMapper` updated to the new `FieldCure.AssistStudio.Core.*` namespaces. No public API changes in this package.
+
+### Notes
+- This package is the platform-agnostic adapter; prompt-caching is a `Ai.Providers` (Claude provider) feature and is reached only through the AssistStudio Claude provider, not through this SDK adapter.
+- Preview-stability guarantees still apply: any release before `1.0.0` may break public API.
+
+---
+
 ## v0.1.0-preview.1 (2026-04-21)
 
 Initial preview — platform-agnostic adapter that lets any .NET host stream from the official `Anthropic` NuGet SDK into the AssistStudio pipeline without implementing `IAiProvider`.
