@@ -1,5 +1,21 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Controls.WinUI
 
+## v0.18.0 (2026-04-27)
+
+### Added
+- **Mermaid diagram rendering** — fenced code blocks with `lang=mermaid` render inline as SVG via bundled mermaid.min.js (UMD v10), initialised with the current chat theme. `lang=svg` blocks render the inline SVG directly with `<script>` tags stripped.
+- **Diagram action header** — Mermaid and SVG blocks expose **Copy SVG**, **Save as SVG**, and **Save as PNG** actions in the block header. Tool-result inline images reuse the same header (replacing the modal-based viewer) so save/copy actions are consistently one click away.
+- **Compose-bar reuse for editing** — clicking *Edit* on a prior user message rehydrates the compose bar (text + attachments) instead of opening a separate editor surface, so editing runs through the same input pipeline as a fresh message.
+
+### Fixed
+- **Tool-result image header** restored after the diagram-block refactor (regression introduced earlier in this cycle).
+- **Transparent tooltip background** on hover-over diagram actions and other custom tooltip surfaces.
+
+### Changed
+- Rebuilt against **FieldCure.AssistStudio.Core 0.18.0** (`.Core` namespace segment) and **FieldCure.Ai.Providers 0.6.0** (Anthropic prompt caching, gpt-5+ reasoning, Gemini `thoughtSignature` round-trip).
+
+---
+
 ## v0.17.1 (2026-04-24)
 
 ### Added
