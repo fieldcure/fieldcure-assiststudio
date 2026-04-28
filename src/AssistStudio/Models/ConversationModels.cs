@@ -152,6 +152,10 @@ public class MediaReference
     /// <summary>Cached line count for pasted text attachments. Null for non-pasted media.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? LineCount { get; set; }
+
+    /// <summary>Cached playback duration in seconds for audio attachments. Null when unknown.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public long? DurationSeconds { get; set; }
 }
 
 /// <summary>

@@ -195,9 +195,16 @@ public partial class MainViewModel : ObservableObject
 
                 if (mediaRef.Source is "user_upload" or "user_pasted")
                 {
-                    var type = mediaRef.MimeType.StartsWith("text/")
-                        ? AttachmentType.TextFile
-                        : AttachmentType.Image;
+                    // MIME prefix dispatch with Document as the safe default for binary
+                    // formats (PDF, DOCX, XLSX, HWPX, ...) instead of the previous Image fallback.
+                    var mime = mediaRef.MimeType ?? string.Empty;
+                    var type = mime switch
+                    {
+                        var m when m.StartsWith("text/", StringComparison.OrdinalIgnoreCase) => AttachmentType.TextFile,
+                        var m when m.StartsWith("audio/", StringComparison.OrdinalIgnoreCase) => AttachmentType.Audio,
+                        var m when m.StartsWith("image/", StringComparison.OrdinalIgnoreCase) => AttachmentType.Image,
+                        _ => AttachmentType.Document
+                    };
                     var source = mediaRef.Source == "user_pasted"
                         ? AttachmentSource.Pasted
                         : AttachmentSource.File;
@@ -214,12 +221,19 @@ public partial class MainViewModel : ObservableObject
                     }
 
                     var fileName = mediaRef.OriginalFileName ?? mediaRef.FileName;
-                    attachments.Add(new ChatAttachment(fileName, type, bytes, mediaRef.MimeType)
+                    var attachment = new ChatAttachment(fileName, type, bytes, mediaRef.MimeType)
                     {
                         Source = source,
                         CharCount = charCount,
                         LineCount = lineCount,
-                    });
+                    };
+
+                    if (type == AttachmentType.Audio && mediaRef.DurationSeconds is { } secs && secs > 0)
+                    {
+                        attachment.Duration = TimeSpan.FromSeconds(secs);
+                    }
+
+                    attachments.Add(attachment);
                 }
                 else
                 {

@@ -133,7 +133,10 @@ public static class ConversationManager
             {
                 foreach (var att in m.Attachments)
                 {
-                    if (att.Type != AttachmentType.Image && att.Type != AttachmentType.TextFile)
+                    if (att.Type is not (AttachmentType.Image
+                                        or AttachmentType.TextFile
+                                        or AttachmentType.Audio
+                                        or AttachmentType.Document))
                         continue;
 
                     var mime = att.MimeType ?? "application/octet-stream";
@@ -154,6 +157,11 @@ public static class ConversationManager
                     {
                         mediaRef.CharCount = att.CharCount;
                         mediaRef.LineCount = att.LineCount;
+                    }
+
+                    if (att.Type == AttachmentType.Audio && att.Duration is { } dur && dur > TimeSpan.Zero)
+                    {
+                        mediaRef.DurationSeconds = (long)dur.TotalSeconds;
                     }
 
                     saved.Media.Add(mediaRef);
