@@ -96,7 +96,8 @@ public partial class GeminiProvider : IAiProvider, IDisposable
     /// <summary>
     /// Determines thinking support for a Gemini model.
     /// Gemini 2.5+ supports thinking (thinkingBudget). Gemini 3+/3.1+ uses thinkingLevel.
-    /// Gemini 3 Pro / 3.1 Pro always requires thinking (cannot be disabled).
+    /// Pro tier (Gemini 2.5 Pro and Gemini 3+ Pro) always requires thinking (cannot be disabled);
+    /// the API rejects thinkingBudget=0 with INVALID_ARGUMENT for those models.
     /// </summary>
     /// <param name="modelId">The model identifier to check.</param>
     /// <returns>The thinking support level for the model.</returns>
@@ -106,6 +107,11 @@ public partial class GeminiProvider : IAiProvider, IDisposable
 
         // gemini-3*/3.1* with "pro" → thinking is always on and cannot be disabled
         if (modelId.StartsWith("gemini-3", StringComparison.OrdinalIgnoreCase)
+            && modelId.Contains("pro", StringComparison.OrdinalIgnoreCase))
+            return ThinkingSupport.Required;
+
+        // gemini-2.5-pro* → thinking is always on; API rejects thinkingBudget=0
+        if (modelId.StartsWith("gemini-2.5", StringComparison.OrdinalIgnoreCase)
             && modelId.Contains("pro", StringComparison.OrdinalIgnoreCase))
             return ThinkingSupport.Required;
 
