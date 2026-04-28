@@ -1,4 +1,5 @@
-﻿using FieldCure.AssistStudio.Core.Models;
+﻿using AssistStudio.Helpers;
+using FieldCure.AssistStudio.Core.Models;
 using Microsoft.Data.Sqlite;
 using System.Text.Json;
 
@@ -81,9 +82,9 @@ public static class KnowledgeBaseStore
                 var json = File.ReadAllText(configPath);
                 kb = JsonSerializer.Deserialize(json, KnowledgeBaseJsonContext.Default.KnowledgeBase);
             }
-            catch
+            catch (Exception ex)
             {
-                // Skip malformed config files (no logger available in static class).
+                LoggingService.LogWarning($"[KB] Skipped malformed config: {configPath} — {ex.GetType().Name}: {ex.Message}");
                 continue;
             }
 
@@ -280,8 +281,9 @@ public static class KnowledgeBaseStore
                 var json = File.ReadAllText(configPath);
                 kb = JsonSerializer.Deserialize(json, KnowledgeBaseJsonContext.Default.KnowledgeBase);
             }
-            catch
+            catch (Exception ex)
             {
+                LoggingService.LogWarning($"[KB] Skipped malformed config: {configPath} — {ex.GetType().Name}: {ex.Message}");
                 continue;
             }
 

@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using AssistStudio.Helpers;
+using System.Text.Json;
 
 namespace AssistStudio.Mcp;
 
@@ -49,8 +50,9 @@ public static class KbMcpClient
 
             return new IndexInfoResult(totalFiles, totalChunks, isIndexing, current, total, isPromptStale, lastIndexedAt, failedCount);
         }
-        catch
+        catch (Exception ex)
         {
+            LoggingService.LogWarning($"[KB] get_index_info({kbId}) failed — {ex.GetType().Name}: {ex.Message}");
             return null;
         }
     }
@@ -82,8 +84,9 @@ public static class KbMcpClient
                 root.TryGetProperty("failed", out var fail) ? fail.GetInt32() : 0,
                 root.TryGetProperty("is_clean", out var clean) && clean.GetBoolean());
         }
-        catch
+        catch (Exception ex)
         {
+            LoggingService.LogWarning($"[KB] check_changes({kbId}) failed — {ex.GetType().Name}: {ex.Message}");
             return null;
         }
     }
