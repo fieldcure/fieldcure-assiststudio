@@ -33,6 +33,17 @@ public static class KbMcpClient
             using var doc = JsonDocument.Parse(result);
             var root = doc.RootElement;
 
+            // Server returns a structured error envelope ({status:"error", error:"..."}) when
+            // the tool throws (e.g., brand-new KB without rag.db). Detect and bail early so
+            // the missing data fields below do not surface as KeyNotFoundException.
+            if (root.TryGetProperty("status", out var statusEl)
+                && statusEl.GetString() == "error")
+            {
+                var errMsg = root.TryGetProperty("error", out var errEl) ? errEl.GetString() : "unknown";
+                LoggingService.LogWarning($"[KB] get_index_info({kbId}) server error: {errMsg}");
+                return null;
+            }
+
             var totalFiles = root.GetProperty("total_files").GetInt32();
             var totalChunks = root.GetProperty("total_chunks").GetInt32();
             var isIndexing = root.GetProperty("is_indexing").GetBoolean();
@@ -76,6 +87,15 @@ public static class KbMcpClient
 
             using var doc = JsonDocument.Parse(result);
             var root = doc.RootElement;
+
+            // Same structured-error envelope handling as get_index_info.
+            if (root.TryGetProperty("status", out var statusEl)
+                && statusEl.GetString() == "error")
+            {
+                var errMsg = root.TryGetProperty("error", out var errEl) ? errEl.GetString() : "unknown";
+                LoggingService.LogWarning($"[KB] check_changes({kbId}) server error: {errMsg}");
+                return null;
+            }
 
             return new ChangeCheckResult(
                 root.GetProperty("added").GetInt32(),
