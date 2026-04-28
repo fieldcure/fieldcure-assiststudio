@@ -96,6 +96,20 @@ public sealed partial class ComposeBar
         DependencyProperty.Register(nameof(IsEditing), typeof(bool), typeof(ComposeBar),
             new PropertyMetadata(false, OnIsEditingChanged));
 
+    /// <summary>
+    /// Identifies the <see cref="AudioCapability"/> dependency property. Drives send-time reject behavior.
+    /// </summary>
+    public static readonly DependencyProperty AudioCapabilityProperty =
+        DependencyProperty.Register(nameof(AudioCapability), typeof(AudioCapability), typeof(ComposeBar),
+            new PropertyMetadata(AudioCapability.NotSupported));
+
+    /// <summary>
+    /// Identifies the <see cref="AudioProviderName"/> dependency property. Used to look up provider-supported MIMEs.
+    /// </summary>
+    public static readonly DependencyProperty AudioProviderNameProperty =
+        DependencyProperty.Register(nameof(AudioProviderName), typeof(string), typeof(ComposeBar),
+            new PropertyMetadata(null));
+
     #endregion
 
     #region Public Properties
@@ -239,6 +253,25 @@ public sealed partial class ComposeBar
     }
 
     /// <summary>
+    /// Gets or sets the audio handling capability of the currently active provider/model.
+    /// </summary>
+    public AudioCapability AudioCapability
+    {
+        get => (AudioCapability)GetValue(AudioCapabilityProperty);
+        set => SetValue(AudioCapabilityProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the active provider name (e.g. "Gemini", "OpenAI") used to look up
+    /// provider-specific audio MIME support and limit messages.
+    /// </summary>
+    public string? AudioProviderName
+    {
+        get => (string?)GetValue(AudioProviderNameProperty);
+        set => SetValue(AudioProviderNameProperty, value);
+    }
+
+    /// <summary>
     /// Gets or sets the current text in the message text box.
     /// Passthrough used by external edit-mode controllers.
     /// </summary>
@@ -336,6 +369,19 @@ public sealed partial class ComposeBar
         if (_editBannerCancelButton is not null)
             _editBannerCancelButton.Click += EditBannerCancelButton_Click;
 
+        if (_audioRejectCancelButton is not null)
+            _audioRejectCancelButton.Click -= AudioRejectCancelButton_Click;
+        if (_audioRejectSendButton is not null)
+            _audioRejectSendButton.Click -= AudioRejectSendButton_Click;
+        _audioRejectBar = GetTemplateChild("PART_AudioRejectBar") as Grid;
+        _audioRejectLabel = GetTemplateChild("PART_AudioRejectLabel") as TextBlock;
+        _audioRejectCancelButton = GetTemplateChild("PART_AudioRejectCancelButton") as Button;
+        _audioRejectSendButton = GetTemplateChild("PART_AudioRejectSendButton") as Button;
+        if (_audioRejectCancelButton is not null)
+            _audioRejectCancelButton.Click += AudioRejectCancelButton_Click;
+        if (_audioRejectSendButton is not null)
+            _audioRejectSendButton.Click += AudioRejectSendButton_Click;
+
         // Apply ThemeShadow in code (XAML compiler crashes with ThemeShadow in ControlTemplate.Resources)
         if (_containerBorder is not null)
         {
@@ -371,6 +417,10 @@ public sealed partial class ComposeBar
             SetTooltip(_editBannerCancelButton, Res.GetString("ComposeBar_EditBanner_CancelTooltip"));
             if (_editBannerLabel is not null)
                 _editBannerLabel.Text = Res.GetString("ComposeBar_EditBanner_Label") ?? string.Empty;
+            if (_audioRejectCancelButton is not null)
+                _audioRejectCancelButton.Content = Res.GetString("ComposeBar_AudioReject_CancelLabel") ?? "Cancel";
+            if (_audioRejectSendButton is not null)
+                _audioRejectSendButton.Content = Res.GetString("ComposeBar_AudioReject_SendLabel") ?? "Send";
         }
         catch { /* Resource not found — tooltips will be empty */ }
 
@@ -852,12 +902,145 @@ public sealed partial class ComposeBar
 
         if (string.IsNullOrEmpty(text) && attachments.Count == 0) return;
 
+        // Audio capability gate — show inline reject bar instead of sending.
+        // User must explicitly accept dropping audio (or cancel and revise).
+        var rejectMessage = ClassifyAudioReject(attachments, out var offendingAudio);
+        if (rejectMessage is not null)
+        {
+            _pendingAudioReject = offendingAudio;
+            ShowAudioRejectBar(rejectMessage);
+            return;
+        }
+
+        DispatchSend(text, attachments);
+    }
+
+    /// <summary>
+    /// Performs the actual send: clears input, raises <see cref="MessageSent"/>, refocuses textbox.
+    /// </summary>
+    private void DispatchSend(string text, List<ChatAttachment> attachments)
+    {
         if (_messageTextBox is not null)
             _messageTextBox.Text = string.Empty;
         _previewBar?.Clear();
+        HideAudioRejectBar();
 
         MessageSent?.Invoke(this, new MessageSentEventArgs(text, attachments));
         _messageTextBox?.Focus(FocusState.Programmatic);
+    }
+
+    /// <summary>
+    /// Classifies whether the pending send should be blocked by audio capability rules.
+    /// Returns the localized rejection message and the offending audio attachments, or
+    /// <c>null</c> when send may proceed unchanged.
+    /// </summary>
+    private string? ClassifyAudioReject(
+        IReadOnlyList<ChatAttachment> attachments,
+        out List<ChatAttachment> offending)
+    {
+        offending = [];
+        var audioAttachments = attachments.Where(a => a.Type == AttachmentType.Audio).ToList();
+        if (audioAttachments.Count == 0) return null;
+
+        // Case 1: provider does not accept any audio.
+        if (AudioCapability != AudioCapability.NativeAudio)
+        {
+            offending = audioAttachments;
+            return Res.GetString("ComposeBar_AudioReject_NotSupported");
+        }
+
+        var supportedMimes = FieldCure.Ai.Providers.Helpers.AudioMimeHelper
+            .GetSupportedMimes(AudioProviderName ?? string.Empty, AudioCapability);
+
+        // Case 2: partial format mismatch — at least one audio is in an unsupported MIME.
+        if (supportedMimes is not null)
+        {
+            var unsupported = audioAttachments
+                .Where(a => a.MimeType is null || !supportedMimes.Contains(a.MimeType))
+                .ToList();
+            if (unsupported.Count > 0)
+            {
+                offending = unsupported;
+                var extList = string.Join(", ",
+                    unsupported.Select(a => Path.GetExtension(a.FileName).TrimStart('.')).Distinct());
+                var format = Res.GetString("ComposeBar_AudioReject_PartialFormat") ?? "{0}";
+                return string.Format(format, extList);
+            }
+        }
+
+        // Case 3: provider-specific size limit (Gemini 20 MB inline).
+        if (string.Equals(AudioProviderName, "Gemini", StringComparison.OrdinalIgnoreCase))
+        {
+            var oversize = audioAttachments
+                .Where(a => a.Data.LongLength > FieldCure.Ai.Providers.Helpers.AudioMimeHelper.GeminiInlineSizeLimit)
+                .ToList();
+            if (oversize.Count > 0)
+            {
+                offending = oversize;
+                var first = oversize[0];
+                var sizeMb = first.Data.LongLength / (1024.0 * 1024.0);
+                var limitMb = FieldCure.Ai.Providers.Helpers.AudioMimeHelper.GeminiInlineSizeLimit / (1024 * 1024);
+                var format = Res.GetString("ComposeBar_AudioReject_SizeLimit") ?? "{0} {1} {2} {3}";
+                return string.Format(format, "Gemini", limitMb, first.FileName, sizeMb.ToString("0.#"));
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Shows the audio reject bar with the given message. Bar stays open until user clicks
+    /// Cancel (close + keep state) or Send (drop offending audio + dispatch).
+    /// </summary>
+    private void ShowAudioRejectBar(string message)
+    {
+        if (_audioRejectBar is null) return;
+        if (_audioRejectLabel is not null) _audioRejectLabel.Text = message;
+        _audioRejectBar.Visibility = Visibility.Visible;
+    }
+
+    /// <summary>
+    /// Hides the audio reject bar and clears the pending state.
+    /// </summary>
+    private void HideAudioRejectBar()
+    {
+        if (_audioRejectBar is not null) _audioRejectBar.Visibility = Visibility.Collapsed;
+        _pendingAudioReject = null;
+    }
+
+    /// <summary>
+    /// Handles the audio reject bar Cancel button: closes the bar, leaves attachments intact,
+    /// allows the user to revise their selection or switch models.
+    /// </summary>
+    private void AudioRejectCancelButton_Click(object sender, RoutedEventArgs e)
+    {
+        HideAudioRejectBar();
+    }
+
+    /// <summary>
+    /// Handles the audio reject bar Send button: drops the offending audio attachments
+    /// from the preview bar and dispatches the send with the remaining content.
+    /// </summary>
+    private void AudioRejectSendButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_previewBar is null) return;
+        if (_pendingAudioReject is { } drop)
+        {
+            foreach (var att in drop)
+            {
+                if (_previewBar.Attachments.Contains(att))
+                    _previewBar.Attachments.Remove(att);
+            }
+        }
+
+        var text = _messageTextBox?.Text?.Trim() ?? "";
+        var attachments = _previewBar.Attachments.Where(a => !a.IsUnsupported).ToList();
+        if (string.IsNullOrEmpty(text) && attachments.Count == 0)
+        {
+            HideAudioRejectBar();
+            return;
+        }
+        DispatchSend(text, attachments);
     }
 
     /// <summary>

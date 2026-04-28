@@ -234,6 +234,21 @@
   <data name="ComposeBar_EditBanner_CancelName" xml:space="preserve">
     <value>Cancel edit</value>
   </data>
+  <data name="ComposeBar_AudioReject_NotSupported" xml:space="preserve">
+    <value>The current model does not support audio attachments.</value>
+  </data>
+  <data name="ComposeBar_AudioReject_PartialFormat" xml:space="preserve">
+    <value>The current model does not support these audio formats: {0}.</value>
+  </data>
+  <data name="ComposeBar_AudioReject_SizeLimit" xml:space="preserve">
+    <value>File size exceeds the {0} limit ({1} MB): {2} ({3} MB).</value>
+  </data>
+  <data name="ComposeBar_AudioReject_CancelLabel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="ComposeBar_AudioReject_SendLabel" xml:space="preserve">
+    <value>Send</value>
+  </data>
   <data name="ComposeBar_SelectAll" xml:space="preserve">
     <value>Select all</value>
   </data>

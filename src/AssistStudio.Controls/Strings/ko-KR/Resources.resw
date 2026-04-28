@@ -234,6 +234,21 @@
   <data name="ComposeBar_EditBanner_CancelName" xml:space="preserve">
     <value>편집 취소</value>
   </data>
+  <data name="ComposeBar_AudioReject_NotSupported" xml:space="preserve">
+    <value>현재 모델은 음성 첨부를 지원하지 않습니다.</value>
+  </data>
+  <data name="ComposeBar_AudioReject_PartialFormat" xml:space="preserve">
+    <value>현재 모델은 다음 음성 형식을 지원하지 않습니다: {0}.</value>
+  </data>
+  <data name="ComposeBar_AudioReject_SizeLimit" xml:space="preserve">
+    <value>파일 크기가 {0} 한도({1} MB)를 초과합니다: {2} ({3} MB).</value>
+  </data>
+  <data name="ComposeBar_AudioReject_CancelLabel" xml:space="preserve">
+    <value>캔슬</value>
+  </data>
+  <data name="ComposeBar_AudioReject_SendLabel" xml:space="preserve">
+    <value>전송</value>
+  </data>
   <data name="ComposeBar_SelectAll" xml:space="preserve">
     <value>모두 선택</value>
   </data>

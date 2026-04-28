@@ -1,4 +1,5 @@
-﻿using FieldCure.AssistStudio.Controls.Helpers;
+﻿using FieldCure.Ai.Providers.Models;
+using FieldCure.AssistStudio.Controls.Helpers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.ApplicationModel.Resources;
@@ -107,6 +108,32 @@ public sealed partial class ComposeBar : Control
     /// The cancel-edit button on the edit banner.
     /// </summary>
     private Button? _editBannerCancelButton;
+
+    /// <summary>
+    /// The audio reject bar shown when send is blocked by audio capability mismatch.
+    /// </summary>
+    private Grid? _audioRejectBar;
+
+    /// <summary>
+    /// The label inside the audio reject bar describing the rejection reason.
+    /// </summary>
+    private TextBlock? _audioRejectLabel;
+
+    /// <summary>
+    /// The cancel button on the audio reject bar (closes the bar without sending).
+    /// </summary>
+    private Button? _audioRejectCancelButton;
+
+    /// <summary>
+    /// The send button on the audio reject bar (drops offending audio attachments and sends).
+    /// </summary>
+    private Button? _audioRejectSendButton;
+
+    /// <summary>
+    /// Audio attachments that the user must accept being dropped before send proceeds.
+    /// Snapshotted when the reject bar appears.
+    /// </summary>
+    private List<ChatAttachment>? _pendingAudioReject;
 
     #endregion
 

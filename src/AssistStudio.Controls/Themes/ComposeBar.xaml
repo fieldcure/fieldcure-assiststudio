@@ -29,6 +29,7 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
                             <!-- Row 0: Edit banner (visible only in edit mode) -->
@@ -67,13 +68,53 @@
                                 </Button>
                             </Grid>
 
-                            <!-- Row 1: Attachment previews -->
-                            <local:AttachmentPreviewBar x:Name="PART_PreviewBar" Grid.Row="1" />
+                            <!-- Row 1: Audio reject bar (visible when send is blocked by audio capability mismatch) -->
+                            <Grid
+                                x:Name="PART_AudioRejectBar"
+                                Grid.Row="1"
+                                Visibility="Collapsed"
+                                Padding="8,4"
+                                Margin="0,0,0,4"
+                                CornerRadius="4"
+                                Background="{ThemeResource SystemFillColorCautionBackgroundBrush}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <FontIcon
+                                    Grid.Column="0"
+                                    Glyph="&#xE7BA;"
+                                    FontSize="14"
+                                    Margin="0,0,8,0"
+                                    VerticalAlignment="Center"
+                                    Foreground="{ThemeResource SystemFillColorCautionBrush}" />
+                                <TextBlock
+                                    x:Name="PART_AudioRejectLabel"
+                                    Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    TextWrapping="Wrap"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                    <Button
+                                        x:Name="PART_AudioRejectCancelButton"
+                                        Style="{StaticResource SubtleButtonStyle}"
+                                        Padding="8,2" />
+                                    <Button
+                                        x:Name="PART_AudioRejectSendButton"
+                                        Style="{StaticResource AccentButtonStyle}"
+                                        Padding="8,2" />
+                                </StackPanel>
+                            </Grid>
 
-                            <!-- Row 2: TextBox -->
+                            <!-- Row 2: Attachment previews -->
+                            <local:AttachmentPreviewBar x:Name="PART_PreviewBar" Grid.Row="2" />
+
+                            <!-- Row 3: TextBox -->
                             <TextBox
                                 x:Name="PART_MessageTextBox"
-                                Grid.Row="2"
+                                Grid.Row="3"
                                 AcceptsReturn="True"
                                 TextWrapping="Wrap"
                                 FontSize="15"
@@ -95,8 +136,8 @@
                                 </TextBox.Resources>
                             </TextBox>
 
-                            <!-- Row 3: Toolbar -->
-                            <Grid Grid.Row="3">
+                            <!-- Row 4: Toolbar -->
+                            <Grid Grid.Row="4">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />

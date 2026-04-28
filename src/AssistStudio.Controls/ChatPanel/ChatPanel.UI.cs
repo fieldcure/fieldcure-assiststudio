@@ -17,7 +17,7 @@ public sealed partial class ChatPanel
     /// <summary>Identifies the <see cref="Provider"/> dependency property.</summary>
     public static readonly DependencyProperty ProviderProperty =
         DependencyProperty.Register(nameof(Provider), typeof(IAiProvider), typeof(ChatPanel),
-            new PropertyMetadata(null));
+            new PropertyMetadata(null, OnProviderChanged));
 
     /// <summary>Identifies the <see cref="Placeholder"/> dependency property.</summary>
     public static readonly DependencyProperty PlaceholderProperty =
@@ -261,6 +261,18 @@ public sealed partial class ChatPanel
             panel.UpdateTitleDisplay();
             panel.UpdateRefreshTooltip();
         }
+    }
+
+    /// <summary>
+    /// Called when <see cref="Provider"/> changes to push audio capability metadata to the input area.
+    /// Drives ComposeBar's send-time audio reject classification.
+    /// </summary>
+    private static void OnProviderChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is not ChatPanel panel || panel._inputArea is null) return;
+        var provider = e.NewValue as IAiProvider;
+        panel._inputArea.AudioCapability = provider?.AudioCapability ?? AudioCapability.NotSupported;
+        panel._inputArea.AudioProviderName = provider?.ProviderName;
     }
 
     /// <summary>
@@ -1093,6 +1105,12 @@ public sealed partial class ChatPanel
             {
                 _inputArea.SelectedProfile = selectedProfile;
                 _inputArea.SelectProfileInCombo(selectedProfile);
+            }
+            // Push audio capability (Provider may have been set before template was applied)
+            if (Provider is { } currentProvider)
+            {
+                _inputArea.AudioCapability = currentProvider.AudioCapability;
+                _inputArea.AudioProviderName = currentProvider.ProviderName;
             }
 
             // Sync tools and visibility settings
