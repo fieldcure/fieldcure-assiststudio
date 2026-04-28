@@ -168,9 +168,12 @@ public static class ConversationManager
                 }
             }
 
-            // Persist tool result media (images from MCP tools, etc.)
-            if (m.Role == ChatRole.Tool && m.ToolMedia is { Count: > 0 })
+            // Persist tool result media (Tool role) and assistant-generated inline media
+            // (Assistant role, e.g. Gemini image-generation output).
+            if (m.ToolMedia is { Count: > 0 } && m.Role is ChatRole.Tool or ChatRole.Assistant)
             {
+                var source = m.Role == ChatRole.Tool ? "mcp_tool" : "assistant_generated";
+                var idPrefix = m.Role == ChatRole.Tool ? "tool" : "assistant";
                 foreach (var media in m.ToolMedia)
                 {
                     var bytes = DecodeMediaUri(media.MediaUri);
@@ -180,11 +183,11 @@ public static class ConversationManager
                     saved.Media ??= [];
                     saved.Media.Add(new MediaReference
                     {
-                        Id = $"tool_{saved.Media.Count}",
+                        Id = $"{idPrefix}_{saved.Media.Count}",
                         FileName = entryName,
                         MimeType = media.MimeType,
-                        Source = "mcp_tool",
-                        ToolCallId = m.ToolCallId
+                        Source = source,
+                        ToolCallId = m.Role == ChatRole.Tool ? m.ToolCallId : null
                     });
                 }
             }

@@ -385,6 +385,13 @@ public sealed partial class ChatPanel
             timestamp: root.Timestamp.ToString("O"),
             elapsedSeconds: root.ElapsedSeconds,
             coveredTokenCount: root.Summary?.CoveredTokenCount ?? 0);
+
+        // Restore assistant-generated inline media (e.g., Gemini image-generation output).
+        if (root.ToolMedia is { Count: > 0 } generatedMedia)
+        {
+            foreach (var media in generatedMedia)
+                await _renderer.AppendToolMediaAsync(root.Id, media);
+        }
     }
 
     #endregion

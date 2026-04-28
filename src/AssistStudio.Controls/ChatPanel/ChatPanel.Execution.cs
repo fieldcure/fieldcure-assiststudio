@@ -785,6 +785,9 @@ public sealed partial class ChatPanel
                             break;
 
                         case RenderCommand.AppendMedia am:
+                            // Persist on the message so save/load can restore the image,
+                            // then render via the same pipeline used for tool-result media.
+                            message.AppendToolMedia(am.Media);
                             await _renderer.AppendToolMediaAsync(message.Id, am.Media);
                             break;
                     }

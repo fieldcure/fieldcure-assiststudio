@@ -38,6 +38,9 @@ public partial class ChatMessage : INotifyPropertyChanged
     /// <summary>Backing field for <see cref="ThinkingContent"/>.</summary>
     private string? _thinkingContent;
 
+    /// <summary>Backing field for <see cref="ToolMedia"/>; lazily allocated on first append.</summary>
+    private List<MediaContent>? _toolMedia;
+
     #endregion
 
     #region Constructors
@@ -123,10 +126,27 @@ public partial class ChatMessage : INotifyPropertyChanged
     public string? ToolCallId { get; init; }
 
     /// <summary>
-    /// Media content from tool execution results (images, audio, video).
-    /// Set when a tool returns multimedia alongside text. Used for persistence in .astx files.
+    /// Media content attached to this message: tool execution results on a Tool message,
+    /// or assistant-generated inline media (e.g., Gemini image-generation output) on an
+    /// Assistant message. Used for persistence in .astx files.
+    /// Mutable so streaming providers can append while a response is in flight.
     /// </summary>
-    public IReadOnlyList<MediaContent>? ToolMedia { get; init; }
+    public IReadOnlyList<MediaContent>? ToolMedia
+    {
+        get => _toolMedia;
+        init => _toolMedia = value is null ? null : [.. value];
+    }
+
+    /// <summary>
+    /// Appends a media item to <see cref="ToolMedia"/>, allocating the backing list on first call.
+    /// Raises <see cref="PropertyChanged"/> for <see cref="ToolMedia"/>.
+    /// </summary>
+    public void AppendToolMedia(MediaContent media)
+    {
+        _toolMedia ??= [];
+        _toolMedia.Add(media);
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ToolMedia)));
+    }
 
     /// <summary>
     /// Thinking/reasoning content from the AI model (e.g., Claude extended thinking).
