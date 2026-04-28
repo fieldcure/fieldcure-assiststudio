@@ -50,7 +50,7 @@
                             <controls:CloudProviderSection
                                 x:Name="ClaudeSection" x:Load="False"
                                 ProviderType="Claude"
-                                FallbackModelsString="claude-sonnet-4-6,claude-opus-4-6,claude-haiku-4-6" />
+                                FallbackModelsString="claude-sonnet-4-6,claude-opus-4-7,claude-haiku-4-5" />
                         </Grid>
                     </controls:CollapsibleSection.Body>
                 </controls:CollapsibleSection>

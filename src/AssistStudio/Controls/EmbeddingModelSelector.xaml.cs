@@ -54,7 +54,7 @@ public sealed partial class EmbeddingModelSelector : UserControl
         ("gemma3:4b", "Ollama", "gemma3:4b", "2.8GB", false),
         ("qwen3:4b", "Ollama", "qwen3:4b", "2.7GB", true),
         ("gpt-4o-mini", "OpenAI", "gpt-4o-mini", "", false),
-        ("claude-haiku-4-6", "Claude", "claude-haiku-4-6", "", false),
+        ("claude-haiku-4-5", "Claude", "claude-haiku-4-5", "", false),
     ];
 
     private static readonly Dictionary<string, (string Provider, string? ApiKeyPreset)> ProviderMap = new()
@@ -69,7 +69,7 @@ public sealed partial class EmbeddingModelSelector : UserControl
         ["gemma3:4b"] = ("ollama", null),
         ["qwen3:4b"] = ("ollama", null),
         ["gpt-4o-mini"] = ("openai", "OpenAI"),
-        ["claude-haiku-4-6"] = ("anthropic", "Claude"),
+        ["claude-haiku-4-5"] = ("anthropic", "Claude"),
     };
 
     #endregion
