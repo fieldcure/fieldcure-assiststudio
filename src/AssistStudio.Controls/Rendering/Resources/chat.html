@@ -1332,6 +1332,8 @@
                 html += renderImageChip(att, num);
             } else if (att.type === 'text') {
                 html += renderTextChip(att, num);
+            } else if (att.type === 'audio') {
+                html += renderAudioChip(att, num);
             } else {
                 html += '<span class="attachment-file">' +
                     '<span class="attachment-file-icon">&#128196;</span>' +
@@ -1353,6 +1355,40 @@
             '<img class="attachment-chip-thumb" src="data:' +
             escapeHtml(att.mimeType || 'image/png') + ';base64,' + att.base64 + '" />' +
             '<div class="attachment-chip-name">' + escapeHtml(displayName) + '</div>' +
+            '</div>';
+    }
+
+    function formatAudioBytes(bytes) {
+        if (!bytes || bytes < 0) return '';
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1048576) return (bytes / 1024).toFixed(1).replace(/\.0$/, '') + ' KB';
+        if (bytes < 1073741824) return (bytes / 1048576).toFixed(1).replace(/\.0$/, '') + ' MB';
+        return (bytes / 1073741824).toFixed(1).replace(/\.0$/, '') + ' GB';
+    }
+
+    function formatAudioDuration(seconds) {
+        if (!seconds || seconds <= 0) return '';
+        var s = Math.floor(seconds);
+        var h = Math.floor(s / 3600);
+        var m = Math.floor((s % 3600) / 60);
+        var sec = s % 60;
+        var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+        return h >= 1 ? h + ':' + pad(m) + ':' + pad(sec) : pad(m) + ':' + pad(sec);
+    }
+
+    function renderAudioChip(att, num) {
+        var displayName = formatChipName(att.fileName || 'Audio', num);
+        var size = formatAudioBytes(att.sizeBytes);
+        var duration = formatAudioDuration(att.durationSeconds);
+        var meta = duration ? (size + ' · ' + duration) : size;
+        return '<div class="attachment-chip">' +
+            '<div class="attachment-chip-thumb attachment-chip-thumb-icon">' +
+            '<span class="attachment-chip-glyph"></span>' +
+            '</div>' +
+            '<div class="attachment-chip-name">' +
+            escapeHtml(displayName) +
+            (meta ? '<br/><span style="opacity:0.7;font-size:11px">' + escapeHtml(meta) + '</span>' : '') +
+            '</div>' +
             '</div>';
     }
 
