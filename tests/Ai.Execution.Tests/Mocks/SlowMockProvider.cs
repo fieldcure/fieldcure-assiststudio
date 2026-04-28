@@ -20,6 +20,7 @@ internal sealed class SlowMockProvider : IAiProvider
     public string? LastRawResponse => null;
     public PdfCapability PdfCapability => PdfCapability.Auto;
     public AudioCapability AudioCapability => AudioCapability.NotSupported;
+    public ToolCallingSupport ToolCallingSupport => ToolCallingSupport.Supported;
 
     public async Task<AiResponse> CompleteAsync(AiRequest request, CancellationToken ct = default)
     {

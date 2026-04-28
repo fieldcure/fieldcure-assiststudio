@@ -33,6 +33,9 @@ public interface IAiProvider
     /// <summary>Declares how this provider handles audio attachments for the currently configured model.</summary>
     AudioCapability AudioCapability { get; }
 
+    /// <summary>Declares whether the currently configured model accepts function-calling (tools) declarations.</summary>
+    ToolCallingSupport ToolCallingSupport { get; }
+
     #endregion
 
     #region Methods

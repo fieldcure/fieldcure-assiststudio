@@ -18,6 +18,7 @@ internal sealed class MockProvider : IAiProvider
     public string? LastRawResponse => null;
     public PdfCapability PdfCapability => PdfCapability.Auto;
     public AudioCapability AudioCapability => AudioCapability.NotSupported;
+    public ToolCallingSupport ToolCallingSupport => ToolCallingSupport.Supported;
 
     public List<AiRequest> ReceivedRequests { get; } = [];
 

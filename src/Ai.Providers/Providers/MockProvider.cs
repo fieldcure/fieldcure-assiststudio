@@ -35,6 +35,9 @@ public class MockProvider : IAiProvider
     /// <inheritdoc/>
     public AudioCapability AudioCapability => AudioCapability.NotSupported;
 
+    /// <inheritdoc/>
+    public ToolCallingSupport ToolCallingSupport => ToolCallingSupport.Supported;
+
     #endregion
 
     #region Fields

@@ -61,6 +61,9 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
     /// <inheritdoc/>
     public AudioCapability AudioCapability => AudioCapability.NotSupported;
 
+    /// <inheritdoc/>
+    public ToolCallingSupport ToolCallingSupport => ToolCallingSupport.Supported;
+
     #endregion
 
     #region Constructors

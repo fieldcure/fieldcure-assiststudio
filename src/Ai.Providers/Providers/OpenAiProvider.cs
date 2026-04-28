@@ -60,6 +60,9 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
             ? AudioCapability.NativeAudio
             : AudioCapability.NotSupported;
 
+    /// <inheritdoc/>
+    public ToolCallingSupport ToolCallingSupport => ToolCallingSupport.Supported;
+
     #endregion
 
     #region Constructors

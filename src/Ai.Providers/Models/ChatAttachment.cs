@@ -48,6 +48,21 @@ public enum AudioCapability
 }
 
 /// <summary>
+/// Specifies whether a provider/model accepts function-calling (tools) declarations.
+/// Models that reject tools structurally (image-generation variants) or that
+/// behave unreliably with tools (hallucinating phantom tool names) should be
+/// marked NotSupported so the serializer omits the tools array entirely.
+/// </summary>
+public enum ToolCallingSupport
+{
+    /// <summary>Tools array is omitted from the request, even if the caller passed tools.</summary>
+    NotSupported,
+
+    /// <summary>Standard function-calling is sent through.</summary>
+    Supported
+}
+
+/// <summary>
 /// Specifies how a provider handles PDF document attachments.
 /// </summary>
 public enum PdfCapability

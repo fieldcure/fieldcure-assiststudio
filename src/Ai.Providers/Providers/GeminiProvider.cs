@@ -58,6 +58,16 @@ public partial class GeminiProvider : IAiProvider, IDisposable
     /// <inheritdoc/>
     public AudioCapability AudioCapability => AudioCapability.NativeAudio;
 
+    /// <inheritdoc/>
+    public ToolCallingSupport ToolCallingSupport =>
+        // Image-generation variants reject tools[] structurally (HTTP 400).
+        // Flash-Lite accepts tools but tends to hallucinate phantom tool names
+        // (e.g. fabricated run_code calls); disabled here pending evaluation.
+        (ModelId.Contains("-image", StringComparison.OrdinalIgnoreCase)
+         || ModelId.Contains("flash-lite", StringComparison.OrdinalIgnoreCase))
+            ? ToolCallingSupport.NotSupported
+            : ToolCallingSupport.Supported;
+
     #endregion
 
     #region Constructors
@@ -536,8 +546,9 @@ public partial class GeminiProvider : IAiProvider, IDisposable
             };
         }
 
-        // Add tool definitions when available
-        if (request.Tools is { Count: > 0 })
+        // Add tool definitions when available — gated by per-model ToolCallingSupport.
+        // Image-only and tool-unreliable Gemini variants drop the tools array entirely.
+        if (request.Tools is { Count: > 0 } && ToolCallingSupport == ToolCallingSupport.Supported)
         {
             var functionDeclarations = new JsonArray();
             foreach (var tool in request.Tools)
