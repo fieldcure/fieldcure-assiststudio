@@ -244,7 +244,7 @@
     <value>파일 크기가 {0} 한도({1} MB)를 초과합니다: {2} ({3} MB).</value>
   </data>
   <data name="ComposeBar_AudioReject_CancelLabel" xml:space="preserve">
-    <value>캔슬</value>
+    <value>취소</value>
   </data>
   <data name="ComposeBar_AudioReject_SendLabel" xml:space="preserve">
     <value>전송</value>

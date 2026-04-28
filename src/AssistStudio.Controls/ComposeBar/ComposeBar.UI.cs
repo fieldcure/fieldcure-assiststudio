@@ -101,14 +101,14 @@ public sealed partial class ComposeBar
     /// </summary>
     public static readonly DependencyProperty AudioCapabilityProperty =
         DependencyProperty.Register(nameof(AudioCapability), typeof(AudioCapability), typeof(ComposeBar),
-            new PropertyMetadata(AudioCapability.NotSupported));
+            new PropertyMetadata(AudioCapability.NotSupported, OnAudioContextChanged));
 
     /// <summary>
     /// Identifies the <see cref="AudioProviderName"/> dependency property. Used to look up provider-supported MIMEs.
     /// </summary>
     public static readonly DependencyProperty AudioProviderNameProperty =
         DependencyProperty.Register(nameof(AudioProviderName), typeof(string), typeof(ComposeBar),
-            new PropertyMetadata(null));
+            new PropertyMetadata(null, OnAudioContextChanged));
 
     #endregion
 
@@ -1006,6 +1006,31 @@ public sealed partial class ComposeBar
     {
         if (_audioRejectBar is not null) _audioRejectBar.Visibility = Visibility.Collapsed;
         _pendingAudioReject = null;
+    }
+
+    /// <summary>
+    /// Reactive change handler for <see cref="AudioCapability"/> / <see cref="AudioProviderName"/>.
+    /// Default state (no reject pending) ignores capability changes per spec section 1.2.
+    /// When the reject bar is open the user is mid-decision, so re-classify with the new capability:
+    /// dismiss the bar if the rejection no longer applies, otherwise refresh the message in place.
+    /// </summary>
+    private static void OnAudioContextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is not ComposeBar self) return;
+        if (self._pendingAudioReject is null) return; // bar not visible — nothing to recompute
+
+        var attachments = self._previewBar?.Attachments
+            .Where(a => !a.IsUnsupported).ToList() ?? [];
+        var newMessage = self.ClassifyAudioReject(attachments, out var newOffending);
+        if (newMessage is null)
+        {
+            self.HideAudioRejectBar();
+        }
+        else
+        {
+            self._pendingAudioReject = newOffending;
+            if (self._audioRejectLabel is not null) self._audioRejectLabel.Text = newMessage;
+        }
     }
 
     /// <summary>
