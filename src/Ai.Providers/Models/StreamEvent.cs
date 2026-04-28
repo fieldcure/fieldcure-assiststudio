@@ -36,6 +36,11 @@ public abstract record StreamEvent
     /// <param name="ArgumentsChunk">A fragment of the JSON arguments string.</param>
     public sealed record ToolCallDelta(string Id, string ArgumentsChunk) : StreamEvent;
 
+    /// <summary>An assistant-generated media part embedded in the response stream
+    /// (e.g., Gemini image-generation models emit inline image bytes).</summary>
+    /// <param name="Media">The media payload (data URI or accessible URI plus MIME type).</param>
+    public sealed record MediaPart(MediaContent Media) : StreamEvent;
+
     /// <summary>Token usage information, typically emitted near the end of the stream.</summary>
     /// <param name="TokenUsage">The token counts.</param>
     public sealed record Usage(TokenUsage TokenUsage) : StreamEvent;

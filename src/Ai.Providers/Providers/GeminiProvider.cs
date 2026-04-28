@@ -282,6 +282,24 @@ public partial class GeminiProvider : IAiProvider, IDisposable
                             if (!string.IsNullOrEmpty(text))
                                 yield return new StreamEvent.TextDelta(text);
                         }
+                        else if (part.TryGetProperty("inlineData", out var inlineEl))
+                        {
+                            // Image-generation Gemini models embed produced images
+                            // (and occasionally audio) as inlineData parts in the stream.
+                            var mime = inlineEl.TryGetProperty("mimeType", out var mEl)
+                                ? mEl.GetString() ?? string.Empty : string.Empty;
+                            var data = inlineEl.TryGetProperty("data", out var dEl)
+                                ? dEl.GetString() ?? string.Empty : string.Empty;
+                            if (mime.Length > 0 && data.Length > 0)
+                            {
+                                var dataUri = $"data:{mime};base64,{data}";
+                                var kind = mime.StartsWith("image/", StringComparison.OrdinalIgnoreCase) ? MediaContentKind.Image
+                                    : mime.StartsWith("audio/", StringComparison.OrdinalIgnoreCase) ? MediaContentKind.Audio
+                                    : mime.StartsWith("video/", StringComparison.OrdinalIgnoreCase) ? MediaContentKind.Video
+                                    : MediaContentKind.Download;
+                                yield return new StreamEvent.MediaPart(new MediaContent(dataUri, mime, kind));
+                            }
+                        }
                         else if (part.TryGetProperty("functionCall", out var fc))
                         {
                             var funcName = fc.GetProperty("name").GetString()!;

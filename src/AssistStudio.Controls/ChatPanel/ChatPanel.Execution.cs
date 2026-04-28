@@ -333,6 +333,9 @@ public sealed partial class ChatPanel
 
         /// <summary>Flush accumulated thinking tokens.</summary>
         public sealed record FlushThinking(string Text) : RenderCommand;
+
+        /// <summary>Append assistant-generated media (e.g., Gemini inline image) below the message text.</summary>
+        public sealed record AppendMedia(MediaContent Media) : RenderCommand;
     }
 
     #endregion
@@ -707,6 +710,16 @@ public sealed partial class ChatPanel
                             toolAccumulator.HandleDelta(delta);
                             break;
 
+                        case StreamEvent.MediaPart media:
+                            // Flush any pending text first so the media renders below the text-so-far.
+                            if (textBatch.Length > 0)
+                            {
+                                channel.Writer.TryWrite(new RenderCommand.FlushText(textBatch.ToString()));
+                                textBatch.Clear();
+                            }
+                            channel.Writer.TryWrite(new RenderCommand.AppendMedia(media.Media));
+                            break;
+
                         case StreamEvent.Usage u:
                             usage = u.TokenUsage;
                             break;
@@ -769,6 +782,10 @@ public sealed partial class ChatPanel
                         case RenderCommand.FlushThinking ft:
                             message.ThinkingContent = (message.ThinkingContent ?? "") + ft.Text;
                             await _renderer.AppendThinkingTokenAsync(message.Id, ft.Text);
+                            break;
+
+                        case RenderCommand.AppendMedia am:
+                            await _renderer.AppendToolMediaAsync(message.Id, am.Media);
                             break;
                     }
                 }
