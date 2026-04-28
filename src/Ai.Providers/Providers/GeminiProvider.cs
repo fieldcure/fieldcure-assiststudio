@@ -56,7 +56,11 @@ public partial class GeminiProvider : IAiProvider, IDisposable
     public PdfCapability PdfCapability => PdfCapability.NativePdf;
 
     /// <inheritdoc/>
-    public AudioCapability AudioCapability => AudioCapability.NativeAudio;
+    public AudioCapability AudioCapability =>
+        // Image-generation variants reject audio input modality entirely.
+        ModelId.Contains("-image", StringComparison.OrdinalIgnoreCase)
+            ? AudioCapability.NotSupported
+            : AudioCapability.NativeAudio;
 
     /// <inheritdoc/>
     public ToolCallingSupport ToolCallingSupport =>
@@ -114,6 +118,11 @@ public partial class GeminiProvider : IAiProvider, IDisposable
     public static ThinkingSupport GetThinkingSupportFor(string? modelId)
     {
         if (string.IsNullOrEmpty(modelId)) return ThinkingSupport.NotSupported;
+
+        // Image-generation variants (e.g., gemini-2.5-flash-image) reject thinkingConfig
+        // entirely; even thinkingBudget=0 returns "Thinking is not enabled for this model".
+        if (modelId.Contains("-image", StringComparison.OrdinalIgnoreCase))
+            return ThinkingSupport.NotSupported;
 
         // gemini-3*/3.1* with "pro" → thinking is always on and cannot be disabled
         if (modelId.StartsWith("gemini-3", StringComparison.OrdinalIgnoreCase)
@@ -409,7 +418,10 @@ public partial class GeminiProvider : IAiProvider, IDisposable
                 {
                     if (seg.Attachment.Type == AttachmentType.Audio)
                     {
-                        // Silent skip audio whose MIME Gemini does not accept (per spec § 1.2 history handling).
+                        // Silent skip when this model lacks audio capability (image variants)
+                        // or when the MIME is outside Gemini's supported set (history hygiene
+                        // per spec § 1.2).
+                        if (AudioCapability != AudioCapability.NativeAudio) continue;
                         var audioMime = seg.Attachment.MimeType;
                         if (audioMime is null || !AudioMimeHelper.GeminiSupportedMimes.Contains(audioMime))
                         {
@@ -526,9 +538,11 @@ public partial class GeminiProvider : IAiProvider, IDisposable
                 };
             }
         }
-        else if (ModelId.StartsWith("gemini-2.5", StringComparison.OrdinalIgnoreCase))
+        else if (ModelId.StartsWith("gemini-2.5", StringComparison.OrdinalIgnoreCase)
+                 && thinkingSupport != ThinkingSupport.NotSupported)
         {
-            // Gemini 2.5: explicitly disable thinking with budget = 0
+            // Gemini 2.5: explicitly disable thinking with budget = 0.
+            // Skipped for image-generation variants whose API forbids thinkingConfig entirely.
             genConfig["thinkingConfig"] = new JsonObject
             {
                 ["thinkingBudget"] = 0
