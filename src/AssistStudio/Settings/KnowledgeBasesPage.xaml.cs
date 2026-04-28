@@ -77,6 +77,15 @@ public sealed partial class KnowledgeBasesPage : Page
     #region Event Handlers
 
     /// <summary>
+    /// Handles the Refresh button click — re-runs the same load path that fires on
+    /// page navigation, so card status reflects the latest server-side state.
+    /// </summary>
+    private async void OnRefreshClicked(object sender, RoutedEventArgs e)
+    {
+        await RefreshListAsync();
+    }
+
+    /// <summary>
     /// Opens the KB creation dialog.
     /// Folder selection comes first; name auto-generates from the first folder.
     /// </summary>

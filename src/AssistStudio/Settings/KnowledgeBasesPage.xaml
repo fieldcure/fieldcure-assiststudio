@@ -18,7 +18,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Header: title + counter + Create button -->
+        <!-- Header: title + counter + Create + Refresh -->
         <Grid
             Grid.Row="0" Padding="20,14,20,14"
             BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
@@ -26,6 +26,7 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
@@ -51,6 +52,17 @@
                     <ToolTip x:Uid="KB_CreateButtonTip" Placement="Mouse"/>
                 </ToolTipService.ToolTip>
                 <FontIcon Glyph="&#xE710;" FontSize="14" />
+            </Button>
+
+            <Button
+                x:Uid="KB_RefreshButton"
+                x:Name="RefreshButton" Grid.Column="4"
+                Click="OnRefreshClicked"
+                Style="{StaticResource SubtleButtonStyle}"
+                Padding="8" MinWidth="0" MinHeight="0"
+                Margin="4,0,0,0"
+                ToolTipService.Placement="Mouse">
+                <FontIcon Glyph="&#xE72C;" FontSize="14" />
             </Button>
         </Grid>
 

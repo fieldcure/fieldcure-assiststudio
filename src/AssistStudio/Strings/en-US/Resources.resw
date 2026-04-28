@@ -1694,6 +1694,9 @@
   <data name="KB_CreateButtonTip.Content" xml:space="preserve">
     <value>Create knowledge base</value>
   </data>
+  <data name="KB_RefreshButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
   <data name="ScheduleCard_DeleteButtonTip.Content" xml:space="preserve">
     <value>Delete</value>
   </data>

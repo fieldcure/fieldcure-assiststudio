@@ -1694,6 +1694,9 @@
   <data name="KB_CreateButtonTip.Content" xml:space="preserve">
     <value>지식베이스 생성</value>
   </data>
+  <data name="KB_RefreshButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>새로 고침</value>
+  </data>
   <data name="ScheduleCard_DeleteButtonTip.Content" xml:space="preserve">
     <value>삭제</value>
   </data>

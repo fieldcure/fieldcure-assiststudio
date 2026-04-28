@@ -598,6 +598,9 @@ public sealed partial class KbCard : UserControl, INotifyPropertyChanged
 
         if (justFinished)
         {
+            LoggingService.LogInfo(
+                $"[KB] Indexing completed: {_vm.Name} ({_vm.Id}) — {_vm.StatsText}");
+
             var result = await KbMcpClient.CheckChangesAsync(_vm.Id);
             if (result is not null)
             {
