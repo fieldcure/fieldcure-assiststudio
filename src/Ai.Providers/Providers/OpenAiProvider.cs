@@ -54,6 +54,12 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
     /// <inheritdoc/>
     public PdfCapability PdfCapability => _pdfCapability;
 
+    /// <inheritdoc/>
+    public AudioCapability AudioCapability =>
+        ModelId.Contains("audio", StringComparison.OrdinalIgnoreCase)
+            ? AudioCapability.NativeAudio
+            : AudioCapability.NotSupported;
+
     #endregion
 
     #region Constructors
@@ -401,6 +407,27 @@ public partial class OpenAiProvider : IAiProvider, IDisposable
 
                 foreach (var seg in layout.BinarySegments)
                 {
+                    if (seg.Attachment.Type == AttachmentType.Audio)
+                    {
+                        // Silent skip if this model is not audio-capable, or if MIME is unsupported (history hygiene).
+                        if (AudioCapability != AudioCapability.NativeAudio) continue;
+                        var audioMime = seg.Attachment.MimeType;
+                        if (audioMime is null || !AudioMimeHelper.OpenAiSupportedMimes.Contains(audioMime)) continue;
+                        var format = audioMime.Equals("audio/wav", StringComparison.OrdinalIgnoreCase) ? "wav" : "mp3";
+
+                        contentParts.Add(new JsonObject { ["type"] = "text", ["text"] = seg.Label });
+                        contentParts.Add(new JsonObject
+                        {
+                            ["type"] = "input_audio",
+                            ["input_audio"] = new JsonObject
+                            {
+                                ["data"] = Convert.ToBase64String(seg.Attachment.Data),
+                                ["format"] = format
+                            }
+                        });
+                        continue;
+                    }
+
                     contentParts.Add(new JsonObject { ["type"] = "text", ["text"] = seg.Label });
 
                     if (seg.Attachment.Type == AttachmentType.Image)

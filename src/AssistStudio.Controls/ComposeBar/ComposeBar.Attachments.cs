@@ -37,6 +37,13 @@ public sealed partial class ComposeBar
     private static readonly HashSet<string> DocumentExtensions =
         [".pdf", .. DocumentParserFactory.SupportedExtensions];
 
+    /// <summary>
+    /// Set of file extensions recognized as audio attachments.
+    /// Per-provider gating happens at send time via <see cref="AudioMimeHelper"/>.
+    /// </summary>
+    private static readonly HashSet<string> AudioExtensions =
+        [.. AudioMimeHelper.AcceptedExtensions];
+
     #endregion
 
     #region Attach Button
@@ -50,6 +57,7 @@ public sealed partial class ComposeBar
         foreach (var ext in ImageExtensions) picker.FileTypeFilter.Add(ext);
         foreach (var ext in TextExtensions) picker.FileTypeFilter.Add(ext);
         foreach (var ext in DocumentExtensions) picker.FileTypeFilter.Add(ext);
+        foreach (var ext in AudioExtensions) picker.FileTypeFilter.Add(ext);
 
         var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(GetWindow());
         WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
@@ -84,6 +92,10 @@ public sealed partial class ComposeBar
                 if (attachment is not null)
                 {
                     _previewBar?.AddAttachment(attachment);
+                    if (attachment.Type == AttachmentType.Audio)
+                    {
+                        _ = PopulateAudioDurationAsync(file, attachment);
+                    }
                 }
             }
         }
@@ -213,12 +225,25 @@ public sealed partial class ComposeBar
         var isImage = ImageExtensions.Contains(ext);
         var isText = TextExtensions.Contains(ext);
         var isDocument = DocumentExtensions.Contains(ext);
+        var isAudio = AudioExtensions.Contains(ext);
 
-        if (!isImage && !isText && !isDocument) return null;
+        if (!isImage && !isText && !isDocument && !isAudio) return null;
 
         var sourcePath = file.Path;
         var buffer = await FileIO.ReadBufferAsync(file);
         var data = buffer.ToArray();
+
+        if (isAudio)
+        {
+            return new ChatAttachment
+            {
+                FileName = file.Name,
+                Type = AttachmentType.Audio,
+                Data = data,
+                MimeType = AudioMimeHelper.GetMimeType(ext),
+                SourcePath = sourcePath
+            };
+        }
 
         if (isDocument)
         {
@@ -289,6 +314,29 @@ public sealed partial class ComposeBar
             MimeType = "text/plain",
             SourcePath = sourcePath
         };
+    }
+
+    /// <summary>
+    /// Computes the playback duration of an audio attachment via Windows MediaProperties
+    /// and refreshes its chip on completion. Failure leaves <see cref="ChatAttachment.Duration"/> null
+    /// so the chip falls back to size-only display.
+    /// </summary>
+    private async Task PopulateAudioDurationAsync(StorageFile file, ChatAttachment attachment)
+    {
+        try
+        {
+            var props = await file.Properties.GetMusicPropertiesAsync();
+            var duration = props?.Duration;
+            if (duration.HasValue && duration.Value > TimeSpan.Zero)
+            {
+                attachment.Duration = duration;
+                _previewBar?.NotifyAttachmentUpdated();
+            }
+        }
+        catch (Exception ex)
+        {
+            DiagnosticLogger.LogWarning($"[Audio] Duration probe failed for {file.Name}: {ex.GetType().Name}: {ex.Message}");
+        }
     }
 
     /// <summary>

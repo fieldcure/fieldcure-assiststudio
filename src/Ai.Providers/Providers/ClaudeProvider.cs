@@ -58,6 +58,9 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
     /// <inheritdoc/>
     public PdfCapability PdfCapability => PdfCapability.NativePdf;
 
+    /// <inheritdoc/>
+    public AudioCapability AudioCapability => AudioCapability.NotSupported;
+
     #endregion
 
     #region Constructors
@@ -411,6 +414,9 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
                 // Binary attachments with label text blocks interleaved
                 foreach (var seg in layout.BinarySegments)
                 {
+                    // Audio is unsupported on Anthropic — silent skip per spec § 1.2 (history hygiene).
+                    if (seg.Attachment.Type == AttachmentType.Audio) continue;
+
                     contentParts.Add(new JsonObject { ["type"] = "text", ["text"] = seg.Label });
 
                     if (seg.Attachment.Type == AttachmentType.Image)

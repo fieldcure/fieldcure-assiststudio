@@ -55,6 +55,9 @@ public partial class OllamaProvider : IAiProvider, IDisposable
     /// <inheritdoc/>
     public PdfCapability PdfCapability { get; }
 
+    /// <inheritdoc/>
+    public AudioCapability AudioCapability => AudioCapability.NotSupported;
+
     #endregion
 
     #region Constructors
@@ -375,6 +378,9 @@ public partial class OllamaProvider : IAiProvider, IDisposable
                 // Binary labels first (describing what's in the images array)
                 foreach (var seg in layout.BinarySegments)
                 {
+                    // Audio is unsupported on Ollama — silent skip per spec § 1.2 (history hygiene).
+                    if (seg.Attachment.Type == AttachmentType.Audio) continue;
+
                     sb.AppendLine(seg.Label);
 
                     if (seg.Attachment.Type == AttachmentType.Image)

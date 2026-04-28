@@ -30,6 +30,9 @@ public interface IAiProvider
     /// <summary>Declares how this provider handles PDF document attachments.</summary>
     PdfCapability PdfCapability { get; }
 
+    /// <summary>Declares how this provider handles audio attachments for the currently configured model.</summary>
+    AudioCapability AudioCapability { get; }
+
     #endregion
 
     #region Methods

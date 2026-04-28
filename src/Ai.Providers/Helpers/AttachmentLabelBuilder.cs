@@ -44,7 +44,7 @@ public static class AttachmentLabelBuilder
             var att = attachments[i];
             var label = BuildLabel(att, numbered ? i + 1 : null);
 
-            if (att.Type is AttachmentType.Image or AttachmentType.Document)
+            if (att.Type is AttachmentType.Image or AttachmentType.Document or AttachmentType.Audio)
             {
                 binarySegments.Add(new LabeledBinarySegment(label, att));
             }
@@ -68,6 +68,7 @@ public static class AttachmentLabelBuilder
         {
             AttachmentType.Image => ("image", att.FileName),
             AttachmentType.Document => ("document", att.FileName),
+            AttachmentType.Audio => ("audio", att.FileName),
             AttachmentType.TextFile when att.Source == AttachmentSource.Pasted =>
                 ("pasted text", $"{att.CharCount:N0} chars, {att.LineCount:N0} lines"),
             AttachmentType.TextFile => ("file", att.FileName),

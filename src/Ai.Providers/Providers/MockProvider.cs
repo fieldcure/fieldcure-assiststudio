@@ -32,6 +32,9 @@ public class MockProvider : IAiProvider
     /// <inheritdoc/>
     public PdfCapability PdfCapability => PdfCapability.TextExtraction;
 
+    /// <inheritdoc/>
+    public AudioCapability AudioCapability => AudioCapability.NotSupported;
+
     #endregion
 
     #region Fields

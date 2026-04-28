@@ -29,7 +29,22 @@ public enum AttachmentType
     TextFile,
 
     /// <summary>A document attachment for multimodal support (e.g., native PDF).</summary>
-    Document
+    Document,
+
+    /// <summary>An audio attachment sent as raw bytes to audio-native providers.</summary>
+    Audio
+}
+
+/// <summary>
+/// Specifies how a provider handles audio attachments.
+/// </summary>
+public enum AudioCapability
+{
+    /// <summary>Provider cannot accept audio input. Attachments are dropped at send time.</summary>
+    NotSupported,
+
+    /// <summary>Provider accepts raw audio bytes (e.g., Gemini 1.5+, gpt-4o-audio).</summary>
+    NativeAudio
 }
 
 /// <summary>
@@ -114,6 +129,13 @@ public partial class ChatAttachment
     /// </summary>
     [JsonIgnore]
     public bool IsUnsupported { get; set; }
+
+    /// <summary>
+    /// Playback duration for audio attachments. Computed asynchronously after attach;
+    /// <c>null</c> while pending or when the codec cannot be parsed.
+    /// </summary>
+    [JsonIgnore]
+    public TimeSpan? Duration { get; set; }
 
     #endregion
 }

@@ -55,6 +55,9 @@ public partial class GeminiProvider : IAiProvider, IDisposable
     /// <inheritdoc/>
     public PdfCapability PdfCapability => PdfCapability.NativePdf;
 
+    /// <inheritdoc/>
+    public AudioCapability AudioCapability => AudioCapability.NativeAudio;
+
     #endregion
 
     #region Constructors
@@ -388,15 +391,28 @@ public partial class GeminiProvider : IAiProvider, IDisposable
             {
                 foreach (var seg in layout.BinarySegments)
                 {
+                    if (seg.Attachment.Type == AttachmentType.Audio)
+                    {
+                        // Silent skip audio whose MIME Gemini does not accept (per spec § 1.2 history handling).
+                        var audioMime = seg.Attachment.MimeType;
+                        if (audioMime is null || !AudioMimeHelper.GeminiSupportedMimes.Contains(audioMime))
+                        {
+                            continue;
+                        }
+                    }
+
                     parts.Add(new JsonObject { ["text"] = seg.Label });
 
                     parts.Add(new JsonObject
                     {
                         ["inlineData"] = new JsonObject
                         {
-                            ["mimeType"] = seg.Attachment.Type == AttachmentType.Image
-                                ? seg.Attachment.MimeType ?? "image/png"
-                                : seg.Attachment.MimeType ?? "application/pdf",
+                            ["mimeType"] = seg.Attachment.Type switch
+                            {
+                                AttachmentType.Image => seg.Attachment.MimeType ?? "image/png",
+                                AttachmentType.Audio => seg.Attachment.MimeType!,
+                                _ => seg.Attachment.MimeType ?? "application/pdf"
+                            },
                             ["data"] = Convert.ToBase64String(seg.Attachment.Data)
                         }
                     });

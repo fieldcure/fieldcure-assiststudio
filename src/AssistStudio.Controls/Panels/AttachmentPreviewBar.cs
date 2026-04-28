@@ -124,6 +124,12 @@ public sealed partial class AttachmentPreviewBar : Control
         _previewItems.Clear();
     }
 
+    /// <summary>
+    /// Rebuilds chip visuals after an attachment's display data changed in place
+    /// (e.g., audio duration computed asynchronously).
+    /// </summary>
+    public void NotifyAttachmentUpdated() => RebuildChips();
+
     #endregion
 
     #region Overrides
@@ -183,6 +189,7 @@ public sealed partial class AttachmentPreviewBar : Control
             {
                 AttachmentType.Image => CreateImageChip(attachment, number),
                 AttachmentType.TextFile => CreateTextChip(attachment, number),
+                AttachmentType.Audio => CreateAudioChip(attachment, number),
                 _ => CreateGenericChip(attachment, number),
             };
 
@@ -257,6 +264,49 @@ public sealed partial class AttachmentPreviewBar : Control
             thumbnailBackgroundBrush: new SolidColorBrush(Microsoft.UI.Colors.DarkRed),
             nameTextDecorations: Windows.UI.Text.TextDecorations.Strikethrough);
     }
+
+    /// <summary>
+    /// Creates an audio chip showing filename + size · duration on two lines.
+    /// Duration may arrive asynchronously; chip rebuilds when <see cref="NotifyAttachmentUpdated"/> fires.
+    /// </summary>
+    private AttachmentPreviewItemViewModel CreateAudioChip(ChatAttachment attachment, int number)
+    {
+        var sizeLabel = FormatBytes(attachment.Data.LongLength);
+        var durationLabel = attachment.Duration is { } d ? FormatDuration(d) : null;
+        var metaLine = durationLabel is null ? sizeLabel : $"{sizeLabel} · {durationLabel}";
+        var displayName = $"{FormatDisplayName(attachment.FileName, number)}\n{metaLine}";
+
+        var tooltipText = durationLabel is null
+            ? $"{attachment.FileName} · {sizeLabel}"
+            : $"{attachment.FileName} · {sizeLabel} · {durationLabel}";
+
+        return CreateIconChip(
+            attachment,
+            automationId: "AttachmentPreviewAudioChip",
+            displayName: displayName,
+            tooltipText: tooltipText,
+            accessibilityName: FormatAttachmentAccessibilityName(tooltipText),
+            glyph: ""); // MusicNote
+    }
+
+    /// <summary>
+    /// Returns a human-readable byte size (e.g., "12.3 MB", "850 KB").
+    /// </summary>
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024L * 1024) return $"{bytes / 1024.0:0.#} KB";
+        if (bytes < 1024L * 1024 * 1024) return $"{bytes / (1024.0 * 1024):0.#} MB";
+        return $"{bytes / (1024.0 * 1024 * 1024):0.#} GB";
+    }
+
+    /// <summary>
+    /// Formats a duration as MM:SS for under one hour, HH:MM:SS otherwise.
+    /// </summary>
+    private static string FormatDuration(TimeSpan d)
+        => d.TotalHours >= 1
+            ? $"{(int)d.TotalHours}:{d.Minutes:D2}:{d.Seconds:D2}"
+            : $"{d.Minutes:D2}:{d.Seconds:D2}";
 
     /// <summary>
     /// Creates a generic file chip for Document type attachments.
