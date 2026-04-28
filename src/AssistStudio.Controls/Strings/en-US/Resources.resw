@@ -213,6 +213,9 @@
   <data name="Chat_RegenerateTitle" xml:space="preserve">
     <value>Regenerate title with {0}</value>
   </data>
+  <data name="ComposeBar_DropCaption" xml:space="preserve">
+    <value>Attach file</value>
+  </data>
   <data name="ComposeBar_AttachTooltip" xml:space="preserve">
     <value>Attach file</value>
   </data>

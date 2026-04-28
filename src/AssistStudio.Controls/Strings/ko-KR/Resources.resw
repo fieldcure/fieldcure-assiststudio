@@ -213,6 +213,9 @@
   <data name="Chat_RegenerateTitle" xml:space="preserve">
     <value>{0}(으)로 제목 재생성</value>
   </data>
+  <data name="ComposeBar_DropCaption" xml:space="preserve">
+    <value>파일 첨부</value>
+  </data>
   <data name="ComposeBar_AttachTooltip" xml:space="preserve">
     <value>파일 첨부</value>
   </data>

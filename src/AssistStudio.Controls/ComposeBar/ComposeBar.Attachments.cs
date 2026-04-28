@@ -190,14 +190,21 @@ public sealed partial class ComposeBar
     #region Drag & Drop
 
     /// <summary>
-    /// Handles the DragOver event to accept file drop operations.
+    /// Handles the DragOver event to accept file drop operations and claim the caption
+    /// so a parent target (e.g., TabView "open conversation") does not override it.
     /// </summary>
     private void OnDragOver(object sender, DragEventArgs e)
     {
-        if (e.DataView.Contains(StandardDataFormats.StorageItems))
+        if (!e.DataView.Contains(StandardDataFormats.StorageItems)) return;
+
+        e.AcceptedOperation = DataPackageOperation.Copy;
+        if (e.DragUIOverride is not null)
         {
-            e.AcceptedOperation = DataPackageOperation.Copy;
+            e.DragUIOverride.Caption = Res.GetString("ComposeBar_DropCaption") ?? "Attach file";
+            e.DragUIOverride.IsCaptionVisible = true;
+            e.DragUIOverride.IsContentVisible = true;
         }
+        e.Handled = true;
     }
 
     /// <summary>
