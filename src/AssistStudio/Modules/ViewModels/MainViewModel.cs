@@ -237,11 +237,11 @@ public partial class MainViewModel : ObservableObject
                 }
                 else
                 {
-                    var dataUri = $"data:{mediaRef.MimeType};base64,{Convert.ToBase64String(bytes)}";
-                    var mime = mediaRef.MimeType;
-                    var kind = mime.StartsWith("image/") ? MediaContentKind.Image
-                        : mime.StartsWith("audio/") ? MediaContentKind.Audio
-                        : mime.StartsWith("video/") ? MediaContentKind.Video
+                    var mime = mediaRef.MimeType ?? "application/octet-stream";
+                    var dataUri = $"data:{mime};base64,{Convert.ToBase64String(bytes)}";
+                    var kind = mime.StartsWith("image/", StringComparison.OrdinalIgnoreCase) ? MediaContentKind.Image
+                        : mime.StartsWith("audio/", StringComparison.OrdinalIgnoreCase) ? MediaContentKind.Audio
+                        : mime.StartsWith("video/", StringComparison.OrdinalIgnoreCase) ? MediaContentKind.Video
                         : MediaContentKind.Download;
                     toolMedia.Add(new MediaContent(dataUri, mime, kind));
                 }
