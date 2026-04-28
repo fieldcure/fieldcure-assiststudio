@@ -1334,6 +1334,8 @@
                 html += renderTextChip(att, num);
             } else if (att.type === 'audio') {
                 html += renderAudioChip(att, num);
+            } else if (att.type === 'document') {
+                html += renderDocumentChip(att, num);
             } else {
                 html += '<span class="attachment-file">' +
                     '<span class="attachment-file-icon">&#128196;</span>' +
@@ -1388,6 +1390,20 @@
             '<div class="attachment-chip-name">' +
             escapeHtml(displayName) +
             (meta ? '<br/><span style="opacity:0.7;font-size:11px">' + escapeHtml(meta) + '</span>' : '') +
+            '</div>' +
+            '</div>';
+    }
+
+    function renderDocumentChip(att, num) {
+        var displayName = formatChipName(att.fileName || 'Document', num);
+        var size = formatAudioBytes(att.sizeBytes);
+        return '<div class="attachment-chip">' +
+            '<div class="attachment-chip-thumb attachment-chip-thumb-icon">' +
+            '<span class="attachment-chip-glyph"></span>' +
+            '</div>' +
+            '<div class="attachment-chip-name">' +
+            escapeHtml(displayName) +
+            (size ? '<br/><span style="opacity:0.7;font-size:11px">' + escapeHtml(size) + '</span>' : '') +
             '</div>' +
             '</div>';
     }

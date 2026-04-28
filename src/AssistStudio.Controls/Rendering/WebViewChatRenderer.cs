@@ -1007,6 +1007,7 @@ internal partial class WebViewChatRenderer
             var type = att.Type == AttachmentType.Image ? "image"
                 : att.Type == AttachmentType.TextFile ? "text"
                 : att.Type == AttachmentType.Audio ? "audio"
+                : att.Type == AttachmentType.Document ? "document"
                 : "file";
 
             var obj = new JsonObject
@@ -1027,6 +1028,10 @@ internal partial class WebViewChatRenderer
                 {
                     obj["durationSeconds"] = (long)d.TotalSeconds;
                 }
+            }
+            else if (att.Type == AttachmentType.Document)
+            {
+                obj["sizeBytes"] = att.Data.LongLength;
             }
             else if (att.Type == AttachmentType.TextFile)
             {
