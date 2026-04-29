@@ -297,10 +297,19 @@ public sealed partial class ChatPanel
         {
             if (panel._inputArea is not null)
                 panel._inputArea.SelectedModel = preset;
+
+            // Build the placeholder identifier. SDK consumers (per spec §6) and
+            // post-PR-4 hosts often set Name == ModelId; rendering both halves
+            // produces a duplicated "claude-opus-4-7/claude-opus-4-7" string.
+            // Fall back to a single token when they collapse.
             var displayName = preset.ProviderType == "Mock" ? "demo" : preset.Name;
-            var label = string.IsNullOrEmpty(preset.ModelId)
-                ? displayName
-                : $"{displayName}/{preset.ModelId}";
+            string label;
+            if (string.IsNullOrEmpty(preset.ModelId))
+                label = displayName;
+            else if (string.Equals(displayName, preset.ModelId, StringComparison.Ordinal))
+                label = preset.ModelId;
+            else
+                label = $"{displayName}/{preset.ModelId}";
             panel.UpdatePlaceholderWithProvider(label);
         }
         else
