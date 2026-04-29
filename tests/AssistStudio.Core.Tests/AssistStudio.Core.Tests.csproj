@@ -21,4 +21,12 @@
     <ProjectReference Include="..\..\src\AssistStudio.Core\AssistStudio.Core.csproj" />
   </ItemGroup>
 
+  <!-- ModelPickerEntry is pure C# (no WinUI deps) — link the source so its
+       equality/hash semantics can be tested from net8.0 without pulling in
+       AssistStudio.Controls's net8.0-windows TFM. -->
+  <ItemGroup>
+    <Compile Include="..\..\src\AssistStudio.Controls\ModelPicker\ModelPickerEntry.cs"
+             Link="ModelPicker\ModelPickerEntry.cs" />
+  </ItemGroup>
+
 </Project>

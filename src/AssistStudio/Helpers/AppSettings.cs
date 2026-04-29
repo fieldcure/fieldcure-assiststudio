@@ -767,7 +767,7 @@ public static class AppSettings
     /// </summary>
     public static void SaveModels(IList<ProviderModel> models)
     {
-        BroadcastSharedFields(models);
+        ProviderModelBroadcast.Apply(models);
 
         // Save API keys to PasswordVault, serialize rest to JSON
         foreach (var p in models)
@@ -901,34 +901,6 @@ public static class AppSettings
             if (m.ProviderType != "Mock") continue;
             if (string.IsNullOrEmpty(m.ModelId)) m.ModelId = MockDefaultModelId;
             if (string.IsNullOrEmpty(m.Name)) m.Name = MockDefaultModelId;
-        }
-    }
-
-    /// <summary>
-    /// Forces all <see cref="ProviderModel"/> entries that share a <see cref="ProviderModel.ProviderType"/>
-    /// to also share the per-Provider broadcast fields (MaxTokens, Temperature, StreamingEnabled,
-    /// PdfCapability, ThinkingEnabled, ThinkingOverride, ThinkingBudget, BaseUrl). The first
-    /// entry per ProviderType wins. Per-model fields (KeepAlive, NumCtx) are not touched.
-    /// Idempotent.
-    /// </summary>
-    private static void BroadcastSharedFields(IList<ProviderModel> models)
-    {
-        var seen = new Dictionary<string, ProviderModel>(StringComparer.Ordinal);
-        foreach (var m in models)
-        {
-            if (!seen.TryGetValue(m.ProviderType, out var first))
-            {
-                seen[m.ProviderType] = m;
-                continue;
-            }
-            m.MaxTokens = first.MaxTokens;
-            m.Temperature = first.Temperature;
-            m.StreamingEnabled = first.StreamingEnabled;
-            m.PdfCapability = first.PdfCapability;
-            m.ThinkingEnabled = first.ThinkingEnabled;
-            m.ThinkingOverride = first.ThinkingOverride;
-            m.ThinkingBudget = first.ThinkingBudget;
-            m.BaseUrl = first.BaseUrl;
         }
     }
 
