@@ -9,6 +9,7 @@
         <ResourceDictionary Source="ms-appx:///AssistStudio.Controls/Themes/ToolElicitationPanel.xaml"/>
         <ResourceDictionary Source="ms-appx:///AssistStudio.Controls/Themes/ToolApprovalPanel.xaml"/>
         <ResourceDictionary Source="ms-appx:///AssistStudio.Controls/Themes/ChatPanel.xaml"/>
+        <ResourceDictionary Source="ms-appx:///AssistStudio.Controls/Themes/ModelPicker.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 
 </ResourceDictionary>

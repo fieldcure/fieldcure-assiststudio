@@ -1,0 +1,88 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:FieldCure.AssistStudio.Controls"
+    xmlns:helpers="using:FieldCure.AssistStudio.Controls.Helpers">
+
+    <helpers:StringToVisibilityConverter x:Key="ModelPickerStringToVisibilityConverter"/>
+
+    <Style TargetType="local:ModelPicker">
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:ModelPicker">
+                    <Button x:Name="PART_RootButton"
+                            AutomationProperties.AutomationId="ModelPickerRoot"
+                            Padding="8,4"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left">
+                        <Button.Content>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock x:Name="PART_LabelText"
+                                           VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <FontIcon Glyph="&#xE70D;"
+                                          FontSize="10"
+                                          VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button.Content>
+                        <Button.Flyout>
+                            <Flyout Placement="Top">
+                                <Grid Width="320" MaxHeight="380">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+
+                                    <AutoSuggestBox x:Name="PART_SearchBox"
+                                                    AutomationProperties.AutomationId="ModelPickerSearch"
+                                                    QueryIcon="Find"
+                                                    Grid.Row="0"
+                                                    Margin="0,0,0,8"/>
+
+                                    <ListView x:Name="PART_List"
+                                              AutomationProperties.AutomationId="ModelPickerList"
+                                              Grid.Row="1"
+                                              SelectionMode="Single"
+                                              IsItemClickEnabled="True">
+                                        <ListView.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <ItemsStackPanel AreStickyGroupHeadersEnabled="True"/>
+                                            </ItemsPanelTemplate>
+                                        </ListView.ItemsPanel>
+                                        <ListView.GroupStyle>
+                                            <GroupStyle>
+                                                <GroupStyle.HeaderTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding Key}"
+                                                                   Style="{ThemeResource BodyStrongTextBlockStyle}"
+                                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                                   Margin="0,8,0,4"/>
+                                                    </DataTemplate>
+                                                </GroupStyle.HeaderTemplate>
+                                            </GroupStyle>
+                                        </ListView.GroupStyle>
+                                        <ListView.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding DisplayName}"/>
+                                                    <TextBlock Text="{Binding Description}"
+                                                               Style="{ThemeResource CaptionTextBlockStyle}"
+                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                               Visibility="{Binding Description,
+                                                                   Converter={StaticResource ModelPickerStringToVisibilityConverter}}"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ListView.ItemTemplate>
+                                    </ListView>
+                                </Grid>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>
