@@ -342,9 +342,6 @@
   <data name="Profiles_NewProfileDialog" xml:space="preserve">
     <value>새 프로필</value>
   </data>
-  <data name="Profiles_DesiredProvider.Text" xml:space="preserve">
-    <value>선호 프로바이더</value>
-  </data>
   <data name="Profiles_DesiredModel.Text" xml:space="preserve">
     <value>선호 모델</value>
   </data>
@@ -356,9 +353,6 @@
   </data>
   <data name="Profiles_ServerToolsHint" xml:space="preserve">
     <value>서버의 도구는 AI가 자동으로 검색하여 사용합니다.</value>
-  </data>
-  <data name="Profiles_AnyProvider" xml:space="preserve">
-    <value>모든 프로바이더</value>
   </data>
   <data name="Nav_AppTasks.Content" xml:space="preserve">
     <value>앱 작업</value>
@@ -470,6 +464,48 @@
   </data>
   <data name="Models_NoKey" xml:space="preserve">
     <value>키 없음</value>
+  </data>
+  <data name="Models_AvailableModels.Text" xml:space="preserve">
+    <value>사용 가능한 모델</value>
+  </data>
+  <data name="Models_RefreshModels.ToolTipService.ToolTip" xml:space="preserve">
+    <value>모델 목록 새로고침</value>
+  </data>
+  <data name="Models_NoModelsAvailable.Text" xml:space="preserve">
+    <value>사용할 수 있는 모델이 없습니다. 아래에서 추가하거나 새로고침을 누르세요.</value>
+  </data>
+  <data name="Models_NoOllamaModels.Text" xml:space="preserve">
+    <value>설치된 Ollama 모델이 없습니다. 'Browse models'로 설치하세요.</value>
+  </data>
+  <data name="Models_AddCustomModelIdBox.PlaceholderText" xml:space="preserve">
+    <value>모델 ID</value>
+  </data>
+  <data name="Models_AddCustomModelIdButton.Content" xml:space="preserve">
+    <value>+ 모델 ID 추가</value>
+  </data>
+  <data name="Models_NoModelsSelected" xml:space="preserve">
+    <value>선택된 모델 없음</value>
+  </data>
+  <data name="Models_OneModelSelected" xml:space="preserve">
+    <value>모델 {0}개</value>
+  </data>
+  <data name="Models_NModelsSelected" xml:space="preserve">
+    <value>모델 {0}개</value>
+  </data>
+  <data name="Models_ModelInUseTitle" xml:space="preserve">
+    <value>모델이 사용 중입니다</value>
+  </data>
+  <data name="Models_ModelInUseMessage" xml:space="preserve">
+    <value>'{0}'을(를) 제거하면 다음 참조가 손상됩니다: {1}. 계속하시겠습니까?</value>
+  </data>
+  <data name="Models_Remove" xml:space="preserve">
+    <value>제거</value>
+  </data>
+  <data name="Models_RefreshFailedTitle" xml:space="preserve">
+    <value>새로고침 실패</value>
+  </data>
+  <data name="Models_Close" xml:space="preserve">
+    <value>닫기</value>
   </data>
   <data name="Models_UpdateKey" xml:space="preserve">
     <value>키 수정</value>

@@ -342,9 +342,6 @@
   <data name="Profiles_NewProfileDialog" xml:space="preserve">
     <value>New Profile</value>
   </data>
-  <data name="Profiles_DesiredProvider.Text" xml:space="preserve">
-    <value>Desired provider</value>
-  </data>
   <data name="Profiles_DesiredModel.Text" xml:space="preserve">
     <value>Desired model</value>
   </data>
@@ -356,9 +353,6 @@
   </data>
   <data name="Profiles_ServerToolsHint" xml:space="preserve">
     <value>Server tools are automatically discovered and used by AI.</value>
-  </data>
-  <data name="Profiles_AnyProvider" xml:space="preserve">
-    <value>Any provider</value>
   </data>
   <data name="Nav_AppTasks.Content" xml:space="preserve">
     <value>App Tasks</value>
@@ -470,6 +464,48 @@
   </data>
   <data name="Models_NoKey" xml:space="preserve">
     <value>No Key</value>
+  </data>
+  <data name="Models_AvailableModels.Text" xml:space="preserve">
+    <value>Available models</value>
+  </data>
+  <data name="Models_RefreshModels.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Refresh model list</value>
+  </data>
+  <data name="Models_NoModelsAvailable.Text" xml:space="preserve">
+    <value>No models available. Add one below or click refresh.</value>
+  </data>
+  <data name="Models_NoOllamaModels.Text" xml:space="preserve">
+    <value>No Ollama models pulled. Click 'Browse models' to install one.</value>
+  </data>
+  <data name="Models_AddCustomModelIdBox.PlaceholderText" xml:space="preserve">
+    <value>model-id</value>
+  </data>
+  <data name="Models_AddCustomModelIdButton.Content" xml:space="preserve">
+    <value>+ Add model ID</value>
+  </data>
+  <data name="Models_NoModelsSelected" xml:space="preserve">
+    <value>No models selected</value>
+  </data>
+  <data name="Models_OneModelSelected" xml:space="preserve">
+    <value>{0} model</value>
+  </data>
+  <data name="Models_NModelsSelected" xml:space="preserve">
+    <value>{0} models</value>
+  </data>
+  <data name="Models_ModelInUseTitle" xml:space="preserve">
+    <value>Model is still in use</value>
+  </data>
+  <data name="Models_ModelInUseMessage" xml:space="preserve">
+    <value>Removing '{0}' will leave the following references stale: {1}. Continue?</value>
+  </data>
+  <data name="Models_Remove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="Models_RefreshFailedTitle" xml:space="preserve">
+    <value>Refresh failed</value>
+  </data>
+  <data name="Models_Close" xml:space="preserve">
+    <value>Close</value>
   </data>
   <data name="Models_UpdateKey" xml:space="preserve">
     <value>Update Key</value>

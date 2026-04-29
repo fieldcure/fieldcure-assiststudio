@@ -1,7 +1,9 @@
-﻿namespace FieldCure.AssistStudio.Core.Models;
+using System.Text.Json.Serialization;
+
+namespace FieldCure.AssistStudio.Core.Models;
 
 /// <summary>
-/// A named profile that bundles a system prompt with optional preferred provider, model, and tools.
+/// A named profile that bundles a system prompt with an optional preferred model and tool selection.
 /// Serialized to JSON via <c>AppJsonContext</c>.
 /// </summary>
 public class Profile
@@ -10,7 +12,7 @@ public class Profile
 
     /// <summary>
     /// Raised when any tool-related property (<see cref="ToolNames"/>, <see cref="EnabledServers"/>,
-    /// <see cref="UseSearchTools"/>) changes. Subscribers should refresh their tool resolution.
+    /// <see cref="UseSearchTools"/>) changes.
     /// </summary>
     public event EventHandler? ToolSettingsChanged;
 
@@ -22,17 +24,34 @@ public class Profile
     public string Name { get; set; } = "";
 
     /// <summary>The system prompt text for this profile.</summary>
-    [System.Text.Json.Serialization.JsonPropertyName("Text")]
+    [JsonPropertyName("Text")]
     public string SystemPrompt { get; set; } = "";
 
     /// <summary>Whether this is a built-in profile (cannot be deleted).</summary>
     public bool IsBuiltIn { get; set; }
 
-    /// <summary>Preferred provider type to auto-select (e.g., "Ollama", "OpenAI").</summary>
-    public string? PreferredProviderType { get; set; }
+    /// <summary>
+    /// Preferred <c>ProviderModel.Name</c> to auto-select for new tabs using this profile.
+    /// Replaces the legacy (<c>PreferredProviderType</c>, <c>PreferredModelId</c>) pair.
+    /// </summary>
+    public string? PreferredModelName { get; set; }
 
-    /// <summary>Preferred model ID to auto-select (e.g., "llama3.1:latest").</summary>
-    public string? PreferredModelId { get; set; }
+    /// <summary>
+    /// Legacy field (pre-1.0). Populated when reading old profile JSON; consumed once by
+    /// <c>AppSettings.LoadProfiles</c> migration to backfill <see cref="PreferredModelName"/>.
+    /// Skipped on write because it ends up null after migration and the global JSON
+    /// source-gen context ignores nulls.
+    /// </summary>
+    [JsonPropertyName("PreferredProviderType")]
+    public string? LegacyPreferredProviderType { get; set; }
+
+    /// <summary>
+    /// Legacy field (pre-1.0). Populated when reading old profile JSON. Not consumed
+    /// directly — migration uses <see cref="LegacyPreferredProviderType"/> to look up
+    /// the matching <c>ProviderModel.Name</c>. Skipped on write once cleared.
+    /// </summary>
+    [JsonPropertyName("PreferredModelId")]
+    public string? LegacyPreferredModelId { get; set; }
 
     /// <summary>Tool names to enable when this profile is active.</summary>
     public List<string> ToolNames
@@ -59,9 +78,8 @@ public class Profile
     }
 
     /// <summary>
-    /// Server IDs enabled for this profile (e.g., "builtin_filesystem", "github_abc123").
-    /// When non-empty, only tools from these servers are discoverable via search_tools.
-    /// Empty means no servers selected (built-in tools only).
+    /// Server IDs enabled for this profile. When non-empty, only tools from these servers
+    /// are discoverable via search_tools. Empty means built-in tools only.
     /// </summary>
     public List<string> EnabledServers
     {

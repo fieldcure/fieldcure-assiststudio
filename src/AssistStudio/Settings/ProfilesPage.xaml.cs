@@ -1,13 +1,15 @@
 ﻿using AssistStudio.Controls.Dialogs;
 using AssistStudio.Helpers;
 using AssistStudio.Mcp;
+using AssistStudio.Modules.Helpers;
 using FieldCure.Ai.Providers.Models;
+using FieldCure.AssistStudio.Controls;
 using FieldCure.AssistStudio.Core.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Markup;
 using Microsoft.UI.Xaml.Navigation;
 using Microsoft.Windows.ApplicationModel.Resources;
+using System.Collections.Generic;
 
 namespace AssistStudio.Settings;
 
@@ -178,36 +180,15 @@ public sealed partial class ProfilesPage : Page
     }
 
     /// <summary>
-    /// Handles preferred provider combo box selection changes.
+    /// Handles preferred-model selection changes from the embedded <see cref="ModelPicker"/>.
+    /// Stores the selected <c>ProviderModel.Name</c> on the active profile.
     /// </summary>
-    private void OnProviderChanged(object sender, SelectionChangedEventArgs e)
+    private void OnProfileModelPickerSelectionChanged(object? sender, ModelPickerEntry? entry)
     {
         if (_suppressEvents) return;
         if (ProfileCombo.SelectedItem is not Profile profile) return;
 
-        var providerType = ProviderCombo.SelectedItem is ComboBoxItem selected
-            ? selected.Tag as string
-            : null;
-
-        profile.PreferredProviderType = providerType;
-
-        _suppressEvents = true;
-        PopulateModelCombo(providerType);
-        profile.PreferredModelId = null;
-        _suppressEvents = false;
-
-        SaveAll();
-    }
-
-    /// <summary>
-    /// Handles preferred model combo box selection changes.
-    /// </summary>
-    private void OnModelChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (_suppressEvents) return;
-        if (ProfileCombo.SelectedItem is not Profile profile) return;
-
-        profile.PreferredModelId = ModelCombo.SelectedItem as string;
+        profile.PreferredModelName = (entry?.Tag as ProviderModel)?.Name;
         SaveAll();
     }
 
@@ -260,8 +241,7 @@ public sealed partial class ProfilesPage : Page
         profile.ToolNames = [.. defaults.ToolNames];
         profile.UseSearchTools = defaults.UseSearchTools;
         profile.EnabledServers = [.. defaults.EnabledServers];
-        profile.PreferredProviderType = defaults.PreferredProviderType;
-        profile.PreferredModelId = defaults.PreferredModelId;
+        profile.PreferredModelName = defaults.PreferredModelName;
 
         LoadSelectedProfile();
         SaveAll();
@@ -328,18 +308,39 @@ public sealed partial class ProfilesPage : Page
 
         SystemPromptBox.Text = profile.SystemPrompt;
 
-        // Provider
-        PopulateProviderCombo();
-        SelectProviderItem(profile.PreferredProviderType);
-
-        // Model
-        PopulateModelCombo(profile.PreferredProviderType);
-        SelectModelItem(profile.PreferredModelId);
+        // Model picker
+        PopulateModelPicker(profile);
 
         // Tools
         PopulateToolsPanel(profile);
 
         _suppressEvents = false;
+    }
+
+    /// <summary>
+    /// Populates <see cref="ProfileModelPicker"/> with the current registered
+    /// <see cref="ProviderModel"/> entries and selects the row matching
+    /// <see cref="Profile.PreferredModelName"/>. Idempotent on repeated profile loads.
+    /// </summary>
+    private void PopulateModelPicker(Profile profile)
+    {
+        var ordered = AppSettings.BuildOrderedModelItems();
+        var entries = ModelPickerAdapter.BuildEntriesFromOrderedItems(ordered);
+
+        // Detach the SelectionChanged subscription while we reassign ItemsSource +
+        // SelectedItem so we don't fire a write-back during programmatic update.
+        ProfileModelPicker.SelectionChanged -= OnProfileModelPickerSelectionChanged;
+        ProfileModelPicker.ItemsSource = (System.Collections.IList)entries;
+
+        ModelPickerEntry? match = null;
+        if (!string.IsNullOrEmpty(profile.PreferredModelName))
+        {
+            match = entries.FirstOrDefault(en =>
+                en.Tag is ProviderModel pm &&
+                string.Equals(pm.Name, profile.PreferredModelName, StringComparison.Ordinal));
+        }
+        ProfileModelPicker.SelectedItem = match;
+        ProfileModelPicker.SelectionChanged += OnProfileModelPickerSelectionChanged;
     }
 
     /// <summary>
@@ -361,118 +362,6 @@ public sealed partial class ProfilesPage : Page
         {
             System.Diagnostics.Debug.WriteLine("[SaveAll] No profile selected, NotifyProfilesChanged NOT fired");
         }
-    }
-
-    /// <summary>
-    /// Populates the provider combo box with available provider types.
-    /// The first item uses a localized "Any provider" label from resources.
-    /// </summary>
-    private void PopulateProviderCombo()
-    {
-        ProviderCombo.Items.Clear();
-        var anyProviderLabel = Res.GetString("Profiles_AnyProvider");
-
-        // "Any provider" item
-        ProviderCombo.Items.Add(new ComboBoxItem
-        {
-            Content = string.IsNullOrEmpty(anyProviderLabel) ? "Any provider" : anyProviderLabel,
-            Tag = (string?)null,
-        });
-
-        // Ordered provider items with separators
-        var items = AppSettings.BuildOrderedModelItems();
-        foreach (var obj in items)
-        {
-            if (obj is ProviderModel preset)
-            {
-                var displayName = preset.ProviderType == "Mock" ? "demo" : preset.Name;
-                ProviderCombo.Items.Add(new ComboBoxItem
-                {
-                    Content = displayName,
-                    Tag = preset.ProviderType,
-                });
-            }
-            else if (obj is "-")
-            {
-                var border = (Border)XamlReader.Load(
-                    """
-                    <Border xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                            Height="1" HorizontalAlignment="Stretch"
-                            Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
-                    """);
-                ProviderCombo.Items.Add(new ComboBoxItem
-                {
-                    IsEnabled = false,
-                    IsHitTestVisible = false,
-                    MinHeight = 0,
-                    Height = 9,
-                    Padding = new Thickness(0),
-                    Content = border,
-                });
-            }
-        }
-    }
-
-    /// <summary>
-    /// Selects the matching provider item in the combo box.
-    /// </summary>
-    private void SelectProviderItem(string? providerType)
-    {
-        for (var i = 0; i < ProviderCombo.Items.Count; i++)
-        {
-            if (ProviderCombo.Items[i] is ComboBoxItem item && item.Tag as string == providerType)
-            {
-                ProviderCombo.SelectedIndex = i;
-                return;
-            }
-        }
-        ProviderCombo.SelectedIndex = 0;
-    }
-
-    /// <summary>
-    /// Populates the model combo box based on the selected provider type.
-    /// </summary>
-    private void PopulateModelCombo(string? providerType)
-    {
-        ModelCombo.Items.Clear();
-
-        if (providerType is null)
-        {
-            ModelCombo.IsEnabled = false;
-            return;
-        }
-
-        var models = AppSettings.GetCachedModels(providerType);
-        if (models is not null)
-        {
-            foreach (var m in models)
-                ModelCombo.Items.Add(m);
-        }
-
-        ModelCombo.IsEnabled = ModelCombo.Items.Count > 0;
-    }
-
-    /// <summary>
-    /// Selects the matching model item in the combo box.
-    /// </summary>
-    private void SelectModelItem(string? modelId)
-    {
-        if (modelId is null || ModelCombo.Items.Count == 0)
-        {
-            if (ModelCombo.Items.Count > 0)
-                ModelCombo.SelectedIndex = 0;
-            return;
-        }
-
-        for (var i = 0; i < ModelCombo.Items.Count; i++)
-        {
-            if (ModelCombo.Items[i] is string s && s == modelId)
-            {
-                ModelCombo.SelectedIndex = i;
-                return;
-            }
-        }
-        ModelCombo.SelectedIndex = 0;
     }
 
     /// <summary>

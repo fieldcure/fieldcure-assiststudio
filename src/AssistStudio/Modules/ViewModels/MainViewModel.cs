@@ -554,10 +554,12 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Gets the default provider preset based on the active profile's preferred provider type.
-    /// Falls back to the first available preset, or Mock if none exist.
+    /// Resolves the seed <see cref="ProviderModel"/> for a new tab from the active
+    /// profile's <see cref="Profile.PreferredModelName"/>. Falls back to the first
+    /// available preset, or to a synthetic Mock entry if the user has no usable
+    /// providers configured.
     /// </summary>
-    /// <returns>The default provider preset.</returns>
+    /// <returns>The default provider model.</returns>
     private ProviderModel GetDefaultPreset()
     {
         var presets = GetFilteredPresets();
@@ -565,16 +567,15 @@ public partial class MainViewModel : ObservableObject
         if (providerPresets.Count == 0)
             return new ProviderModel { Name = AppSettings.MockDefaultModelId, ProviderType = "Mock", ModelId = AppSettings.MockDefaultModelId };
 
-        var preferredType = GetActiveProfile()?.PreferredProviderType;
-        if (preferredType is not null)
+        var preferredName = GetActiveProfile()?.PreferredModelName;
+        if (!string.IsNullOrEmpty(preferredName))
         {
-            foreach (var p in providerPresets)
-            {
-                if (p.ProviderType == preferredType) return p;
-            }
+            var match = providerPresets.FirstOrDefault(p =>
+                string.Equals(p.Name, preferredName, StringComparison.Ordinal));
+            if (match is not null) return match;
         }
 
-        // Preferred provider not available — fall back to first
+        // Preferred model unavailable — fall back to first.
         return providerPresets[0];
     }
 

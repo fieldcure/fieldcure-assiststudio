@@ -470,23 +470,6 @@ public static class AppSettings
     #region Default Model Methods
 
     /// <summary>
-    /// Gets the saved default model ID for the specified provider.
-    /// </summary>
-    /// <returns>The model ID, or <c>null</c> if none is saved.</returns>
-    public static string? GetDefaultModel(string provider)
-    {
-        return Settings.Values[$"DefaultModel_{provider}"] as string;
-    }
-
-    /// <summary>
-    /// Sets the default model ID for the specified provider.
-    /// </summary>
-    public static void SetDefaultModel(string provider, string modelId)
-    {
-        Settings.Values[$"DefaultModel_{provider}"] = modelId;
-    }
-
-    /// <summary>
     /// Gets the saved Ollama server base URL, or <c>null</c> for the default (localhost).
     /// </summary>
     public static string? GetOllamaBaseUrl()
@@ -539,8 +522,7 @@ public static class AppSettings
             Name = p.Name,
             SystemPrompt = p.SystemPrompt,
             IsBuiltIn = p.IsBuiltIn,
-            PreferredProviderType = p.PreferredProviderType,
-            PreferredModelId = p.PreferredModelId,
+            PreferredModelName = p.PreferredModelName,
             ToolNames = [.. p.ToolNames],
             UseSearchTools = p.UseSearchTools,
             EnabledServers = [.. p.EnabledServers],
@@ -604,8 +586,47 @@ public static class AppSettings
             p.EnabledServers.Remove(Mcp.BuiltInServerHelper.MemoryKey);
         }
 
+        MigratePreferredModelName(result);
+
         _profileCache = result;
         return result;
+    }
+
+    /// <summary>
+    /// One-time migration: when a profile loaded from old JSON carries
+    /// <c>LegacyPreferredProviderType</c> but no <c>PreferredModelName</c>, populate
+    /// the latter from the first <see cref="ProviderModel"/> matching the legacy
+    /// provider type. Idempotent — already-migrated profiles are unchanged. Clears
+    /// the legacy fields so the next save drops them from JSON.
+    /// </summary>
+    private static void MigratePreferredModelName(IList<Profile> profiles)
+    {
+        var anyLegacy = profiles.Any(p =>
+            !string.IsNullOrEmpty(p.LegacyPreferredProviderType) &&
+            string.IsNullOrEmpty(p.PreferredModelName));
+        if (!anyLegacy) return;
+
+        // Read models without recursing through profile load.
+        var models = LoadModels();
+        foreach (var p in profiles)
+        {
+            if (string.IsNullOrEmpty(p.PreferredModelName) &&
+                !string.IsNullOrEmpty(p.LegacyPreferredProviderType))
+            {
+                ProviderModel? match = null;
+                if (!string.IsNullOrEmpty(p.LegacyPreferredModelId))
+                {
+                    match = models.FirstOrDefault(m =>
+                        m.ProviderType == p.LegacyPreferredProviderType &&
+                        m.ModelId == p.LegacyPreferredModelId);
+                }
+                match ??= models.FirstOrDefault(m => m.ProviderType == p.LegacyPreferredProviderType);
+                if (match is not null)
+                    p.PreferredModelName = match.Name;
+            }
+            p.LegacyPreferredProviderType = null;
+            p.LegacyPreferredModelId = null;
+        }
     }
 
     /// <summary>
@@ -707,6 +728,29 @@ public static class AppSettings
     public static void ClearModelsEndpointFailed(string provider)
         => Settings.Values.Remove($"ModelsEndpointFailed_{provider}");
 
+    /// <summary>
+    /// Returns the user-entered (manually added) model IDs for the specified provider.
+    /// Manually added IDs persist across sessions even when not present in the upstream
+    /// /models response, and render greyed out with a "Manually added" tooltip.
+    /// </summary>
+    public static List<string> GetManualModels(string provider)
+    {
+        var json = Settings.Values[$"ManualModels_{provider}"] as string;
+        if (string.IsNullOrEmpty(json)) return [];
+        try { return JsonSerializer.Deserialize(json, AppJsonContext.Default.ListString) ?? []; }
+        catch { return []; }
+    }
+
+    /// <summary>
+    /// Persists the manually added model IDs for the specified provider.
+    /// </summary>
+    public static void SetManualModels(string provider, IList<string> ids)
+    {
+        var list = ids as List<string> ?? [.. ids];
+        var json = JsonSerializer.Serialize(list, AppJsonContext.Default.ListString);
+        Settings.Values[$"ManualModels_{provider}"] = json;
+    }
+
     #endregion
 
     #region Provider Model Methods
@@ -716,9 +760,15 @@ public static class AppSettings
 
     /// <summary>
     /// Persists provider models to local storage, saving API keys securely via the password vault.
+    /// Per-Provider broadcast fields (MaxTokens, Temperature, StreamingEnabled, PdfCapability,
+    /// ThinkingEnabled, ThinkingOverride, ThinkingBudget) are forced to share the value of
+    /// the first entry within each ProviderType before serialization. Per-model fields
+    /// (KeepAlive, NumCtx) are preserved per instance.
     /// </summary>
     public static void SaveModels(IList<ProviderModel> models)
     {
+        BroadcastSharedFields(models);
+
         // Save API keys to PasswordVault, serialize rest to JSON
         foreach (var p in models)
         {
@@ -801,6 +851,43 @@ public static class AppSettings
     }
 
     /// <summary>
+    /// Lists auxiliary settings keys (TitleModel, SummaryModel, SubAgentModel,
+    /// EmbeddingProviderModel, ContextualizerProviderModel, Specialist_*_Model) that
+    /// currently reference <paramref name="modelName"/>. Used by the Models page to
+    /// warn the user before unchecking a model that is still in use elsewhere.
+    /// </summary>
+    /// <returns>A list of human-readable usage labels (e.g., "Title", "Summary",
+    /// "Specialist: WebSearch"); empty when no references exist.</returns>
+    public static IReadOnlyList<string> FindAuxiliaryKeyUsages(string modelName)
+    {
+        if (string.IsNullOrEmpty(modelName)) return [];
+        var results = new List<string>();
+        if (string.Equals(TitleModel, modelName, StringComparison.Ordinal)) results.Add("Title");
+        if (string.Equals(SummaryModel, modelName, StringComparison.Ordinal)) results.Add("Summary");
+        if (string.Equals(SubAgentModel, modelName, StringComparison.Ordinal)) results.Add("Sub-Agent");
+#pragma warning disable CS0618 // Embedding/Contextualizer kept only as legacy reference probes
+        if (string.Equals(EmbeddingProviderModel, modelName, StringComparison.Ordinal)) results.Add("Embedding");
+        if (string.Equals(ContextualizerProviderModel, modelName, StringComparison.Ordinal)) results.Add("Contextualizer");
+#pragma warning restore CS0618
+
+        const string prefix = "Specialist_";
+        const string suffix = "_Model";
+        foreach (var key in Settings.Values.Keys)
+        {
+            if (!key.StartsWith(prefix, StringComparison.Ordinal) ||
+                !key.EndsWith(suffix, StringComparison.Ordinal)) continue;
+            if (Settings.Values[key] is string val &&
+                string.Equals(val, modelName, StringComparison.Ordinal))
+            {
+                var name = key[prefix.Length..^suffix.Length];
+                results.Add($"Specialist: {name}");
+            }
+        }
+        return results;
+    }
+
+
+    /// <summary>
     /// Ensures every Mock-provider entry carries <see cref="MockDefaultModelId"/>
     /// as its <see cref="ProviderModel.ModelId"/>/<see cref="ProviderModel.Name"/>.
     /// Repairs entries persisted before the demo-default fix; safe to invoke
@@ -814,6 +901,34 @@ public static class AppSettings
             if (m.ProviderType != "Mock") continue;
             if (string.IsNullOrEmpty(m.ModelId)) m.ModelId = MockDefaultModelId;
             if (string.IsNullOrEmpty(m.Name)) m.Name = MockDefaultModelId;
+        }
+    }
+
+    /// <summary>
+    /// Forces all <see cref="ProviderModel"/> entries that share a <see cref="ProviderModel.ProviderType"/>
+    /// to also share the per-Provider broadcast fields (MaxTokens, Temperature, StreamingEnabled,
+    /// PdfCapability, ThinkingEnabled, ThinkingOverride, ThinkingBudget, BaseUrl). The first
+    /// entry per ProviderType wins. Per-model fields (KeepAlive, NumCtx) are not touched.
+    /// Idempotent.
+    /// </summary>
+    private static void BroadcastSharedFields(IList<ProviderModel> models)
+    {
+        var seen = new Dictionary<string, ProviderModel>(StringComparer.Ordinal);
+        foreach (var m in models)
+        {
+            if (!seen.TryGetValue(m.ProviderType, out var first))
+            {
+                seen[m.ProviderType] = m;
+                continue;
+            }
+            m.MaxTokens = first.MaxTokens;
+            m.Temperature = first.Temperature;
+            m.StreamingEnabled = first.StreamingEnabled;
+            m.PdfCapability = first.PdfCapability;
+            m.ThinkingEnabled = first.ThinkingEnabled;
+            m.ThinkingOverride = first.ThinkingOverride;
+            m.ThinkingBudget = first.ThinkingBudget;
+            m.BaseUrl = first.BaseUrl;
         }
     }
 
@@ -902,12 +1017,13 @@ public static class AppSettings
             if (models.Any(p => p.ProviderType == providerType))
                 continue;
 
+            var seed = GetCachedModels(providerType)?.FirstOrDefault() ?? "";
             models.Add(new ProviderModel
             {
-                Name = config.DisplayName,
+                Name = string.IsNullOrEmpty(seed) ? config.DisplayName : seed,
                 ProviderType = providerType,
                 BaseUrl = config.BaseUrl,
-                ModelId = GetDefaultModel(providerType) ?? "",
+                ModelId = seed,
                 ApiKey = PasswordVaultHelper.LoadApiKey(providerType),
             });
         }
@@ -1139,25 +1255,27 @@ public static class AppSettings
             var key = PasswordVaultHelper.LoadApiKey(providerType);
             if (string.IsNullOrEmpty(key)) continue;
 
-            var savedModel = GetDefaultModel(providerType);
+            var seed = (GetCachedModels(providerType)?.FirstOrDefault())
+                ?? ProviderModelDefaults.ForProvider(providerType)
+                ?? fallbackModel;
 
             models.Add(new ProviderModel
             {
-                Name = displayName,
+                Name = seed,
                 ProviderType = providerType,
-                ModelId = savedModel ?? fallbackModel,
+                ModelId = seed,
                 ApiKey = key,
                 BaseUrl = baseUrl,
             });
         }
 
         // Ollama (local, may not be running)
-        var ollamaModel = GetDefaultModel("Ollama");
+        var ollamaSeed = ProviderModelDefaults.ForProvider("Ollama") ?? "llama3.3";
         models.Add(new ProviderModel
         {
-            Name = "Ollama",
+            Name = ollamaSeed,
             ProviderType = "Ollama",
-            ModelId = ollamaModel ?? "llama3.1",
+            ModelId = ollamaSeed,
             BaseUrl = GetOllamaBaseUrl(),
         });
 

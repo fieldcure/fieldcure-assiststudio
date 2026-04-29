@@ -3,6 +3,7 @@
     x:Class="AssistStudio.Settings.ProfilesPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:FieldCure.AssistStudio.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
@@ -96,24 +97,14 @@
                         MaxHeight="400"
                         TextChanged="OnEditorChanged" />
 
-                    <!-- Desired Provider -->
-                    <TextBlock
-                        x:Uid="Profiles_DesiredProvider" Text="Desired provider"
-                        Style="{StaticResource BodyStrongTextBlockStyle}" />
-                    <ComboBox
-                        x:Name="ProviderCombo"
-                        HorizontalAlignment="Stretch"
-                        SelectionChanged="OnProviderChanged" />
-
                     <!-- Desired Model -->
                     <TextBlock
                         x:Uid="Profiles_DesiredModel" Text="Desired model"
                         Style="{StaticResource BodyStrongTextBlockStyle}" />
-                    <ComboBox
-                        x:Name="ModelCombo"
+                    <controls:ModelPicker
+                        x:Name="ProfileModelPicker"
                         HorizontalAlignment="Stretch"
-                        IsEnabled="False"
-                        SelectionChanged="OnModelChanged" />
+                        MinWidth="200" />
 
                     <!-- Tools & Servers -->
                     <StackPanel Spacing="8">

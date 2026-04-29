@@ -57,8 +57,9 @@ public class ProfileTests
         Assert.AreEqual("", profile.Name);
         Assert.AreEqual("", profile.SystemPrompt);
         Assert.IsFalse(profile.IsBuiltIn);
-        Assert.IsNull(profile.PreferredProviderType);
-        Assert.IsNull(profile.PreferredModelId);
+        Assert.IsNull(profile.PreferredModelName);
+        Assert.IsNull(profile.LegacyPreferredProviderType);
+        Assert.IsNull(profile.LegacyPreferredModelId);
         Assert.IsEmpty(profile.ToolNames);
     }
 
@@ -70,8 +71,7 @@ public class ProfileTests
             Name = "File Organizer",
             SystemPrompt = "You are a file organization assistant.",
             IsBuiltIn = false,
-            PreferredProviderType = "Ollama",
-            PreferredModelId = "llama3.2",
+            PreferredModelName = "llama3.2",
             ToolNames = ["scan_directory"]
         };
 
@@ -81,8 +81,7 @@ public class ProfileTests
         Assert.AreEqual("File Organizer", deserialized.Name);
         Assert.AreEqual("You are a file organization assistant.", deserialized.SystemPrompt);
         Assert.IsFalse(deserialized.IsBuiltIn);
-        Assert.AreEqual("Ollama", deserialized.PreferredProviderType);
-        Assert.AreEqual("llama3.2", deserialized.PreferredModelId);
+        Assert.AreEqual("llama3.2", deserialized.PreferredModelName);
         Assert.HasCount(1, deserialized.ToolNames);
         Assert.AreEqual("scan_directory", deserialized.ToolNames[0]);
     }
@@ -95,8 +94,21 @@ public class ProfileTests
 
         Assert.AreEqual("Test", profile.Name);
         Assert.AreEqual("Hello", profile.SystemPrompt);
-        Assert.IsNull(profile.PreferredProviderType);
-        Assert.IsNull(profile.PreferredModelId);
+        Assert.IsNull(profile.PreferredModelName);
+        Assert.IsNull(profile.LegacyPreferredProviderType);
         Assert.IsEmpty(profile.ToolNames);
+    }
+
+    [TestMethod]
+    public void Deserialize_LegacyFields_RoundTripIntoLegacyProperties()
+    {
+        // Legacy JSON (pre-PR-4b) carried PreferredProviderType + PreferredModelId.
+        // The new Profile keeps them as Legacy* properties solely for one-time migration.
+        var json = """{"Name":"Old","Text":"","PreferredProviderType":"Ollama","PreferredModelId":"llama3.2"}""";
+        var profile = JsonSerializer.Deserialize<Profile>(json)!;
+
+        Assert.AreEqual("Ollama", profile.LegacyPreferredProviderType);
+        Assert.AreEqual("llama3.2", profile.LegacyPreferredModelId);
+        Assert.IsNull(profile.PreferredModelName);
     }
 }

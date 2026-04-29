@@ -155,38 +155,38 @@ public sealed partial class ModelsPage : Page
     /// </summary>
     private void UpdateAllSubHeaders()
     {
-        var keys = _presets.ToDictionary(p => p.ProviderType, p => p.ApiKey) ?? [];
-
         var cloudProviders = new[] { "Claude", "OpenAI", "Gemini", "Groq" };
         foreach (var provider in cloudProviders)
         {
             var header = GetHeaderForProvider(provider);
             if (header is null) continue;
 
-            keys.TryGetValue(provider, out var key);
-            var preset = _presets.FirstOrDefault(p => p.ProviderType == provider);
-            var model = preset?.ModelId ?? "";
-            var status = !string.IsNullOrEmpty(key) ? "\u2713" : L("Models_NoKey");
-            header.SubHeader = BuildSubHeader(
-                string.IsNullOrEmpty(model) ? null : model, status);
+            var count = _presets.Count(p => p.ProviderType == provider);
+            var hasKey = _presets.Any(p => p.ProviderType == provider && !string.IsNullOrEmpty(p.ApiKey));
+            header.SubHeader = BuildSubHeader(count, hasKey ? "✓" : L("Models_NoKey"));
         }
 
-        // Ollama sub-header from preset data
-        var ollamaPreset = _presets.FirstOrDefault(p => p.ProviderType == "Ollama");
-        var ollamaModel = ollamaPreset?.ModelId ?? "";
-        OllamaHeader.SubHeader = BuildSubHeader(
-            string.IsNullOrEmpty(ollamaModel) ? null : ollamaModel, null);
+        var ollamaCount = _presets.Count(p => p.ProviderType == "Ollama");
+        OllamaHeader.SubHeader = BuildSubHeader(ollamaCount, status: null);
     }
 
     /// <summary>
-    /// Builds a sub-header string from model ID and status parts.
+    /// Builds a sub-header string in the form "{N} models · {status}". Sub-header is a
+    /// status summary, not a model identifier - model identity lives in the checklist.
     /// </summary>
-    private static string BuildSubHeader(string? modelId, string? status)
+    private static string BuildSubHeader(int count, string? status)
     {
+        var modelText = count switch
+        {
+            0 => L("Models_NoModelsSelected"),
+            1 => string.Format(L("Models_OneModelSelected"), 1),
+            _ => string.Format(L("Models_NModelsSelected"), count),
+        };
+
         var parts = new List<string>(2);
-        if (!string.IsNullOrEmpty(modelId)) parts.Add(modelId);
+        if (!string.IsNullOrEmpty(modelText)) parts.Add(modelText);
         if (!string.IsNullOrEmpty(status)) parts.Add(status);
-        return string.Join(" \u00B7 ", parts);
+        return string.Join(" · ", parts);
     }
 
     #endregion
@@ -198,7 +198,9 @@ public sealed partial class ModelsPage : Page
     /// </summary>
     private void UpdateExpandedState()
     {
-        var keys = _presets.ToDictionary(p => p.ProviderType, p => p.ApiKey) ?? [];
+        var keys = _presets
+            .GroupBy(p => p.ProviderType)
+            .ToDictionary(g => g.Key, g => g.FirstOrDefault(p => !string.IsNullOrEmpty(p.ApiKey))?.ApiKey ?? "");
 
         var sections = new (string Provider, CollapsibleSection Header)[]
         {
@@ -309,14 +311,10 @@ public sealed partial class ModelsPage : Page
         CustomProvidersPanel.Children.Add(header);
 
         // Update sub-header from preset data
-        var preset = _presets.FirstOrDefault(p => p.ProviderType == providerType);
-        if (preset is not null)
-        {
-            var model = preset.ModelId ?? "";
-            var status = !string.IsNullOrEmpty(preset.ApiKey) ? "\u2713" : L("Models_NoKey");
-            header.SubHeader = BuildSubHeader(
-                string.IsNullOrEmpty(model) ? null : model, status);
-        }
+        var count = _presets.Count(p => p.ProviderType == providerType);
+        var hasKey = _presets.Any(p => p.ProviderType == providerType && !string.IsNullOrEmpty(p.ApiKey))
+            || !string.IsNullOrEmpty(PasswordVaultHelper.LoadApiKey(providerType));
+        header.SubHeader = BuildSubHeader(count, hasKey ? "\u2713" : L("Models_NoKey"));
     }
 
     /// <summary>
@@ -371,6 +369,34 @@ public sealed partial class ModelsPage : Page
 
         var providerType = $"Custom_{configId}";
 
+        // Surface auxiliary-key warnings for every model this provider currently registers,
+        // since deleting the provider removes N ProviderModels at once.
+        var doomedNames = _presets
+            .Where(p => p.ProviderType == providerType)
+            .Select(p => p.Name)
+            .Where(n => !string.IsNullOrEmpty(n))
+            .Distinct()
+            .ToList();
+        var allUsages = doomedNames
+            .SelectMany(n => AppSettings.FindAuxiliaryKeyUsages(n).Select(u => $"{n}: {u}"))
+            .ToList();
+        if (allUsages.Count > 0)
+        {
+            var inUseDialog = new ThemedContentDialog
+            {
+                Title = L("Models_ModelInUseTitle"),
+                Content = string.Format(
+                    L("Models_ModelInUseMessage"),
+                    string.Join(", ", doomedNames),
+                    string.Join("; ", allUsages)),
+                PrimaryButtonText = L("Models_Remove"),
+                CloseButtonText = L("Models_Cancel"),
+                DefaultButton = ContentDialogButton.Close,
+                XamlRoot = XamlRoot,
+            };
+            if (await inUseDialog.ShowAsync() != ContentDialogResult.Primary) return;
+        }
+
         // Remove from storage
         var customs = AppSettings.LoadCustomProviders();
         customs.RemoveAll(c => c.Id == configId);
@@ -379,9 +405,11 @@ public sealed partial class ModelsPage : Page
         // Remove from factory
         ProviderFactory.UnregisterCustomProvider(configId);
 
-        // Remove preset and API key
-        var preset = _presets.FirstOrDefault(p => p.ProviderType == providerType);
-        if (preset is not null) _presets.Remove(preset);
+        // Remove ALL ProviderModels for this custom provider and the API key
+        for (var i = _presets.Count - 1; i >= 0; i--)
+        {
+            if (_presets[i].ProviderType == providerType) _presets.RemoveAt(i);
+        }
         PasswordVaultHelper.DeleteApiKey(providerType);
         AppSettings.SaveModels(_presets.ToList());
 
