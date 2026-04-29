@@ -340,7 +340,16 @@ public sealed partial class ProfilesPage : Page
                 en.Tag is ProviderModel pm &&
                 string.Equals(pm.Name, profile.PreferredModelName, StringComparison.Ordinal));
         }
-        ProfileModelPicker.SelectedItem = match;
+
+        // (D) policy: when PreferredModelName is null/unmatched, visually fall
+        // back to the first registered entry so the picker is never empty —
+        // but DO NOT write the fallback to profile.PreferredModelName. The
+        // null storage value preserves "auto" semantics that
+        // MainViewModel.GetDefaultPreset honours at consumption time.
+        // SelectionChanged is detached above and ModelPicker only raises that
+        // event on user click (not on programmatic SelectedItem set), so this
+        // assignment cannot leak into OnProfileModelPickerSelectionChanged.
+        ProfileModelPicker.SelectedItem = match ?? entries.FirstOrDefault();
         ProfileModelPicker.SelectionChanged += OnProfileModelPickerSelectionChanged;
     }
 
