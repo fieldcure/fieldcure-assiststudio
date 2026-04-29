@@ -18,7 +18,7 @@ namespace FieldCure.AssistStudio.Controls;
 /// the current selection; the flyout opens above the button (ComposeBar
 /// lives at the bottom of ChatPanel).
 /// </summary>
-[TemplatePart(Name = PartRootButton, Type = typeof(Button))]
+[TemplatePart(Name = PartRootButton, Type = typeof(DropDownButton))]
 [TemplatePart(Name = PartLabelText, Type = typeof(TextBlock))]
 [TemplatePart(Name = PartSearchBox, Type = typeof(AutoSuggestBox))]
 [TemplatePart(Name = PartList, Type = typeof(ListView))]
@@ -47,8 +47,8 @@ public sealed class ModelPicker : Control
     /// <summary>CollectionViewSource exposing <see cref="_groupedView"/> as a grouped view.</summary>
     private CollectionViewSource? _cvs;
 
-    /// <summary>Resolved template part: the flyout-anchor button.</summary>
-    private Button? _rootButton;
+    /// <summary>Resolved template part: the flyout-anchor drop-down button.</summary>
+    private DropDownButton? _rootButton;
     /// <summary>Resolved template part: the button label text.</summary>
     private TextBlock? _labelText;
     /// <summary>Resolved template part: the search box inside the flyout.</summary>
@@ -145,7 +145,7 @@ public sealed class ModelPicker : Control
         // Detach old handlers if a template was reapplied.
         DetachHandlers();
 
-        _rootButton = GetTemplateChild(PartRootButton) as Button;
+        _rootButton = GetTemplateChild(PartRootButton) as DropDownButton;
         _labelText = GetTemplateChild(PartLabelText) as TextBlock;
         _searchBox = GetTemplateChild(PartSearchBox) as AutoSuggestBox;
         _list = GetTemplateChild(PartList) as ListView;
@@ -212,7 +212,9 @@ public sealed class ModelPicker : Control
         _groupedView.Clear();
         if (ItemsSource is null) return;
 
-        IEnumerable<ModelPickerEntry> entries = ItemsSource.OfType<ModelPickerEntry>();
+        IEnumerable<ModelPickerEntry> entries = ItemsSource
+            .OfType<ModelPickerEntry>()
+            .Where(e => !string.IsNullOrEmpty(e.ModelId));
         if (!string.IsNullOrWhiteSpace(searchText))
         {
             var query = searchText.Trim();

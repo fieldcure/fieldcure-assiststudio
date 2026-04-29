@@ -5,6 +5,17 @@
     xmlns:helpers="using:FieldCure.AssistStudio.Controls.Helpers">
 
     <helpers:StringToVisibilityConverter x:Key="ModelPickerStringToVisibilityConverter"/>
+    <helpers:UpperCaseConverter x:Key="ModelPickerUpperCaseConverter"/>
+
+    <!-- Container style: tight padding, comfortable touch target, default
+         WinUI selection indicator (the vertical accent bar on the left) is
+         preserved because we do not override Template. -->
+    <Style x:Key="ModelPickerListViewItemStyle" TargetType="ListViewItem">
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="MinHeight" Value="36"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
 
     <Style TargetType="local:ModelPicker">
         <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -12,22 +23,24 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="local:ModelPicker">
-                    <Button x:Name="PART_RootButton"
-                            AutomationProperties.AutomationId="ModelPickerRoot"
-                            Padding="8,4"
-                            HorizontalAlignment="Stretch"
-                            HorizontalContentAlignment="Left">
-                        <Button.Content>
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <TextBlock x:Name="PART_LabelText"
-                                           VerticalAlignment="Center"
-                                           TextTrimming="CharacterEllipsis"/>
-                                <FontIcon Glyph="&#xE70D;"
-                                          FontSize="10"
-                                          VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button.Content>
-                        <Button.Flyout>
+                    <!-- Trigger: DropDownButton provides the chevron + open-state
+                         rotation visual states automatically. Inline transparent
+                         background + BorderThickness=0 mirror the ProfileComboBox
+                         chrome exactly; default PointerOver/Pressed visual states
+                         supply the hover fill. -->
+                    <DropDownButton x:Name="PART_RootButton"
+                                    AutomationProperties.AutomationId="ModelPickerRoot"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Padding="8,4"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Left">
+                        <DropDownButton.Content>
+                            <TextBlock x:Name="PART_LabelText"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </DropDownButton.Content>
+                        <DropDownButton.Flyout>
                             <Flyout Placement="Top">
                                 <Grid Width="320" MaxHeight="380">
                                     <Grid.RowDefinitions>
@@ -35,41 +48,60 @@
                                         <RowDefinition Height="*"/>
                                     </Grid.RowDefinitions>
 
+                                    <!-- Search box: subtle fill, no border,
+                                         standard control corner radius. -->
                                     <AutoSuggestBox x:Name="PART_SearchBox"
                                                     AutomationProperties.AutomationId="ModelPickerSearch"
                                                     QueryIcon="Find"
                                                     Grid.Row="0"
-                                                    Margin="0,0,0,8"/>
+                                                    Margin="0,0,0,8"
+                                                    Background="{ThemeResource ControlFillColorTertiaryBrush}"
+                                                    BorderThickness="0"
+                                                    CornerRadius="{ThemeResource ControlCornerRadius}"/>
 
                                     <ListView x:Name="PART_List"
                                               AutomationProperties.AutomationId="ModelPickerList"
                                               Grid.Row="1"
                                               SelectionMode="Single"
-                                              IsItemClickEnabled="True">
+                                              IsItemClickEnabled="True"
+                                              ItemContainerStyle="{StaticResource ModelPickerListViewItemStyle}">
                                         <ListView.ItemsPanel>
                                             <ItemsPanelTemplate>
                                                 <ItemsStackPanel AreStickyGroupHeadersEnabled="True"/>
                                             </ItemsPanelTemplate>
                                         </ListView.ItemsPanel>
+
+                                        <!-- Group header: caption, tertiary,
+                                             uppercase, letter-spaced. Sits at
+                                             the top of the page hierarchy. -->
                                         <ListView.GroupStyle>
                                             <GroupStyle>
                                                 <GroupStyle.HeaderTemplate>
                                                     <DataTemplate>
-                                                        <TextBlock Text="{Binding Key}"
-                                                                   Style="{ThemeResource BodyStrongTextBlockStyle}"
-                                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                                   Margin="0,8,0,4"/>
+                                                        <TextBlock Text="{Binding Key,
+                                                                       Converter={StaticResource ModelPickerUpperCaseConverter}}"
+                                                                   Style="{ThemeResource CaptionTextBlockStyle}"
+                                                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                                                   CharacterSpacing="100"
+                                                                   Margin="12,12,0,4"/>
                                                     </DataTemplate>
                                                 </GroupStyle.HeaderTemplate>
                                             </GroupStyle>
                                         </ListView.GroupStyle>
+
+                                        <!-- Item: body title + caption-style
+                                             secondary description. 12px left
+                                             padding aligns with group header. -->
                                         <ListView.ItemTemplate>
                                             <DataTemplate>
-                                                <StackPanel>
-                                                    <TextBlock Text="{Binding DisplayName}"/>
+                                                <StackPanel Padding="12,4,8,4" Spacing="0">
+                                                    <TextBlock Text="{Binding DisplayName}"
+                                                               Style="{ThemeResource BodyTextBlockStyle}"
+                                                               TextTrimming="CharacterEllipsis"/>
                                                     <TextBlock Text="{Binding Description}"
                                                                Style="{ThemeResource CaptionTextBlockStyle}"
                                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                               TextTrimming="CharacterEllipsis"
                                                                Visibility="{Binding Description,
                                                                    Converter={StaticResource ModelPickerStringToVisibilityConverter}}"/>
                                                 </StackPanel>
@@ -78,8 +110,8 @@
                                     </ListView>
                                 </Grid>
                             </Flyout>
-                        </Button.Flyout>
-                    </Button>
+                        </DropDownButton.Flyout>
+                    </DropDownButton>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
