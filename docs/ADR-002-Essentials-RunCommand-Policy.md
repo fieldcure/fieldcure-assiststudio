@@ -59,7 +59,8 @@ Add a `shell` parameter to `RunCommandTool` with the following values:
 | Value | Behavior |
 |---|---|
 | `"auto"` (default) | Windows: `cmd.exe /c` &nbsp;·&nbsp; Unix: `/bin/sh -c` |
-| `"pwsh"` | `pwsh -NoProfile -Command <command>` (cross-platform) |
+| `"pwsh"` | `pwsh -NoProfile -NonInteractive -EncodedCommand <base64>` (PowerShell Core; cross-platform if installed) |
+| `"powershell"` | `powershell.exe -NoProfile -NonInteractive -EncodedCommand <base64>` (Windows PowerShell; Windows only) |
 | `"cmd"` | `cmd.exe /c <command>` (Windows only — fail-fast on Unix) |
 | `"bash"` | `/bin/bash -c <command>` on Unix, first `bash` on PATH on Windows (fail-fast if absent) |
 | `"sh"` | `/bin/sh -c <command>` (POSIX baseline; fail-fast on Windows unless a `sh` is on PATH) |
@@ -71,9 +72,16 @@ for `shell` omitted) while enabling PowerShell-native command generation
 when the caller — typically guided by tool description — requests it.
 
 **Fail-fast on missing shell**: If `shell` is set to a specific value
-(`"pwsh"`, `"bash"`, etc.) and the binary is not available on PATH, the
-tool returns a clear error rather than falling back. Silent fallback would
-recreate the very class of bug this ADR exists to fix.
+(`"pwsh"`, `"powershell"`, `"bash"`, etc.) and the binary is not available
+on PATH, the tool returns a clear error rather than falling back. Silent
+fallback would recreate the very class of bug this ADR exists to fix.
+
+`"powershell"` is included separately from `"pwsh"` because many Windows
+developer machines still have Windows PowerShell available even when
+PowerShell Core is not installed. It is not part of `"auto"` because changing
+the default would still break cmd-style callers; it is an explicit opt-in
+compatibility escape hatch for PowerShell-native commands on Windows hosts
+without `pwsh`.
 
 **Tool description as steering signal**: The parameter description is
 prescriptive about when to choose `"pwsh"` over `"auto"`. This applies
@@ -87,10 +95,13 @@ the same prescriptive-description pattern verified effective on
   - 'pwsh': PowerShell Core. Recommended on Windows for cmdlets
     (Get-ChildItem, Select-String, Set-Content -Encoding utf8) and
     object pipelines. Cross-platform if pwsh is installed.
+  - 'powershell': Windows PowerShell. Use on Windows when pwsh is not
+    installed and PowerShell syntax is needed.
   - 'cmd', 'bash', 'sh': Explicit shell. Fails if unavailable.
 The 'auto' default uses cmd on Windows, which does not support cmdlets,
 object pipelines, or modern quoting. Prefer 'pwsh' when generating
-PowerShell-native commands."
+PowerShell-native commands; use 'powershell' as a Windows-only fallback
+when pwsh is unavailable."
 ```
 
 ### 2. Output truncation — observable, configurable
@@ -102,11 +113,20 @@ Adopt the `HttpRequestTool` pattern verbatim:
 - Response includes `stdout_truncated: bool` and `stderr_truncated: bool`
 - Truncation marker: `[Truncated: N more chars omitted. Use a smaller
   max_output_chars or narrow the command.]`
+- Output readers must continue draining stdout/stderr after the visible
+  capture limit is reached. The tool should discard additional characters
+  while counting them for the truncation marker, not stop reading the pipe.
+  Otherwise a verbose child process can block on a full stdout/stderr pipe
+  and appear to time out even though the command itself would have exited.
 
-**Default value preserves current behavior**: 100_000 chars matches the
-existing 102_400 byte buffer (close enough for ASCII; multibyte content
-already truncates earlier today). Callers experience no change unless they
-explicitly opt into a different limit or read the truncation flags.
+**Default value intentionally preserves the same order of magnitude while
+making the unit explicit**: the current implementation uses a 102,400 byte
+constant but converts it to a conservative character limit internally
+(`maxBytes / 2`, approximately 51,200 chars). The new default is 100,000
+chars: still roughly the existing 100 KB response budget for ASCII-heavy CLI
+output, but no longer hidden behind a byte/char mismatch. Callers experience
+no behavioral break unless they depend on silent clipping at the old lower
+effective limit.
 
 **Independent stream truncation**: Commands like `npm install` write
 progress to stderr and results to stdout. A single shared buffer would let
@@ -246,12 +266,13 @@ private static (string fileName, string arguments) ResolveShell(
     return shellOption switch
     {
         "pwsh" => ResolvePwsh(command),
+        "powershell" => ResolveWindowsPowerShell(command),
         "cmd" => ResolveCmd(command),
         "bash" => ResolveBash(command),
         "sh" => ResolveSh(command),
         "auto" or null => ResolveAuto(command),
         _ => throw new ArgumentException(
-            $"Unknown shell '{shellOption}'. Valid: auto, pwsh, cmd, bash, sh."),
+            $"Unknown shell '{shellOption}'. Valid: auto, pwsh, powershell, cmd, bash, sh."),
     };
 }
 
@@ -276,6 +297,21 @@ private static (string, string) ResolvePwsh(string command)
     var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(command));
     return ("pwsh", $"-NoProfile -NonInteractive -EncodedCommand {encoded}");
 }
+
+private static (string, string) ResolveWindowsPowerShell(string command)
+{
+    if (!OperatingSystem.IsWindows())
+        throw new InvalidOperationException(
+            "Requested shell 'powershell' is only available on Windows hosts.");
+
+    if (!IsAvailableOnPath("powershell"))
+        throw new InvalidOperationException(
+            "Requested shell 'powershell' is not available on this host. " +
+            "Install Windows PowerShell or use shell: 'auto' / 'cmd'.");
+
+    var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(command));
+    return ("powershell", $"-NoProfile -NonInteractive -EncodedCommand {encoded}");
+}
 ```
 
 ### Quoting hazards
@@ -288,12 +324,18 @@ test the following matrix at minimum:
 - Backslashes in Windows paths (`C:\Users\...`)
 - Backtick (pwsh escape character)
 - Dollar signs in pwsh (`$variable` vs literal `$`)
+- Windows PowerShell fallback (`shell: "powershell"`) on a host where
+  `pwsh` is unavailable
 - Chaining operators (`&&`, `||`, `;`) — semantics differ:
   - `cmd`: `&&`/`||`/`&`, no `;`
   - `pwsh` 7+: `;`, `&&`, `||` (PS6 and earlier: only `;`)
+  - Windows PowerShell 5.1: `;`, but not modern `&&`/`||`
   - `sh`/`bash`: `;`, `&&`, `||`
 - Commands that write only to stderr (e.g., `>&2 echo error`) — verify
   `stderr_truncated` independent of `stdout_truncated`
+- Commands that emit far more than `max_output_chars` and then exit quickly
+  — verify the reader drains the remaining pipe data and does not deadlock
+  the child process
 
 A regression test fixture per shell is required.
 
@@ -321,7 +363,8 @@ Aliases on Windows (the modern install method via the Microsoft Store).
 ### For existing v2.x callers
 
 No action required. `shell` omitted continues to behave as v1.x.
-`max_output_chars` omitted preserves the 100 KB default.
+`max_output_chars` omitted preserves the 100 KB-scale default while making
+truncation visible.
 
 ### For LLM tool consumers
 
