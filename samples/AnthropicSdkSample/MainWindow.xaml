@@ -26,7 +26,6 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
             <Button
@@ -102,16 +101,6 @@
                 AutomationProperties.AutomationId="AppTitleText"
                 AutomationProperties.Name="Application title" />
 
-            <ComboBox
-                x:Name="ModelComboBox"
-                Grid.Column="3"
-                VerticalAlignment="Center"
-                BorderThickness="0"
-                Background="Transparent"
-                SelectionChanged="OnModelSelectionChanged"
-                AutomationProperties.AutomationId="ModelSelector"
-                AutomationProperties.Name="Claude model"
-                AutomationProperties.HelpText="Selects which Claude model handles the conversation" />
         </Grid>
 
         <TeachingTip
@@ -128,7 +117,6 @@
             VerticalAlignment="Stretch"
             DisableInternalSendFlow="True"
             ShowTitleBar="False"
-            ShowModelSelector="False"
             ShowProfileSelector="False"
             Theme="System"
             Placeholder="Ask Claude anything..." />

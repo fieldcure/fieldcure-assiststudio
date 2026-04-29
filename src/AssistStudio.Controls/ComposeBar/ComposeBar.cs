@@ -75,9 +75,9 @@ public sealed partial class ComposeBar : Control
     private Button? _stopButton;
 
     /// <summary>
-    /// The combo box for selecting provider presets.
+    /// The picker for selecting a provider × model entry.
     /// </summary>
-    private ComboBox? _presetComboBox;
+    private ModelPicker? _modelPicker;
 
     /// <summary>
     /// The combo box for selecting prompt presets.

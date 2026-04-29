@@ -343,8 +343,8 @@ public sealed partial class ComposeBar
             _sendButton.Click -= SendButton_Click;
         if (_stopButton is not null)
             _stopButton.Click -= StopButton_Click;
-        if (_presetComboBox is not null)
-            _presetComboBox.SelectionChanged -= PresetComboBox_SelectionChanged;
+        if (_modelPicker is not null)
+            _modelPicker.SelectionChanged -= OnModelPickerSelectionChanged;
         if (_profileComboBox is not null)
             _profileComboBox.SelectionChanged -= ProfileComboBox_SelectionChanged;
 
@@ -354,7 +354,7 @@ public sealed partial class ComposeBar
         _attachButton = GetTemplateChild("PART_AttachButton") as Button;
         _sendButton = GetTemplateChild("PART_SendButton") as Button;
         _stopButton = GetTemplateChild("PART_StopButton") as Button;
-        _presetComboBox = GetTemplateChild("PART_PresetComboBox") as ComboBox;
+        _modelPicker = GetTemplateChild("PART_ModelPicker") as ModelPicker;
         _profileComboBox = GetTemplateChild("PART_ProfileComboBox") as ComboBox;
         _containerBorder = GetTemplateChild("PART_ContainerBorder") as Border;
         _toolButton = GetTemplateChild("PART_ToolButton") as Button;
@@ -402,8 +402,8 @@ public sealed partial class ComposeBar
             _sendButton.Click += SendButton_Click;
         if (_stopButton is not null)
             _stopButton.Click += StopButton_Click;
-        if (_presetComboBox is not null)
-            _presetComboBox.SelectionChanged += PresetComboBox_SelectionChanged;
+        if (_modelPicker is not null)
+            _modelPicker.SelectionChanged += OnModelPickerSelectionChanged;
         if (_profileComboBox is not null)
             _profileComboBox.SelectionChanged += ProfileComboBox_SelectionChanged;
 
@@ -455,9 +455,9 @@ public sealed partial class ComposeBar
         if (_attachButton is not null)
             _attachButton.Visibility = ShowAttachButton ? Visibility.Visible : Visibility.Collapsed;
 
-        // Apply initial visibility for selector ComboBoxes
-        if (_presetComboBox is not null)
-            _presetComboBox.Visibility = ShowModelSelector ? Visibility.Visible : Visibility.Collapsed;
+        // Apply initial visibility for selectors
+        if (_modelPicker is not null)
+            _modelPicker.Visibility = ShowModelSelector ? Visibility.Visible : Visibility.Collapsed;
         if (_profileComboBox is not null)
             _profileComboBox.Visibility = ShowProfileSelector ? Visibility.Visible : Visibility.Collapsed;
 
@@ -502,39 +502,39 @@ public sealed partial class ComposeBar
     }
 
     /// <summary>
-    /// Called when <see cref="AvailableModels"/> changes to populate or defer ComboBox items.
+    /// Called when <see cref="AvailableModels"/> changes to populate or defer the picker.
     /// </summary>
     private static void OnAvailableModelsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is ComposeBar self && e.NewValue is IList presets)
+        if (d is ComposeBar self && e.NewValue is IList models)
         {
             if (!self.IsLoaded)
             {
                 self._pendingModelPopulate = true;
                 return;
             }
-            self.PopulatePresetCombo(presets);
+            self.PopulateModelPicker(models);
         }
     }
 
     /// <summary>
-    /// Called when <see cref="SelectedModel"/> changes to sync the ComboBox selection.
+    /// Called when <see cref="SelectedModel"/> changes to sync the picker selection.
     /// </summary>
     private static void OnSelectedModelChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is not ComposeBar self || !self.IsLoaded) return;
 
-        if (e.NewValue is ProviderModel preset)
+        if (e.NewValue is ProviderModel model)
         {
-            self.SelectPresetInCombo(preset);
+            self.SelectModelInPicker(model);
         }
         else
         {
-            // Preset cleared — deselect ComboBox
-            if (self._presetComboBox is not null)
+            // Model cleared — deselect picker
+            if (self._modelPicker is not null)
             {
                 self._suppressModelChanged = true;
-                self._presetComboBox.SelectedItem = null;
+                self._modelPicker.SelectedItem = null;
                 self._suppressModelChanged = false;
             }
         }
@@ -585,13 +585,13 @@ public sealed partial class ComposeBar
     }
 
     /// <summary>
-    /// Called when <see cref="ShowModelSelector"/> changes to show or hide the preset ComboBox.
+    /// Called when <see cref="ShowModelSelector"/> changes to show or hide the model picker.
     /// </summary>
     private static void OnShowModelSelectorChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is ComposeBar self && self._presetComboBox is not null)
+        if (d is ComposeBar self && self._modelPicker is not null)
         {
-            self._presetComboBox.Visibility = (bool)e.NewValue
+            self._modelPicker.Visibility = (bool)e.NewValue
                 ? Visibility.Visible
                 : Visibility.Collapsed;
         }
@@ -649,10 +649,10 @@ public sealed partial class ComposeBar
     {
         Loaded -= OnLoaded;
 
-        if (_pendingModelPopulate && AvailableModels is { } presets)
+        if (_pendingModelPopulate && AvailableModels is { } models)
         {
             _pendingModelPopulate = false;
-            PopulatePresetCombo(presets);
+            PopulateModelPicker(models);
         }
 
         if (_pendingProfilePopulate)
@@ -718,15 +718,17 @@ public sealed partial class ComposeBar
     }
 
     /// <summary>
-    /// Handles the preset ComboBox selection change to propagate the new preset.
+    /// Handles the <see cref="ModelPicker.SelectionChanged"/> event to propagate the new model.
     /// </summary>
-    private void PresetComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    /// <param name="sender">The model picker.</param>
+    /// <param name="entry">The selected entry (or null when cleared).</param>
+    private void OnModelPickerSelectionChanged(object? sender, ModelPickerEntry? entry)
     {
         if (_suppressModelChanged) return;
-        if (_presetComboBox?.SelectedItem is ComboBoxItem item && item.Tag is ProviderModel preset)
+        if (entry?.Tag is ProviderModel model)
         {
-            SelectedModel = preset;
-            ModelChanged?.Invoke(this, preset);
+            SelectedModel = model;
+            ModelChanged?.Invoke(this, model);
         }
     }
 
@@ -804,55 +806,80 @@ public sealed partial class ComposeBar
     #region ComboBox Management
 
     /// <summary>
-    /// Populates the provider preset ComboBox with items from the given list.
-    /// The list may contain <see cref="ProviderModel"/> objects and <c>"-"</c> string
-    /// separators to visually group providers by category (e.g., Cloud / Custom / Local / Demo).
+    /// Populates the <see cref="ModelPicker"/> with entries from the given list.
+    /// The list may contain <see cref="ProviderModel"/> objects and literal <c>"-"</c>
+    /// string separators (the format produced by host-side ordered builders).
+    /// Separators are dropped because the picker performs its own grouping by
+    /// <see cref="ModelPickerEntry.GroupKey"/>.
     /// </summary>
-    private void PopulatePresetCombo(IList presets)
+    /// <param name="models">The source list of models (and optional separator strings).</param>
+    private void PopulateModelPicker(IList models)
     {
-        if (_presetComboBox is null) return;
+        if (_modelPicker is null) return;
 
         _suppressModelChanged = true;
-        _presetComboBox.ItemsSource = null;
-        _presetComboBox.Items.Clear();
-        foreach (var obj in presets)
-        {
-            if (obj is ProviderModel preset)
-            {
-                var displayName = preset.ProviderType == "Mock" ? "Demo" : preset.Name;
-                var item = new ComboBoxItem { Content = displayName, Tag = preset };
-                _presetComboBox.Items.Add(item);
-            }
-            else if (obj is "-")
-            {
-                _presetComboBox.Items.Add(new ComboBoxSeparatorItem());
-            }
-        }
+        var entries = BuildEntries(models);
+        _modelPicker.ItemsSource = (IList)entries;
 
         if (SelectedModel is not null)
         {
-            SelectPresetInCombo(SelectedModel);
+            SelectModelInPicker(SelectedModel);
         }
         _suppressModelChanged = false;
     }
 
     /// <summary>
-    /// Selects the matching provider preset in the ComboBox without raising change events.
+    /// Selects the entry in the picker matching the given <see cref="ProviderModel"/>
+    /// (by <see cref="ProviderModel.ProviderType"/> + <see cref="ProviderModel.ModelId"/>),
+    /// without raising change events.
     /// </summary>
-    private void SelectPresetInCombo(ProviderModel preset)
+    /// <param name="model">The model to select.</param>
+    private void SelectModelInPicker(ProviderModel model)
     {
-        if (_presetComboBox is null) return;
+        if (_modelPicker?.ItemsSource is not IList items) return;
 
         _suppressModelChanged = true;
-        foreach (var obj in _presetComboBox.Items)
+        foreach (var obj in items)
         {
-            if (obj is ComboBoxItem item && item.Tag is ProviderModel p && p.Name == preset.Name)
+            if (obj is ModelPickerEntry entry &&
+                entry.GroupKey == model.ProviderType &&
+                entry.ModelId == model.ModelId)
             {
-                _presetComboBox.SelectedItem = item;
+                _modelPicker.SelectedItem = entry;
                 break;
             }
         }
         _suppressModelChanged = false;
+    }
+
+    /// <summary>
+    /// Projects an interleaved list of <see cref="ProviderModel"/> + <c>"-"</c>
+    /// separators into <see cref="ModelPickerEntry"/> entries. The separator
+    /// strings are dropped. <c>Custom_*</c> provider-type entries fall back to
+    /// the literal <c>ProviderType</c> as the group label because this control
+    /// library is host-agnostic and cannot resolve user-defined custom display
+    /// names; hosts that need richer labels can build entries themselves and
+    /// assign <see cref="ModelPicker.ItemsSource"/> directly.
+    /// </summary>
+    /// <param name="models">The source list (contains <see cref="ProviderModel"/> and
+    /// optional <c>"-"</c> separator strings).</param>
+    /// <returns>The projected entries.</returns>
+    private static IList<ModelPickerEntry> BuildEntries(IList models)
+    {
+        var result = new List<ModelPickerEntry>(models.Count);
+        foreach (var obj in models)
+        {
+            if (obj is not ProviderModel model) continue;
+            result.Add(new ModelPickerEntry
+            {
+                ModelId = model.ModelId,
+                DisplayName = model.ModelId,
+                GroupKey = model.ProviderType,
+                GroupDisplayName = model.ProviderType == "Mock" ? "Demo" : model.ProviderType,
+                Tag = model,
+            });
+        }
+        return result;
     }
 
     /// <summary>

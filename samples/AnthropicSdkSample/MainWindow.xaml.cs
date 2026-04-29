@@ -1,5 +1,6 @@
 ﻿using Anthropic;
 using AnthropicSdkSample.Controls;
+using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Controls;
 using FieldCure.AssistStudio.Controls.Anthropic;
 using FieldCure.AssistStudio.Controls.Helpers;
@@ -24,19 +25,15 @@ public sealed partial class MainWindow : Window
     private readonly AppWindow? _appWindow;
 
     /// <summary>
-    /// Fallback model list used only when the Anthropic API cannot be queried at startup.
-    /// The live list is fetched from <c>client.Models.List()</c> in <see cref="LoadModelsAsync"/>.
+    /// Fallback model IDs used only when the Anthropic <c>client.Models.List()</c> call
+    /// fails (offline or transient error). Mirrors the legacy fallback shape, IDs only.
     /// </summary>
-    private static readonly (string Id, string Display)[] FallbackModels =
+    private static readonly string[] FallbackModelIds =
     [
-        ("claude-opus-4-7",   "Claude Opus 4.7"),
-        ("claude-opus-4-6",   "Claude Opus 4.6"),
-        ("claude-sonnet-4-6", "Claude Sonnet 4.6"),
-        ("claude-haiku-4-5",  "Claude Haiku 4.5"),
+        "claude-opus-4-7",
+        "claude-sonnet-4-6",
+        "claude-haiku-4-5",
     ];
-
-    /// <summary>Dynamically loaded model list — populated from the Anthropic API on startup.</summary>
-    private List<(string Id, string Display)> _availableModels = [];
 
     /// <summary>LocalSettings key for the persisted model selection.</summary>
     private const string ModelSettingName = "SelectedModelId";
@@ -52,12 +49,6 @@ public sealed partial class MainWindow : Window
 
     /// <summary>Anthropic SDK client. Null until API key is verified on first load.</summary>
     private AnthropicClient? _client;
-
-    /// <summary>Currently selected model ID. Empty until <see cref="LoadModelsAsync"/> completes.</summary>
-    private string _selectedModelId = string.Empty;
-
-    /// <summary>Guards against saving during programmatic ComboBox population.</summary>
-    private bool _suppressModelChanged;
 
     /// <summary>Initializes the window, sets up the custom title bar, and subscribes to events.</summary>
     public MainWindow()
@@ -77,66 +68,68 @@ public sealed partial class MainWindow : Window
         InitializeTheme();
 
         ChatPanel.UserMessageSubmitted += OnUserMessageSubmitted;
+        ChatPanel.ModelChanged += OnChatPanelModelChanged;
         ((FrameworkElement)Content).Loaded += OnContentLoaded;
     }
 
     #region Model Selector
 
     /// <summary>
-    /// Fetches the live model list from the Anthropic API, orders it by release date (newest
-    /// first), and populates the ComboBox. Falls back to <see cref="FallbackModels"/> when the
-    /// API call fails so the sample remains usable offline or during transient failures.
+    /// Fetches the live Claude model list from the Anthropic SDK and feeds it into
+    /// <see cref="ChatPanel.AvailableModels"/>. Falls back to <see cref="FallbackModelIds"/>
+    /// when the API call fails so the sample remains usable offline or during transient
+    /// failures. The chat panel's built-in <see cref="ModelPicker"/> renders the list.
     /// </summary>
-    private async Task LoadModelsAsync()
+    /// <param name="apiKey">The current Anthropic API key (forwarded to each
+    /// <see cref="ProviderModel"/> for completeness — unused while
+    /// <see cref="ChatPanel.DisableInternalSendFlow"/> is true).</param>
+    private async Task LoadModelsAsync(string apiKey)
     {
         if (_client is null) return;
 
-        _suppressModelChanged = true;
-
+        List<ProviderModel> claudeModels;
         try
         {
             var page = await _client.Models.List();
-            _availableModels = page.Items
+            claudeModels = page.Items
                 .OrderByDescending(m => m.CreatedAt)
-                .Select(m => (m.ID, m.DisplayName))
+                .Select(m => new ProviderModel
+                {
+                    Name = m.ID,
+                    ProviderType = "Claude",
+                    ModelId = m.ID,
+                    ApiKey = apiKey,
+                })
                 .ToList();
         }
-        catch
+        catch (Exception ex)
         {
-            _availableModels = [.. FallbackModels];
+            System.Diagnostics.Debug.WriteLine($"[SdkSample] Models.List() failed; using fallback: {ex.Message}");
+            claudeModels = [.. FallbackModelIds.Select(id => new ProviderModel
+            {
+                Name = id,
+                ProviderType = "Claude",
+                ModelId = id,
+                ApiKey = apiKey,
+            })];
         }
 
         var settings = ApplicationData.Current.LocalSettings;
         var savedModelId = settings.Values[ModelSettingName] as string;
-        var selectedIndex = 0;
 
-        ModelComboBox.Items.Clear();
-        for (var i = 0; i < _availableModels.Count; i++)
-        {
-            ModelComboBox.Items.Add(_availableModels[i].Display);
-            if (_availableModels[i].Id == savedModelId)
-                selectedIndex = i;
-        }
-
-        if (_availableModels.Count > 0)
-        {
-            ModelComboBox.SelectedIndex = selectedIndex;
-            _selectedModelId = _availableModels[selectedIndex].Id;
-        }
-
-        _suppressModelChanged = false;
+        ChatPanel.AvailableModels = claudeModels;
+        ChatPanel.SelectedModel = claudeModels.FirstOrDefault(m => m.ModelId == savedModelId)
+                               ?? claudeModels.FirstOrDefault();
     }
 
-    /// <summary>Handles model ComboBox selection changes.</summary>
-    private void OnModelSelectionChanged(object sender, SelectionChangedEventArgs e)
+    /// <summary>Persists the user's model selection from the ChatPanel's built-in picker.</summary>
+    /// <param name="sender">The chat panel.</param>
+    /// <param name="model">The newly selected model.</param>
+    private void OnChatPanelModelChanged(object? sender, ProviderModel model)
     {
-        if (_suppressModelChanged) return;
-        if (ModelComboBox.SelectedIndex < 0 || ModelComboBox.SelectedIndex >= _availableModels.Count) return;
-
-        _selectedModelId = _availableModels[ModelComboBox.SelectedIndex].Id;
-
+        if (model is null) return;
         var settings = ApplicationData.Current.LocalSettings;
-        settings.Values[ModelSettingName] = _selectedModelId;
+        settings.Values[ModelSettingName] = model.ModelId;
     }
 
     #endregion
@@ -266,7 +259,7 @@ public sealed partial class MainWindow : Window
         }
 
         _client = new AnthropicClient { ApiKey = apiKey };
-        await LoadModelsAsync();
+        await LoadModelsAsync(apiKey);
     }
 
     /// <summary>Handles the Reset API Key button click.</summary>
@@ -297,7 +290,7 @@ public sealed partial class MainWindow : Window
 
         SaveApiKeyToVault(newKey);
         _client = new AnthropicClient { ApiKey = newKey };
-        await LoadModelsAsync();
+        await LoadModelsAsync(newKey);
     }
 
     /// <summary>Shows a dialog to collect the API key from the user.</summary>
@@ -403,7 +396,7 @@ public sealed partial class MainWindow : Window
 
         ExportMenuItem.IsEnabled = false;
 
-        var modelId = _selectedModelId;
+        var modelId = ChatPanel.SelectedModel?.ModelId ?? "claude-sonnet-4-6";
 
         // Begin an assistant turn — this creates the message bubble and shows the streaming cursor
         await using var handle = ChatPanel.BeginAnthropicTurn("Claude", modelId);

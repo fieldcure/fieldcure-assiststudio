@@ -1,9 +1,10 @@
+using System;
 using AssistStudio.Helpers;
+using AssistStudio.Modules.Helpers;
 using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Controls;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Markup;
 
 namespace AssistStudio.Settings;
 
@@ -49,6 +50,7 @@ public sealed partial class TaskModelSelector : UserControl
     public TaskModelSelector()
     {
         InitializeComponent();
+        ModelPickerControl.SelectionChanged += OnModelPickerSelectionChanged;
     }
 
     #endregion
@@ -74,9 +76,11 @@ public sealed partial class TaskModelSelector : UserControl
     #region Public Methods
 
     /// <summary>
-    /// Loads the current state from settings and populates the model combo.
+    /// Loads the current state from settings and populates the model picker.
     /// Call during <c>OnNavigatedTo</c>.
     /// </summary>
+    /// <param name="source">The source mode (Inherit or Specific).</param>
+    /// <param name="modelName">The model name to preselect when source is Specific.</param>
     public void Load(AuxiliaryTaskSource source, string modelName)
     {
         _suppressEvents = true;
@@ -85,9 +89,9 @@ public sealed partial class TaskModelSelector : UserControl
         ModelName = modelName;
 
         SourceRadio.SelectedIndex = source == AuxiliaryTaskSource.Specific ? 1 : 0;
-        ModelCombo.Visibility = source == AuxiliaryTaskSource.Specific ? Visibility.Visible : Visibility.Collapsed;
+        ModelPickerControl.Visibility = source == AuxiliaryTaskSource.Specific ? Visibility.Visible : Visibility.Collapsed;
 
-        PopulateModelCombo(modelName);
+        PopulateModelPicker(modelName);
 
         _suppressEvents = false;
     }
@@ -97,58 +101,38 @@ public sealed partial class TaskModelSelector : UserControl
     #region Private Methods
 
     /// <summary>
-    /// Populates the model combo box, selecting the given model name.
+    /// Populates the model picker, selecting the entry whose <see cref="ModelPickerEntry.ModelId"/>
+    /// matches the given name. Excludes Mock and any cloud provider lacking an API key.
     /// </summary>
-    private void PopulateModelCombo(string selectedName)
+    /// <param name="selectedName">The model name to preselect (matches against <see cref="ProviderModel.ModelId"/>;
+    /// post-PR-1 <see cref="ProviderModel.Name"/> equals <see cref="ProviderModel.ModelId"/>).</param>
+    private void PopulateModelPicker(string selectedName)
     {
-        ModelCombo.Items.Clear();
-
         var items = AppSettings.BuildOrderedModelItems();
-        var selectedIndex = -1;
+        var entries = ModelPickerAdapter.BuildEntriesFromOrderedItems(
+            items,
+            filter: m => m.ProviderType != "Mock"
+                      && (!m.RequiresApiKey || !string.IsNullOrEmpty(m.ApiKey)));
 
-        foreach (var obj in items)
+        ModelPickerControl.ItemsSource = (System.Collections.IList)entries;
+
+        ModelPickerEntry? match = null;
+        foreach (var entry in entries)
         {
-            if (obj is ProviderModel model)
+            if (entry.ModelId == selectedName)
             {
-                // Skip Mock — cannot generate titles, summaries, or run sub-agents
-                if (model.ProviderType == "Mock") continue;
-
-                // Skip cloud providers without an API key
-                if (model.RequiresApiKey && string.IsNullOrEmpty(model.ApiKey)) continue;
-
-                ModelCombo.Items.Add(model.Name);
-                if (model.Name == selectedName)
-                    selectedIndex = ModelCombo.Items.Count - 1;
-            }
-            else if (obj is "-")
-            {
-                var border = (Border)XamlReader.Load(
-                    """
-                    <Border xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                            Height="1" HorizontalAlignment="Stretch"
-                            Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
-                    """);
-                ModelCombo.Items.Add(new ComboBoxItem
-                {
-                    IsEnabled = false,
-                    IsHitTestVisible = false,
-                    MinHeight = 0,
-                    Height = 9,
-                    Padding = new Thickness(0),
-                    Content = border,
-                });
+                match = entry;
+                break;
             }
         }
-
-        if (selectedIndex >= 0)
-            ModelCombo.SelectedIndex = selectedIndex;
-        else if (ModelCombo.Items.Count > 0)
-            ModelCombo.SelectedIndex = 0;
+        ModelPickerControl.SelectedItem = match ?? (entries.Count > 0 ? entries[0] : null);
     }
 
     /// <summary>
     /// Parses a source tag string into an <see cref="AuxiliaryTaskSource"/> enum value.
     /// </summary>
+    /// <param name="tag">The radio-button tag value.</param>
+    /// <returns>The parsed source mode.</returns>
     private static AuxiliaryTaskSource ParseSource(string tag)
         => tag == "Specific" ? AuxiliaryTaskSource.Specific : AuxiliaryTaskSource.Inherit;
 
@@ -159,6 +143,8 @@ public sealed partial class TaskModelSelector : UserControl
     /// <summary>
     /// Handles source radio button selection change.
     /// </summary>
+    /// <param name="sender">The radio buttons control.</param>
+    /// <param name="e">Selection-changed event args.</param>
     private void OnSourceChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_suppressEvents) return;
@@ -166,24 +152,23 @@ public sealed partial class TaskModelSelector : UserControl
         if (SourceRadio.SelectedItem is RadioButton rb && rb.Tag is string tag)
         {
             Source = ParseSource(tag);
-            ModelCombo.Visibility = Source == AuxiliaryTaskSource.Specific
+            ModelPickerControl.Visibility = Source == AuxiliaryTaskSource.Specific
                 ? Visibility.Visible : Visibility.Collapsed;
             SettingsChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 
     /// <summary>
-    /// Handles model combo box selection change.
+    /// Handles the <see cref="ModelPicker.SelectionChanged"/> event to commit the new model name.
     /// </summary>
-    private void OnModelChanged(object sender, SelectionChangedEventArgs e)
+    /// <param name="sender">The model picker.</param>
+    /// <param name="entry">The selected entry, or null when cleared.</param>
+    private void OnModelPickerSelectionChanged(object? sender, ModelPickerEntry? entry)
     {
         if (_suppressEvents) return;
 
-        if (ModelCombo.SelectedItem is string name)
-        {
-            ModelName = name;
-            SettingsChanged?.Invoke(this, EventArgs.Empty);
-        }
+        ModelName = entry?.ModelId ?? string.Empty;
+        SettingsChanged?.Invoke(this, EventArgs.Empty);
     }
 
     #endregion
