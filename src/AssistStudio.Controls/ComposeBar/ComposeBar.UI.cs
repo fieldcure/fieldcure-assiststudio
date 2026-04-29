@@ -875,7 +875,7 @@ public sealed partial class ComposeBar
                 ModelId = model.ModelId,
                 DisplayName = model.ModelId,
                 GroupKey = model.ProviderType,
-                GroupDisplayName = model.ProviderType == "Mock" ? "Demo" : model.ProviderType,
+                GroupDisplayName = model.ProviderType == "Mock" ? "demo" : model.ProviderType,
                 Tag = model,
             });
         }

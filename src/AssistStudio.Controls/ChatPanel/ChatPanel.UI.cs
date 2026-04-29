@@ -297,7 +297,7 @@ public sealed partial class ChatPanel
         {
             if (panel._inputArea is not null)
                 panel._inputArea.SelectedModel = preset;
-            var displayName = preset.ProviderType == "Mock" ? "Demo" : preset.Name;
+            var displayName = preset.ProviderType == "Mock" ? "demo" : preset.Name;
             var label = string.IsNullOrEmpty(preset.ModelId)
                 ? displayName
                 : $"{displayName}/{preset.ModelId}";

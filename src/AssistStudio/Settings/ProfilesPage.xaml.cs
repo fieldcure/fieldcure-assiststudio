@@ -385,7 +385,7 @@ public sealed partial class ProfilesPage : Page
         {
             if (obj is ProviderModel preset)
             {
-                var displayName = preset.ProviderType == "Mock" ? "Demo" : preset.Name;
+                var displayName = preset.ProviderType == "Mock" ? "demo" : preset.Name;
                 ProviderCombo.Items.Add(new ComboBoxItem
                 {
                     Content = displayName,

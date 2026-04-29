@@ -94,7 +94,7 @@ internal static class ModelPickerAdapter
     /// <returns>The group display name.</returns>
     private static string ResolveGroupDisplayName(string providerType)
     {
-        if (providerType == "Mock") return "Demo";
+        if (providerType == "Mock") return "demo";
         if (providerType.StartsWith("Custom_", StringComparison.Ordinal))
         {
             var configId = providerType["Custom_".Length..];

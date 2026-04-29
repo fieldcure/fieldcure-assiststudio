@@ -563,7 +563,7 @@ public partial class MainViewModel : ObservableObject
         var presets = GetFilteredPresets();
         var providerPresets = presets.OfType<ProviderModel>().ToList();
         if (providerPresets.Count == 0)
-            return new ProviderModel { Name = "Mock", ProviderType = "Mock" };
+            return new ProviderModel { Name = AppSettings.MockDefaultModelId, ProviderType = "Mock", ModelId = AppSettings.MockDefaultModelId };
 
         var preferredType = GetActiveProfile()?.PreferredProviderType;
         if (preferredType is not null)

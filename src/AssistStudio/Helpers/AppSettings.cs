@@ -357,6 +357,13 @@ public static class AppSettings
     /// </summary>
     private const int MaxRecentFiles = 10;
 
+    /// <summary>
+    /// Default <see cref="ProviderModel.ModelId"/> assigned to Mock provider entries.
+    /// Pre-PR-3 the Mock entry had an empty ModelId, which renders as a blank row in
+    /// <see cref="ModelPicker"/>. Backfilled idempotently on every <see cref="LoadModels"/>.
+    /// </summary>
+    internal const string MockDefaultModelId = "demo-default";
+
     #endregion
 
     #region Fields
@@ -785,8 +792,29 @@ public static class AppSettings
         // Append synthetic entries for custom providers
         AppendCustomProviderModels(result);
 
+        // Backfill: legacy Mock entries had ModelId="" which renders as a blank
+        // row in ModelPicker. Idempotent — running on every load is cheap.
+        FixupMockModelIds(result);
+
         _modelsCache = result;
         return new ObservableCollection<ProviderModel>(result);
+    }
+
+    /// <summary>
+    /// Ensures every Mock-provider entry carries <see cref="MockDefaultModelId"/>
+    /// as its <see cref="ProviderModel.ModelId"/>/<see cref="ProviderModel.Name"/>.
+    /// Repairs entries persisted before the demo-default fix; safe to invoke
+    /// repeatedly because already-correct entries are unchanged.
+    /// </summary>
+    /// <param name="models">The current model list to repair in place.</param>
+    private static void FixupMockModelIds(IList<ProviderModel> models)
+    {
+        foreach (var m in models)
+        {
+            if (m.ProviderType != "Mock") continue;
+            if (string.IsNullOrEmpty(m.ModelId)) m.ModelId = MockDefaultModelId;
+            if (string.IsNullOrEmpty(m.Name)) m.Name = MockDefaultModelId;
+        }
     }
 
     /// <summary>
@@ -1133,8 +1161,15 @@ public static class AppSettings
             BaseUrl = GetOllamaBaseUrl(),
         });
 
-        // Mock
-        models.Add(new ProviderModel { Name = "Mock", ProviderType = "Mock" });
+        // Demo (mock provider). Treated like a real provider with a single fixed
+        // built-in model so the picker shows it as a normal entry rather than an
+        // empty group row. Additional demo models can be added in the future.
+        models.Add(new ProviderModel
+        {
+            Name = MockDefaultModelId,
+            ProviderType = "Mock",
+            ModelId = MockDefaultModelId,
+        });
 
         return models;
     }
