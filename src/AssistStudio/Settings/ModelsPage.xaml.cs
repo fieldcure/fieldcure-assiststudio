@@ -21,6 +21,7 @@ public sealed partial class ModelsPage : Page
 {
     #region Fields
 
+    /// <summary>Provider preset collection shared with the per-provider sections.</summary>
     private ObservableCollection<ProviderModel> _presets = [];
 
     #endregion
@@ -415,6 +416,7 @@ public sealed partial class ModelsPage : Page
         _ => null
     };
 
+    /// <summary>Shared resource loader for localized strings on this page.</summary>
     private static readonly ResourceLoader Res = new();
 
     /// <summary>

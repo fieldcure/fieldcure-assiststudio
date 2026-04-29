@@ -46,6 +46,7 @@ public class ProviderModelTests
 
 }
 
+/// <summary>Tests <see cref="Profile"/> defaults and JSON serialization round-trip.</summary>
 [TestClass]
 public class ProfileTests
 {

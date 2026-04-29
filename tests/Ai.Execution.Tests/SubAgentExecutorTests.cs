@@ -222,6 +222,7 @@ public sealed class SubAgentExecutorTests
 
     #region Helpers
 
+    /// <summary>Creates a <see cref="SubAgentExecutor"/> wired to the given mock provider with no tools.</summary>
     static SubAgentExecutor CreateExecutor(MockProvider provider)
     {
         return new SubAgentExecutor(

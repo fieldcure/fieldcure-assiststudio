@@ -55,6 +55,7 @@ public sealed partial class ChatTabView : UserControl
 
     #region DP Callbacks
 
+    /// <summary>Reattaches event wiring when the bound view model is replaced.</summary>
     private static void OnViewModelChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         var view = (ChatTabView)d;

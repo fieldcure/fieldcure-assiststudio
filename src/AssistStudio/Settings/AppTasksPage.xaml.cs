@@ -16,6 +16,7 @@ public sealed partial class AppTasksPage : Page
 {
     #region Fields
 
+    /// <summary>Suppresses change handlers while the page is loading saved state into UI.</summary>
     private bool _suppressEvents;
 
     #endregion
@@ -148,15 +149,19 @@ public sealed partial class AppTasksPage : Page
         AppSettings.SetSpecialistModel(specialistName, selector.ModelName);
     }
 
+    /// <summary>Persists Web Search specialist source/model when its selector changes.</summary>
     private void OnWebSearchSpecialistSettingsChanged(object? sender, EventArgs e)
         => SaveSpecialistSelector(WebSearchSpecialistSelector, WebSearchSpecialist.SpecialistName);
 
+    /// <summary>Persists Critique specialist source/model when its selector changes.</summary>
     private void OnCritiqueSpecialistSettingsChanged(object? sender, EventArgs e)
         => SaveSpecialistSelector(CritiqueSpecialistSelector, CritiqueSpecialist.SpecialistName);
 
+    /// <summary>Persists Red Team specialist source/model when its selector changes.</summary>
     private void OnRedTeamSpecialistSettingsChanged(object? sender, EventArgs e)
         => SaveSpecialistSelector(RedTeamSpecialistSelector, RedTeamSpecialist.SpecialistName);
 
+    /// <summary>Persists Devil's Advocate specialist source/model when its selector changes.</summary>
     private void OnDevilsAdvocateSpecialistSettingsChanged(object? sender, EventArgs e)
         => SaveSpecialistSelector(DevilsAdvocateSpecialistSelector, DevilsAdvocateSpecialist.SpecialistName);
 

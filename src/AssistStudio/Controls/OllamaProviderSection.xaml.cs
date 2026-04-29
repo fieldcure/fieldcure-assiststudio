@@ -19,9 +19,13 @@ public sealed partial class OllamaProviderSection : UserControl
 {
     #region Fields
 
+    /// <summary>The provider preset collection shared with the parent ModelsPage.</summary>
     private ObservableCollection<ProviderModel> _presets = [];
+    /// <summary>Suppresses change handlers while the section is repopulating UI from saved state.</summary>
     private bool _isPopulating;
+    /// <summary>Tracks whether <see cref="Initialize"/> has run, to make it idempotent.</summary>
     private bool _initialized;
+    /// <summary>Cancellation source for the background model-pull progress tracker.</summary>
     private CancellationTokenSource? _pullCts;
 
     /// <summary>
@@ -34,6 +38,7 @@ public sealed partial class OllamaProviderSection : UserControl
     /// <summary>Model names queued for download, shared across page instances.</summary>
     private static readonly List<string> _pendingPulls = [];
 
+    /// <summary>Resource keys for the thinking-override ComboBox entries.</summary>
     private static readonly (ThinkingOverride Value, string LabelKey)[] ThinkingOverrideOptions =
     [
         (ThinkingOverride.Auto, "Models_ThinkingOverrideAuto"),
@@ -41,6 +46,7 @@ public sealed partial class OllamaProviderSection : UserControl
         (ThinkingOverride.ForceOff, "Models_ThinkingOverrideForceOff"),
     ];
 
+    /// <summary>Resource keys for the PDF-handling ComboBox entries.</summary>
     private static readonly (PdfCapability Value, string LabelKey)[] PdfOptions =
     [
         (PdfCapability.Auto, "Models_PdfAuto"),
@@ -62,6 +68,7 @@ public sealed partial class OllamaProviderSection : UserControl
 
     #region Constructor
 
+    /// <summary>Initializes a new <see cref="OllamaProviderSection"/> and subscribes to theme changes.</summary>
     public OllamaProviderSection()
     {
         InitializeComponent();
@@ -121,9 +128,12 @@ public sealed partial class OllamaProviderSection : UserControl
 
     #region Status Check
 
+    /// <summary>Handles the Check button click by re-running the status probe.</summary>
     private async void OnCheckStatus(object sender, RoutedEventArgs e) => await CheckStatusAsync();
+    /// <summary>Handles the Test URL button click by re-running the status probe with the current URL.</summary>
     private async void OnTestUrl(object sender, RoutedEventArgs e) => await CheckStatusAsync();
 
+    /// <summary>Probes the configured Ollama endpoint and updates the status UI accordingly.</summary>
     private async Task CheckStatusAsync()
     {
         Spinner.Visibility = Visibility.Visible;
@@ -185,6 +195,7 @@ public sealed partial class OllamaProviderSection : UserControl
     /// Keeps main-tab preset filtering in sync when the user explicitly re-checks Ollama
     /// from the Settings UI or starts the server after app launch.
     /// </summary>
+    /// <summary>Refreshes the MainViewModel's Ollama reachability state so preset filtering stays in sync.</summary>
     private static async Task SyncMainViewModelOllamaReachabilityAsync()
     {
         if ((App.Current as App)?.MainWindow?.ViewModel is { } viewModel)
@@ -195,6 +206,7 @@ public sealed partial class OllamaProviderSection : UserControl
     /// Uses the provider-level health check so Settings and startup filtering rely on the
     /// same Ollama endpoint semantics.
     /// </summary>
+    /// <summary>Runs the provider-level health check against the current base URL and returns the resulting connection info.</summary>
     private async Task<ConnectionInfo> ValidateOllamaConnectionAsync()
     {
         var baseUrl = UrlBox.Text.Trim();
@@ -209,6 +221,7 @@ public sealed partial class OllamaProviderSection : UserControl
 
     #region Model Loading
 
+    /// <summary>Loads the locally available Ollama models, classifies their hardware fit, and populates the ComboBox.</summary>
     private async Task LoadModelsAsync()
     {
         try
@@ -278,6 +291,7 @@ public sealed partial class OllamaProviderSection : UserControl
 
     #region URL Management
 
+    /// <summary>Handles edits to the base URL textbox by persisting the new value to settings.</summary>
     private void OnUrlChanged(object sender, RoutedEventArgs e)
     {
         var url = GetBaseUrlFromUI();
@@ -293,6 +307,7 @@ public sealed partial class OllamaProviderSection : UserControl
         _ = SyncMainViewModelOllamaReachabilityAsync();
     }
 
+    /// <summary>Resets the base URL to the default localhost endpoint and clears any saved override.</summary>
     private void OnLocalhost(object sender, RoutedEventArgs e)
     {
         UrlBox.Text = "http://localhost:11434";
@@ -309,6 +324,7 @@ public sealed partial class OllamaProviderSection : UserControl
         _ = CheckStatusAsync();
     }
 
+    /// <summary>Returns the user-entered base URL, or null when the value matches the default localhost.</summary>
     private string? GetBaseUrlFromUI()
     {
         var url = UrlBox.Text.Trim();
@@ -317,6 +333,7 @@ public sealed partial class OllamaProviderSection : UserControl
         return url;
     }
 
+    /// <summary>Returns true when the configured base URL targets a non-loopback host.</summary>
     private bool IsRemote()
     {
         var url = UrlBox.Text.Trim();
@@ -330,6 +347,7 @@ public sealed partial class OllamaProviderSection : UserControl
 
     #region Ollama Actions
 
+    /// <summary>Launches the Ollama CLI login flow in an external shell.</summary>
     private void OnLogin(object sender, RoutedEventArgs e)
     {
         Process.Start(new ProcessStartInfo
@@ -340,6 +358,7 @@ public sealed partial class OllamaProviderSection : UserControl
         });
     }
 
+    /// <summary>Handles the Start button click by launching the local Ollama service.</summary>
     private async void OnStartOllama(object sender, RoutedEventArgs e)
     {
         StartButton.IsEnabled = false;
@@ -372,6 +391,7 @@ public sealed partial class OllamaProviderSection : UserControl
         }
     }
 
+    /// <summary>Opens the Ollama model browser dialog and queues any selected models for download.</summary>
     private async void OnBrowseModels(object sender, RoutedEventArgs e)
     {
         var baseUrl = GetBaseUrlFromUI() ?? "http://localhost:11434";
@@ -388,6 +408,7 @@ public sealed partial class OllamaProviderSection : UserControl
         await LoadModelsAsync();
     }
 
+    /// <summary>Adds <paramref name="modelNames"/> to the pending-pull queue and starts progress tracking.</summary>
     private async Task PullModelsAsync(List<string> modelNames)
     {
         foreach (var name in modelNames)
@@ -398,6 +419,7 @@ public sealed partial class OllamaProviderSection : UserControl
         await TrackPullProgressAsync();
     }
 
+    /// <summary>Drains the pending-pull queue, updating the progress bar/status until cancelled or empty.</summary>
     private async Task TrackPullProgressAsync()
     {
         _pullCts?.Cancel();
@@ -477,6 +499,7 @@ public sealed partial class OllamaProviderSection : UserControl
 
     #region Options
 
+    /// <summary>Persists the newly selected Ollama model to settings and the active preset.</summary>
     private void OnModelChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_isPopulating) return;
@@ -493,6 +516,7 @@ public sealed partial class OllamaProviderSection : UserControl
         }
     }
 
+    /// <summary>Populates the PDF-handling ComboBox and selects the saved capability for the current preset.</summary>
     private void PopulatePdfCombo()
     {
         PdfCombo.Items.Clear();
@@ -503,6 +527,7 @@ public sealed partial class OllamaProviderSection : UserControl
         PdfCombo.SelectedIndex = idx >= 0 ? idx : 0;
     }
 
+    /// <summary>Loads the saved max-tokens value into the NumberBox for the current preset.</summary>
     private void PopulateMaxTokens()
     {
         var preset = FindPreset();
@@ -510,6 +535,7 @@ public sealed partial class OllamaProviderSection : UserControl
             MaxTokensBox.Value = preset.MaxTokens;
     }
 
+    /// <summary>Loads Ollama-specific settings (NumCtx, KeepAlive) into the matching controls.</summary>
     private void PopulateOllamaOptions()
     {
         var preset = FindPreset();
@@ -520,6 +546,7 @@ public sealed partial class OllamaProviderSection : UserControl
         }
     }
 
+    /// <summary>Initializes the thinking override controls from the current provider preset.</summary>
     private void PopulateThinkingToggle()
     {
         ThinkingOverrideCombo.Items.Clear();
@@ -544,6 +571,7 @@ public sealed partial class OllamaProviderSection : UserControl
         }
     }
 
+    /// <summary>Persists the selected PDF handling mode when the ComboBox selection changes.</summary>
     private void OnPdfHandlingChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_isPopulating) return;
@@ -556,6 +584,7 @@ public sealed partial class OllamaProviderSection : UserControl
         PersistPresets();
     }
 
+    /// <summary>Persists max-token changes from the NumberBox to the current preset.</summary>
     private void OnMaxTokensChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
         if (_isPopulating || double.IsNaN(args.NewValue)) return;
@@ -565,6 +594,7 @@ public sealed partial class OllamaProviderSection : UserControl
         PersistPresets();
     }
 
+    /// <summary>Persists the NumCtx context-window size to the current preset.</summary>
     private void OnNumCtxChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
         if (_isPopulating || double.IsNaN(args.NewValue)) return;
@@ -574,6 +604,7 @@ public sealed partial class OllamaProviderSection : UserControl
         PersistPresets();
     }
 
+    /// <summary>Persists the KeepAlive duration string to the current preset.</summary>
     private void OnKeepAliveChanged(object sender, TextChangedEventArgs args)
     {
         if (_isPopulating) return;
@@ -586,6 +617,7 @@ public sealed partial class OllamaProviderSection : UserControl
         PersistPresets();
     }
 
+    /// <summary>Persists the explicit thinking toggle state and updates the budget enablement.</summary>
     private void OnThinkingToggled(object sender, RoutedEventArgs e)
     {
         if (_isPopulating || !ThinkingToggle.IsEnabled) return;
@@ -601,6 +633,7 @@ public sealed partial class OllamaProviderSection : UserControl
         PersistPresets();
     }
 
+    /// <summary>Applies a new thinking override mode and persists the resulting preset state.</summary>
     private void OnThinkingOverrideChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_isPopulating) return;
@@ -621,6 +654,7 @@ public sealed partial class OllamaProviderSection : UserControl
         PersistPresets();
     }
 
+    /// <summary>Persists changes to the thinking budget NumberBox for the current preset.</summary>
     private void OnThinkingBudgetChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
         if (_isPopulating) return;
@@ -630,6 +664,7 @@ public sealed partial class OllamaProviderSection : UserControl
         PersistPresets();
     }
 
+    /// <summary>Recomputes thinking-control availability and visibility based on the selected model and override.</summary>
     private void UpdateThinkingState()
     {
         var modelId = ModelCombo.SelectedItem is string display ? StripFitSuffix(display) : null;
@@ -685,11 +720,14 @@ public sealed partial class OllamaProviderSection : UserControl
 
     #region Private Helpers
 
+    /// <summary>Finds the saved Ollama provider preset, if any.</summary>
     private ProviderModel? FindPreset()
         => _presets.FirstOrDefault(p => p.ProviderType == "Ollama");
 
+    /// <summary>Saves the current in-memory provider presets back to application settings.</summary>
     private void PersistPresets() => AppSettings.SaveModels(_presets);
 
+    /// <summary>Raises the sub-header text update event with the current model and status.</summary>
     private void UpdateSubHeader()
     {
         var display = ModelCombo.SelectedItem as string ?? "";
@@ -702,14 +740,17 @@ public sealed partial class OllamaProviderSection : UserControl
         SubHeaderChanged?.Invoke(this, string.Join(" \u00B7 ", parts));
     }
 
+    /// <summary>Strips the trailing "(GPU)/(CPU)/(Maybe)" hardware-fit suffix from a model display label.</summary>
     private static string StripFitSuffix(string display)
     {
         var idx = display.IndexOf("  (", StringComparison.Ordinal);
         return idx >= 0 ? display[..idx] : display;
     }
 
+    /// <summary>Shared resource loader for localized strings on this page.</summary>
     private static readonly ResourceLoader Res = new();
 
+    /// <summary>Resolves a localized string for the given resource key, falling back to the key itself.</summary>
     private static string L(string key) =>
         Res.GetString(key) is { Length: > 0 } value ? value : key;
 

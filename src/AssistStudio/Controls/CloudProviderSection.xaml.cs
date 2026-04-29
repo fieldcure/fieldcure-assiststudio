@@ -16,14 +16,18 @@ public sealed partial class CloudProviderSection : UserControl
 {
     #region Fields
 
+    /// <summary>The provider preset collection shared with the parent ModelsPage.</summary>
     private ObservableCollection<ProviderModel> _presets = [];
+    /// <summary>Suppresses change handlers while the section is repopulating UI from saved state.</summary>
     private bool _isPopulating;
+    /// <summary>Tracks whether <see cref="Initialize"/> has run, to make it idempotent.</summary>
     private bool _initialized;
 
     #endregion
 
     #region Constants
 
+    /// <summary>Resource keys for the thinking-override ComboBox entries.</summary>
     private static readonly (ThinkingOverride Value, string LabelKey)[] ThinkingOverrideOptions =
     [
         (ThinkingOverride.Auto, "Models_ThinkingOverrideAuto"),
@@ -31,6 +35,7 @@ public sealed partial class CloudProviderSection : UserControl
         (ThinkingOverride.ForceOff, "Models_ThinkingOverrideForceOff"),
     ];
 
+    /// <summary>Resource keys for the PDF-handling ComboBox entries.</summary>
     private static readonly (PdfCapability Value, string LabelKey)[] PdfOptions =
     [
         (PdfCapability.Auto, "Models_PdfAuto"),
@@ -684,6 +689,7 @@ public sealed partial class CloudProviderSection : UserControl
         _ => provider
     };
 
+    /// <summary>Shared resource loader for localized strings on this page.</summary>
     private static readonly ResourceLoader Res = new();
 
     /// <summary>

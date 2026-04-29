@@ -24,9 +24,13 @@ namespace FieldCure.AssistStudio.Controls;
 [TemplatePart(Name = PartList, Type = typeof(ListView))]
 public sealed class ModelPicker : Control
 {
+    /// <summary>Template part name for the flyout-anchor button.</summary>
     private const string PartRootButton = "PART_RootButton";
+    /// <summary>Template part name for the button label that displays the current selection.</summary>
     private const string PartLabelText = "PART_LabelText";
+    /// <summary>Template part name for the search box inside the flyout.</summary>
     private const string PartSearchBox = "PART_SearchBox";
+    /// <summary>Template part name for the grouped list of entries.</summary>
     private const string PartList = "PART_List";
 
     /// <summary>
@@ -43,9 +47,13 @@ public sealed class ModelPicker : Control
     /// <summary>CollectionViewSource exposing <see cref="_groupedView"/> as a grouped view.</summary>
     private CollectionViewSource? _cvs;
 
+    /// <summary>Resolved template part: the flyout-anchor button.</summary>
     private Button? _rootButton;
+    /// <summary>Resolved template part: the button label text.</summary>
     private TextBlock? _labelText;
+    /// <summary>Resolved template part: the search box inside the flyout.</summary>
     private AutoSuggestBox? _searchBox;
+    /// <summary>Resolved template part: the grouped list view.</summary>
     private ListView? _list;
 
     #endregion

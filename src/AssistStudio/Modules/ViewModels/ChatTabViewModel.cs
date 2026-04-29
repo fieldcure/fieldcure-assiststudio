@@ -22,6 +22,7 @@ namespace AssistStudio.Modules.ViewModels;
 /// </summary>
 public partial class ChatTabViewModel : ObservableObject, IDisposable
 {
+    /// <summary>Shared resource loader for localized strings used by this view model.</summary>
     private static readonly ResourceLoader Res = new();
 
     #region Observable Fields — Tab

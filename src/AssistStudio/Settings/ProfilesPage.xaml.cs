@@ -17,6 +17,7 @@ namespace AssistStudio.Settings;
 /// </summary>
 public sealed partial class ProfilesPage : Page
 {
+    /// <summary>Shared resource loader for localized strings on this page.</summary>
     private static readonly ResourceLoader Res = new();
 
     #region Fields
@@ -82,6 +83,7 @@ public sealed partial class ProfilesPage : Page
         LoadSelectedProfile();
     }
 
+    /// <inheritdoc/>
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         base.OnNavigatedFrom(e);

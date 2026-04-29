@@ -517,6 +517,10 @@ public static class AppSettings
     /// </summary>
     public static void InvalidateProfileCache() => _profileCache = null;
 
+    /// <summary>
+    /// Loads all profiles, combining built-in profiles with user-created custom profiles from storage.
+    /// </summary>
+    /// <returns>A list of all available profiles.</returns>
     public static List<Profile> LoadProfiles()
     {
         if (_profileCache is not null)

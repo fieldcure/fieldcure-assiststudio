@@ -36,6 +36,9 @@ public sealed partial class ChatPanel
         }
     }
 
+    /// <summary>
+    /// Closes the in-conversation search bar and clears any highlighted matches in the WebView.
+    /// </summary>
     private async void CloseSearchBar()
     {
         if (_searchBar is not null) _searchBar.Visibility = Visibility.Collapsed;
@@ -47,6 +50,9 @@ public sealed partial class ChatPanel
             await _chatWebView.ExecuteScriptAsync("window.assistChat.searchClear()").AsTask();
     }
 
+    /// <summary>
+    /// Executes a search in the WebView for <paramref name="query"/> and updates the match counter.
+    /// </summary>
     private async Task ExecuteSearchAsync(string query)
     {
         if (_chatWebView?.CoreWebView2 is null) return;
@@ -58,6 +64,9 @@ public sealed partial class ChatPanel
         UpdateSearchCount(result);
     }
 
+    /// <summary>
+    /// Navigates to the previous (-1) or next (+1) search match and refreshes the counter.
+    /// </summary>
     private async Task NavigateSearchAsync(int direction)
     {
         if (_chatWebView?.CoreWebView2 is null) return;
@@ -68,6 +77,9 @@ public sealed partial class ChatPanel
         UpdateSearchCount(result);
     }
 
+    /// <summary>
+    /// Parses the JSON result of a search/navigate call and updates the "current/total" counter text.
+    /// </summary>
     private void UpdateSearchCount(string? jsonResult)
     {
         if (_searchCount is null || jsonResult is null) return;

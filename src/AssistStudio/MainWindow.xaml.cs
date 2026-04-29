@@ -23,6 +23,7 @@ namespace AssistStudio;
 /// </summary>
 public sealed partial class MainWindow : Window
 {
+    /// <summary>Shared resource loader for localized strings on this window.</summary>
     private static readonly ResourceLoader Res = new();
 
     #region Fields

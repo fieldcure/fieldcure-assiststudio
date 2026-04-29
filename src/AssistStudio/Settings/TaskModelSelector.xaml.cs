@@ -29,6 +29,7 @@ public sealed partial class TaskModelSelector : UserControl
 
     #region Fields
 
+    /// <summary>Suppresses change handlers while loading saved state into UI.</summary>
     private bool _suppressEvents;
 
     #endregion

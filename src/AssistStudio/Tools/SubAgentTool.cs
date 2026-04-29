@@ -21,10 +21,15 @@ public sealed class SubAgentTool : IAssistTool
 {
     #region Fields
 
+    /// <summary>Sub-agent executor used to run isolated LLM sessions.</summary>
     private readonly ISubAgentExecutor _executor;
+    /// <summary>Resolves the active conversation's Knowledge Base id, or null when none is selected.</summary>
     private readonly Func<string?> _kbIdProvider;
+    /// <summary>Registry of built-in specialists used for auto-approval routing.</summary>
     private readonly SpecialistRegistry _registry;
+    /// <summary>Resolves the preferred provider model for a given specialist name.</summary>
     private readonly Func<string, string?> _specialistModelProvider;
+    /// <summary>Returns the configured per-task sub-agent model, or null to inherit the parent.</summary>
     private readonly Func<string?> _subAgentModelProvider;
 
     #endregion
@@ -389,6 +394,7 @@ public sealed class SubAgentTool : IAssistTool
         return match.Value.StartsWith('\n') ? match.Index + 1 : match.Index;
     }
 
+    /// <summary>Parses an optional string-array parameter, returning null when absent or empty.</summary>
     private static IReadOnlyList<string>? ParseStringArray(JsonElement parameters, string propertyName)
     {
         if (!parameters.TryGetProperty(propertyName, out var arr) || arr.ValueKind != JsonValueKind.Array)
@@ -405,6 +411,7 @@ public sealed class SubAgentTool : IAssistTool
         return list.Count > 0 ? list : null;
     }
 
+    /// <summary>Formats a <see cref="SubAgentResult"/> into the JSON envelope returned to the parent LLM.</summary>
     private static string FormatResult(SubAgentResult result)
     {
         var statusText = result.Status switch

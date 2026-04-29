@@ -23,8 +23,11 @@ public static class ConversationManager
     /// <summary>The current format version for .astx archives.</summary>
     private const int CurrentFormatVersion = 2;
 
+    /// <summary>The zip entry name used for the manifest JSON inside an .astx archive.</summary>
     private const string ManifestEntryName = "manifest.json";
+    /// <summary>The zip entry name used for the conversation body JSON inside an .astx archive.</summary>
     private const string ConversationEntryName = "conversation.json";
+    /// <summary>The directory prefix used for media payloads inside an .astx archive.</summary>
     private const string MediaDirPrefix = "media/";
 
     #endregion
