@@ -47,10 +47,11 @@
 
         <!-- Options (visible when key exists) -->
         <StackPanel x:Name="OptionsPanel" Spacing="8" Visibility="Collapsed">
-            <!-- Available models header + Refresh -->
+            <!-- Available models header + Enable all + Refresh -->
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <TextBlock
@@ -60,6 +61,16 @@
                     FontSize="12" Opacity="0.7" />
                 <Button
                     Grid.Column="1"
+                    x:Name="EnableAllModelsButton"
+                    x:Uid="Models_EnableAllModels"
+                    Content="Enable all"
+                    ToolTipService.ToolTip="Enable all listed models"
+                    ToolTipService.Placement="Mouse"
+                    Click="OnEnableAllModels"
+                    Padding="8,4"
+                    Margin="0,0,4,0" />
+                <Button
+                    Grid.Column="2"
                     x:Name="RefreshModelsButton"
                     x:Uid="Models_RefreshModels"
                     ToolTipService.ToolTip="Refresh models"

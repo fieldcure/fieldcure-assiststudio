@@ -330,6 +330,7 @@ public sealed partial class ProfilesPage : Page
         // Detach the SelectionChanged subscription while we reassign ItemsSource +
         // SelectedItem so we don't fire a write-back during programmatic update.
         ProfileModelPicker.SelectionChanged -= OnProfileModelPickerSelectionChanged;
+        ProfileModelPicker.PlaceholderText = Res.GetString("Profiles_PreferredModelPlaceholder");
         ProfileModelPicker.ItemsSource = (System.Collections.IList)entries;
 
         ModelPickerEntry? match = null;

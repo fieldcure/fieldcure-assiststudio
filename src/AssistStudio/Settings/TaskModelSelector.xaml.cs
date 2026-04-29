@@ -5,6 +5,7 @@ using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Controls;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.Windows.ApplicationModel.Resources;
 
 namespace AssistStudio.Settings;
 
@@ -51,7 +52,11 @@ public sealed partial class TaskModelSelector : UserControl
     {
         InitializeComponent();
         ModelPickerControl.SelectionChanged += OnModelPickerSelectionChanged;
+        ModelPickerControl.PlaceholderText = Res.GetString("TaskPreset_ModelPlaceholder");
     }
+
+    /// <summary>Shared resource loader for localized strings used by this control.</summary>
+    private static readonly ResourceLoader Res = new();
 
     #endregion
 
@@ -154,6 +159,19 @@ public sealed partial class TaskModelSelector : UserControl
             Source = ParseSource(tag);
             ModelPickerControl.Visibility = Source == AuxiliaryTaskSource.Specific
                 ? Visibility.Visible : Visibility.Collapsed;
+
+            // When flipping to Specific for the first time, the picker may have
+            // had its template realized while collapsed and the auto-fallback
+            // selection from Load() not yet rendered. Re-populate so the first
+            // entry is selected and the label paints.
+            if (Source == AuxiliaryTaskSource.Specific
+                && (ModelPickerControl.SelectedItem is null
+                    || string.IsNullOrEmpty(ModelName)))
+            {
+                PopulateModelPicker(ModelName);
+                ModelName = ((ModelPickerControl.SelectedItem is ModelPickerEntry sel) ? sel.ModelId : "") ?? "";
+            }
+
             SettingsChanged?.Invoke(this, EventArgs.Empty);
         }
     }

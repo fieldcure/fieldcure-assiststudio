@@ -345,6 +345,12 @@
   <data name="Profiles_DesiredModel.Text" xml:space="preserve">
     <value>Desired model</value>
   </data>
+  <data name="Profiles_PreferredModelPlaceholder" xml:space="preserve">
+    <value>Automatic (first available)</value>
+  </data>
+  <data name="TaskPreset_ModelPlaceholder" xml:space="preserve">
+    <value>Select a model</value>
+  </data>
   <data name="Profiles_DesiredTools.Text" xml:space="preserve">
     <value>Tools &amp; Servers</value>
   </data>
@@ -470,6 +476,12 @@
   </data>
   <data name="Models_RefreshModels.ToolTipService.ToolTip" xml:space="preserve">
     <value>Refresh model list</value>
+  </data>
+  <data name="Models_EnableAllModels.Content" xml:space="preserve">
+    <value>Enable all</value>
+  </data>
+  <data name="Models_EnableAllModels.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Enable all listed models</value>
   </data>
   <data name="Models_NoModelsAvailable.Text" xml:space="preserve">
     <value>No models available. Add one below or click refresh.</value>

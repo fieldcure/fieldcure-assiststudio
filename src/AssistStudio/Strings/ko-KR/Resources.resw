@@ -345,6 +345,12 @@
   <data name="Profiles_DesiredModel.Text" xml:space="preserve">
     <value>선호 모델</value>
   </data>
+  <data name="Profiles_PreferredModelPlaceholder" xml:space="preserve">
+    <value>자동 (첫 번째 모델)</value>
+  </data>
+  <data name="TaskPreset_ModelPlaceholder" xml:space="preserve">
+    <value>모델 선택</value>
+  </data>
   <data name="Profiles_DesiredTools.Text" xml:space="preserve">
     <value>도구 및 서버</value>
   </data>
@@ -470,6 +476,12 @@
   </data>
   <data name="Models_RefreshModels.ToolTipService.ToolTip" xml:space="preserve">
     <value>모델 목록 새로고침</value>
+  </data>
+  <data name="Models_EnableAllModels.Content" xml:space="preserve">
+    <value>모두 활성화</value>
+  </data>
+  <data name="Models_EnableAllModels.ToolTipService.ToolTip" xml:space="preserve">
+    <value>나열된 모든 모델 활성화</value>
   </data>
   <data name="Models_NoModelsAvailable.Text" xml:space="preserve">
     <value>사용할 수 있는 모델이 없습니다. 아래에서 추가하거나 새로고침을 누르세요.</value>

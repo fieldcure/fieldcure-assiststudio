@@ -274,6 +274,32 @@ public sealed partial class CloudProviderSection : UserControl
         EmptyChecklistHint.Visibility = _checklist.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    /// <summary>
+    /// Handles the "Enable all" button — checks every visible row that is not
+    /// already registered, creating <see cref="ProviderModel"/> instances for
+    /// the new ones in one batch save.
+    /// </summary>
+    private void OnEnableAllModels(object sender, RoutedEventArgs e)
+    {
+        var enabled = FindAllPresets().Select(p => p.ModelId).ToHashSet();
+        var toEnable = _checklist.Where(i => !enabled.Contains(i.ModelId)).ToList();
+        if (toEnable.Count == 0) return;
+
+        _isPopulating = true;
+        try
+        {
+            foreach (var item in toEnable)
+            {
+                EnableModel(item.ModelId);
+                item.IsEnabled = true;
+            }
+        }
+        finally { _isPopulating = false; }
+
+        AppSettings.SaveModels(_presets);
+        UpdateSubHeader();
+    }
+
     /// <summary>Handles the Refresh button click — re-fetches the upstream model list.</summary>
     private async void OnRefreshModels(object sender, RoutedEventArgs e)
     {
