@@ -5,9 +5,26 @@ using System.Text.Json.Serialization;
 namespace FieldCure.Ai.Providers.Models;
 
 /// <summary>
-/// A saved AI provider configuration including provider type, model, API key reference, and generation parameters.
+/// Represents a single (Provider × Model) entry. Multiple instances per
+/// ProviderType are allowed — one per enabled model.
+///
+/// <para>
+/// Per-Provider broadcast fields (shared across all instances of the same
+/// ProviderType): <see cref="MaxTokens"/>, <see cref="Temperature"/>,
+/// <see cref="StreamingEnabled"/>, <see cref="PdfCapability"/>,
+/// <see cref="ThinkingEnabled"/>, <see cref="ThinkingOverride"/>,
+/// <see cref="ThinkingBudget"/>. The storage layer broadcasts changes to
+/// these fields when the user edits any one instance in the Models page.
+/// </para>
+/// <para>
+/// Per-model fields (unique to each instance, even within the same
+/// ProviderType): <see cref="KeepAlive"/>, <see cref="NumCtx"/>. These are
+/// physical constraints that vary by Ollama model size and host VRAM, so
+/// each ProviderModel carries its own value (nullable; null falls back to
+/// Ollama protocol defaults).
+/// </para>
 /// </summary>
-public partial class ProviderPreset : INotifyPropertyChanged
+public partial class ProviderModel : INotifyPropertyChanged
 {
     #region Fields
 
@@ -28,7 +45,7 @@ public partial class ProviderPreset : INotifyPropertyChanged
     #region Properties
 
     /// <summary>
-    /// The display name of this preset.
+    /// The display name of this ProviderModel.
     /// </summary>
     public string Name
     {
@@ -80,17 +97,17 @@ public partial class ProviderPreset : INotifyPropertyChanged
     public int MaxTokens { get; set; } = 4096;
 
     /// <summary>
-    /// Whether streaming is enabled for this preset. Default is true.
+    /// Whether streaming is enabled for this ProviderModel. Default is true.
     /// </summary>
     public bool StreamingEnabled { get; set; } = true;
 
     /// <summary>
-    /// How this preset handles PDF document attachments. Default is Auto (provider determines).
+    /// How this ProviderModel handles PDF document attachments. Default is Auto (provider determines).
     /// </summary>
     public PdfCapability PdfCapability { get; set; } = PdfCapability.Auto;
 
     /// <summary>
-    /// Whether extended thinking/reasoning is enabled for this preset.
+    /// Whether extended thinking/reasoning is enabled for this ProviderModel.
     /// </summary>
     public bool ThinkingEnabled { get; set; }
 

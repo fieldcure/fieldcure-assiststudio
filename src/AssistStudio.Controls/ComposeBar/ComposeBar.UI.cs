@@ -25,15 +25,15 @@ public sealed partial class ComposeBar
         DependencyProperty.Register(nameof(IsInputEnabled), typeof(bool), typeof(ComposeBar),
             new PropertyMetadata(true, OnIsInputEnabledChanged));
 
-    /// <summary>Identifies the <see cref="AvailablePresets"/> dependency property.</summary>
-    public static readonly DependencyProperty AvailablePresetsProperty =
-        DependencyProperty.Register(nameof(AvailablePresets), typeof(IList), typeof(ComposeBar),
-            new PropertyMetadata(null, OnAvailablePresetsChanged));
+    /// <summary>Identifies the <see cref="AvailableModels"/> dependency property.</summary>
+    public static readonly DependencyProperty AvailableModelsProperty =
+        DependencyProperty.Register(nameof(AvailableModels), typeof(IList), typeof(ComposeBar),
+            new PropertyMetadata(null, OnAvailableModelsChanged));
 
-    /// <summary>Identifies the <see cref="SelectedPreset"/> dependency property.</summary>
-    public static readonly DependencyProperty SelectedPresetProperty =
-        DependencyProperty.Register(nameof(SelectedPreset), typeof(ProviderPreset), typeof(ComposeBar),
-            new PropertyMetadata(null, OnSelectedPresetChanged));
+    /// <summary>Identifies the <see cref="SelectedModel"/> dependency property.</summary>
+    public static readonly DependencyProperty SelectedModelProperty =
+        DependencyProperty.Register(nameof(SelectedModel), typeof(ProviderModel), typeof(ComposeBar),
+            new PropertyMetadata(null, OnSelectedModelChanged));
 
     /// <summary>Identifies the <see cref="AvailableProfiles"/> dependency property.</summary>
     public static readonly DependencyProperty AvailableProfilesProperty =
@@ -55,10 +55,10 @@ public sealed partial class ComposeBar
         DependencyProperty.Register(nameof(ShowAttachButton), typeof(bool), typeof(ComposeBar),
             new PropertyMetadata(true, OnShowAttachButtonChanged));
 
-    /// <summary>Identifies the <see cref="ShowPresetSelector"/> dependency property.</summary>
-    public static readonly DependencyProperty ShowPresetSelectorProperty =
-        DependencyProperty.Register(nameof(ShowPresetSelector), typeof(bool), typeof(ComposeBar),
-            new PropertyMetadata(true, OnShowPresetSelectorChanged));
+    /// <summary>Identifies the <see cref="ShowModelSelector"/> dependency property.</summary>
+    public static readonly DependencyProperty ShowModelSelectorProperty =
+        DependencyProperty.Register(nameof(ShowModelSelector), typeof(bool), typeof(ComposeBar),
+            new PropertyMetadata(true, OnShowModelSelectorChanged));
 
     /// <summary>Identifies the <see cref="ShowProfileSelector"/> dependency property.</summary>
     public static readonly DependencyProperty ShowProfileSelectorProperty =
@@ -135,19 +135,19 @@ public sealed partial class ComposeBar
     /// <summary>
     /// Gets or sets the list of available provider presets for the preset selector.
     /// </summary>
-    public IList? AvailablePresets
+    public IList? AvailableModels
     {
-        get => (IList?)GetValue(AvailablePresetsProperty);
-        set => SetValue(AvailablePresetsProperty, value);
+        get => (IList?)GetValue(AvailableModelsProperty);
+        set => SetValue(AvailableModelsProperty, value);
     }
 
     /// <summary>
     /// Gets or sets the currently selected provider preset.
     /// </summary>
-    public ProviderPreset? SelectedPreset
+    public ProviderModel? SelectedModel
     {
-        get => (ProviderPreset?)GetValue(SelectedPresetProperty);
-        set => SetValue(SelectedPresetProperty, value);
+        get => (ProviderModel?)GetValue(SelectedModelProperty);
+        set => SetValue(SelectedModelProperty, value);
     }
 
     /// <summary>
@@ -189,10 +189,10 @@ public sealed partial class ComposeBar
     /// <summary>
     /// Gets or sets whether the preset (model) selector ComboBox is visible.
     /// </summary>
-    public bool ShowPresetSelector
+    public bool ShowModelSelector
     {
-        get => (bool)GetValue(ShowPresetSelectorProperty);
-        set => SetValue(ShowPresetSelectorProperty, value);
+        get => (bool)GetValue(ShowModelSelectorProperty);
+        set => SetValue(ShowModelSelectorProperty, value);
     }
 
     /// <summary>
@@ -297,7 +297,7 @@ public sealed partial class ComposeBar
     /// <summary>
     /// Occurs when the user selects a different provider preset from the dropdown.
     /// </summary>
-    public event EventHandler<ProviderPreset>? PresetChanged;
+    public event EventHandler<ProviderModel>? ModelChanged;
 
     /// <summary>
     /// Occurs when the user selects a different prompt preset from the dropdown.
@@ -457,7 +457,7 @@ public sealed partial class ComposeBar
 
         // Apply initial visibility for selector ComboBoxes
         if (_presetComboBox is not null)
-            _presetComboBox.Visibility = ShowPresetSelector ? Visibility.Visible : Visibility.Collapsed;
+            _presetComboBox.Visibility = ShowModelSelector ? Visibility.Visible : Visibility.Collapsed;
         if (_profileComboBox is not null)
             _profileComboBox.Visibility = ShowProfileSelector ? Visibility.Visible : Visibility.Collapsed;
 
@@ -502,15 +502,15 @@ public sealed partial class ComposeBar
     }
 
     /// <summary>
-    /// Called when <see cref="AvailablePresets"/> changes to populate or defer ComboBox items.
+    /// Called when <see cref="AvailableModels"/> changes to populate or defer ComboBox items.
     /// </summary>
-    private static void OnAvailablePresetsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    private static void OnAvailableModelsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is ComposeBar self && e.NewValue is IList presets)
         {
             if (!self.IsLoaded)
             {
-                self._pendingPresetPopulate = true;
+                self._pendingModelPopulate = true;
                 return;
             }
             self.PopulatePresetCombo(presets);
@@ -518,13 +518,13 @@ public sealed partial class ComposeBar
     }
 
     /// <summary>
-    /// Called when <see cref="SelectedPreset"/> changes to sync the ComboBox selection.
+    /// Called when <see cref="SelectedModel"/> changes to sync the ComboBox selection.
     /// </summary>
-    private static void OnSelectedPresetChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    private static void OnSelectedModelChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is not ComposeBar self || !self.IsLoaded) return;
 
-        if (e.NewValue is ProviderPreset preset)
+        if (e.NewValue is ProviderModel preset)
         {
             self.SelectPresetInCombo(preset);
         }
@@ -533,9 +533,9 @@ public sealed partial class ComposeBar
             // Preset cleared — deselect ComboBox
             if (self._presetComboBox is not null)
             {
-                self._suppressPresetChanged = true;
+                self._suppressModelChanged = true;
                 self._presetComboBox.SelectedItem = null;
-                self._suppressPresetChanged = false;
+                self._suppressModelChanged = false;
             }
         }
     }
@@ -585,9 +585,9 @@ public sealed partial class ComposeBar
     }
 
     /// <summary>
-    /// Called when <see cref="ShowPresetSelector"/> changes to show or hide the preset ComboBox.
+    /// Called when <see cref="ShowModelSelector"/> changes to show or hide the preset ComboBox.
     /// </summary>
-    private static void OnShowPresetSelectorChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    private static void OnShowModelSelectorChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is ComposeBar self && self._presetComboBox is not null)
         {
@@ -649,9 +649,9 @@ public sealed partial class ComposeBar
     {
         Loaded -= OnLoaded;
 
-        if (_pendingPresetPopulate && AvailablePresets is { } presets)
+        if (_pendingModelPopulate && AvailableModels is { } presets)
         {
-            _pendingPresetPopulate = false;
+            _pendingModelPopulate = false;
             PopulatePresetCombo(presets);
         }
 
@@ -722,11 +722,11 @@ public sealed partial class ComposeBar
     /// </summary>
     private void PresetComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_suppressPresetChanged) return;
-        if (_presetComboBox?.SelectedItem is ComboBoxItem item && item.Tag is ProviderPreset preset)
+        if (_suppressModelChanged) return;
+        if (_presetComboBox?.SelectedItem is ComboBoxItem item && item.Tag is ProviderModel preset)
         {
-            SelectedPreset = preset;
-            PresetChanged?.Invoke(this, preset);
+            SelectedModel = preset;
+            ModelChanged?.Invoke(this, preset);
         }
     }
 
@@ -735,7 +735,7 @@ public sealed partial class ComposeBar
     /// </summary>
     private void ProfileComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_suppressPresetChanged) return;
+        if (_suppressModelChanged) return;
         if (_profileComboBox?.SelectedItem is ComboBoxItem item && item.Tag is Profile preset)
         {
             SelectedProfile = preset;
@@ -787,7 +787,7 @@ public sealed partial class ComposeBar
     {
         if (_profileComboBox is null) return;
 
-        _suppressPresetChanged = true;
+        _suppressModelChanged = true;
         foreach (var obj in _profileComboBox.Items)
         {
             if (obj is ComboBoxItem item && item.Tag is Profile p && p.Name == preset.Name)
@@ -796,7 +796,7 @@ public sealed partial class ComposeBar
                 break;
             }
         }
-        _suppressPresetChanged = false;
+        _suppressModelChanged = false;
     }
 
     #endregion
@@ -805,19 +805,19 @@ public sealed partial class ComposeBar
 
     /// <summary>
     /// Populates the provider preset ComboBox with items from the given list.
-    /// The list may contain <see cref="ProviderPreset"/> objects and <c>"-"</c> string
+    /// The list may contain <see cref="ProviderModel"/> objects and <c>"-"</c> string
     /// separators to visually group providers by category (e.g., Cloud / Custom / Local / Demo).
     /// </summary>
     private void PopulatePresetCombo(IList presets)
     {
         if (_presetComboBox is null) return;
 
-        _suppressPresetChanged = true;
+        _suppressModelChanged = true;
         _presetComboBox.ItemsSource = null;
         _presetComboBox.Items.Clear();
         foreach (var obj in presets)
         {
-            if (obj is ProviderPreset preset)
+            if (obj is ProviderModel preset)
             {
                 var displayName = preset.ProviderType == "Mock" ? "Demo" : preset.Name;
                 var item = new ComboBoxItem { Content = displayName, Tag = preset };
@@ -829,30 +829,30 @@ public sealed partial class ComposeBar
             }
         }
 
-        if (SelectedPreset is not null)
+        if (SelectedModel is not null)
         {
-            SelectPresetInCombo(SelectedPreset);
+            SelectPresetInCombo(SelectedModel);
         }
-        _suppressPresetChanged = false;
+        _suppressModelChanged = false;
     }
 
     /// <summary>
     /// Selects the matching provider preset in the ComboBox without raising change events.
     /// </summary>
-    private void SelectPresetInCombo(ProviderPreset preset)
+    private void SelectPresetInCombo(ProviderModel preset)
     {
         if (_presetComboBox is null) return;
 
-        _suppressPresetChanged = true;
+        _suppressModelChanged = true;
         foreach (var obj in _presetComboBox.Items)
         {
-            if (obj is ComboBoxItem item && item.Tag is ProviderPreset p && p.Name == preset.Name)
+            if (obj is ComboBoxItem item && item.Tag is ProviderModel p && p.Name == preset.Name)
             {
                 _presetComboBox.SelectedItem = item;
                 break;
             }
         }
-        _suppressPresetChanged = false;
+        _suppressModelChanged = false;
     }
 
     /// <summary>
@@ -862,13 +862,13 @@ public sealed partial class ComposeBar
     {
         if (_profileComboBox is null) return;
 
-        _suppressPresetChanged = true;
+        _suppressModelChanged = true;
         _profileComboBox.ItemsSource = null;
         _profileComboBox.Items.Clear();
         var presets = AvailableProfiles;
         if (presets is null || presets.Count == 0)
         {
-            _suppressPresetChanged = false;
+            _suppressModelChanged = false;
             return;
         }
 
@@ -882,7 +882,7 @@ public sealed partial class ComposeBar
         {
             SelectProfileInCombo(SelectedProfile);
         }
-        _suppressPresetChanged = false;
+        _suppressModelChanged = false;
     }
 
     #endregion

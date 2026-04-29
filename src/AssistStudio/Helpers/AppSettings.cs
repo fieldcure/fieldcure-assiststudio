@@ -1,15 +1,16 @@
-﻿using FieldCure.Ai.Providers.Models;
+using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Core.Models;
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Windows.Storage;
 
 namespace AssistStudio.Helpers;
 
 /// <summary>
 /// Centralized application settings backed by <see cref="ApplicationData.Current.LocalSettings"/>.
-/// Manages theme, system prompt, provider presets, profiles, MRU file paths, and model caches.
+/// Manages theme, system prompt, provider models, profiles, MRU file paths, and model caches.
 /// </summary>
 public static class AppSettings
 {
@@ -26,9 +27,9 @@ public static class AppSettings
     public static event EventHandler? TaskSettingsChanged;
 
     /// <summary>
-    /// Raised when provider presets are saved.
+    /// Raised when provider models are saved.
     /// </summary>
-    public static event EventHandler? PresetsChanged;
+    public static event EventHandler? ModelsChanged;
 
     /// <summary>
     /// Raised when profiles are added, removed, or modified (list-level changes).
@@ -96,12 +97,12 @@ public static class AppSettings
     }
 
     /// <summary>
-    /// Gets or sets the preset name for title generation when <see cref="TitleSource"/> is "Specific".
+    /// Gets or sets the model name for title generation when <see cref="TitleSource"/> is "Specific".
     /// </summary>
-    public static string TitlePreset
+    public static string TitleModel
     {
-        get => Settings.Values["TitlePreset"] as string ?? "";
-        set { Settings.Values["TitlePreset"] = value; TaskSettingsChanged?.Invoke(null, EventArgs.Empty); }
+        get => Settings.Values["TitleModel"] as string ?? "";
+        set { Settings.Values["TitleModel"] = value; TaskSettingsChanged?.Invoke(null, EventArgs.Empty); }
     }
 
     /// <summary>
@@ -114,12 +115,12 @@ public static class AppSettings
     }
 
     /// <summary>
-    /// Gets or sets the preset name for summary when <see cref="SummarySource"/> is "Specific".
+    /// Gets or sets the model name for summary when <see cref="SummarySource"/> is "Specific".
     /// </summary>
-    public static string SummaryPreset
+    public static string SummaryModel
     {
-        get => Settings.Values["SummaryPreset"] as string ?? "";
-        set { Settings.Values["SummaryPreset"] = value; TaskSettingsChanged?.Invoke(null, EventArgs.Empty); }
+        get => Settings.Values["SummaryModel"] as string ?? "";
+        set { Settings.Values["SummaryModel"] = value; TaskSettingsChanged?.Invoke(null, EventArgs.Empty); }
     }
 
     /// <summary>
@@ -132,17 +133,17 @@ public static class AppSettings
     }
 
     /// <summary>
-    /// Gets or sets the preset name for sub-agent when <see cref="SubAgentSource"/> is "Specific".
+    /// Gets or sets the model name for sub-agent when <see cref="SubAgentSource"/> is "Specific".
     /// </summary>
-    public static string SubAgentPreset
+    public static string SubAgentModel
     {
-        get => Settings.Values["SubAgentPreset"] as string ?? "";
-        set { Settings.Values["SubAgentPreset"] = value; TaskSettingsChanged?.Invoke(null, EventArgs.Empty); }
+        get => Settings.Values["SubAgentModel"] as string ?? "";
+        set { Settings.Values["SubAgentModel"] = value; TaskSettingsChanged?.Invoke(null, EventArgs.Empty); }
     }
 
     /// <summary>
     /// One-time migration: moves legacy <c>AppTasksSource</c>/<c>AppTasksPreset</c>
-    /// to <see cref="TitleSource"/>/<see cref="TitlePreset"/> and deletes the old keys.
+    /// to <see cref="TitleSource"/>/<see cref="TitleModel"/> and deletes the old keys.
     /// Call once at app startup.
     /// </summary>
     public static void MigrateAppTasksSettings()
@@ -154,13 +155,54 @@ public static class AppSettings
 
             if (source == "Specific" && !string.IsNullOrEmpty(preset))
             {
-                // Only migrate if user had explicitly set a specific preset
+                // Only migrate if user had explicitly set a specific model
                 Settings.Values["TitleSource"] = "Specific";
-                Settings.Values["TitlePreset"] = preset;
+                Settings.Values["TitleModel"] = preset;
             }
 
             Settings.Values.Remove("AppTasksSource");
             Settings.Values.Remove("AppTasksPreset");
+        }
+    }
+
+    /// <summary>
+    /// One-time migration of auxiliary "*Preset" persisted keys to "*Model" keys.
+    /// Idempotent. Called once at app startup before any consumer reads them.
+    /// </summary>
+    internal static void MigrateAuxiliaryModelKeys()
+    {
+        var settings = Settings.Values;
+        (string Old, string New)[] pairs =
+        {
+            ("TitlePreset",          "TitleModel"),
+            ("SummaryPreset",        "SummaryModel"),
+            ("SubAgentPreset",       "SubAgentModel"),
+            ("EmbeddingPreset",      "EmbeddingProviderModel"),
+            ("ContextualizerPreset", "ContextualizerProviderModel"),
+        };
+        foreach (var (oldKey, newKey) in pairs)
+        {
+            if (settings.ContainsKey(newKey)) { settings.Remove(oldKey); continue; }
+            if (settings.TryGetValue(oldKey, out var raw) && raw is string val)
+            {
+                settings[newKey] = val;
+                settings.Remove(oldKey);
+            }
+        }
+
+        // Specialist keys: real format is "Specialist_{name}_Preset" → rename
+        // suffix to "_Model". Enumerated by suffix because the middle segment
+        // is user-defined.
+        var specialistKeys = settings.Keys
+            .Where(k => k.StartsWith("Specialist_", StringComparison.Ordinal)
+                     && k.EndsWith("_Preset", StringComparison.Ordinal))
+            .ToList();
+        foreach (var oldKey in specialistKeys)
+        {
+            var newKey = oldKey[..^"_Preset".Length] + "_Model";
+            if (!settings.ContainsKey(newKey) && settings[oldKey] is string val)
+                settings[newKey] = val;
+            settings.Remove(oldKey);
         }
     }
 
@@ -196,13 +238,13 @@ public static class AppSettings
     }
 
     /// <summary>
-    /// Gets or sets the preset name used for embedding (UI reference only).
+    /// Gets or sets the ProviderModel name used for embedding (UI reference only).
     /// </summary>
     [Obsolete("Embedding config moved to per-KB config.json. Will be removed in a future version.")]
-    public static string EmbeddingPreset
+    public static string EmbeddingProviderModel
     {
-        get => Settings.Values["EmbeddingPreset"] as string ?? "";
-        set => Settings.Values["EmbeddingPreset"] = value;
+        get => Settings.Values["EmbeddingProviderModel"] as string ?? "";
+        set => Settings.Values["EmbeddingProviderModel"] = value;
     }
 
     /// <summary>
@@ -217,7 +259,7 @@ public static class AppSettings
 
     /// <summary>
     /// Gets or sets the embedding API base URL.
-    /// Stored independently of the preset so it survives preset deletion.
+    /// Stored independently of the ProviderModel so it survives ProviderModel deletion.
     /// </summary>
     [Obsolete("Embedding config moved to per-KB config.json. Will be removed in a future version.")]
     public static string EmbeddingBaseUrl
@@ -227,13 +269,13 @@ public static class AppSettings
     }
 
     /// <summary>
-    /// Gets or sets the contextualizer preset tag for UI restoration (e.g., "ollama/gemma3:4b", "none").
+    /// Gets or sets the contextualizer ProviderModel tag for UI restoration (e.g., "ollama/gemma3:4b", "none").
     /// </summary>
     [Obsolete("Contextualizer config moved to per-KB config.json. Will be removed in a future version.")]
-    public static string ContextualizerPreset
+    public static string ContextualizerProviderModel
     {
-        get => Settings.Values["ContextualizerPreset"] as string ?? "";
-        set => Settings.Values["ContextualizerPreset"] = value;
+        get => Settings.Values["ContextualizerProviderModel"] as string ?? "";
+        set => Settings.Values["ContextualizerProviderModel"] = value;
     }
 
     /// <summary>
@@ -656,18 +698,18 @@ public static class AppSettings
 
     #endregion
 
-    #region Provider Preset Methods
+    #region Provider Model Methods
 
-    /// <summary>In-memory preset cache to avoid repeated PasswordVault reads.</summary>
-    private static ObservableCollection<ProviderPreset>? _presetsCache;
+    /// <summary>In-memory model cache to avoid repeated PasswordVault reads.</summary>
+    private static ObservableCollection<ProviderModel>? _modelsCache;
 
     /// <summary>
-    /// Persists provider presets to local storage, saving API keys securely via the password vault.
+    /// Persists provider models to local storage, saving API keys securely via the password vault.
     /// </summary>
-    public static void SavePresets(IList<ProviderPreset> presets)
+    public static void SaveModels(IList<ProviderModel> models)
     {
         // Save API keys to PasswordVault, serialize rest to JSON
-        foreach (var p in presets)
+        foreach (var p in models)
         {
             if (p.RequiresApiKey && !string.IsNullOrEmpty(p.ApiKey))
             {
@@ -678,36 +720,39 @@ public static class AppSettings
         // Sync to Win32 Credential Manager for external processes (Runner)
         PasswordVaultHelper.SyncToCredentialManager();
 
-        var list = presets as List<ProviderPreset> ?? [.. presets];
-        var json = JsonSerializer.Serialize(list, AppJsonContext.Default.ListProviderPreset);
-        Settings.Values["ProviderPresets"] = json;
+        var list = models as List<ProviderModel> ?? [.. models];
+        var json = JsonSerializer.Serialize(list, AppJsonContext.Default.ListProviderModel);
+        Settings.Values["ProviderModels"] = json;
 
-        // Update cache with the just-saved presets (already have API keys in memory)
+        // Update cache with the just-saved models (already have API keys in memory)
         if (list.Count > 0)
-            _presetsCache = new ObservableCollection<ProviderPreset>(list);
+            _modelsCache = new ObservableCollection<ProviderModel>(list);
 
-        PresetsChanged?.Invoke(null, EventArgs.Empty);
+        ModelsChanged?.Invoke(null, EventArgs.Empty);
     }
 
     /// <summary>
-    /// Loads provider presets from local storage, restoring API keys from the password vault.
-    /// Falls back to building presets from vault keys if no saved presets exist.
+    /// Loads provider models from local storage, restoring API keys from the password vault.
+    /// Falls back to building models from vault keys if no saved models exist.
+    /// Migrates from the legacy "ProviderPresets" key (one entry per provider) into the
+    /// new "ProviderModels" key (N entries per provider — one per enabled model).
+    /// Idempotent: subsequent calls find the new key directly.
     /// Uses an in-memory cache to avoid repeated slow PasswordVault reads.
     /// </summary>
-    /// <returns>An observable collection of provider presets.</returns>
-    public static ObservableCollection<ProviderPreset> LoadPresets()
+    /// <returns>An observable collection of provider models.</returns>
+    public static ObservableCollection<ProviderModel> LoadModels()
     {
-        if (_presetsCache is not null)
-            return new ObservableCollection<ProviderPreset>(_presetsCache);
+        if (_modelsCache is not null)
+            return new ObservableCollection<ProviderModel>(_modelsCache);
 
-        var json = Settings.Values["ProviderPresets"] as string;
-        ObservableCollection<ProviderPreset>? result = null;
+        var json = Settings.Values["ProviderModels"] as string;
+        ObservableCollection<ProviderModel>? result = null;
 
         if (!string.IsNullOrEmpty(json))
         {
             try
             {
-                var list = JsonSerializer.Deserialize(json, AppJsonContext.Default.ListProviderPreset);
+                var list = JsonSerializer.Deserialize(json, AppJsonContext.Default.ListProviderModel);
                 if (list is { Count: > 0 })
                 {
                     foreach (var p in list)
@@ -718,37 +763,114 @@ public static class AppSettings
                         }
                     }
 
-                    result = new ObservableCollection<ProviderPreset>(list);
+                    result = new ObservableCollection<ProviderModel>(list);
                 }
             }
             catch { /* fall through to rebuild */ }
         }
 
-        // No saved presets — build from PasswordVault API keys
-        result ??= BuildPresetsFromVault();
+        // Try legacy "ProviderPresets" migration before falling back to vault scan.
+        if (result is null)
+        {
+            result = TryMigrateLegacyProviderPresets();
+        }
 
-        // Append synthetic presets for custom providers
-        AppendCustomProviderPresets(result);
+        // No saved models — build from PasswordVault API keys
+        result ??= BuildModelsFromVault();
 
-        _presetsCache = result;
-        return new ObservableCollection<ProviderPreset>(result);
+        // Append synthetic entries for custom providers
+        AppendCustomProviderModels(result);
+
+        _modelsCache = result;
+        return new ObservableCollection<ProviderModel>(result);
     }
 
     /// <summary>
-    /// Appends synthetic <see cref="ProviderPreset"/> entries for each registered custom provider.
+    /// Reads the legacy "ProviderPresets" key (one entry per provider), expands each
+    /// legacy entry into N <see cref="ProviderModel"/> instances using cached model
+    /// lists, persists the result under the new "ProviderModels" key, and removes
+    /// the legacy key. Returns <c>null</c> if no legacy data exists.
     /// </summary>
-    private static void AppendCustomProviderPresets(ObservableCollection<ProviderPreset> presets)
+    private static ObservableCollection<ProviderModel>? TryMigrateLegacyProviderPresets()
+    {
+        var legacyJson = Settings.Values["ProviderPresets"] as string;
+        if (string.IsNullOrEmpty(legacyJson)) return null;
+
+        List<LegacyProviderPreset>? legacy;
+        try
+        {
+            legacy = JsonSerializer.Deserialize(legacyJson, AppJsonContext.Default.ListLegacyProviderPreset);
+        }
+        catch
+        {
+            return null;
+        }
+
+        if (legacy is null || legacy.Count == 0) return null;
+
+        var result = new ObservableCollection<ProviderModel>();
+        foreach (var preset in legacy)
+        {
+            var enabledModels = GetCachedModels(preset.ProviderType)
+                ?? new List<string> { preset.ModelId };
+
+            // Patch #2 (활성 모델 보존): the cached model list may not contain
+            // the user's last-active ModelId. Always include it so the active
+            // selection survives migration; promote it to the front so callers
+            // that pick the first entry as default keep the prior selection.
+            if (!string.IsNullOrEmpty(preset.ModelId) && !enabledModels.Contains(preset.ModelId))
+                enabledModels = enabledModels.Prepend(preset.ModelId).ToList();
+            else
+                enabledModels = enabledModels
+                    .OrderByDescending(id => id == preset.ModelId)
+                    .ToList();
+
+            foreach (var modelId in enabledModels)
+            {
+                var model = new ProviderModel
+                {
+                    Name = modelId,
+                    ProviderType = preset.ProviderType,
+                    ModelId = modelId,
+                    BaseUrl = preset.BaseUrl,
+                    MaxTokens = preset.MaxTokens,
+                    Temperature = preset.Temperature,
+                    StreamingEnabled = preset.StreamingEnabled,
+                    PdfCapability = preset.PdfCapability,
+                    ThinkingEnabled = preset.ThinkingEnabled,
+                    ThinkingOverride = preset.ThinkingOverride,
+                    ThinkingBudget = preset.ThinkingBudget,
+                    // Per-model fields: only the legacy entry's values populate
+                    // the matching ModelId entry; others get nullable defaults.
+                    KeepAlive = modelId == preset.ModelId ? preset.KeepAlive : null,
+                    NumCtx = modelId == preset.ModelId ? preset.NumCtx : null,
+                };
+                if (model.RequiresApiKey)
+                    model.ApiKey = PasswordVaultHelper.LoadApiKey(model.ProviderType);
+                result.Add(model);
+            }
+        }
+
+        SaveModels(result);
+        Settings.Values.Remove("ProviderPresets");
+        return result;
+    }
+
+    /// <summary>
+    /// Appends synthetic <see cref="ProviderModel"/> entries for each registered custom provider.
+    /// </summary>
+    private static void AppendCustomProviderModels(ObservableCollection<ProviderModel> models)
     {
         var customs = LoadCustomProviders();
         foreach (var config in customs)
         {
             var providerType = $"Custom_{config.Id}";
 
-            // Skip if already present (e.g., from serialized presets)
-            if (presets.Any(p => p.ProviderType == providerType))
+            // Skip if already present (e.g., from serialized models)
+            if (models.Any(p => p.ProviderType == providerType))
                 continue;
 
-            presets.Add(new ProviderPreset
+            models.Add(new ProviderModel
             {
                 Name = config.DisplayName,
                 ProviderType = providerType,
@@ -760,18 +882,18 @@ public static class AppSettings
     }
 
     /// <summary>
-    /// Builds an ordered list of preset items grouped by category (Cloud → Custom → Local → Demo)
+    /// Builds an ordered list of model items grouped by category (Cloud → Custom → Local → Demo)
     /// with separator markers ("-") between non-empty groups.
     /// </summary>
-    /// <returns>A list containing <see cref="ProviderPreset"/> objects and separator strings.</returns>
-    public static ArrayList BuildOrderedPresetItems()
+    /// <returns>A list containing <see cref="ProviderModel"/> objects and separator strings.</returns>
+    public static ArrayList BuildOrderedModelItems()
     {
-        var presets = LoadPresets();
+        var models = LoadModels();
 
-        var cloud = presets.Where(p => IsCloudProvider(p.ProviderType)).ToList();
-        var custom = presets.Where(p => p.ProviderType.StartsWith("Custom_")).ToList();
-        var local = presets.Where(p => p.ProviderType == "Ollama").ToList();
-        var demo = presets.Where(p => p.ProviderType == "Mock").ToList();
+        var cloud = models.Where(p => IsCloudProvider(p.ProviderType)).ToList();
+        var custom = models.Where(p => p.ProviderType.StartsWith("Custom_")).ToList();
+        var local = models.Where(p => p.ProviderType == "Ollama").ToList();
+        var demo = models.Where(p => p.ProviderType == "Mock").ToList();
 
         var result = new ArrayList();
         AddGroup(result, cloud);
@@ -780,7 +902,7 @@ public static class AppSettings
         AddGroup(result, demo);
         return result;
 
-        static void AddGroup(ArrayList list, List<ProviderPreset> group)
+        static void AddGroup(ArrayList list, List<ProviderModel> group)
         {
             if (group.Count == 0) return;
             if (list.Count > 0) list.Add("-");
@@ -928,7 +1050,7 @@ public static class AppSettings
 
     /// <summary>
     /// Loads custom provider configurations from the JSON file.
-    /// Must be called at app startup before <see cref="LoadPresets"/>.
+    /// Must be called at app startup before <see cref="LoadModels"/>.
     /// </summary>
     public static List<CustomProviderConfig> LoadCustomProviders()
     {
@@ -963,7 +1085,7 @@ public static class AppSettings
         File.WriteAllText(CustomProvidersFilePath, json);
 
         _customProviderCache = configs;
-        _presetsCache = null; // Invalidate preset cache so synthetic presets are regenerated
+        _modelsCache = null; // Invalidate model cache so synthetic entries are regenerated
         CustomProvidersChanged?.Invoke(null, EventArgs.Empty);
     }
 
@@ -972,13 +1094,13 @@ public static class AppSettings
     #region Private Methods
 
     /// <summary>
-    /// Builds a default set of provider presets by scanning the password vault for stored API keys.
+    /// Builds a default set of provider models by scanning the password vault for stored API keys.
     /// Always includes Ollama and Mock providers.
     /// </summary>
-    /// <returns>An observable collection of provider presets constructed from vault data.</returns>
-    private static ObservableCollection<ProviderPreset> BuildPresetsFromVault()
+    /// <returns>An observable collection of provider models constructed from vault data.</returns>
+    private static ObservableCollection<ProviderModel> BuildModelsFromVault()
     {
-        var presets = new ObservableCollection<ProviderPreset>();
+        var models = new ObservableCollection<ProviderModel>();
 
         foreach (var (providerType, displayName, baseUrl, fallbackModel) in KnownProviders)
         {
@@ -987,7 +1109,7 @@ public static class AppSettings
 
             var savedModel = GetDefaultModel(providerType);
 
-            presets.Add(new ProviderPreset
+            models.Add(new ProviderModel
             {
                 Name = displayName,
                 ProviderType = providerType,
@@ -999,7 +1121,7 @@ public static class AppSettings
 
         // Ollama (local, may not be running)
         var ollamaModel = GetDefaultModel("Ollama");
-        presets.Add(new ProviderPreset
+        models.Add(new ProviderModel
         {
             Name = "Ollama",
             ProviderType = "Ollama",
@@ -1008,9 +1130,9 @@ public static class AppSettings
         });
 
         // Mock
-        presets.Add(new ProviderPreset { Name = "Mock", ProviderType = "Mock" });
+        models.Add(new ProviderModel { Name = "Mock", ProviderType = "Mock" });
 
-        return presets;
+        return models;
     }
 
     #endregion
@@ -1046,42 +1168,94 @@ public static class AppSettings
     }
 
     /// <summary>
-    /// Gets or sets the preset name for the named specialist when
+    /// Gets or sets the model name for the named specialist when
     /// <see cref="GetSpecialistSource"/> is "Specific".
     /// </summary>
-    public static string GetSpecialistPreset(string specialistName)
-        => Settings.Values[$"Specialist_{specialistName}_Preset"] as string ?? "";
+    public static string GetSpecialistModel(string specialistName)
+        => Settings.Values[$"Specialist_{specialistName}_Model"] as string ?? "";
 
     /// <summary>
-    /// Sets the preset name for the named specialist.
+    /// Sets the model name for the named specialist.
     /// </summary>
-    public static void SetSpecialistPreset(string specialistName, string preset)
+    public static void SetSpecialistModel(string specialistName, string model)
     {
-        Settings.Values[$"Specialist_{specialistName}_Preset"] = preset;
+        Settings.Values[$"Specialist_{specialistName}_Model"] = model;
         TaskSettingsChanged?.Invoke(null, EventArgs.Empty);
     }
 
     /// <summary>
-    /// Resolves the provider preset for a specialist using the fallback
+    /// Resolves the provider model for a specialist using the fallback
     /// chain: per-specialist override → general sub-agent setting →
     /// <see langword="null"/> (parent conversation provider).
     /// </summary>
-    public static string? ResolveSpecialistPreset(string specialistName)
+    public static string? ResolveSpecialistModel(string specialistName)
     {
         // 1. Per-specialist override (only when Source == "Specific")
         if (GetSpecialistSource(specialistName) == "Specific")
         {
-            var preset = GetSpecialistPreset(specialistName);
-            if (!string.IsNullOrEmpty(preset))
-                return preset;
+            var model = GetSpecialistModel(specialistName);
+            if (!string.IsNullOrEmpty(model))
+                return model;
         }
 
         // 2. General sub-agent default
-        if (SubAgentSource == "Specific" && !string.IsNullOrEmpty(SubAgentPreset))
-            return SubAgentPreset;
+        if (SubAgentSource == "Specific" && !string.IsNullOrEmpty(SubAgentModel))
+            return SubAgentModel;
 
-        // 3. Parent conversation preset (null = inherit)
+        // 3. Parent conversation model (null = inherit)
         return null;
+    }
+
+    #endregion
+
+    #region Legacy DTO
+
+    /// <summary>
+    /// Legacy data shape for the deprecated "ProviderPresets" storage key.
+    /// Used solely by <see cref="TryMigrateLegacyProviderPresets"/> to read
+    /// pre-PR-1 settings and expand them into the new
+    /// <see cref="ProviderModel"/> list.
+    /// </summary>
+    public sealed class LegacyProviderPreset
+    {
+        /// <summary>The legacy display name.</summary>
+        public string Name { get; set; } = "";
+
+        /// <summary>Provider type key.</summary>
+        public string ProviderType { get; set; } = "Mock";
+
+        /// <summary>Model identifier last selected for this provider.</summary>
+        public string ModelId { get; set; } = "";
+
+        /// <summary>Optional override base URL.</summary>
+        public string? BaseUrl { get; set; }
+
+        /// <summary>Sampling temperature.</summary>
+        public double Temperature { get; set; } = 0.7;
+
+        /// <summary>Maximum response tokens.</summary>
+        public int MaxTokens { get; set; } = 4096;
+
+        /// <summary>Whether streaming is enabled.</summary>
+        public bool StreamingEnabled { get; set; } = true;
+
+        /// <summary>PDF document handling capability.</summary>
+        public PdfCapability PdfCapability { get; set; } = PdfCapability.Auto;
+
+        /// <summary>Whether thinking/reasoning is enabled.</summary>
+        public bool ThinkingEnabled { get; set; }
+
+        /// <summary>Thinking budget in tokens.</summary>
+        public int? ThinkingBudget { get; set; }
+
+        /// <summary>Thinking-support override.</summary>
+        public ThinkingOverride ThinkingOverride { get; set; } = ThinkingOverride.Auto;
+
+        /// <summary>Ollama keep-alive duration.</summary>
+        public string? KeepAlive { get; set; }
+
+        /// <summary>Ollama context window size.</summary>
+        public int? NumCtx { get; set; }
     }
 
     #endregion

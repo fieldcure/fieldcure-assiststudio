@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <UserControl
-    x:Class="AssistStudio.Settings.TaskPresetSelector"
+    x:Class="AssistStudio.Settings.TaskModelSelector"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -23,11 +23,11 @@
         </RadioButtons>
 
         <ComboBox
-            x:Name="PresetCombo"
+            x:Name="ModelCombo"
             x:Uid="TaskPreset_Provider"
             Header="Provider"
             HorizontalAlignment="Stretch"
             Visibility="Collapsed"
-            SelectionChanged="OnPresetChanged" />
+            SelectionChanged="OnModelChanged" />
     </StackPanel>
 </UserControl>

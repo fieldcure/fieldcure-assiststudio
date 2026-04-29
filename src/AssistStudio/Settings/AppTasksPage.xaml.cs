@@ -1,4 +1,4 @@
-using AssistStudio.Helpers;
+﻿using AssistStudio.Helpers;
 using AssistStudio.Specialists;
 using FieldCure.AssistStudio.Controls;
 using Microsoft.UI.Xaml;
@@ -50,15 +50,15 @@ public sealed partial class AppTasksPage : Page
         // Load per-task selectors
         TitleSelector.Load(
             ParseSource(AppSettings.TitleSource),
-            AppSettings.TitlePreset);
+            AppSettings.TitleModel);
 
         SummarySelector.Load(
             ParseSource(AppSettings.SummarySource),
-            AppSettings.SummaryPreset);
+            AppSettings.SummaryModel);
 
         SubAgentSelector.Load(
             ParseSource(AppSettings.SubAgentSource),
-            AppSettings.SubAgentPreset);
+            AppSettings.SubAgentModel);
 
         // Specialists
         LoadSpecialistSelector(WebSearchSpecialistSelector, WebSearchSpecialist.SpecialistName);
@@ -99,53 +99,53 @@ public sealed partial class AppTasksPage : Page
     #region Event Handlers
 
     /// <summary>
-    /// Persists title task source and preset when changed.
+    /// Persists title task source and model when changed.
     /// </summary>
     private void OnTitleSettingsChanged(object? sender, EventArgs e)
     {
         if (_suppressEvents) return;
         AppSettings.TitleSource = SourceToString(TitleSelector.Source);
-        AppSettings.TitlePreset = TitleSelector.PresetName;
+        AppSettings.TitleModel = TitleSelector.ModelName;
     }
 
     /// <summary>
-    /// Persists summary task source and preset when changed.
+    /// Persists summary task source and model when changed.
     /// </summary>
     private void OnSummarySettingsChanged(object? sender, EventArgs e)
     {
         if (_suppressEvents) return;
         AppSettings.SummarySource = SourceToString(SummarySelector.Source);
-        AppSettings.SummaryPreset = SummarySelector.PresetName;
+        AppSettings.SummaryModel = SummarySelector.ModelName;
     }
 
     /// <summary>
-    /// Persists sub-agent task source and preset when changed.
+    /// Persists sub-agent task source and model when changed.
     /// </summary>
     private void OnSubAgentSettingsChanged(object? sender, EventArgs e)
     {
         if (_suppressEvents) return;
         AppSettings.SubAgentSource = SourceToString(SubAgentSelector.Source);
-        AppSettings.SubAgentPreset = SubAgentSelector.PresetName;
+        AppSettings.SubAgentModel = SubAgentSelector.ModelName;
     }
 
     /// <summary>
-    /// Loads source/preset for the named specialist into the given selector.
+    /// Loads source/model for the named specialist into the given selector.
     /// </summary>
-    private static void LoadSpecialistSelector(TaskPresetSelector selector, string specialistName)
+    private static void LoadSpecialistSelector(TaskModelSelector selector, string specialistName)
     {
         selector.Load(
             ParseSource(AppSettings.GetSpecialistSource(specialistName)),
-            AppSettings.GetSpecialistPreset(specialistName));
+            AppSettings.GetSpecialistModel(specialistName));
     }
 
     /// <summary>
-    /// Persists per-specialist source and preset when changed.
+    /// Persists per-specialist source and model when changed.
     /// </summary>
-    private void SaveSpecialistSelector(TaskPresetSelector selector, string specialistName)
+    private void SaveSpecialistSelector(TaskModelSelector selector, string specialistName)
     {
         if (_suppressEvents) return;
         AppSettings.SetSpecialistSource(specialistName, SourceToString(selector.Source));
-        AppSettings.SetSpecialistPreset(specialistName, selector.PresetName);
+        AppSettings.SetSpecialistModel(specialistName, selector.ModelName);
     }
 
     private void OnWebSearchSpecialistSettingsChanged(object? sender, EventArgs e)

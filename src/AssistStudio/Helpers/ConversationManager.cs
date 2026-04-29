@@ -198,7 +198,7 @@ public static class ConversationManager
         var data = new ConversationData
         {
             TabName = tabName,
-            ProviderPresetName = providerPresetName,
+            ProviderModelName = providerPresetName,
             ConversationId = conversationId,
             ActiveRootChildId = activeRootChildId,
             BuiltInServers = builtInServers,

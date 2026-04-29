@@ -24,8 +24,8 @@ public sealed class SubAgentTool : IAssistTool
     private readonly ISubAgentExecutor _executor;
     private readonly Func<string?> _kbIdProvider;
     private readonly SpecialistRegistry _registry;
-    private readonly Func<string, string?> _specialistPresetProvider;
-    private readonly Func<string?> _subAgentPresetProvider;
+    private readonly Func<string, string?> _specialistModelProvider;
+    private readonly Func<string?> _subAgentModelProvider;
 
     #endregion
 
@@ -40,26 +40,26 @@ public sealed class SubAgentTool : IAssistTool
     /// or <c>null</c> if no KB is selected.
     /// </param>
     /// <param name="registry">Registry of built-in specialists for auto-approve lookup.</param>
-    /// <param name="specialistPresetProvider">
-    /// Resolves the preferred provider preset for the given specialist name,
+    /// <param name="specialistModelProvider">
+    /// Resolves the preferred provider model for the given specialist name,
     /// or <c>null</c> to inherit the parent conversation's provider.
     /// </param>
-    /// <param name="subAgentPresetProvider">
-    /// Returns the per-task preset for standard sub-agent execution
+    /// <param name="subAgentModelProvider">
+    /// Returns the per-task model for standard sub-agent execution
     /// (from App Tasks > Sub-Agent setting), or <c>null</c> for "Inherit".
     /// </param>
     public SubAgentTool(
         ISubAgentExecutor executor,
         Func<string?> kbIdProvider,
         SpecialistRegistry registry,
-        Func<string, string?> specialistPresetProvider,
-        Func<string?> subAgentPresetProvider)
+        Func<string, string?> specialistModelProvider,
+        Func<string?> subAgentModelProvider)
     {
         _executor = executor;
         _kbIdProvider = kbIdProvider;
         _registry = registry;
-        _specialistPresetProvider = specialistPresetProvider;
-        _subAgentPresetProvider = subAgentPresetProvider;
+        _specialistModelProvider = specialistModelProvider;
+        _subAgentModelProvider = subAgentModelProvider;
     }
 
     #endregion
@@ -92,9 +92,9 @@ public sealed class SubAgentTool : IAssistTool
               "type": "string",
               "description": "Built-in specialist name (e.g. 'web_search_specialist'). When set, uses specialist's predefined config (prompt, tools, timeout). Other params except prompt are ignored."
             },
-            "preset_name": {
+            "model_name": {
               "type": "string",
-              "description": "Provider preset name to use (e.g. 'Claude', 'Ollama-Qwen'). Null = use current preset."
+              "description": "Provider model name to use (e.g. 'Claude', 'Ollama-Qwen'). Null = use current model."
             },
             "mcp_servers": {
               "type": "array",
@@ -132,7 +132,7 @@ public sealed class SubAgentTool : IAssistTool
         var prompt = parameters.GetProperty("prompt").GetString()
             ?? throw new ArgumentException("'prompt' is required.");
 
-        var presetName = parameters.TryGetProperty("preset_name", out var pn)
+        var modelName = parameters.TryGetProperty("model_name", out var pn)
             ? pn.GetString() : null;
 
         // Specialist path: auto-approved, uses specialist's predefined config
@@ -146,9 +146,9 @@ public sealed class SubAgentTool : IAssistTool
             var request = new SubAgentRequest
             {
                 Prompt = specialist.BuildSystemPrompt(prompt, contextHints),
-                // Specialist: use specialist-specific preset, or null to inherit parent.
+                // Specialist: use specialist-specific model, or null to inherit parent.
                 // Per-task Sub-Agent setting is NOT applied here.
-                PresetName = _specialistPresetProvider(specialist.Name),
+                ModelName = _specialistModelProvider(specialist.Name),
                 McpServers = specialist.FallbackServers.ToList(),
                 AllowedTools = specialist.AllowedTools.ToList(),
                 MaxRounds = specialist.MaxRounds,
@@ -180,9 +180,9 @@ public sealed class SubAgentTool : IAssistTool
         var standardRequest = new SubAgentRequest
         {
             Prompt = prompt,
-            // Standard sub-agent: LLM-specified preset takes priority,
+            // Standard sub-agent: LLM-specified model takes priority,
             // then per-task setting, then null (inherit parent).
-            PresetName = presetName ?? _subAgentPresetProvider(),
+            ModelName = modelName ?? _subAgentModelProvider(),
             McpServers = mcpServers,
             AllowedTools = allowedTools,
             MaxRounds = maxRounds,
@@ -259,7 +259,7 @@ public sealed class SubAgentTool : IAssistTool
             ToolCallCount = result.ToolCallCount,
             Duration = result.Duration,
             RoundsExecuted = result.RoundsExecuted,
-            UsedPreset = result.UsedPreset,
+            UsedModel = result.UsedModel,
         };
     }
 
@@ -424,7 +424,7 @@ public sealed class SubAgentTool : IAssistTool
             tool_call_count = result.ToolCallCount,
             rounds_executed = result.RoundsExecuted,
             duration_seconds = Math.Round(result.Duration.TotalSeconds, 1),
-            used_preset = result.UsedPreset,
+            used_model = result.UsedModel,
         }, new JsonSerializerOptions
         {
             WriteIndented = false,

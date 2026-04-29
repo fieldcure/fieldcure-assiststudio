@@ -8,7 +8,7 @@ namespace FieldCure.AssistStudio.Core.Tests;
 /// Tests provider preset behavior, including defaults, persistence-facing values, and normalization.
 /// </summary>
 [TestClass]
-public class ProviderPresetTests
+public class ProviderModelTests
 {
     [TestMethod]
     [DataRow("Claude", true)]
@@ -19,14 +19,14 @@ public class ProviderPresetTests
     [DataRow("Ollama", false)]
     public void RequiresApiKey_ByProviderType(string providerType, bool expected)
     {
-        var preset = new ProviderPreset { ProviderType = providerType };
+        var preset = new ProviderModel { ProviderType = providerType };
         Assert.AreEqual(expected, preset.RequiresApiKey);
     }
 
     [TestMethod]
     public void Defaults_AreCorrect()
     {
-        var preset = new ProviderPreset();
+        var preset = new ProviderModel();
         Assert.AreEqual(0.7, preset.Temperature);
         Assert.AreEqual(4096, preset.MaxTokens);
         Assert.IsTrue(preset.StreamingEnabled);
@@ -36,7 +36,7 @@ public class ProviderPresetTests
     [TestMethod]
     public void PropertyChanged_RaisedOnNameChange()
     {
-        var preset = new ProviderPreset();
+        var preset = new ProviderModel();
         string? changedProperty = null;
         preset.PropertyChanged += (_, e) => changedProperty = e.PropertyName;
 

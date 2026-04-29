@@ -31,7 +31,7 @@ public sealed class SubAgentExecutorTests
 
         Assert.AreEqual(SubAgentStatus.Completed, result.Status);
         Assert.AreEqual("## 결론\nTask completed successfully.", result.Report);
-        Assert.IsNull(result.UsedPreset);
+        Assert.IsNull(result.UsedModel);
         Assert.IsTrue(result.Duration > TimeSpan.Zero);
         Assert.AreEqual(0, result.ToolCallCount);
     }
@@ -55,13 +55,13 @@ public sealed class SubAgentExecutorTests
         var request = new SubAgentRequest
         {
             Prompt = "Do something",
-            PresetName = "custom-ollama",
+            ModelName = "custom-ollama",
         };
 
         var result = await executor.ExecuteAsync(request);
 
         Assert.AreEqual("custom-ollama", resolvedPreset);
-        Assert.AreEqual("custom-ollama", result.UsedPreset);
+        Assert.AreEqual("custom-ollama", result.UsedModel);
     }
 
     #endregion

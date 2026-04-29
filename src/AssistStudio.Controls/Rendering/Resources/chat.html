@@ -1663,7 +1663,7 @@
                     + escapeHtml(obj.status);
                 if (obj.rounds_executed != null) meta += ' · ' + obj.rounds_executed + ' rounds';
                 if (obj.duration_seconds != null) meta += ' · ' + obj.duration_seconds + 's';
-                if (obj.used_preset) meta += ' · ' + escapeHtml(obj.used_preset);
+                if (obj.used_model) meta += ' · ' + escapeHtml(obj.used_model);
                 meta += '</div>';
                 var rendered = '<div class="rendered-zone">' + renderMarkdown(obj.report) + '</div>';
                 return meta + rendered;

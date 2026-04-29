@@ -36,10 +36,10 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<ChatTabViewModel> Tabs { get; } = [];
 
     /// <summary>
-    /// Provides the current preset list from SettingsPanel.
+    /// Provides the current model list from SettingsPanel.
     /// Set by MainWindow after construction.
     /// </summary>
-    public Func<IList> GetPresets { get; set; } = () => new List<ProviderPreset>();
+    public Func<IList> GetModels { get; set; } = () => new List<ProviderModel>();
 
     #endregion
 
@@ -115,7 +115,7 @@ public partial class MainViewModel : ObservableObject
     /// Creates and adds a new conversation tab with the specified or default provider preset.
     /// </summary>
     /// <returns>The newly created tab view model.</returns>
-    public ChatTabViewModel AddTab(ProviderPreset? preset = null)
+    public ChatTabViewModel AddTab(ProviderModel? preset = null)
     {
         _tabCounter++;
         preset ??= GetDefaultPreset();
@@ -159,13 +159,13 @@ public partial class MainViewModel : ObservableObject
         }
 
         // Find matching preset or use default
-        ProviderPreset? preset = null;
+        ProviderModel? preset = null;
         var filteredPresets = GetFilteredPresets();
-        if (data.ProviderPresetName is not null)
+        if (data.ProviderModelName is not null)
         {
             foreach (var p in filteredPresets)
             {
-                if (p is ProviderPreset presetItem && presetItem.Name == data.ProviderPresetName)
+                if (p is ProviderModel presetItem && presetItem.Name == data.ProviderModelName)
                 {
                     preset = presetItem;
                     break;
@@ -558,12 +558,12 @@ public partial class MainViewModel : ObservableObject
     /// Falls back to the first available preset, or Mock if none exist.
     /// </summary>
     /// <returns>The default provider preset.</returns>
-    private ProviderPreset GetDefaultPreset()
+    private ProviderModel GetDefaultPreset()
     {
         var presets = GetFilteredPresets();
-        var providerPresets = presets.OfType<ProviderPreset>().ToList();
+        var providerPresets = presets.OfType<ProviderModel>().ToList();
         if (providerPresets.Count == 0)
-            return new ProviderPreset { Name = "Mock", ProviderType = "Mock" };
+            return new ProviderModel { Name = "Mock", ProviderType = "Mock" };
 
         var preferredType = GetActiveProfile()?.PreferredProviderType;
         if (preferredType is not null)
@@ -590,15 +590,15 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     private ArrayList GetFilteredPresets()
     {
-        var all = GetPresets();
-        var cloud = new List<ProviderPreset>();
-        var custom = new List<ProviderPreset>();
-        var local = new List<ProviderPreset>();
-        var demo = new List<ProviderPreset>();
+        var all = GetModels();
+        var cloud = new List<ProviderModel>();
+        var custom = new List<ProviderModel>();
+        var local = new List<ProviderModel>();
+        var demo = new List<ProviderModel>();
 
         foreach (var obj in all)
         {
-            if (obj is not ProviderPreset p) continue;
+            if (obj is not ProviderModel p) continue;
             if (!_ollamaReachable && p.ProviderType == "Ollama") continue;
             if (p.RequiresApiKey && string.IsNullOrEmpty(p.ApiKey)) continue;
 
@@ -627,7 +627,7 @@ public partial class MainViewModel : ObservableObject
         AddGroup(result, demo);
         return result;
 
-        static void AddGroup(ArrayList list, List<ProviderPreset> group)
+        static void AddGroup(ArrayList list, List<ProviderModel> group)
         {
             if (group.Count == 0) return;
             if (list.Count > 0) list.Add("-");

@@ -13,7 +13,8 @@ namespace AssistStudio.Helpers;
     WriteIndented = false,
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(List<Profile>))]
-[JsonSerializable(typeof(List<ProviderPreset>))]
+[JsonSerializable(typeof(List<ProviderModel>))]
+[JsonSerializable(typeof(List<AppSettings.LegacyProviderPreset>))]
 [JsonSerializable(typeof(List<string>))]
 [JsonSerializable(typeof(ConversationData))]
 [JsonSerializable(typeof(Dictionary<string, string>))]

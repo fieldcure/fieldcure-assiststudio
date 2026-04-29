@@ -75,7 +75,7 @@ public sealed partial class MainWindow : Window
         // Create ViewModel
         ViewModel = new MainViewModel
         {
-            GetPresets = AppSettings.BuildOrderedPresetItems,
+            GetModels = AppSettings.BuildOrderedModelItems,
         };
 
         // Wire theme events → ViewModel (ThemeSettingsService handles window-level updates)
@@ -94,7 +94,7 @@ public sealed partial class MainWindow : Window
             LoggingService.LogInfo($"[Settings] PresetsChanged (debounced) → refreshing on {ViewModel.Tabs.Count} tabs");
             ViewModel.RefreshPresetsOnAll();
         };
-        AppSettings.PresetsChanged += (_, _) =>
+        AppSettings.ModelsChanged += (_, _) =>
         {
             presetsDebounce.Stop();
             presetsDebounce.Start();

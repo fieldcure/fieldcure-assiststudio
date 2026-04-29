@@ -80,7 +80,7 @@ public sealed partial class ChatTabView : UserControl
     /// </summary>
     private void AttachEvents(ChatTabViewModel vm)
     {
-        Panel.PresetChanged += vm.OnPresetChanged;
+        Panel.ModelChanged += vm.OnModelChanged;
         Panel.ProfileChanged += vm.OnProfileChanged;
         Panel.TitleGenerated += vm.OnTitleGenerated;
         Panel.MessageAdded += vm.OnMessageAdded;
@@ -100,7 +100,7 @@ public sealed partial class ChatTabView : UserControl
     /// </summary>
     private void DetachEvents(ChatTabViewModel vm)
     {
-        Panel.PresetChanged -= vm.OnPresetChanged;
+        Panel.ModelChanged -= vm.OnModelChanged;
         Panel.ProfileChanged -= vm.OnProfileChanged;
         Panel.TitleGenerated -= vm.OnTitleGenerated;
         Panel.MessageAdded -= vm.OnMessageAdded;

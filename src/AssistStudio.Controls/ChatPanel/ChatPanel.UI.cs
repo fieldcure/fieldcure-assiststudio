@@ -39,15 +39,15 @@ public sealed partial class ChatPanel
         DependencyProperty.Register(nameof(Theme), typeof(ChatTheme), typeof(ChatPanel),
             new PropertyMetadata(ChatTheme.System, OnThemePropertyChanged));
 
-    /// <summary>Identifies the <see cref="AvailablePresets"/> dependency property.</summary>
-    public static readonly DependencyProperty AvailablePresetsProperty =
-        DependencyProperty.Register(nameof(AvailablePresets), typeof(IList), typeof(ChatPanel),
-            new PropertyMetadata(null, OnAvailablePresetsChanged));
+    /// <summary>Identifies the <see cref="AvailableModels"/> dependency property.</summary>
+    public static readonly DependencyProperty AvailableModelsProperty =
+        DependencyProperty.Register(nameof(AvailableModels), typeof(IList), typeof(ChatPanel),
+            new PropertyMetadata(null, OnAvailableModelsChanged));
 
-    /// <summary>Identifies the <see cref="SelectedPreset"/> dependency property.</summary>
-    public static readonly DependencyProperty SelectedPresetProperty =
-        DependencyProperty.Register(nameof(SelectedPreset), typeof(ProviderPreset), typeof(ChatPanel),
-            new PropertyMetadata(null, OnSelectedPresetChanged));
+    /// <summary>Identifies the <see cref="SelectedModel"/> dependency property.</summary>
+    public static readonly DependencyProperty SelectedModelProperty =
+        DependencyProperty.Register(nameof(SelectedModel), typeof(ProviderModel), typeof(ChatPanel),
+            new PropertyMetadata(null, OnSelectedModelChanged));
 
     /// <summary>Identifies the <see cref="AvailableProfiles"/> dependency property.</summary>
     public static readonly DependencyProperty AvailableProfilesProperty =
@@ -104,14 +104,14 @@ public sealed partial class ChatPanel
         DependencyProperty.Register(nameof(AuxiliaryProviderResolver), typeof(IAuxiliaryProviderResolver), typeof(ChatPanel),
             new PropertyMetadata(null));
 
-    /// <summary>Identifies the <see cref="TitlePreset"/> dependency property.</summary>
-    public static readonly DependencyProperty TitlePresetProperty =
-        DependencyProperty.Register(nameof(TitlePreset), typeof(string), typeof(ChatPanel),
+    /// <summary>Identifies the <see cref="TitleModel"/> dependency property.</summary>
+    public static readonly DependencyProperty TitleModelProperty =
+        DependencyProperty.Register(nameof(TitleModel), typeof(string), typeof(ChatPanel),
             new PropertyMetadata(null));
 
-    /// <summary>Identifies the <see cref="SummaryPreset"/> dependency property.</summary>
-    public static readonly DependencyProperty SummaryPresetProperty =
-        DependencyProperty.Register(nameof(SummaryPreset), typeof(string), typeof(ChatPanel),
+    /// <summary>Identifies the <see cref="SummaryModel"/> dependency property.</summary>
+    public static readonly DependencyProperty SummaryModelProperty =
+        DependencyProperty.Register(nameof(SummaryModel), typeof(string), typeof(ChatPanel),
             new PropertyMetadata(null));
 
     /// <summary>Identifies the <see cref="WorkspaceContext"/> dependency property.</summary>
@@ -154,10 +154,10 @@ public sealed partial class ChatPanel
         DependencyProperty.Register(nameof(ShowTitleBar), typeof(bool), typeof(ChatPanel),
             new PropertyMetadata(true, OnShowTitleBarChanged));
 
-    /// <summary>Identifies the <see cref="ShowPresetSelector"/> dependency property.</summary>
-    public static readonly DependencyProperty ShowPresetSelectorProperty =
-        DependencyProperty.Register(nameof(ShowPresetSelector), typeof(bool), typeof(ChatPanel),
-            new PropertyMetadata(true, OnShowPresetSelectorChanged));
+    /// <summary>Identifies the <see cref="ShowModelSelector"/> dependency property.</summary>
+    public static readonly DependencyProperty ShowModelSelectorProperty =
+        DependencyProperty.Register(nameof(ShowModelSelector), typeof(bool), typeof(ChatPanel),
+            new PropertyMetadata(true, OnShowModelSelectorChanged));
 
     /// <summary>Identifies the <see cref="ShowProfileSelector"/> dependency property.</summary>
     public static readonly DependencyProperty ShowProfileSelectorProperty =
@@ -276,27 +276,27 @@ public sealed partial class ChatPanel
     }
 
     /// <summary>
-    /// Called when <see cref="AvailablePresets"/> changes to push preset list to the input area.
+    /// Called when <see cref="AvailableModels"/> changes to push preset list to the input area.
     /// </summary>
-    private static void OnAvailablePresetsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    private static void OnAvailableModelsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is ChatPanel panel && panel._inputArea is not null)
         {
-            panel._inputArea.AvailablePresets = e.NewValue as IList;
+            panel._inputArea.AvailableModels = e.NewValue as IList;
         }
     }
 
     /// <summary>
-    /// Called when <see cref="SelectedPreset"/> changes to sync the input area and update placeholder text.
+    /// Called when <see cref="SelectedModel"/> changes to sync the input area and update placeholder text.
     /// </summary>
-    private static void OnSelectedPresetChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    private static void OnSelectedModelChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is not ChatPanel panel) return;
 
-        if (e.NewValue is ProviderPreset preset)
+        if (e.NewValue is ProviderModel preset)
         {
             if (panel._inputArea is not null)
-                panel._inputArea.SelectedPreset = preset;
+                panel._inputArea.SelectedModel = preset;
             var displayName = preset.ProviderType == "Mock" ? "Demo" : preset.Name;
             var label = string.IsNullOrEmpty(preset.ModelId)
                 ? displayName
@@ -307,7 +307,7 @@ public sealed partial class ChatPanel
         {
             // Preset cleared (all providers removed)
             if (panel._inputArea is not null)
-                panel._inputArea.SelectedPreset = null;
+                panel._inputArea.SelectedModel = null;
             panel.UpdatePlaceholderWithProvider(null);
         }
     }
@@ -435,13 +435,13 @@ public sealed partial class ChatPanel
     }
 
     /// <summary>
-    /// Called when <see cref="ShowPresetSelector"/> changes to show or hide the preset ComboBox.
+    /// Called when <see cref="ShowModelSelector"/> changes to show or hide the preset ComboBox.
     /// </summary>
-    private static void OnShowPresetSelectorChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    private static void OnShowModelSelectorChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is ChatPanel panel && panel._inputArea is not null)
         {
-            panel._inputArea.ShowPresetSelector = (bool)e.NewValue;
+            panel._inputArea.ShowModelSelector = (bool)e.NewValue;
         }
     }
 
@@ -527,23 +527,23 @@ public sealed partial class ChatPanel
     }
 
     /// <summary>
-    /// Gets or sets the preset name for title generation.
+    /// Gets or sets the model name for title generation.
     /// <see langword="null"/> or empty means inherit from the current conversation provider.
     /// </summary>
-    public string? TitlePreset
+    public string? TitleModel
     {
-        get => (string?)GetValue(TitlePresetProperty);
-        set => SetValue(TitlePresetProperty, value);
+        get => (string?)GetValue(TitleModelProperty);
+        set => SetValue(TitleModelProperty, value);
     }
 
     /// <summary>
-    /// Gets or sets the preset name for summary generation.
+    /// Gets or sets the model name for summary generation.
     /// <see langword="null"/> or empty means inherit from the current conversation provider.
     /// </summary>
-    public string? SummaryPreset
+    public string? SummaryModel
     {
-        get => (string?)GetValue(SummaryPresetProperty);
-        set => SetValue(SummaryPresetProperty, value);
+        get => (string?)GetValue(SummaryModelProperty);
+        set => SetValue(SummaryModelProperty, value);
     }
 
     /// <summary>
@@ -645,10 +645,10 @@ public sealed partial class ChatPanel
     /// <summary>
     /// Gets or sets whether the preset (model) selector is visible in the compose bar.
     /// </summary>
-    public bool ShowPresetSelector
+    public bool ShowModelSelector
     {
-        get => (bool)GetValue(ShowPresetSelectorProperty);
-        set => SetValue(ShowPresetSelectorProperty, value);
+        get => (bool)GetValue(ShowModelSelectorProperty);
+        set => SetValue(ShowModelSelectorProperty, value);
     }
 
     /// <summary>
@@ -813,19 +813,19 @@ public sealed partial class ChatPanel
     /// <summary>
     /// Gets or sets the list of available provider presets shown in the input area dropdown.
     /// </summary>
-    public IList? AvailablePresets
+    public IList? AvailableModels
     {
-        get => (IList?)GetValue(AvailablePresetsProperty);
-        set => SetValue(AvailablePresetsProperty, value);
+        get => (IList?)GetValue(AvailableModelsProperty);
+        set => SetValue(AvailableModelsProperty, value);
     }
 
     /// <summary>
     /// Gets or sets the currently selected provider preset.
     /// </summary>
-    public ProviderPreset? SelectedPreset
+    public ProviderModel? SelectedModel
     {
-        get => (ProviderPreset?)GetValue(SelectedPresetProperty);
-        set => SetValue(SelectedPresetProperty, value);
+        get => (ProviderModel?)GetValue(SelectedModelProperty);
+        set => SetValue(SelectedModelProperty, value);
     }
 
     /// <summary>
@@ -872,7 +872,7 @@ public sealed partial class ChatPanel
     /// <summary>
     /// Occurs when the user selects a different provider preset.
     /// </summary>
-    public event EventHandler<ProviderPreset>? PresetChanged;
+    public event EventHandler<ProviderModel>? ModelChanged;
 
     /// <summary>
     /// Occurs when a new message (user or assistant) is added to the conversation.
@@ -953,7 +953,7 @@ public sealed partial class ChatPanel
         if (_inputArea is not null)
         {
             _inputArea.MessageSent -= OnMessageSent;
-            _inputArea.PresetChanged -= OnInputPresetChanged;
+            _inputArea.ModelChanged -= OnInputModelChanged;
             _inputArea.ProfileChanged -= OnInputProfileChanged;
             _inputArea.StopRequested -= OnStopRequested;
             _inputArea.EditCanceled -= OnComposeBarEditCanceled;
@@ -1090,15 +1090,15 @@ public sealed partial class ChatPanel
         if (_inputArea is not null)
         {
             _inputArea.MessageSent += OnMessageSent;
-            _inputArea.PresetChanged += OnInputPresetChanged;
+            _inputArea.ModelChanged += OnInputModelChanged;
             _inputArea.ProfileChanged += OnInputProfileChanged;
             _inputArea.StopRequested += OnStopRequested;
             _inputArea.EditCanceled += OnComposeBarEditCanceled;
             // Push current values (may have been set before template was applied)
-            if (AvailablePresets is { } presets)
-                _inputArea.AvailablePresets = presets;
-            if (SelectedPreset is { } selectedPreset)
-                _inputArea.SelectedPreset = selectedPreset;
+            if (AvailableModels is { } presets)
+                _inputArea.AvailableModels = presets;
+            if (SelectedModel is { } selectedPreset)
+                _inputArea.SelectedModel = selectedPreset;
             if (AvailableProfiles is { } promptPresets)
                 _inputArea.AvailableProfiles = promptPresets;
             if (SelectedProfile is { } selectedProfile)
@@ -1116,7 +1116,7 @@ public sealed partial class ChatPanel
             // Sync tools and visibility settings
             _inputArea.AvailableTools = RegisteredTools;
             _inputArea.ShowAttachButton = AllowAttachments;
-            _inputArea.ShowPresetSelector = ShowPresetSelector;
+            _inputArea.ShowModelSelector = ShowModelSelector;
             _inputArea.ShowProfileSelector = ShowProfileSelector;
             if (IsReadOnly)
                 _inputArea.Visibility = Visibility.Collapsed;
@@ -1247,10 +1247,10 @@ public sealed partial class ChatPanel
     /// <summary>
     /// Handles the preset changed event from the input area to propagate the selection.
     /// </summary>
-    private void OnInputPresetChanged(object? sender, ProviderPreset preset)
+    private void OnInputModelChanged(object? sender, ProviderModel preset)
     {
-        SelectedPreset = preset;
-        PresetChanged?.Invoke(this, preset);
+        SelectedModel = preset;
+        ModelChanged?.Invoke(this, preset);
     }
 
     /// <summary>

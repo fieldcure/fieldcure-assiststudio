@@ -52,7 +52,7 @@
                                 Toggled="OnAutoTitleToggled" />
 
                             <StackPanel x:Name="TitleDetailsPanel" Spacing="12" Visibility="Collapsed">
-                                <local:TaskPresetSelector
+                                <local:TaskModelSelector
                                     x:Name="TitleSelector"
                                     SettingsChanged="OnTitleSettingsChanged" />
                             </StackPanel>
@@ -74,7 +74,7 @@
                                 Toggled="OnAutoSummaryToggled" />
 
                             <StackPanel x:Name="SummaryDetailsPanel" Spacing="12" Visibility="Collapsed">
-                                <local:TaskPresetSelector
+                                <local:TaskModelSelector
                                     x:Name="SummarySelector"
                                     SettingsChanged="OnSummarySettingsChanged" />
 
@@ -109,7 +109,7 @@
                     IsExpanded="True">
                     <controls:CollapsibleSection.Body>
                         <StackPanel Spacing="12" Padding="0">
-                            <local:TaskPresetSelector
+                            <local:TaskModelSelector
                                 x:Name="SubAgentSelector"
                                 SettingsChanged="OnSubAgentSettingsChanged" />
                         </StackPanel>
@@ -135,7 +135,7 @@
                                 <TextBlock x:Uid="AppTasks_Specialist_WebSearch"
                                            Text="Web Search"
                                            Style="{StaticResource BodyStrongTextBlockStyle}" />
-                                <local:TaskPresetSelector
+                                <local:TaskModelSelector
                                     x:Name="WebSearchSpecialistSelector"
                                     SettingsChanged="OnWebSearchSpecialistSettingsChanged" />
                             </StackPanel>
@@ -144,7 +144,7 @@
                                 <TextBlock x:Uid="AppTasks_Specialist_Critique"
                                            Text="Critique"
                                            Style="{StaticResource BodyStrongTextBlockStyle}" />
-                                <local:TaskPresetSelector
+                                <local:TaskModelSelector
                                     x:Name="CritiqueSpecialistSelector"
                                     SettingsChanged="OnCritiqueSpecialistSettingsChanged" />
                             </StackPanel>
@@ -153,7 +153,7 @@
                                 <TextBlock x:Uid="AppTasks_Specialist_RedTeam"
                                            Text="Red Team"
                                            Style="{StaticResource BodyStrongTextBlockStyle}" />
-                                <local:TaskPresetSelector
+                                <local:TaskModelSelector
                                     x:Name="RedTeamSpecialistSelector"
                                     SettingsChanged="OnRedTeamSpecialistSettingsChanged" />
                             </StackPanel>
@@ -162,7 +162,7 @@
                                 <TextBlock x:Uid="AppTasks_Specialist_DevilsAdvocate"
                                            Text="Devil's Advocate"
                                            Style="{StaticResource BodyStrongTextBlockStyle}" />
-                                <local:TaskPresetSelector
+                                <local:TaskModelSelector
                                     x:Name="DevilsAdvocateSpecialistSelector"
                                     SettingsChanged="OnDevilsAdvocateSpecialistSettingsChanged" />
                             </StackPanel>

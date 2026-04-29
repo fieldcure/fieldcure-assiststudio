@@ -8,21 +8,21 @@ using Microsoft.UI.Xaml.Markup;
 namespace AssistStudio.Settings;
 
 /// <summary>
-/// Reusable control for selecting a provider source (Inherit / Specific) and preset
+/// Reusable control for selecting a provider source (Inherit / Specific) and model
 /// for an auxiliary task (title, summary, sub-agent).
 /// </summary>
-public sealed partial class TaskPresetSelector : UserControl
+public sealed partial class TaskModelSelector : UserControl
 {
     #region Dependency Properties
 
     /// <summary>Identifies the <see cref="Source"/> dependency property.</summary>
     public static readonly DependencyProperty SourceProperty =
-        DependencyProperty.Register(nameof(Source), typeof(AuxiliaryTaskSource), typeof(TaskPresetSelector),
+        DependencyProperty.Register(nameof(Source), typeof(AuxiliaryTaskSource), typeof(TaskModelSelector),
             new PropertyMetadata(AuxiliaryTaskSource.Inherit));
 
-    /// <summary>Identifies the <see cref="PresetName"/> dependency property.</summary>
-    public static readonly DependencyProperty PresetNameProperty =
-        DependencyProperty.Register(nameof(PresetName), typeof(string), typeof(TaskPresetSelector),
+    /// <summary>Identifies the <see cref="ModelName"/> dependency property.</summary>
+    public static readonly DependencyProperty ModelNameProperty =
+        DependencyProperty.Register(nameof(ModelName), typeof(string), typeof(TaskModelSelector),
             new PropertyMetadata(""));
 
     #endregion
@@ -35,7 +35,7 @@ public sealed partial class TaskPresetSelector : UserControl
 
     #region Events
 
-    /// <summary>Raised when the user changes the source or preset.</summary>
+    /// <summary>Raised when the user changes the source or model.</summary>
     public event EventHandler? SettingsChanged;
 
     #endregion
@@ -43,9 +43,9 @@ public sealed partial class TaskPresetSelector : UserControl
     #region Constructors
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="TaskPresetSelector"/> class.
+    /// Initializes a new instance of the <see cref="TaskModelSelector"/> class.
     /// </summary>
-    public TaskPresetSelector()
+    public TaskModelSelector()
     {
         InitializeComponent();
     }
@@ -61,11 +61,11 @@ public sealed partial class TaskPresetSelector : UserControl
         set => SetValue(SourceProperty, value);
     }
 
-    /// <summary>Selected preset name when <see cref="Source"/> is <see cref="AuxiliaryTaskSource.Specific"/>.</summary>
-    public string PresetName
+    /// <summary>Selected model name when <see cref="Source"/> is <see cref="AuxiliaryTaskSource.Specific"/>.</summary>
+    public string ModelName
     {
-        get => (string)GetValue(PresetNameProperty);
-        set => SetValue(PresetNameProperty, value);
+        get => (string)GetValue(ModelNameProperty);
+        set => SetValue(ModelNameProperty, value);
     }
 
     #endregion
@@ -73,20 +73,20 @@ public sealed partial class TaskPresetSelector : UserControl
     #region Public Methods
 
     /// <summary>
-    /// Loads the current state from settings and populates the preset combo.
+    /// Loads the current state from settings and populates the model combo.
     /// Call during <c>OnNavigatedTo</c>.
     /// </summary>
-    public void Load(AuxiliaryTaskSource source, string presetName)
+    public void Load(AuxiliaryTaskSource source, string modelName)
     {
         _suppressEvents = true;
 
         Source = source;
-        PresetName = presetName;
+        ModelName = modelName;
 
         SourceRadio.SelectedIndex = source == AuxiliaryTaskSource.Specific ? 1 : 0;
-        PresetCombo.Visibility = source == AuxiliaryTaskSource.Specific ? Visibility.Visible : Visibility.Collapsed;
+        ModelCombo.Visibility = source == AuxiliaryTaskSource.Specific ? Visibility.Visible : Visibility.Collapsed;
 
-        PopulatePresetCombo(presetName);
+        PopulateModelCombo(modelName);
 
         _suppressEvents = false;
     }
@@ -96,28 +96,28 @@ public sealed partial class TaskPresetSelector : UserControl
     #region Private Methods
 
     /// <summary>
-    /// Populates the preset combo box, selecting the given preset name.
+    /// Populates the model combo box, selecting the given model name.
     /// </summary>
-    private void PopulatePresetCombo(string selectedName)
+    private void PopulateModelCombo(string selectedName)
     {
-        PresetCombo.Items.Clear();
+        ModelCombo.Items.Clear();
 
-        var items = AppSettings.BuildOrderedPresetItems();
+        var items = AppSettings.BuildOrderedModelItems();
         var selectedIndex = -1;
 
         foreach (var obj in items)
         {
-            if (obj is ProviderPreset preset)
+            if (obj is ProviderModel model)
             {
                 // Skip Mock — cannot generate titles, summaries, or run sub-agents
-                if (preset.ProviderType == "Mock") continue;
+                if (model.ProviderType == "Mock") continue;
 
                 // Skip cloud providers without an API key
-                if (preset.RequiresApiKey && string.IsNullOrEmpty(preset.ApiKey)) continue;
+                if (model.RequiresApiKey && string.IsNullOrEmpty(model.ApiKey)) continue;
 
-                PresetCombo.Items.Add(preset.Name);
-                if (preset.Name == selectedName)
-                    selectedIndex = PresetCombo.Items.Count - 1;
+                ModelCombo.Items.Add(model.Name);
+                if (model.Name == selectedName)
+                    selectedIndex = ModelCombo.Items.Count - 1;
             }
             else if (obj is "-")
             {
@@ -127,7 +127,7 @@ public sealed partial class TaskPresetSelector : UserControl
                             Height="1" HorizontalAlignment="Stretch"
                             Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
                     """);
-                PresetCombo.Items.Add(new ComboBoxItem
+                ModelCombo.Items.Add(new ComboBoxItem
                 {
                     IsEnabled = false,
                     IsHitTestVisible = false,
@@ -140,9 +140,9 @@ public sealed partial class TaskPresetSelector : UserControl
         }
 
         if (selectedIndex >= 0)
-            PresetCombo.SelectedIndex = selectedIndex;
-        else if (PresetCombo.Items.Count > 0)
-            PresetCombo.SelectedIndex = 0;
+            ModelCombo.SelectedIndex = selectedIndex;
+        else if (ModelCombo.Items.Count > 0)
+            ModelCombo.SelectedIndex = 0;
     }
 
     /// <summary>
@@ -165,22 +165,22 @@ public sealed partial class TaskPresetSelector : UserControl
         if (SourceRadio.SelectedItem is RadioButton rb && rb.Tag is string tag)
         {
             Source = ParseSource(tag);
-            PresetCombo.Visibility = Source == AuxiliaryTaskSource.Specific
+            ModelCombo.Visibility = Source == AuxiliaryTaskSource.Specific
                 ? Visibility.Visible : Visibility.Collapsed;
             SettingsChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 
     /// <summary>
-    /// Handles preset combo box selection change.
+    /// Handles model combo box selection change.
     /// </summary>
-    private void OnPresetChanged(object sender, SelectionChangedEventArgs e)
+    private void OnModelChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_suppressEvents) return;
 
-        if (PresetCombo.SelectedItem is string name)
+        if (ModelCombo.SelectedItem is string name)
         {
-            PresetName = name;
+            ModelName = name;
             SettingsChanged?.Invoke(this, EventArgs.Empty);
         }
     }

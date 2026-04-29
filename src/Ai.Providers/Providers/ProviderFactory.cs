@@ -1,9 +1,9 @@
-using FieldCure.Ai.Providers.Models;
+﻿using FieldCure.Ai.Providers.Models;
 
 namespace FieldCure.Ai.Providers;
 
 /// <summary>
-/// Factory for creating <see cref="IAiProvider"/> instances from a <see cref="ProviderPreset"/> configuration.
+/// Factory for creating <see cref="IAiProvider"/> instances from a <see cref="ProviderModel"/> configuration.
 /// </summary>
 public static class ProviderFactory
 {
@@ -35,7 +35,7 @@ public static class ProviderFactory
     /// <summary>
     /// Creates an <see cref="IAiProvider"/> instance based on the specified preset configuration.
     /// </summary>
-    public static IAiProvider Create(ProviderPreset preset)
+    public static IAiProvider Create(ProviderModel preset)
     {
         var apiKey = preset.ApiKey;
         var model = preset.ModelId;
@@ -89,7 +89,7 @@ public static class ProviderFactory
     /// Resolves the effective <see cref="PdfCapability"/> for a preset,
     /// applying provider-type defaults when set to <see cref="PdfCapability.Auto"/>.
     /// </summary>
-    private static PdfCapability ResolvePdfCapability(ProviderPreset preset)
+    private static PdfCapability ResolvePdfCapability(ProviderModel preset)
     {
         if (preset.PdfCapability != PdfCapability.Auto)
             return preset.PdfCapability;

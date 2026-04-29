@@ -19,7 +19,7 @@ public sealed partial class OllamaProviderSection : UserControl
 {
     #region Fields
 
-    private ObservableCollection<ProviderPreset> _presets = [];
+    private ObservableCollection<ProviderModel> _presets = [];
     private bool _isPopulating;
     private bool _initialized;
     private CancellationTokenSource? _pullCts;
@@ -75,7 +75,7 @@ public sealed partial class OllamaProviderSection : UserControl
     /// <summary>
     /// Initializes the section UI from the current presets. Called once after x:Load realization.
     /// </summary>
-    public void Initialize(ObservableCollection<ProviderPreset> presets)
+    public void Initialize(ObservableCollection<ProviderModel> presets)
     {
         if (_initialized) return;
         _initialized = true;
@@ -685,10 +685,10 @@ public sealed partial class OllamaProviderSection : UserControl
 
     #region Private Helpers
 
-    private ProviderPreset? FindPreset()
+    private ProviderModel? FindPreset()
         => _presets.FirstOrDefault(p => p.ProviderType == "Ollama");
 
-    private void PersistPresets() => AppSettings.SavePresets(_presets);
+    private void PersistPresets() => AppSettings.SaveModels(_presets);
 
     private void UpdateSubHeader()
     {

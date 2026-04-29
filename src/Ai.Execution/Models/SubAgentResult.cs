@@ -32,9 +32,9 @@ public sealed class SubAgentResult
     public int RoundsExecuted { get; init; }
 
     /// <summary>
-    /// Provider preset that was actually used.
+    /// Provider model that was actually used.
     /// </summary>
-    public required string? UsedPreset { get; init; }
+    public required string? UsedModel { get; init; }
 }
 
 /// <summary>

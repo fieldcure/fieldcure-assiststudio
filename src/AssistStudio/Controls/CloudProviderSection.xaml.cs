@@ -1,4 +1,4 @@
-using AssistStudio.Helpers;
+﻿using AssistStudio.Helpers;
 using FieldCure.Ai.Providers;
 using FieldCure.Ai.Providers.Models;
 using Microsoft.UI.Xaml;
@@ -16,7 +16,7 @@ public sealed partial class CloudProviderSection : UserControl
 {
     #region Fields
 
-    private ObservableCollection<ProviderPreset> _presets = [];
+    private ObservableCollection<ProviderModel> _presets = [];
     private bool _isPopulating;
     private bool _initialized;
 
@@ -109,7 +109,7 @@ public sealed partial class CloudProviderSection : UserControl
     /// <summary>
     /// Initializes the section UI from the current presets. Called once after x:Load realization.
     /// </summary>
-    public void Initialize(ObservableCollection<ProviderPreset> presets)
+    public void Initialize(ObservableCollection<ProviderModel> presets)
     {
         if (_initialized) return;
         _initialized = true;
@@ -199,7 +199,7 @@ public sealed partial class CloudProviderSection : UserControl
         }
         else
         {
-            var newPreset = new ProviderPreset
+            var newPreset = new ProviderModel
             {
                 Name = ProviderToDisplayName(ProviderType),
                 ProviderType = ProviderType,
@@ -611,13 +611,13 @@ public sealed partial class CloudProviderSection : UserControl
     /// <summary>
     /// Finds the saved preset that belongs to the current provider type.
     /// </summary>
-    private ProviderPreset? FindPreset()
+    private ProviderModel? FindPreset()
         => _presets.FirstOrDefault(p => p.ProviderType == ProviderType);
 
     /// <summary>
     /// Saves the current in-memory provider presets back to application settings.
     /// </summary>
-    private void PersistPresets() => AppSettings.SavePresets(_presets);
+    private void PersistPresets() => AppSettings.SaveModels(_presets);
 
     /// <summary>
     /// Raises the sub-header text update event with the current model and key status.

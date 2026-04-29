@@ -11,10 +11,10 @@ public sealed class SubAgentRequest
     public required string Prompt { get; init; }
 
     /// <summary>
-    /// Provider preset name (e.g. "Claude", "Ollama-Qwen").
+    /// ProviderModel name (e.g. "Claude", "Ollama-Qwen").
     /// Null = use parent conversation's provider.
     /// </summary>
-    public string? PresetName { get; init; }
+    public string? ModelName { get; init; }
 
     /// <summary>
     /// MCP servers to bootstrap for this session.

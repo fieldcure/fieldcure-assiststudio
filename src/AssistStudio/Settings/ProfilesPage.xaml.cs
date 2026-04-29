@@ -378,10 +378,10 @@ public sealed partial class ProfilesPage : Page
         });
 
         // Ordered provider items with separators
-        var items = AppSettings.BuildOrderedPresetItems();
+        var items = AppSettings.BuildOrderedModelItems();
         foreach (var obj in items)
         {
-            if (obj is ProviderPreset preset)
+            if (obj is ProviderModel preset)
             {
                 var displayName = preset.ProviderType == "Mock" ? "Demo" : preset.Name;
                 ProviderCombo.Items.Add(new ComboBoxItem

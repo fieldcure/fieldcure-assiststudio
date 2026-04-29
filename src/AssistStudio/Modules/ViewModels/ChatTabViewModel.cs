@@ -102,14 +102,14 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     [ObservableProperty] private IAuxiliaryProviderResolver? _auxiliaryResolver;
 
     /// <summary>
-    /// Preset name for title generation. <see langword="null"/> means inherit from conversation.
+    /// Model name for title generation. <see langword="null"/> means inherit from conversation.
     /// </summary>
-    [ObservableProperty] private string? _titlePreset;
+    [ObservableProperty] private string? _titleModel;
 
     /// <summary>
-    /// Preset name for summary generation. <see langword="null"/> means inherit from conversation.
+    /// Model name for summary generation. <see langword="null"/> means inherit from conversation.
     /// </summary>
-    [ObservableProperty] private string? _summaryPreset;
+    [ObservableProperty] private string? _summaryModel;
 
     /// <summary>
     /// The system prompt sent with AI requests.
@@ -124,12 +124,12 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Available provider presets shown in the ComposeBar ComboBox.
     /// </summary>
-    [ObservableProperty] private IList? _availablePresets;
+    [ObservableProperty] private IList? _availableModels;
 
     /// <summary>
-    /// The currently selected provider preset.
+    /// The currently selected ProviderModel.
     /// </summary>
-    [ObservableProperty] private ProviderPreset? _selectedPreset;
+    [ObservableProperty] private ProviderModel? _selectedModel;
 
     /// <summary>
     /// Available profiles with system prompts.
@@ -201,7 +201,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Gets the currently active provider preset for this tab.
     /// </summary>
-    public ProviderPreset? CurrentPreset { get; private set; }
+    public ProviderModel? CurrentPreset { get; private set; }
 
     #endregion
 
@@ -210,7 +210,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Raised when the user switches provider preset via ComposeBar ComboBox.
     /// </summary>
-    public event Action<ChatTabViewModel, ProviderPreset>? PresetSwitched;
+    public event Action<ChatTabViewModel, ProviderModel>? ModelSwitched;
 
     /// <summary>
     /// Relayed from ChatPanel for keyboard shortcuts forwarded from WebView2.
@@ -286,7 +286,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// preset, system prompt, theme, and available presets.
     /// </summary>
     public ChatTabViewModel(
-        ProviderPreset preset,
+        ProviderModel preset,
         string systemPrompt,
         ChatTheme theme,
         IList availablePresets,
@@ -302,13 +302,13 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 
         // Set observable fields — ChatTabView.xaml binds to these via x:Bind
         _provider = ProviderFactory.Create(preset);
-        _auxiliaryResolver = new AuxiliaryProviderResolver(() => AvailablePresets!);
-        _titlePreset = ResolveTaskPreset(AppSettings.TitleSource, AppSettings.TitlePreset);
-        _summaryPreset = ResolveTaskPreset(AppSettings.SummarySource, AppSettings.SummaryPreset);
+        _auxiliaryResolver = new AuxiliaryProviderResolver(() => AvailableModels!);
+        _titleModel = ResolveTaskPreset(AppSettings.TitleSource, AppSettings.TitleModel);
+        _summaryModel = ResolveTaskPreset(AppSettings.SummarySource, AppSettings.SummaryModel);
         _systemPrompt = systemPrompt;
         _theme = theme;
-        _availablePresets = availablePresets;
-        _selectedPreset = preset;
+        _availableModels = availablePresets;
+        _selectedModel = preset;
         _availableProfiles = profiles;
         _selectedProfile = selectedProfile;
         _autoTitle = AppSettings.AppAutoTitle;
@@ -324,8 +324,8 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             AutoTitle = AppSettings.AppAutoTitle;
             AutoSummarize = AppSettings.AppAutoSummary;
             MaxInputTokens = AppSettings.AppMaxInputTokens;
-            TitlePreset = ResolveTaskPreset(AppSettings.TitleSource, AppSettings.TitlePreset);
-            SummaryPreset = ResolveTaskPreset(AppSettings.SummarySource, AppSettings.SummaryPreset);
+            TitleModel = ResolveTaskPreset(AppSettings.TitleSource, AppSettings.TitleModel);
+            SummaryModel = ResolveTaskPreset(AppSettings.SummarySource, AppSettings.SummaryModel);
             _subAgentTool = null; // Invalidate cached sub-agent tool on settings change
         };
 
@@ -597,25 +597,25 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         var currentBaseUrl = CurrentPreset?.BaseUrl;
 
         // Force DP change callback by passing a new list instance
-        AvailablePresets = new ArrayList(presets);
+        AvailableModels = new ArrayList(presets);
 
         var found = false;
         if (currentName is not null)
         {
             foreach (var obj in presets)
             {
-                if (obj is not ProviderPreset p) continue;
+                if (obj is not ProviderModel p) continue;
                 if (p.Name == currentName)
                 {
                     found = true;
-                    SelectedPreset = p;
+                    SelectedModel = p;
 
                     // Recreate provider if connection-relevant fields changed
                     if (p.ModelId != currentModelId ||
                         p.ApiKey != currentApiKey ||
                         p.BaseUrl != currentBaseUrl)
                     {
-                        OnPresetChanged(this, p);
+                        OnModelChanged(this, p);
                     }
                     break;
                 }
@@ -625,15 +625,15 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         // Fallback: current preset was deleted — select the first available or clear
         if (!found)
         {
-            if (presets.OfType<ProviderPreset>().FirstOrDefault() is { } first)
+            if (presets.OfType<ProviderModel>().FirstOrDefault() is { } first)
             {
-                SelectedPreset = first;
-                OnPresetChanged(this, first);
+                SelectedModel = first;
+                OnModelChanged(this, first);
             }
             else
             {
                 CurrentPreset = null;
-                SelectedPreset = null;
+                SelectedModel = null;
             }
         }
     }
@@ -689,7 +689,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Handles provider preset changes by disposing the old provider and creating a new one.
     /// </summary>
-    public void OnPresetChanged(object? _sender, ProviderPreset preset)
+    public void OnModelChanged(object? _sender, ProviderModel preset)
     {
         LoggingService.LogInfo($"[Tab] Preset switched: {preset.Name} (model={preset.ModelId})");
 
@@ -707,7 +707,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         // Invalidate sub-agent tool so it picks up the new default preset
         _subAgentTool = null;
 
-        PresetSwitched?.Invoke(this, preset);
+        ModelSwitched?.Invoke(this, preset);
     }
 
     /// <summary>
@@ -1478,8 +1478,8 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                 ResolveToolsForSubAgentAsync),
             () => _cachedKbId,
             Specialists.SpecialistRegistry.Instance,
-            AppSettings.ResolveSpecialistPreset,
-            () => ResolveTaskPreset(AppSettings.SubAgentSource, AppSettings.SubAgentPreset));
+            AppSettings.ResolveSpecialistModel,
+            () => ResolveTaskPreset(AppSettings.SubAgentSource, AppSettings.SubAgentModel));
     }
 
     /// <summary>

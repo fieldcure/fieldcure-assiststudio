@@ -23,12 +23,12 @@ public sealed partial class ComposeBar : Control
     /// <summary>
     /// Flag to suppress preset changed events during programmatic ComboBox updates.
     /// </summary>
-    private bool _suppressPresetChanged;
+    private bool _suppressModelChanged;
 
     /// <summary>
     /// Flag indicating a pending preset ComboBox population deferred until control is loaded.
     /// </summary>
-    private bool _pendingPresetPopulate;
+    private bool _pendingModelPopulate;
 
     /// <summary>
     /// Flag indicating a pending prompt preset ComboBox population deferred until control is loaded.

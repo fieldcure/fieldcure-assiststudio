@@ -8,18 +8,18 @@ namespace FieldCure.AssistStudio.Controls;
 /// </summary>
 /// <remarks>
 /// All background tasks share the same fallback policy: attempt the requested
-/// preset, validate connectivity, and silently fall back to the parent
+/// model, validate connectivity, and silently fall back to the parent
 /// conversation's (already-reachable) provider on any failure — connection
 /// refused, auth error, model not found, or timeout.
 /// </remarks>
 public interface IAuxiliaryProviderResolver
 {
     /// <summary>
-    /// Attempts to resolve the specified preset; on reachability or auth failure,
+    /// Attempts to resolve the specified model; on reachability or auth failure,
     /// falls back to <paramref name="parentProvider"/> and logs the downgrade.
     /// </summary>
-    /// <param name="requestedPresetName">
-    /// Preset name to resolve. <see langword="null"/> returns <paramref name="parentProvider"/> directly.
+    /// <param name="requestedModelName">
+    /// ProviderModel name to resolve. <see langword="null"/> returns <paramref name="parentProvider"/> directly.
     /// </param>
     /// <param name="parentProvider">
     /// The parent conversation's provider, already verified as reachable.
@@ -33,7 +33,7 @@ public interface IAuxiliaryProviderResolver
     /// </param>
     /// <returns>A usable <see cref="IAiProvider"/> — either the requested one or the parent fallback.</returns>
     Task<IAiProvider> ResolveWithFallbackAsync(
-        string? requestedPresetName,
+        string? requestedModelName,
         IAiProvider parentProvider,
         string taskType,
         CancellationToken cancellationToken = default);

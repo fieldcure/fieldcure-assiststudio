@@ -1,4 +1,4 @@
-using AssistStudio.Controls;
+﻿using AssistStudio.Controls;
 using AssistStudio.Controls.Dialogs;
 using AssistStudio.Helpers;
 using FieldCure.Ai.Providers;
@@ -21,7 +21,7 @@ public sealed partial class ModelsPage : Page
 {
     #region Fields
 
-    private ObservableCollection<ProviderPreset> _presets = [];
+    private ObservableCollection<ProviderModel> _presets = [];
 
     #endregion
 
@@ -44,7 +44,7 @@ public sealed partial class ModelsPage : Page
     {
         base.OnNavigatedTo(e);
 
-        _presets = AppSettings.LoadPresets();
+        _presets = AppSettings.LoadModels();
 
         // All section bodies are deferred (x:Load="False").
         // Individual sections are initialized via OnSectionExpanded when first expanded.
@@ -342,7 +342,7 @@ public sealed partial class ModelsPage : Page
         ProviderFactory.RegisterCustomProvider(config);
 
         // Reload presets (includes new synthetic preset)
-        _presets = AppSettings.LoadPresets();
+        _presets = AppSettings.LoadModels();
 
         // Add UI section
         AddCustomProviderSection(config);
@@ -382,7 +382,7 @@ public sealed partial class ModelsPage : Page
         var preset = _presets.FirstOrDefault(p => p.ProviderType == providerType);
         if (preset is not null) _presets.Remove(preset);
         PasswordVaultHelper.DeleteApiKey(providerType);
-        AppSettings.SavePresets(_presets.ToList());
+        AppSettings.SaveModels(_presets.ToList());
 
         // Remove UI section
         for (int i = CustomProvidersPanel.Children.Count - 1; i >= 0; i--)

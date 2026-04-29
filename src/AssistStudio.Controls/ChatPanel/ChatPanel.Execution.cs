@@ -1220,7 +1220,7 @@ public sealed partial class ChatPanel
         if (Provider is null) return;
 
         var summaryProvider = AuxiliaryProviderResolver is { } resolver
-            ? await resolver.ResolveWithFallbackAsync(SummaryPreset, Provider, "Summary", ct)
+            ? await resolver.ResolveWithFallbackAsync(SummaryModel, Provider, "Summary", ct)
             : Provider;
 
         // Find the range to summarize: from last summary (exclusive) to end of _messages
@@ -1371,7 +1371,7 @@ public sealed partial class ChatPanel
             ? await ContextProvider.RetrieveAsync(lastUserMsg)
             : null;
 
-        var preset = SelectedPreset;
+        var preset = SelectedModel;
         return new AiRequest
         {
             Messages = ApplySummaryTruncation(messages),

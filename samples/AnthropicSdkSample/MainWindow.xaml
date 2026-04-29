@@ -1,4 +1,4 @@
-<Window
+﻿<Window
     x:Class="AnthropicSdkSample.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -128,7 +128,7 @@
             VerticalAlignment="Stretch"
             DisableInternalSendFlow="True"
             ShowTitleBar="False"
-            ShowPresetSelector="False"
+            ShowModelSelector="False"
             ShowProfileSelector="False"
             Theme="System"
             Placeholder="Ask Claude anything..." />

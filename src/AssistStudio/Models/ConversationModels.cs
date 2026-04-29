@@ -26,8 +26,16 @@ public class ConversationData
     /// <summary>The display name of the tab this conversation was saved from.</summary>
     public string TabName { get; set; } = "";
 
-    /// <summary>The name of the provider preset used for this conversation.</summary>
-    public string? ProviderPresetName { get; set; }
+    /// <summary>The name of the ProviderModel used for this conversation.</summary>
+    [JsonPropertyName("ProviderModelName")]
+    public string? ProviderModelName { get; set; }
+
+    /// <summary>Legacy alias for older .astx files. Read-only; never serialized (no getter).</summary>
+    [JsonPropertyName("ProviderPresetName")]
+    public string? LegacyProviderPresetName
+    {
+        set => ProviderModelName ??= value;
+    }
 
     /// <summary>The UTC timestamp when the conversation was saved.</summary>
     public DateTime SavedAt { get; set; }

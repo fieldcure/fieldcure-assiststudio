@@ -109,7 +109,7 @@ public sealed partial class ChatPanel
         if (Provider is null or MockProvider) return;
 
         var provider = AuxiliaryProviderResolver is { } resolver
-            ? await resolver.ResolveWithFallbackAsync(TitlePreset, Provider, "Title")
+            ? await resolver.ResolveWithFallbackAsync(TitleModel, Provider, "Title")
             : Provider;
 
         // Build context from conversation history

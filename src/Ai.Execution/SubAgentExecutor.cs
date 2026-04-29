@@ -14,11 +14,11 @@ namespace FieldCure.Ai.Execution;
 public sealed class SubAgentExecutor : ISubAgentExecutor
 {
     /// <summary>
-    /// Resolves a provider preset name to an <see cref="IAiProvider"/> instance.
+    /// Resolves a ProviderModel name to an <see cref="IAiProvider"/> instance.
     /// Injected by the host (e.g., AssistStudio Core, Runner).
     /// The resolver may perform async validation (e.g., connectivity check with fallback).
     /// </summary>
-    public delegate Task<IAiProvider> ProviderResolver(string? presetName, CancellationToken cancellationToken);
+    public delegate Task<IAiProvider> ProviderResolver(string? modelName, CancellationToken cancellationToken);
 
     /// <summary>
     /// Resolves MCP server IDs and tool allowlist to a list of available tools.
@@ -56,9 +56,9 @@ public sealed class SubAgentExecutor : ISubAgentExecutor
     /// </summary>
     /// <param name="agentLoop">Agent loop implementation to use.</param>
     /// <param name="resolveProvider">
-    /// Resolves preset name → IAiProvider. May perform async validation
+    /// Resolves model name → IAiProvider. May perform async validation
     /// and fallback (e.g., via <c>IAuxiliaryProviderResolver</c>).
-    /// Called with <see cref="SubAgentRequest.PresetName"/> which may be <see langword="null"/>
+    /// Called with <see cref="SubAgentRequest.ModelName"/> which may be <see langword="null"/>
     /// if the caller intends the resolver to use its own fallback policy.
     /// </param>
     /// <param name="resolveTools">Resolves MCP servers + allowlist → tools.</param>
@@ -84,12 +84,12 @@ public sealed class SubAgentExecutor : ISubAgentExecutor
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCts.CancelAfter(request.Timeout);
 
-        var presetName = request.PresetName;
+        var modelName = request.ModelName;
 
         try
         {
             // 1. Resolve provider (may perform async validation + fallback)
-            var provider = await _resolveProvider(presetName, timeoutCts.Token);
+            var provider = await _resolveProvider(modelName, timeoutCts.Token);
 
             // 2. Resolve tools
             var tools = await _resolveTools(
@@ -119,7 +119,7 @@ public sealed class SubAgentExecutor : ISubAgentExecutor
                 ToolCallCount = loopResult.ToolCallCount,
                 Duration = sw.Elapsed,
                 RoundsExecuted = loopResult.RoundsExecuted,
-                UsedPreset = presetName,
+                UsedModel = modelName,
             };
         }
         catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested
@@ -131,7 +131,7 @@ public sealed class SubAgentExecutor : ISubAgentExecutor
                 Report = $"Execution timed out after {request.Timeout.TotalSeconds:F0} seconds.",
                 Status = SubAgentStatus.TimedOut,
                 Duration = sw.Elapsed,
-                UsedPreset = presetName,
+                UsedModel = modelName,
             };
         }
         catch (OperationCanceledException)
@@ -146,7 +146,7 @@ public sealed class SubAgentExecutor : ISubAgentExecutor
                 Report = ex.Message,
                 Status = SubAgentStatus.Failed,
                 Duration = sw.Elapsed,
-                UsedPreset = presetName,
+                UsedModel = modelName,
             };
         }
     }

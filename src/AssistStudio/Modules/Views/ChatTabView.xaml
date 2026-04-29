@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <UserControl
     x:Class="AssistStudio.Modules.Views.ChatTabView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -18,13 +18,13 @@
         VerticalAlignment="Stretch"
         Provider="{x:Bind ViewModel.Provider, Mode=OneWay}"
         AuxiliaryProviderResolver="{x:Bind ViewModel.AuxiliaryResolver, Mode=OneWay}"
-        TitlePreset="{x:Bind ViewModel.TitlePreset, Mode=OneWay}"
-        SummaryPreset="{x:Bind ViewModel.SummaryPreset, Mode=OneWay}"
+        TitleModel="{x:Bind ViewModel.TitleModel, Mode=OneWay}"
+        SummaryModel="{x:Bind ViewModel.SummaryModel, Mode=OneWay}"
         SystemPrompt="{x:Bind ViewModel.SystemPrompt, Mode=OneWay}"
         Theme="{x:Bind ViewModel.Theme, Mode=OneWay}"
         Title="{x:Bind ViewModel.Title, Mode=OneWay}"
-        AvailablePresets="{x:Bind ViewModel.AvailablePresets, Mode=OneWay}"
-        SelectedPreset="{x:Bind ViewModel.SelectedPreset, Mode=OneWay}"
+        AvailableModels="{x:Bind ViewModel.AvailableModels, Mode=OneWay}"
+        SelectedModel="{x:Bind ViewModel.SelectedModel, Mode=OneWay}"
         AvailableProfiles="{x:Bind ViewModel.AvailableProfiles, Mode=OneWay}"
         SelectedProfile="{x:Bind ViewModel.SelectedProfile, Mode=OneWay}"
         AutoTitle="{x:Bind ViewModel.AutoTitle, Mode=OneWay}"

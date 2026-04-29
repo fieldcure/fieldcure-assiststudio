@@ -57,6 +57,7 @@ public partial class App : Application
         DocumentParserFactoryImagingExtensions.AddImagingSupport();
         ConversationManager.Initialize(ApplicationData.Current.LocalFolder.Path);
         AppSettings.MigrateAppTasksSettings();
+        AppSettings.MigrateAuxiliaryModelKeys();
 
         // Clean up leftover temp media from previous sessions (e.g. abnormal shutdown)
         ChatPanel.CleanupTempMedia();
