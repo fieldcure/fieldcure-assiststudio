@@ -60,7 +60,7 @@
                         <MenuFlyoutSeparator />
                         <MenuFlyoutItem
                             x:Name="ExportMenuItem"
-                            Text="Export"
+                            Text="Export as Markdown"
                             IsEnabled="False"
                             Click="OnExportClick"
                             AutomationProperties.AutomationId="ExportMenuItem"
@@ -69,6 +69,7 @@
                                 <FontIcon Glyph="&#xEDE1;" />
                             </MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
+                        <MenuFlyoutSeparator />
                         <MenuFlyoutItem
                             x:Name="ThemeMenuItem"
                             Text="Switch to dark"
