@@ -652,7 +652,8 @@ public sealed partial class ChatPanel
             _inputArea.IsInputEnabled = true;
             _inputArea.FocusInput();
         }
-        _currentTurn = null;
+        if (_currentTurn?.Message == message)
+            _currentTurn = null;
     }
 
     /// <summary>

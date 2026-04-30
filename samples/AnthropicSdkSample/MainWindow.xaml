@@ -43,10 +43,13 @@
                     Glyph="&#xE700;"
                     FontSize="16" />
                 <Button.Flyout>
-                    <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                    <MenuFlyout
+                        Placement="BottomEdgeAlignedLeft"
+                        Opening="OnMenuFlyoutOpening">
                         <MenuFlyoutItem
                             x:Name="NewChatMenuItem"
                             Text="New Chat"
+                            IsEnabled="False"
                             Click="OnNewChatClick"
                             AutomationProperties.AutomationId="NewChatMenuItem"
                             AutomationProperties.Name="Start a new chat">

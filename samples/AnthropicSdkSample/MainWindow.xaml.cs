@@ -358,18 +358,27 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private void OnNewChatClick(object sender, RoutedEventArgs e)
     {
+        if (IsConversationBusy()) return;
+
         ChatPanel.ClearConversation();
-        ExportMenuItem.IsEnabled = false;
+    }
+
+    /// <summary>Refreshes conversation-scoped menu state when the app menu opens.</summary>
+    private void OnMenuFlyoutOpening(object? sender, object e)
+    {
+        UpdateConversationMenuItems();
     }
 
     private void OnExportClick(object sender, RoutedEventArgs e)
     {
         var messages = ChatPanel.GetMessages();
 
-        if (messages.Count == 0)
+        if (messages.Count == 0 || IsConversationBusy())
         {
             ExportTip.Title = "No messages to export";
-            ExportTip.Subtitle = "Start a conversation first.";
+            ExportTip.Subtitle = messages.Count == 0
+                ? "Start a conversation first."
+                : "Wait for the current response to finish.";
             ExportTip.IsOpen = true;
             return;
         }
@@ -393,8 +402,6 @@ public sealed partial class MainWindow : Window
     private async void OnUserMessageSubmitted(object? sender, MessageSentEventArgs e)
     {
         if (_client is null) return;
-
-        ExportMenuItem.IsEnabled = false;
 
         var modelId = ChatPanel.SelectedModel?.ModelId ?? "claude-sonnet-4-6";
 
@@ -428,7 +435,17 @@ public sealed partial class MainWindow : Window
             // a ContentDialog would be more reliable for production code.
             handle.Message.Content += $"\n\n[Error: {ex.Message}]";
         }
-
-        ExportMenuItem.IsEnabled = true;
     }
+
+    /// <summary>Updates conversation-scoped menu items from message and streaming state.</summary>
+    private void UpdateConversationMenuItems()
+    {
+        var messages = ChatPanel.GetMessages();
+        var canUseConversationActions = messages.Count > 0 && !IsConversationBusy();
+        NewChatMenuItem.IsEnabled = canUseConversationActions;
+        ExportMenuItem.IsEnabled = canUseConversationActions;
+    }
+
+    /// <summary>Returns true while an assistant turn is still streaming.</summary>
+    private bool IsConversationBusy() => ChatPanel.GetMessages().Any(m => m.IsStreaming);
 }

@@ -195,12 +195,30 @@ public sealed partial class ChatPanel
     public async void ClearConversation()
     {
         _streamingCts?.Cancel();
+        _currentTurn = null;
         _messages.Clear();
+        _childrenMap.Clear();
+        _editingMessage = null;
+        _hasRenderedRestored = false;
+        _titleGenerated = false;
+        _isConversationActive = false;
+
+        if (_inputArea is not null)
+        {
+            _inputArea.Text = string.Empty;
+            _inputArea.ClearAttachments();
+            _inputArea.IsEditing = false;
+            _inputArea.IsInputEnabled = true;
+        }
+
         if (_isInitialized && _chatWebView is not null)
         {
-            await _renderer.SetThemeAsync(IsDarkTheme());
             await _renderer.InitializeAsync(_chatWebView);
             await ApplyThemeAsync();
+            await ApplyLocaleStringsAsync();
+            ApplyChatZoom();
+            if (IsDebugMode)
+                await _renderer.SetDebugModeAsync(true);
         }
 
         // Switch back to empty state
@@ -215,6 +233,9 @@ public sealed partial class ChatPanel
             if (_emptyStatePanel is not null)
                 _emptyStatePanel.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
         }
+
+        UpdateTitleDisplay();
+        _inputArea?.FocusInput();
     }
 
     #endregion
