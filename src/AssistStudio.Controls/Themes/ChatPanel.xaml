@@ -320,10 +320,10 @@
 
                             <!-- Tool approval panel (shown in place of ComposeBar when confirmation needed) -->
                             <local:ToolApprovalPanel x:Name="PART_ToolApprovalPanel" Grid.Row="1" />
-                            
+
                             <!-- Tool elicitation panel (shown when MCP server requests user input) -->
                             <local:ToolElicitationPanel x:Name="PART_ToolElicitationPanel" Grid.Row="1" />
-                            
+
                         </Grid>
                     </Grid>
                 </ControlTemplate>

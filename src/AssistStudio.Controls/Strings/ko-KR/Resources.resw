@@ -316,6 +316,12 @@
   <data name="Chat_SearchCloseName" xml:space="preserve">
     <value>검색 닫기</value>
   </data>
+  <data name="Chat_ScrollToBottomTooltip" xml:space="preserve">
+    <value>맨 아래로 이동</value>
+  </data>
+  <data name="Chat_ScrollToBottomName" xml:space="preserve">
+    <value>맨 아래로 이동</value>
+  </data>
   <data name="Attachment_RemoveTooltip" xml:space="preserve">
     <value>첨부 파일 제거</value>
   </data>

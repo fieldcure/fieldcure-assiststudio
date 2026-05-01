@@ -1087,9 +1087,12 @@ public sealed partial class ChatPanel
             _elicitationPanel.Cancelled += OnElicitationCancelled;
         }
 
-        // Set initial background to match CSS --bg-primary (before WebView2 loads)
+        // Set initial background to match CSS --bg-primary (before WebView2 loads).
+        // Resolve against the chat theme up front so dark-mode startup paints the empty
+        // state with the correct backdrop instead of flashing white until ApplyThemeAsync
+        // runs after WebView2 initialization.
         if (_rootGrid is not null)
-            _rootGrid.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(LightBg);
+            _rootGrid.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(IsDarkTheme() ? DarkBg : LightBg);
 
         // Push title text (may have been set before template was applied)
         if (_titleText is not null && !string.IsNullOrEmpty(Title))
@@ -1338,7 +1341,8 @@ public sealed partial class ChatPanel
                 ["diagramSaveSvg"] = Res.GetString("Chat_DiagramSaveSvg"),
                 ["diagramSavePng"] = Res.GetString("Chat_DiagramSavePng"),
                 ["diagramCopyLabel"] = Res.GetString("Chat_DiagramCopyLabel"),
-                ["diagramCopyTooltip"] = Res.GetString("Chat_DiagramCopyTooltip")
+                ["diagramCopyTooltip"] = Res.GetString("Chat_DiagramCopyTooltip"),
+                ["scrollToBottom"] = Res.GetString("Chat_ScrollToBottomTooltip")
             };
 
             // Filter out empty strings (key not found returns empty)

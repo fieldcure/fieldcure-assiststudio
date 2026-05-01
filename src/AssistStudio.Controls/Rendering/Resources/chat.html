@@ -1041,10 +1041,51 @@
         from { opacity: 0; transform: translateY(4px); }
         to { opacity: 1; transform: translateY(0); }
     }
+
+    /* ===== Scroll-to-bottom Floating Button =====
+       Hidden until the scroll listener flips .visible on. Theme-aware via the
+       same CSS variables as the rest of the chat surface, so the host XAML
+       doesn't need to sync any colours. */
+    #scroll-to-bottom-btn {
+        position: fixed;
+        bottom: 16px;
+        left: 50%;
+        transform: translateX(-50%) translateY(8px);
+        width: 36px;
+        height: 36px;
+        border-radius: 18px;
+        border: 1px solid var(--border-color);
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        pointer-events: none;
+        box-shadow: var(--shadow);
+        transition: opacity 0.15s ease, transform 0.15s ease, background 0.1s ease;
+        z-index: 50;
+    }
+    #scroll-to-bottom-btn.visible {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateX(-50%) translateY(0);
+    }
+    /* Use the opaque --bg-user (user-message bubble colour) so hover never lets
+       the chat text underneath bleed through; --bg-hover is rgba and would. */
+    #scroll-to-bottom-btn:hover { background: var(--bg-user); }
+    #scroll-to-bottom-btn:active { background: var(--border-color); }
+    #scroll-to-bottom-btn svg { width: 16px; height: 16px; display: block; }
 </style>
 </head>
 <body>
 <div id="chat-container"></div>
+<button id="scroll-to-bottom-btn" type="button" aria-label="Scroll to bottom" title="Scroll to bottom">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 6 L8 10 L12 6" />
+    </svg>
+</button>
 <script>
 (function() {
     'use strict';
@@ -1092,7 +1133,36 @@
         const threshold = 50;
         const atBottom = (window.innerHeight + window.scrollY) >= (document.body.scrollHeight - threshold);
         autoScroll = atBottom;
+        var btn = document.getElementById('scroll-to-bottom-btn');
+        if (btn) btn.classList.toggle('visible', !atBottom);
     });
+
+    var _scrollBtn = document.getElementById('scroll-to-bottom-btn');
+    if (_scrollBtn) {
+        _scrollBtn.addEventListener('click', function() {
+            // Explicit user request: re-arm autoScroll and force a smooth scroll
+            // even though the button is only ever visible while autoScroll is false.
+            autoScroll = true;
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        });
+        // Apply localized label once the host has pushed locale strings.
+        var _origAssign = Object.assign;
+        var _applyScrollLabel = function() {
+            var L = window._L || {};
+            if (L.scrollToBottom) {
+                _scrollBtn.title = L.scrollToBottom;
+                _scrollBtn.setAttribute('aria-label', L.scrollToBottom);
+            }
+        };
+        _applyScrollLabel();
+        // The host calls Object.assign(window._L, …) after init; hook it once
+        // so the button label refreshes when locale strings arrive.
+        Object.assign = function(target) {
+            var result = _origAssign.apply(this, arguments);
+            if (target === window._L) _applyScrollLabel();
+            return result;
+        };
+    }
 
     function escapeHtml(text) {
         const div = document.createElement('div');
@@ -2599,7 +2669,11 @@
         },
 
         scrollToBottom: function() {
-            doScroll('smooth');
+            // Explicit user request: bypass the autoScroll gate (which is false
+            // precisely when the floating button is visible) and re-arm it so
+            // subsequent streaming continues to follow the bottom.
+            autoScroll = true;
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
         },
 
         removeMessagesAfter: function(messageId) {
