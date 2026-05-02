@@ -191,9 +191,10 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="primitives:ComboBoxSeparatorItem">
-                    <Border Height="1"
-                            HorizontalAlignment="Stretch"
-                            Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                    <Border
+                        Height="1"
+                        HorizontalAlignment="Stretch"
+                        Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
