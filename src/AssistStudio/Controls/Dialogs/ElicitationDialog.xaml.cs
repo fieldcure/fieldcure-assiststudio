@@ -11,6 +11,7 @@ namespace AssistStudio.Controls.Dialogs;
 public sealed partial class ElicitationDialog : ThemedContentDialog
 {
     private readonly ResourceLoader _loader = new();
+    private IDictionary<string, object?>? _capturedContent;
 
     /// <summary>Initializes a new dialog for the given elicitation request.</summary>
     internal ElicitationDialog(ElicitationRequest request)
@@ -26,7 +27,8 @@ public sealed partial class ElicitationDialog : ThemedContentDialog
 
     /// <summary>Creates the MCP accept result from the hosted panel state.</summary>
     internal ElicitResult CreateAcceptResult() =>
-        McpElicitationMapper.ConvertToElicitResult("accept", ElicitationPanel.GetContent());
+        McpElicitationMapper.ConvertToElicitResult("accept",
+            _capturedContent ?? ElicitationPanel.GetContent());
 
     /// <summary>Applies localized dialog chrome text without relying on x:Uid lookup.</summary>
     private void ApplyLocalizedText()
@@ -36,11 +38,20 @@ public sealed partial class ElicitationDialog : ThemedContentDialog
         CloseButtonText = GetString("ElicitationDialog_CloseButtonText", "Cancel");
     }
 
-    /// <summary>Lets the hosted panel validate before the primary button closes the dialog.</summary>
+    /// <summary>
+    /// Validates and snapshots the panel content before the dialog closes; the
+    /// captured copy avoids reading from the visual tree after unload, when
+    /// bindings can disconnect or fire empty change events.
+    /// </summary>
     private void OnPrimaryButtonClick(ContentDialog sender, ContentDialogButtonClickEventArgs args)
     {
         if (!ElicitationPanel.TryValidate())
+        {
             args.Cancel = true;
+            return;
+        }
+
+        _capturedContent = ElicitationPanel.GetContent();
     }
 
     /// <summary>Returns a localized string, falling back when resources are unavailable.</summary>
