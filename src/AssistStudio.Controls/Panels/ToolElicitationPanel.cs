@@ -492,12 +492,18 @@ public static class PasswordBoxBindingHelper
             new PropertyMetadata(false));
 
     /// <summary>Identifies the attached bound-password property.</summary>
+    /// <remarks>
+    /// Default is <see langword="null"/> (not <see cref="string.Empty"/>) so the binding's
+    /// initial set to "" still triggers <see cref="OnBoundPasswordChanged"/> — that callback
+    /// is where <c>PasswordChanged</c> gets subscribed, and DP change callbacks don't fire
+    /// when the new value equals the existing default.
+    /// </remarks>
     public static readonly DependencyProperty BoundPasswordProperty =
         DependencyProperty.RegisterAttached(
             "BoundPassword",
             typeof(string),
             typeof(PasswordBoxBindingHelper),
-            new PropertyMetadata(string.Empty, OnBoundPasswordChanged));
+            new PropertyMetadata(null, OnBoundPasswordChanged));
 
     /// <summary>Gets the bound password value.</summary>
     public static string GetBoundPassword(DependencyObject obj) =>
@@ -527,6 +533,10 @@ public static class PasswordBoxBindingHelper
 
         passwordBox.SetValue(IsUpdatingProperty, true);
         SetBoundPassword(passwordBox, passwordBox.Password);
+        // WinUI 3 does not propagate attached-DP SetValue to TwoWay binding sources,
+        // so push to the field view model directly.
+        if (passwordBox.DataContext is ToolElicitationFieldViewModel vm)
+            vm.CurrentValue = passwordBox.Password;
         passwordBox.SetValue(IsUpdatingProperty, false);
     }
 }
