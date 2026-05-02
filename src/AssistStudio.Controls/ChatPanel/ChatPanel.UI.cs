@@ -1342,6 +1342,8 @@ public sealed partial class ChatPanel
                 ["diagramSavePng"] = Res.GetString("Chat_DiagramSavePng"),
                 ["diagramCopyLabel"] = Res.GetString("Chat_DiagramCopyLabel"),
                 ["diagramCopyTooltip"] = Res.GetString("Chat_DiagramCopyTooltip"),
+                ["htmlPreviewCopyTooltip"] = Res.GetString("Chat_HtmlPreviewCopyTooltip"),
+                ["jsxPreviewCopyTooltip"] = Res.GetString("Chat_JsxPreviewCopyTooltip"),
                 ["scrollToBottom"] = Res.GetString("Chat_ScrollToBottomTooltip")
             };
 

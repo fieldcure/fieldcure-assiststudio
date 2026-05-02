@@ -192,6 +192,12 @@
   <data name="Chat_DiagramCopyTooltip" xml:space="preserve">
     <value>Copy SVG source</value>
   </data>
+  <data name="Chat_HtmlPreviewCopyTooltip" xml:space="preserve">
+    <value>Copy HTML source</value>
+  </data>
+  <data name="Chat_JsxPreviewCopyTooltip" xml:space="preserve">
+    <value>Copy source</value>
+  </data>
   <data name="Chat_Seconds" xml:space="preserve">
     <value>s</value>
   </data>

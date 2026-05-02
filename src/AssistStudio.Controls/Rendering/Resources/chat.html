@@ -909,6 +909,23 @@
         max-width: 100%;
         height: auto;
     }
+    /* HTML preview: sandboxed iframe with vertical resize handle. */
+    .diagram-block .html-frame {
+        margin: 0;
+        padding: 0;
+        background: #ffffff;
+        height: 400px;
+        min-height: 120px;
+        resize: vertical;
+        overflow: hidden;
+    }
+    .diagram-block .html-frame iframe {
+        width: 100%;
+        height: 100%;
+        border: 0;
+        display: block;
+        background: #ffffff;
+    }
     .diagram-actions {
         display: flex;
         gap: 4px;
@@ -1578,8 +1595,21 @@
         // CommonMark spec: closing ** preceded by punctuation and followed by
         // CJK characters is not recognized as right-flanking delimiter.
         // Post-process any remaining **bold** and *italic* in the HTML output.
+        //
+        // Protect iframe srcdoc values first — HTML preview content has its '<'
+        // characters encoded as '&lt;', so naive '*' pairing would jump across
+        // CSS/JS code and corrupt the document fed to the iframe.
+        var srcdocStash = [];
+        html = html.replace(/(<iframe\b[^>]*?\bsrcdoc=)"([^"]*)"/gi, function(_m, prefix, value) {
+            var idx = srcdocStash.length;
+            srcdocStash.push(value);
+            return prefix + '"\x00SRCDOC' + idx + '\x00"';
+        });
         html = html.replace(/\*\*([^<]+?)\*\*/g, '<strong>$1</strong>');
         html = html.replace(/(?<!\*)\*([^<*]+?)\*(?!\*)/g, '<em>$1</em>');
+        html = html.replace(/\x00SRCDOC(\d+)\x00/g, function(_m, idx) {
+            return srcdocStash[parseInt(idx, 10)];
+        });
         return html;
     }
 
@@ -1805,7 +1835,8 @@
 
     function wireDiagramBlock(block) {
         block.setAttribute('data-bound', 'true');
-        var inner = block.querySelector('.svg-block, pre.mermaid');
+        var kind = block.getAttribute('data-kind');
+        var inner = block.querySelector('.svg-block, pre.mermaid, .html-frame');
         if (!inner) return;
 
         var btns = block.querySelectorAll('.diagram-btn');
@@ -1814,6 +1845,29 @@
                 btn.addEventListener('click', function(e) {
                     e.stopPropagation();
                     var act = btn.getAttribute('data-act');
+                    if (kind === 'html') {
+                        if (act === 'copy') {
+                            var iframe = inner.querySelector('iframe');
+                            // getAttribute returns the entity-decoded value, i.e. the original HTML.
+                            var src = iframe ? (iframe.getAttribute('srcdoc') || '') : '';
+                            window.chrome.webview.postMessage('copy-text:' + src);
+                            flashCopied(btn);
+                        }
+                        return;
+                    }
+                    if (kind === 'jsx') {
+                        if (act === 'copy') {
+                            // Original JSX source is stashed UTF-8/base64 on the block —
+                            // the iframe srcdoc holds the host shell, not the user code.
+                            var b64 = block.getAttribute('data-source-b64') || '';
+                            var src;
+                            try { src = decodeURIComponent(escape(atob(b64))); }
+                            catch (e) { src = ''; }
+                            window.chrome.webview.postMessage('copy-text:' + src);
+                            flashCopied(btn);
+                        }
+                        return;
+                    }
                     if (act === 'svg') {
                         var svg = serializeContainerSvg(inner);
                         if (svg) window.chrome.webview.postMessage('save-svg:' + svg);
@@ -1825,17 +1879,22 @@
                         var svg2 = serializeContainerSvg(inner);
                         if (!svg2) return;
                         window.chrome.webview.postMessage('copy-svg:' + svg2);
-                        var orig = btn.textContent;
-                        btn.textContent = window._L.copied || 'Copied!';
-                        btn.classList.add('copied');
-                        setTimeout(function() {
-                            btn.textContent = orig;
-                            btn.classList.remove('copied');
-                        }, 1500);
+                        flashCopied(btn);
                     }
                 });
             })(btns[i]);
         }
+    }
+
+    /// Briefly swaps the button label to the localized "Copied!" string.
+    function flashCopied(btn) {
+        var orig = btn.textContent;
+        btn.textContent = (window._L && window._L.copied) || 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(function() {
+            btn.textContent = orig;
+            btn.classList.remove('copied');
+        }, 1500);
     }
 
     /// Returns the SVG string from a diagram container, ensuring xmlns is present.

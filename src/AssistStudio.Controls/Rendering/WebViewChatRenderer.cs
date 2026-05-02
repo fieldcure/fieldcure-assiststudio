@@ -670,6 +670,8 @@ internal partial class WebViewChatRenderer
                 DiagramSvgSaveRequested?.Invoke(this, message["save-svg:".Length..]);
             else if (message?.StartsWith("copy-svg:") == true)
                 DiagramSvgCopyRequested?.Invoke(this, message["copy-svg:".Length..]);
+            else if (message?.StartsWith("copy-text:") == true)
+                CopyToClipboard(message["copy-text:".Length..]);
         }
         catch (Exception ex)
         {
@@ -860,6 +862,129 @@ internal partial class WebViewChatRenderer
                     }
                 };
 
+                // ---- JSX/TSX preview helpers ----
+                // Maps ES module imports to their UMD globals exposed by the host shell.
+                var JSX_IMPORT_MAP = {
+                    'react': 'React',
+                    'react-dom': 'ReactDOM',
+                    'react-dom/client': 'ReactDOM',
+                    'recharts': 'Recharts',
+                    'lucide-react': 'lucideReact',
+                    'd3': 'd3',
+                    'three': 'THREE',
+                    'lodash': '_',
+                    'mathjs': 'math',
+                    'papaparse': 'Papa',
+                    'chart.js': 'Chart',
+                    'tone': 'Tone'
+                };
+
+                // CDN script URLs for libraries beyond React/ReactDOM. React itself,
+                // Babel, and Tailwind are always loaded; everything here is opt-in
+                // based on what the user code actually imports.
+                var JSX_LIB_CDN = {
+                    'lucide-react': 'https://unpkg.com/lucide-react@0.383.0/dist/umd/lucide-react.min.js',
+                    'recharts':     'https://unpkg.com/recharts@2.12.7/umd/Recharts.js',
+                    'd3':           'https://unpkg.com/d3@7.9.0/dist/d3.min.js',
+                    'three':        'https://unpkg.com/three@0.128.0/build/three.min.js',
+                    'lodash':       'https://unpkg.com/lodash@4.17.21/lodash.min.js',
+                    'mathjs':       'https://unpkg.com/mathjs@13.2.0/lib/browser/math.js',
+                    'papaparse':    'https://unpkg.com/papaparse@5.4.1/papaparse.min.js',
+                    'chart.js':     'https://unpkg.com/chart.js@4.4.4/dist/chart.umd.js',
+                    'tone':         'https://unpkg.com/tone@15.0.4/build/Tone.js'
+                };
+
+                // Some UMD bundles expect React on a differently-cased global
+                // (lucide-react@0.383 looks up `window.react` rather than the
+                // canonical `window.React`). Run before any lib script.
+                var JSX_PRE_LIB_SHIM_JS =
+                    'window.react = window.React;' +
+                    'window.reactDom = window.ReactDOM;';
+
+                // After UMD libs initialize, normalize their exported globals to
+                // the names our import map expects. lucide-react@0.383 exposes
+                // `LucideReact`; older builds expose `lucide`.
+                var JSX_POST_LIB_SHIM_JS =
+                    'window.lucideReact = window.lucideReact || window.LucideReact || window.lucide;' +
+                    'window.Recharts = window.Recharts || window.recharts;' +
+                    'window.THREE = window.THREE || window.three;';
+
+                /// Rewrites `import` and `export default` so user code runs under
+                /// Babel-standalone (no ES module support) against the UMD globals
+                /// the host shell loads from CDN. Unknown imports are stripped with
+                /// a comment so Babel does not throw. Returns { code, libs } where
+                /// `libs` is the list of import sources we should load via CDN.
+                function transformJsxArtifact(src) {
+                    function mapMod(mod) { return JSX_IMPORT_MAP[mod] || null; }
+
+                    // First pass: collect every imported module that has a CDN entry.
+                    var libsSeen = {};
+                    var importScanRe = /^[ \t]*import\s+(?:[^'"]+?\s+from\s+)?['"]([^'"]+)['"];?/gm;
+                    var scan;
+                    while ((scan = importScanRe.exec(src)) !== null) {
+                        if (JSX_LIB_CDN[scan[1]]) libsSeen[scan[1]] = true;
+                    }
+                    var libs = Object.keys(libsSeen);
+
+                    // import { a, b as c } from "mod";
+                    src = src.replace(
+                        /^[ \t]*import\s*\{\s*([^}]+?)\s*\}\s*from\s*['"]([^'"]+)['"];?[ \t]*$/gm,
+                        function(_m, names, mod) {
+                            var g = mapMod(mod);
+                            if (!g) return '/* import { ' + names + " } from '" + mod + "' (unmapped, stripped) */";
+                            var dest = names.split(',').map(function(p) {
+                                p = p.trim();
+                                var asMatch = p.match(/^(\w+)\s+as\s+(\w+)$/);
+                                return asMatch ? asMatch[1] + ': ' + asMatch[2] : p;
+                            }).join(', ');
+                            return 'const { ' + dest + ' } = ' + g + ';';
+                        });
+
+                    // import * as X from "mod";
+                    src = src.replace(
+                        /^[ \t]*import\s*\*\s*as\s+(\w+)\s+from\s*['"]([^'"]+)['"];?[ \t]*$/gm,
+                        function(_m, name, mod) {
+                            var g = mapMod(mod);
+                            if (!g) return "/* import * as " + name + " from '" + mod + "' (unmapped, stripped) */";
+                            return 'const ' + name + ' = ' + g + ';';
+                        });
+
+                    // import X from "mod";
+                    src = src.replace(
+                        /^[ \t]*import\s+(\w+)\s+from\s*['"]([^'"]+)['"];?[ \t]*$/gm,
+                        function(_m, name, mod) {
+                            var g = mapMod(mod);
+                            if (!g) return "/* import " + name + " from '" + mod + "' (unmapped, stripped) */";
+                            return 'const ' + name + ' = ' + g + '.default || ' + g + ';';
+                        });
+
+                    // import "mod";  (side-effect only — drop)
+                    src = src.replace(/^[ \t]*import\s+['"][^'"]+['"];?[ \t]*$/gm, '');
+
+                    // export default function NAMED  →  named function expression on window
+                    src = src.replace(/^export\s+default\s+function(\s+\w+)?/gm,
+                        'window.__default_export = function$1');
+                    // export default class NAMED  →  named class expression on window
+                    src = src.replace(/^export\s+default\s+class(\s+\w+)?/gm,
+                        'window.__default_export = class$1');
+                    // export default IDENTIFIER;
+                    src = src.replace(/^export\s+default\s+(\w+)\s*;?[ \t]*$/gm,
+                        'window.__default_export = $1;');
+                    // export default <expr>  (arrow funcs, JSX literals, etc.)
+                    src = src.replace(/^export\s+default\s+/gm, 'window.__default_export = ');
+                    // export const / export function / etc.  →  drop the keyword
+                    src = src.replace(/^export\s+(?!default)/gm, '');
+
+                    return { code: src, libs: libs };
+                }
+
+                /// UTF-8 safe base64 encode for stashing original JSX source on a
+                /// data attribute (so the Copy button returns the verbatim source,
+                /// not the host-shell-wrapped iframe document).
+                function utf8ToBase64(str) {
+                    return btoa(unescape(encodeURIComponent(str)));
+                }
+
                 // Custom renderer: syntax-highlight code blocks via hljs
                 var renderer = new marked.Renderer();
                 renderer.code = function(token) {
@@ -900,6 +1025,93 @@ internal partial class WebViewChatRenderer
                         return '<div class="diagram-block" data-kind="svg">' +
                                 diagramHeader('svg') +
                                 '<div class="svg-block">' + sanitized + '</div>' +
+                               '</div>';
+                    }
+
+                    // HTML: render inside a sandboxed iframe (allow-scripts only —
+                    // no same-origin, so the artifact cannot reach parent DOM,
+                    // cookies, or localStorage). Scripts and styles inside the
+                    // snippet still execute against the iframe's own document.
+                    if (lang === 'html') {
+                        var L = window._L || {};
+                        var attrEscaped = code
+                            .replace(/&/g, '&amp;')
+                            .replace(/"/g, '&quot;')
+                            .replace(/</g, '&lt;')
+                            .replace(/>/g, '&gt;');
+                        var htmlHeader = '<div class="code-header">' +
+                                '<span class="code-lang">html</span>' +
+                                '<span class="diagram-actions">' +
+                                    '<button class="diagram-btn" data-act="copy" title="' + (L.htmlPreviewCopyTooltip || 'Copy HTML source') + '">' + (L.diagramCopyLabel || 'Copy') + '</button>' +
+                                '</span>' +
+                               '</div>';
+                        return '<div class="diagram-block" data-kind="html">' +
+                                htmlHeader +
+                                '<div class="html-frame">' +
+                                    '<iframe sandbox="allow-scripts" srcdoc="' + attrEscaped + '"></iframe>' +
+                                '</div>' +
+                               '</div>';
+                    }
+
+                    // JSX / TSX: wrap user code in a React + Babel + Tailwind host
+                    // shell, then render through the same sandboxed iframe pipeline
+                    // as HTML. Imports are remapped to UMD globals; `export default`
+                    // is hoisted to window.__default_export for the auto-mount.
+                    // Scripts come from public CDNs (unpkg, cdn.tailwindcss.com).
+                    if (lang === 'jsx' || lang === 'tsx') {
+                        var L2 = window._L || {};
+                        var jsxResult = transformJsxArtifact(code);
+                        var transformed = jsxResult.code;
+                        var presets = (lang === 'tsx') ? 'react,typescript' : 'react';
+                        var libScripts = jsxResult.libs.map(function(lib) {
+                            return '<script src="' + JSX_LIB_CDN[lib] + '" crossorigin></script>';
+                        }).join('');
+                        var hostHtml =
+                            '<!DOCTYPE html><html><head><meta charset="UTF-8"/>' +
+                            '<meta name="viewport" content="width=device-width,initial-scale=1.0"/>' +
+                            '<style>*,*::before,*::after{box-sizing:border-box}' +
+                            'html,body{margin:0;background:#fff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}' +
+                            '#root{min-height:100vh}' +
+                            '#__preview_error{padding:12px 16px;background:#2b1d1d;color:#ffb4b4;font:12px/1.5 ui-monospace,Consolas,monospace;white-space:pre-wrap;border-bottom:1px solid #5a2c2c}</style>' +
+                            '<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin></script>' +
+                            '<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin></script>' +
+                            '<script>' + JSX_PRE_LIB_SHIM_JS + '</script>' +
+                            '<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin></script>' +
+                            '<script src="https://cdn.tailwindcss.com"></script>' +
+                            libScripts +
+                            '<script>' + JSX_POST_LIB_SHIM_JS + '</script>' +
+                            '</head><body><div id="root"></div>' +
+                            '<script type="text/babel" data-presets="' + presets + '">\n' +
+                            transformed +
+                            '\n;(function(){' +
+                                'var c=null;' +
+                                'try{c=window.__default_export}catch(e){}' +
+                                'if(!c){try{c=App}catch(e){}}' +
+                                'if(!c){try{c=Component}catch(e){}}' +
+                                'var r=document.getElementById("root");' +
+                                'if(!c){var d=document.createElement("div");d.id="__preview_error";d.textContent="No exported component found. Define `export default ...` or a top-level `App`/`Component`.";document.body.insertBefore(d,r);return;}' +
+                                'try{ReactDOM.createRoot(r).render(React.createElement(c));}' +
+                                'catch(e){var d2=document.createElement("div");d2.id="__preview_error";d2.textContent="Render error: "+(e&&e.message||e);document.body.insertBefore(d2,r);}' +
+                            '})();' +
+                            '</script>' +
+                            '</body></html>';
+                        var attrEscaped2 = hostHtml
+                            .replace(/&/g, '&amp;')
+                            .replace(/"/g, '&quot;')
+                            .replace(/</g, '&lt;')
+                            .replace(/>/g, '&gt;');
+                        var sourceB64 = utf8ToBase64(code);
+                        var jsxHeader = '<div class="code-header">' +
+                                '<span class="code-lang">' + lang + '</span>' +
+                                '<span class="diagram-actions">' +
+                                    '<button class="diagram-btn" data-act="copy" title="' + (L2.jsxPreviewCopyTooltip || 'Copy source') + '">' + (L2.diagramCopyLabel || 'Copy') + '</button>' +
+                                '</span>' +
+                               '</div>';
+                        return '<div class="diagram-block" data-kind="jsx" data-source-b64="' + sourceB64 + '">' +
+                                jsxHeader +
+                                '<div class="html-frame">' +
+                                    '<iframe sandbox="allow-scripts" srcdoc="' + attrEscaped2 + '"></iframe>' +
+                                '</div>' +
                                '</div>';
                     }
 

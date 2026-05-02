@@ -192,6 +192,12 @@
   <data name="Chat_DiagramCopyTooltip" xml:space="preserve">
     <value>SVG 소스 복사</value>
   </data>
+  <data name="Chat_HtmlPreviewCopyTooltip" xml:space="preserve">
+    <value>HTML 소스 복사</value>
+  </data>
+  <data name="Chat_JsxPreviewCopyTooltip" xml:space="preserve">
+    <value>소스 복사</value>
+  </data>
   <data name="Chat_Seconds" xml:space="preserve">
     <value>초</value>
   </data>
