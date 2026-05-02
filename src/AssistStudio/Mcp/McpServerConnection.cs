@@ -44,7 +44,12 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
     private IReadOnlyList<McpClientTool> _mcpTools = [];
     private string? _serverVersion;
     private readonly Lock _rootsLock = new();
+    private readonly SemaphoreSlim _toolCallGate = new(1, 1);
     private List<string> _currentFolders = [];
+    private readonly Lock _elicitationPresenterLock = new();
+    private readonly List<ElicitationPresenterScope> _elicitationPresenterScopes = [];
+    private IElicitationPresenter? _activeElicitationPresenter;
+    private ElicitationPresenterScope? _activeElicitationPresenterScope;
 
     #endregion
 
@@ -109,12 +114,8 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
     /// </summary>
     public string? CurrentToolName { get; set; }
 
-    /// <summary>
-    /// Gets or sets the handler invoked when the MCP server requests user input (elicitation).
-    /// The handler receives the connection, request params, and cancellation token,
-    /// and returns an <see cref="ElicitResult"/>.
-    /// </summary>
-    public Func<McpServerConnection, ElicitRequestParams, CancellationToken, ValueTask<ElicitResult>>? ElicitationHandler { get; set; }
+    /// <summary>Gets or sets the default presenter invoked when the MCP server requests user input.</summary>
+    internal IElicitationPresenter? ElicitationPresenter { get; set; }
 
     /// <summary>
     /// Gets whether this connection uses MCP roots protocol for dynamic folder updates.
@@ -170,11 +171,11 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
             }
 
             // Elicitation capability
-            if (ElicitationHandler is not null)
+            if (ElicitationPresenter is not null)
             {
                 capabilities.Elicitation = new();
                 handlers.ElicitationHandler = (request, ct) =>
-                    ElicitationHandler(this, request!, ct);
+                    HandleElicitationAsync(request, ct);
             }
 
             var options = new McpClientOptions
@@ -207,12 +208,7 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
                     name: t.Name,
                     description: t.Description ?? string.Empty,
                     parameterSchema: t.JsonSchema.GetRawText(),
-                    executeFunc: async (args, token) =>
-                    {
-                        CurrentToolName = t.Name;
-                        try { return await InvokeMcpToolAsync(t, args, token); }
-                        finally { CurrentToolName = null; }
-                    })
+                    executeFunc: (args, token) => InvokeMcpToolAsync(t, t.Name, args, token))
                 {
                     ServerName = Config.Name,
                     OverrideRequiresConfirmation = Config.IsBuiltIn
@@ -379,37 +375,163 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
         IProgress<(double Current, double Total, string? Message)>? progress,
         CancellationToken ct = default)
     {
-        var mcpTool = _mcpTools.FirstOrDefault(t => t.Name == toolName)
-            ?? throw new InvalidOperationException($"Tool '{toolName}' not found.");
+        await _toolCallGate.WaitAsync(ct);
+        var previousToolName = CurrentToolName;
+        var previousPresenter = ActivateCurrentElicitationPresenterScope();
 
-        var argsDict = ConvertJsonArguments(arguments);
-
-        IProgress<ModelContextProtocol.ProgressNotificationValue>? mcpProgress = null;
-        if (progress is not null)
+        try
         {
-            mcpProgress = new Progress<ModelContextProtocol.ProgressNotificationValue>(value =>
+            CurrentToolName = toolName;
+
+            var mcpTool = _mcpTools.FirstOrDefault(t => t.Name == toolName)
+                ?? throw new InvalidOperationException($"Tool '{toolName}' not found.");
+
+            var argsDict = ConvertJsonArguments(arguments);
+
+            IProgress<ModelContextProtocol.ProgressNotificationValue>? mcpProgress = null;
+            if (progress is not null)
             {
-                progress.Report((value.Progress, value.Total ?? 0, value.Message));
-            });
+                mcpProgress = new Progress<ModelContextProtocol.ProgressNotificationValue>(value =>
+                {
+                    progress.Report((value.Progress, value.Total ?? 0, value.Message));
+                });
+            }
+
+            var result = await mcpTool.CallAsync(argsDict, progress: mcpProgress, cancellationToken: ct);
+            return ExtractTextResult(result);
+        }
+        finally
+        {
+            RestoreActiveElicitationPresenter(previousPresenter);
+            CurrentToolName = previousToolName;
+            _toolCallGate.Release();
+        }
+    }
+
+    /// <summary>
+    /// Pushes a temporary elicitation presenter for the current logical operation.
+    /// Dispose the returned scope to restore the previous presenter.
+    /// </summary>
+    internal ElicitationPresenterScope PushElicitationPresenter(IElicitationPresenter presenter)
+    {
+        ArgumentNullException.ThrowIfNull(presenter);
+
+        var scope = new ElicitationPresenterScope(this, presenter);
+        lock (_elicitationPresenterLock)
+        {
+            _elicitationPresenterScopes.Add(scope);
         }
 
-        var result = await mcpTool.CallAsync(argsDict, progress: mcpProgress, cancellationToken: ct);
-        return ExtractTextResult(result);
+        return scope;
     }
+
+    /// <summary>Removes a presenter scope that was previously pushed.</summary>
+    internal void PopElicitationPresenter(ElicitationPresenterScope scope)
+    {
+        lock (_elicitationPresenterLock)
+        {
+            _elicitationPresenterScopes.Remove(scope);
+        }
+    }
+
+    /// <summary>
+    /// Dispatches an MCP elicitation request to the active presenter.
+    /// </summary>
+    private async ValueTask<ElicitResult> HandleElicitationAsync(
+        ElicitRequestParams? request,
+        CancellationToken ct)
+    {
+        if (request is null)
+            return new ElicitResult { Action = "cancel" };
+
+        var (presenter, scope) = GetActiveElicitationPresenter();
+        if (presenter is null)
+            return new ElicitResult { Action = "cancel" };
+
+        var elicitationRequest = new ElicitationRequest(
+            CurrentToolName ?? Config.Name,
+            Config.Name,
+            request.Message,
+            McpElicitationMapper.ConvertSchema(request.RequestedSchema));
+
+        var result = await presenter.PresentAsync(elicitationRequest, ct);
+        if (IsElicitationCancelled(result.Action))
+            scope?.MarkCancelled();
+
+        return result;
+    }
+
+    /// <summary>Captures the top scoped presenter as active for the current tool call.</summary>
+    private (IElicitationPresenter? Presenter, ElicitationPresenterScope? Scope) ActivateCurrentElicitationPresenterScope()
+    {
+        lock (_elicitationPresenterLock)
+        {
+            var previous = (_activeElicitationPresenter, _activeElicitationPresenterScope);
+            var scope = _elicitationPresenterScopes.Count > 0
+                ? _elicitationPresenterScopes[^1]
+                : null;
+
+            _activeElicitationPresenter = scope?.Presenter;
+            _activeElicitationPresenterScope = scope;
+            return previous;
+        }
+    }
+
+    /// <summary>Restores the active presenter after a tool call completes.</summary>
+    private void RestoreActiveElicitationPresenter(
+        (IElicitationPresenter? Presenter, ElicitationPresenterScope? Scope) previous)
+    {
+        lock (_elicitationPresenterLock)
+        {
+            _activeElicitationPresenter = previous.Presenter;
+            _activeElicitationPresenterScope = previous.Scope;
+        }
+    }
+
+    /// <summary>Gets the active call presenter, or the default presenter if no scope is active.</summary>
+    private (IElicitationPresenter? Presenter, ElicitationPresenterScope? Scope) GetActiveElicitationPresenter()
+    {
+        lock (_elicitationPresenterLock)
+        {
+            return _activeElicitationPresenter is null
+                ? (ElicitationPresenter, null)
+                : (_activeElicitationPresenter, _activeElicitationPresenterScope);
+        }
+    }
+
+    /// <summary>Returns true when an elicitation result ended without accepted content.</summary>
+    private static bool IsElicitationCancelled(string? action) =>
+        string.Equals(action, "cancel", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(action, "decline", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Invokes an MCP tool and extracts both text and media content from the result.
     /// </summary>
-    private static async Task<ToolExecutionResult> InvokeMcpToolAsync(
+    private async Task<ToolExecutionResult> InvokeMcpToolAsync(
         McpClientTool mcpTool,
+        string toolName,
         JsonElement arguments,
         CancellationToken ct)
     {
-        var argsDict = ConvertJsonArguments(arguments);
-        var result = await mcpTool.CallAsync(argsDict, cancellationToken: ct);
-        var text = ExtractTextResult(result);
-        var media = ExtractMediaContents(result);
-        return new ToolExecutionResult(text, media);
+        await _toolCallGate.WaitAsync(ct);
+        var previousToolName = CurrentToolName;
+        var previousPresenter = ActivateCurrentElicitationPresenterScope();
+
+        try
+        {
+            CurrentToolName = toolName;
+            var argsDict = ConvertJsonArguments(arguments);
+            var result = await mcpTool.CallAsync(argsDict, cancellationToken: ct);
+            var text = ExtractTextResult(result);
+            var media = ExtractMediaContents(result);
+            return new ToolExecutionResult(text, media);
+        }
+        finally
+        {
+            RestoreActiveElicitationPresenter(previousPresenter);
+            CurrentToolName = previousToolName;
+            _toolCallGate.Release();
+        }
     }
 
     private static Dictionary<string, object?> ConvertJsonArguments(JsonElement arguments)

@@ -74,8 +74,12 @@ public partial class App : Application
 
         LoggingService.LogInfo("[App] Startup — services initialized");
 
-        // Wire elicitation handler before connecting MCP servers
-        McpRegistry.ElicitationHandler = HandleElicitationAsync;
+        // Wire elicitation presenter before connecting MCP servers.
+        McpRegistry.ElicitationPresenter = new ChatPanelElicitationPresenter(() =>
+        {
+            var app = (App)Current;
+            return (app.MainWindow as MainWindow)?.ViewModel.SelectedTab?.Panel;
+        });
 
         // Initialize MCP server connections (fire-and-forget, failures won't block startup)
         _ = InitializeMcpAsync();
@@ -273,138 +277,4 @@ public partial class App : Application
 
     #endregion
 
-    #region Elicitation
-
-    /// <summary>
-    /// Handles MCP server elicitation requests by routing them to the active ChatPanel.
-    /// </summary>
-    private static async ValueTask<ModelContextProtocol.Protocol.ElicitResult> HandleElicitationAsync(
-        McpServerConnection connection,
-        ModelContextProtocol.Protocol.ElicitRequestParams request,
-        CancellationToken ct)
-    {
-        var app = (App)Current;
-        var panel = (app.MainWindow as MainWindow)?.ViewModel.SelectedTab?.Panel;
-        if (panel is null)
-            return new ModelContextProtocol.Protocol.ElicitResult { Action = "cancel" };
-
-        var fields = ConvertSchema(request.RequestedSchema);
-        var toolName = connection.CurrentToolName ?? connection.Config.Name;
-        var serverName = connection.Config.Name;
-
-        // Marshal to UI thread and await panel result
-        var tcs = new TaskCompletionSource<(string Action, IDictionary<string, object?>? Content)>();
-        panel.DispatcherQueue.TryEnqueue(async () =>
-        {
-            try
-            {
-                var result = await panel.RequestElicitationAsync(toolName, serverName, request.Message, fields);
-                tcs.TrySetResult(result);
-            }
-            catch (Exception ex)
-            {
-                tcs.TrySetException(ex);
-            }
-        });
-
-        var (action, content) = await tcs.Task;
-        return ConvertToElicitResult(action, content);
-    }
-
-    /// <summary>
-    /// Converts an MCP <see cref="ModelContextProtocol.Protocol.ElicitRequestParams.RequestSchema"/>
-    /// to a list of <see cref="ElicitationFieldInfo"/> for the panel.
-    /// </summary>
-    private static List<ElicitationFieldInfo> ConvertSchema(
-        ModelContextProtocol.Protocol.ElicitRequestParams.RequestSchema? schema)
-    {
-        var fields = new List<ElicitationFieldInfo>();
-        if (schema?.Properties is null) return fields;
-
-        foreach (var (name, definition) in schema.Properties)
-        {
-            var field = definition switch
-            {
-                ModelContextProtocol.Protocol.ElicitRequestParams.UntitledSingleSelectEnumSchema enumSchema =>
-                    new ElicitationFieldInfo
-                    {
-                        Name = name,
-                        Type = ElicitationFieldType.Enum,
-                        Title = enumSchema.Title,
-                        Description = enumSchema.Description,
-                        DefaultValue = enumSchema.Default,
-                        Options = [.. enumSchema.Enum.Select(v => new ElicitationOptionInfo { Value = v, DisplayTitle = v })]
-                    },
-
-                ModelContextProtocol.Protocol.ElicitRequestParams.TitledSingleSelectEnumSchema titledSchema =>
-                    new ElicitationFieldInfo
-                    {
-                        Name = name,
-                        Type = ElicitationFieldType.Enum,
-                        Title = titledSchema.Title,
-                        Description = titledSchema.Description,
-                        DefaultValue = titledSchema.Default,
-                        Options = [.. titledSchema.OneOf.Select(o => new ElicitationOptionInfo { Value = o.Const, DisplayTitle = o.Title })]
-                    },
-
-                ModelContextProtocol.Protocol.ElicitRequestParams.BooleanSchema boolSchema =>
-                    new ElicitationFieldInfo
-                    {
-                        Name = name,
-                        Type = ElicitationFieldType.Boolean,
-                        Title = boolSchema.Title,
-                        Description = boolSchema.Description,
-                        DefaultValue = boolSchema.Default?.ToString(),
-                        Options =
-                        [
-                            new() { Value = "true", DisplayTitle = "Yes" },
-                            new() { Value = "false", DisplayTitle = "No" }
-                        ]
-                    },
-
-                // StringSchema, NumberSchema, and any unknown types → free-text input
-                _ => new ElicitationFieldInfo
-                {
-                    Name = name,
-                    Type = ElicitationFieldType.String,
-                    Title = definition.Title,
-                    Description = definition.Description,
-                }
-            };
-
-            fields.Add(field);
-        }
-
-        return fields;
-    }
-
-    /// <summary>
-    /// Converts the panel result to an MCP <see cref="ModelContextProtocol.Protocol.ElicitResult"/>.
-    /// </summary>
-    private static ModelContextProtocol.Protocol.ElicitResult ConvertToElicitResult(
-        string action, IDictionary<string, object?>? content)
-    {
-        if (action != "accept" || content is null)
-            return new ModelContextProtocol.Protocol.ElicitResult { Action = action };
-
-        var jsonContent = new Dictionary<string, System.Text.Json.JsonElement>();
-        foreach (var (key, value) in content)
-        {
-            jsonContent[key] = value switch
-            {
-                "true" => System.Text.Json.JsonSerializer.SerializeToElement(true),
-                "false" => System.Text.Json.JsonSerializer.SerializeToElement(false),
-                string s => System.Text.Json.JsonSerializer.SerializeToElement(s),
-                _ => System.Text.Json.JsonSerializer.SerializeToElement(value?.ToString() ?? "")
-            };
-        }
-
-        return new ModelContextProtocol.Protocol.ElicitResult
-        {
-            Action = "accept",
-            Content = jsonContent
-        };
-    }
-
-    #endregion
 }
