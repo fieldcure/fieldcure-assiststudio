@@ -1364,6 +1364,42 @@
   <data name="Connect_DeleteChannelConfirmMessage" xml:space="preserve">
     <value>"{0}" 채널을 삭제하시겠습니까? 저장된 설정 데이터도 함께 삭제됩니다.</value>
   </data>
+  <data name="Connect_ChannelAddSucceededTitle" xml:space="preserve">
+    <value>채널 추가됨</value>
+  </data>
+  <data name="Connect_ChannelAddSucceededMessage" xml:space="preserve">
+    <value>{0} 채널을 사용할 수 있습니다.</value>
+  </data>
+  <data name="Connect_ChannelAddFailedTitle" xml:space="preserve">
+    <value>채널 설정 실패</value>
+  </data>
+  <data name="Connect_ChannelAddCancelledTitle" xml:space="preserve">
+    <value>채널 설정 취소됨</value>
+  </data>
+  <data name="Connect_ChannelTypeSmtpCustom" xml:space="preserve">
+    <value>SMTP (사용자 지정)</value>
+  </data>
+  <data name="Connect_ChannelTypeSlack" xml:space="preserve">
+    <value>Slack</value>
+  </data>
+  <data name="Connect_ChannelTypeDiscord" xml:space="preserve">
+    <value>Discord</value>
+  </data>
+  <data name="Connect_ChannelTypeGmail" xml:space="preserve">
+    <value>Gmail</value>
+  </data>
+  <data name="Connect_ChannelTypeNaver" xml:space="preserve">
+    <value>Naver</value>
+  </data>
+  <data name="Connect_ChannelTypeTelegram" xml:space="preserve">
+    <value>Telegram</value>
+  </data>
+  <data name="Connect_ChannelTypeKakaoTalk" xml:space="preserve">
+    <value>KakaoTalk</value>
+  </data>
+  <data name="Connect_ChannelTypeMicrosoft" xml:space="preserve">
+    <value>Microsoft (Outlook)</value>
+  </data>
   <data name="ChannelDeleteConfirmDialog.Title" xml:space="preserve">
     <value>채널 삭제</value>
   </data>
@@ -1372,6 +1408,21 @@
   </data>
   <data name="ChannelDeleteConfirmDialog.CloseButtonText" xml:space="preserve">
     <value>취소</value>
+  </data>
+  <data name="ElicitationDialog_Title" xml:space="preserve">
+    <value>입력이 필요합니다</value>
+  </data>
+  <data name="ElicitationDialog_PrimaryButtonText" xml:space="preserve">
+    <value>확인</value>
+  </data>
+  <data name="ElicitationDialog_CloseButtonText" xml:space="preserve">
+    <value>취소</value>
+  </data>
+  <data name="Elicitation_Yes" xml:space="preserve">
+    <value>예</value>
+  </data>
+  <data name="Elicitation_No" xml:space="preserve">
+    <value>아니요</value>
   </data>
   <data name="Embedding_OllamaNotRunning" xml:space="preserve">
     <value>Ollama가 실행되지 않습니다. ollama serve 명령으로 시작하세요</value>

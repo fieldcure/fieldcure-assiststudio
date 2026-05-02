@@ -5,17 +5,14 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.ApplicationModel.Resources;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Text.Json;
 
 namespace AssistStudio.Controls;
 
 /// <summary>
 /// Self-contained section that displays configured Outbox messaging channels.
-/// Reads channels via the <c>list_channels</c> MCP tool. Channel additions are
-/// still delegated to the Outbox CLI setup flow; channel removal uses the
-/// Outbox MCP <c>remove_channel</c> tool and then reloads the list so the UI
-/// reflects the new channel store state.
+/// Reads and mutates channels through the Outbox MCP tools, then reloads the
+/// list so the UI reflects the new channel store state.
 /// </summary>
 public sealed partial class ChannelsSection : UserControl
 {
@@ -48,7 +45,7 @@ public sealed partial class ChannelsSection : UserControl
     {
         InitializeComponent();
         ChannelList.ItemsSource = _channels;
-        AddChannelText.Text = _loader.GetString("Connect_AddChannel") ?? "Add channel";
+        ApplyLocalizedText();
     }
 
     #endregion
@@ -81,15 +78,14 @@ public sealed partial class ChannelsSection : UserControl
     }
 
     /// <summary>
-    /// Launches the Outbox CLI in a new console window to add a channel of the
-    /// selected type, then reloads the list so the UI picks up the new entry.
+    /// Adds a channel of the selected type through the Outbox MCP server.
     /// </summary>
     private async void OnAddChannelTypeClick(object sender, RoutedEventArgs e)
     {
         if (sender is not MenuFlyoutItem item || item.Tag is not string type)
             return;
 
-        await RunCliAsync("add", type);
+        await AddChannelAsync(type);
     }
 
     /// <summary>
@@ -109,6 +105,22 @@ public sealed partial class ChannelsSection : UserControl
     #endregion
 
     #region Private Methods
+
+    /// <summary>
+    /// Applies localized text for elements referenced from code.
+    /// </summary>
+    private void ApplyLocalizedText()
+    {
+        AddChannelText.Text = _loader.GetString("Connect_AddChannel") ?? "Add channel";
+        AddSlackItem.Text = GetChannelTypeLabel("slack");
+        AddDiscordItem.Text = GetChannelTypeLabel("discord");
+        AddGmailItem.Text = GetChannelTypeLabel("gmail");
+        AddNaverItem.Text = GetChannelTypeLabel("naver");
+        AddSmtpItem.Text = GetChannelTypeLabel("smtp");
+        AddTelegramItem.Text = GetChannelTypeLabel("telegram");
+        AddKakaoItem.Text = GetChannelTypeLabel("kakaotalk");
+        AddMicrosoftItem.Text = GetChannelTypeLabel("microsoft");
+    }
 
     /// <summary>
     /// Fetches the channel list from the Outbox MCP server with connection polling.
@@ -132,6 +144,7 @@ public sealed partial class ChannelsSection : UserControl
 
             if (string.IsNullOrEmpty(resultJson))
             {
+                _channels.Clear();
                 ShowStatus(_loader.GetString("Connect_NoChannels")
                     ?? "No channels configured yet.");
                 return;
@@ -141,6 +154,7 @@ public sealed partial class ChannelsSection : UserControl
             if (!doc.RootElement.TryGetProperty("channels", out var channels)
                 || channels.GetArrayLength() == 0)
             {
+                _channels.Clear();
                 ShowStatus(_loader.GetString("Connect_NoChannels")
                     ?? "No channels configured yet.");
                 return;
@@ -188,6 +202,7 @@ public sealed partial class ChannelsSection : UserControl
             var from = channel.TryGetProperty("from", out var f) ? f.GetString() ?? "" : "";
 
             var displayType = TypeDisplayNames.TryGetValue(type, out var dn) ? dn : type;
+            displayType = ResolveDisplayType(id, type, name, displayType);
             var displayDetail = !string.IsNullOrEmpty(from) ? from : name;
 
             _channels.Add(new ChannelRowViewModel(id, displayType, displayDetail, deleteTooltip));
@@ -199,55 +214,162 @@ public sealed partial class ChannelsSection : UserControl
     }
 
     /// <summary>
-    /// Spawns the Outbox CLI (<c>dnx FieldCure.Mcp.Outbox@... &lt;command&gt; &lt;arg&gt;</c>)
-    /// in its own console window and waits for it to exit. No server reconnect
-    /// is needed afterwards: <c>ChannelStore.LoadAsync</c> reads
-    /// <c>channels.json</c> on every tool call, so the next <c>list_channels</c>
-    /// already reflects the CLI's changes.
+    /// Resolves display labels for provider-specific SMTP shortcuts.
     /// </summary>
-    private async Task RunCliAsync(string command, string arg)
+    private static string ResolveDisplayType(
+        string id,
+        string type,
+        string name,
+        string fallback)
+    {
+        if (!string.Equals(type, "smtp", StringComparison.OrdinalIgnoreCase))
+            return fallback;
+
+        if (id.StartsWith("smtp_gmail_", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(name, "Gmail", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Gmail";
+        }
+
+        if (id.StartsWith("smtp_naver_", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(name, "Naver", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Naver";
+        }
+
+        return fallback;
+    }
+
+    /// <summary>
+    /// Adds an Outbox channel by invoking the MCP <c>add_channel</c> tool.
+    /// </summary>
+    private async Task AddChannelAsync(string type)
     {
         AddChannelButton.IsEnabled = false;
+        StatusText.Visibility = Visibility.Collapsed;
+        ElicitationPresenterScope? presenterScope = null;
 
         try
         {
-            var (_, prefixArgs) = BuiltInServerHelper.GetLaunchSpec(BuiltInServerHelper.OutboxKey);
-            if (prefixArgs.Length == 0)
+            var conn = await WaitForOutboxAsync();
+            if (conn is null)
             {
-                LoggingService.LogError("[Outbox] No launch spec available for Outbox CLI");
+                PostChannelAddFailed(
+                    GetChannelTypeLabel(type),
+                    _loader.GetString("Connect_OutboxNotConnected") ?? "Unable to load channels");
                 return;
             }
 
-            // UseShellExecute=true honors PATHEXT so "dnx" resolves to dnx.cmd,
-            // and the .cmd shim opens its own console window for interactive prompts.
-            var args = string.Join(' ', prefixArgs) + $" {command} {arg}";
-            var psi = new ProcessStartInfo
+            using var argsDoc = JsonDocument.Parse(JsonSerializer.Serialize(new { type }));
+            if (XamlRoot is null)
             {
-                FileName = "dnx",
-                Arguments = args,
-                UseShellExecute = true,
-            };
-
-            using var process = Process.Start(psi);
-            if (process is null)
-            {
-                LoggingService.LogError($"[Outbox] Failed to launch CLI for '{command} {arg}'");
+                PostChannelAddFailed(
+                    GetChannelTypeLabel(type),
+                    _loader.GetString("Connect_OutboxNotConnected") ?? "Unable to load channels");
                 return;
             }
 
-            await process.WaitForExitAsync();
-            LoggingService.LogInfo($"[Outbox] CLI '{command} {arg}' exited with code {process.ExitCode}");
+            presenterScope = conn.PushElicitationPresenter(
+                new DialogElicitationPresenter(XamlRoot, DispatcherQueue));
 
+            var resultJson = await conn.CallToolWithProgressAsync(
+                "add_channel", argsDoc.RootElement, null, CancellationToken.None);
+
+            if (!IsOkResult(resultJson, out var error))
+            {
+                LoggingService.LogError($"[Outbox] add_channel failed for '{type}': {error}");
+                if (presenterScope.WasCancelled)
+                {
+                    PostChannelAddCancelled(GetChannelTypeLabel(type));
+                    return;
+                }
+
+                PostChannelAddFailed(
+                    GetChannelTypeLabel(type),
+                    error ?? (_loader.GetString("Connect_OutboxNotConnected")
+                        ?? "Unable to load channels"));
+                return;
+            }
+
+            LoggingService.LogInfo($"[Outbox] Channel added via MCP: {type}");
             await ReloadAsync();
+            PostChannelAddSucceeded(GetChannelTypeLabel(type));
+        }
+        catch (OperationCanceledException)
+        {
+            PostChannelAddCancelled(GetChannelTypeLabel(type));
         }
         catch (Exception ex)
         {
-            LoggingService.LogError($"[Outbox] CLI spawn failed: {ex.Message}");
+            LoggingService.LogError($"[Outbox] add_channel failed: {ex.Message}");
+            if (presenterScope?.WasCancelled == true)
+            {
+                PostChannelAddCancelled(GetChannelTypeLabel(type));
+                return;
+            }
+
+            PostChannelAddFailed(GetChannelTypeLabel(type), ex.Message);
         }
         finally
         {
+            presenterScope?.Dispose();
             AddChannelButton.IsEnabled = true;
         }
+    }
+
+    /// <summary>
+    /// Posts a success notification after a channel is added.
+    /// </summary>
+    private void PostChannelAddSucceeded(string channelType)
+    {
+        NotificationCenter.Instance.Post(
+            InfoBarSeverity.Success,
+            _loader.GetString("Connect_ChannelAddSucceededTitle") ?? "Channel added",
+            string.Format(
+                _loader.GetString("Connect_ChannelAddSucceededMessage")
+                    ?? "{0} channel is ready.",
+                channelType));
+    }
+
+    /// <summary>
+    /// Posts a cancellation notification after channel setup exits.
+    /// </summary>
+    private void PostChannelAddCancelled(string channelType)
+    {
+        NotificationCenter.Instance.Post(
+            InfoBarSeverity.Informational,
+            _loader.GetString("Connect_ChannelAddCancelledTitle") ?? "Channel setup cancelled",
+            channelType);
+    }
+
+    /// <summary>
+    /// Posts a failure notification after channel setup exits.
+    /// </summary>
+    private void PostChannelAddFailed(string channelType, string message)
+    {
+        NotificationCenter.Instance.Post(
+            InfoBarSeverity.Error,
+            _loader.GetString("Connect_ChannelAddFailedTitle") ?? "Channel setup failed",
+            message);
+    }
+
+    /// <summary>
+    /// Returns a localized display label for an add-channel menu type.
+    /// </summary>
+    private string GetChannelTypeLabel(string type)
+    {
+        return type.ToLowerInvariant() switch
+        {
+            "slack" => _loader.GetString("Connect_ChannelTypeSlack") ?? "Slack",
+            "discord" => _loader.GetString("Connect_ChannelTypeDiscord") ?? "Discord",
+            "gmail" => _loader.GetString("Connect_ChannelTypeGmail") ?? "Gmail",
+            "naver" => _loader.GetString("Connect_ChannelTypeNaver") ?? "Naver",
+            "smtp" => _loader.GetString("Connect_ChannelTypeSmtpCustom") ?? "SMTP (custom)",
+            "telegram" => _loader.GetString("Connect_ChannelTypeTelegram") ?? "Telegram",
+            "kakaotalk" => _loader.GetString("Connect_ChannelTypeKakaoTalk") ?? "KakaoTalk",
+            "microsoft" => _loader.GetString("Connect_ChannelTypeMicrosoft") ?? "Microsoft (Outlook)",
+            _ => type,
+        };
     }
 
     /// <summary>
@@ -265,13 +387,14 @@ public sealed partial class ChannelsSection : UserControl
     private async Task RemoveChannelAsync(string channelId)
     {
         AddChannelButton.IsEnabled = false;
+        StatusText.Visibility = Visibility.Collapsed;
 
         try
         {
             var conn = await WaitForOutboxAsync();
             if (conn is null)
             {
-                ShowStatus(_loader.GetString("Connect_OutboxNotConnected")
+                ShowActionStatus(_loader.GetString("Connect_OutboxNotConnected")
                     ?? "Unable to load channels");
                 return;
             }
@@ -283,7 +406,7 @@ public sealed partial class ChannelsSection : UserControl
             if (!IsOkResult(resultJson, out var error))
             {
                 LoggingService.LogError($"[Outbox] remove_channel failed for '{channelId}': {error}");
-                ShowStatus(error ?? (_loader.GetString("Connect_OutboxNotConnected")
+                ShowActionStatus(error ?? (_loader.GetString("Connect_OutboxNotConnected")
                     ?? "Unable to load channels"));
                 return;
             }
@@ -294,7 +417,7 @@ public sealed partial class ChannelsSection : UserControl
         catch (Exception ex)
         {
             LoggingService.LogError($"[Outbox] remove_channel failed: {ex.Message}");
-            ShowStatus(_loader.GetString("Connect_OutboxNotConnected")
+            ShowActionStatus(_loader.GetString("Connect_OutboxNotConnected")
                 ?? "Unable to load channels");
         }
         finally
@@ -353,6 +476,19 @@ public sealed partial class ChannelsSection : UserControl
     {
         LoadingPanel.Visibility = Visibility.Collapsed;
         ChannelList.Visibility = Visibility.Collapsed;
+        StatusText.Text = message;
+        StatusText.Visibility = Visibility.Visible;
+    }
+
+    /// <summary>
+    /// Shows a non-blocking add/remove status while preserving the current list.
+    /// </summary>
+    private void ShowActionStatus(string message)
+    {
+        LoadingPanel.Visibility = Visibility.Collapsed;
+        ChannelList.Visibility = _channels.Count > 0
+            ? Visibility.Visible
+            : Visibility.Collapsed;
         StatusText.Text = message;
         StatusText.Visibility = Visibility.Visible;
     }

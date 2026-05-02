@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<local:ThemedContentDialog
+    x:Class="AssistStudio.Controls.Dialogs.ElicitationDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:FieldCure.AssistStudio.Controls"
+    xmlns:local="using:AssistStudio.Controls.Dialogs"
+    Title="Input required"
+    MinWidth="520"
+    PrimaryButtonText="OK"
+    CloseButtonText="Cancel"
+    DefaultButton="Primary"
+    PrimaryButtonClick="OnPrimaryButtonClick">
+
+    <Grid>
+        <controls:ToolElicitationPanel
+            x:Name="ElicitationPanel"
+            Visibility="Visible"
+            SubmitMode="Explicit" />
+    </Grid>
+</local:ThemedContentDialog>
