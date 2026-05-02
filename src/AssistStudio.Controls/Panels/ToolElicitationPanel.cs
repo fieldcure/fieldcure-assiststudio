@@ -12,9 +12,8 @@ using System.Windows.Input;
 namespace FieldCure.AssistStudio.Controls;
 
 /// <summary>
-/// An inline panel that replaces the ComposeBar when an MCP server requests
-/// user input via elicitation. Renders enum/boolean fields as clickable option
-/// buttons and string fields with text inputs.
+/// A panel that renders MCP elicitation UI. In conversations it replaces the
+/// ComposeBar inline; dialog hosts can reuse it with explicit submit mode.
 /// </summary>
 public sealed partial class ToolElicitationPanel : Control
 {
@@ -44,6 +43,12 @@ public sealed partial class ToolElicitationPanel : Control
             typeof(ToolElicitationPanel),
             new PropertyMetadata(null, OnFieldsChanged));
 
+    /// <summary>Identifies the <see cref="SubmitMode"/> dependency property.</summary>
+    public static readonly DependencyProperty SubmitModeProperty =
+        DependencyProperty.Register(nameof(SubmitMode), typeof(ElicitationSubmitMode),
+            typeof(ToolElicitationPanel),
+            new PropertyMetadata(ElicitationSubmitMode.Inline, OnSubmitModeChanged));
+
     /// <summary>Gets or sets the tool name displayed in the header.</summary>
     public string ToolName
     {
@@ -72,6 +77,13 @@ public sealed partial class ToolElicitationPanel : Control
         set => SetValue(FieldsProperty, value);
     }
 
+    /// <summary>Gets or sets whether the panel or its host owns submit/cancel actions.</summary>
+    public ElicitationSubmitMode SubmitMode
+    {
+        get => (ElicitationSubmitMode)GetValue(SubmitModeProperty);
+        set => SetValue(SubmitModeProperty, value);
+    }
+
     #endregion
 
     #region Events
@@ -97,12 +109,14 @@ public sealed partial class ToolElicitationPanel : Control
     private Border? _serverBadge;
     private TextBlock? _serverBadgeText;
     private ItemsControl? _fieldsPanel;
+    private FrameworkElement? _actionPanel;
     private Button? _declineButton;
     private Button? _submitButton;
     private string _declineLabel = "Skip";
     private string _submitLabel = "Submit";
     private string _promptTemplate = "{0} requires input";
     private bool _isMultiField;
+    private bool _hasManualSubmitField;
 
     /// <summary>Projection of elicitation fields into XAML-friendly field view models.</summary>
     private readonly ObservableCollection<ToolElicitationFieldViewModel> _fieldItems = [];
@@ -136,6 +150,7 @@ public sealed partial class ToolElicitationPanel : Control
         _serverBadge = GetTemplateChild("PART_ServerBadge") as Border;
         _serverBadgeText = GetTemplateChild("PART_ServerBadgeText") as TextBlock;
         _fieldsPanel = GetTemplateChild("PART_FieldsPanel") as ItemsControl;
+        _actionPanel = GetTemplateChild("PART_ActionPanel") as FrameworkElement;
         _declineButton = GetTemplateChild("PART_DeclineButton") as Button;
         _submitButton = GetTemplateChild("PART_SubmitButton") as Button;
 
@@ -178,6 +193,23 @@ public sealed partial class ToolElicitationPanel : Control
 
     #endregion
 
+    #region Public Methods
+
+    /// <summary>Validates the current field values before a host-owned submit.</summary>
+    public bool TryValidate() => true;
+
+    /// <summary>Collects current field values without raising panel events.</summary>
+    public IDictionary<string, object?> GetContent()
+    {
+        var content = new Dictionary<string, object?>();
+        foreach (var field in _fieldItems)
+            content[field.Name] = field.CurrentValue;
+
+        return content;
+    }
+
+    #endregion
+
     #region Private Methods
 
     /// <summary>Handles the Skip button click by raising <see cref="Declined"/>.</summary>
@@ -191,11 +223,8 @@ public sealed partial class ToolElicitationPanel : Control
     /// <summary>Collects the current values from all projected field view models and submits them.</summary>
     private void SubmitAllFields()
     {
-        var content = new Dictionary<string, object?>();
-        foreach (var field in _fieldItems)
-            content[field.Name] = field.CurrentValue;
-
-        Submitted?.Invoke(this, content);
+        if (TryValidate())
+            Submitted?.Invoke(this, GetContent());
     }
 
     /// <summary>Updates the prompt text shown in the header.</summary>
@@ -322,7 +351,7 @@ public sealed partial class ToolElicitationPanel : Control
         foreach (var option in field.Options)
             option.IsSelected = option.Value == value;
 
-        if (_isMultiField)
+        if (_isMultiField || SubmitMode is ElicitationSubmitMode.Explicit)
             return;
 
         var content = new Dictionary<string, object?> { [field.Name] = value };
@@ -332,8 +361,26 @@ public sealed partial class ToolElicitationPanel : Control
     /// <summary>Determines whether the Submit button should be visible.</summary>
     private void UpdateSubmitVisibility(bool hasManualSubmitField)
     {
+        _hasManualSubmitField = hasManualSubmitField;
+        UpdateActionPanelVisibility();
+    }
+
+    /// <summary>Applies the inline-action visibility setting to the action row.</summary>
+    private void UpdateActionPanelVisibility()
+    {
+        if (_actionPanel is not null)
+        {
+            _actionPanel.Visibility = SubmitMode is ElicitationSubmitMode.Inline
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+
         if (_submitButton is not null)
-            _submitButton.Visibility = hasManualSubmitField ? Visibility.Visible : Visibility.Collapsed;
+        {
+            _submitButton.Visibility = SubmitMode is ElicitationSubmitMode.Inline && _hasManualSubmitField
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
     }
 
     /// <summary>
@@ -395,6 +442,12 @@ public sealed partial class ToolElicitationPanel : Control
     private static void OnFieldsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is ToolElicitationPanel panel) panel.RenderFields();
+    }
+
+    /// <summary>Callback when <see cref="SubmitMode"/> changes.</summary>
+    private static void OnSubmitModeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ToolElicitationPanel panel) panel.UpdateActionPanelVisibility();
     }
 
     #endregion
@@ -624,6 +677,16 @@ public enum ToolElicitationFieldKind
 
     /// <summary>Masked password-style input.</summary>
     Password,
+}
+
+/// <summary>Determines whether elicitation submission is handled inline or by a host dialog.</summary>
+public enum ElicitationSubmitMode
+{
+    /// <summary>The panel shows and owns its built-in action buttons.</summary>
+    Inline,
+
+    /// <summary>The host owns submit/cancel actions and the panel only renders fields.</summary>
+    Explicit,
 }
 
 /// <summary>Minimal command wrapper for invoking a provided delegate from XAML.</summary>

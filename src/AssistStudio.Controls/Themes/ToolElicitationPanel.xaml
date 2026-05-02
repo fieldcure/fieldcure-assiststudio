@@ -183,6 +183,7 @@
 
                             <!-- Row 3: Action buttons -->
                             <StackPanel
+                                x:Name="PART_ActionPanel"
                                 Grid.Row="3" Orientation="Horizontal"
                                 HorizontalAlignment="Right" Spacing="8">
                                 <Button
