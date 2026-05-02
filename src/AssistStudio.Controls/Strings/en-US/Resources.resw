@@ -198,6 +198,12 @@
   <data name="Chat_JsxPreviewCopyTooltip" xml:space="preserve">
     <value>Copy source</value>
   </data>
+  <data name="Chat_PreviewToggle" xml:space="preserve">
+    <value>Preview</value>
+  </data>
+  <data name="Chat_CodeToggle" xml:space="preserve">
+    <value>Code</value>
+  </data>
   <data name="Chat_Seconds" xml:space="preserve">
     <value>s</value>
   </data>

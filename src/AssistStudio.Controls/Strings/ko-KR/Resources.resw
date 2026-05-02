@@ -198,6 +198,12 @@
   <data name="Chat_JsxPreviewCopyTooltip" xml:space="preserve">
     <value>소스 복사</value>
   </data>
+  <data name="Chat_PreviewToggle" xml:space="preserve">
+    <value>미리보기</value>
+  </data>
+  <data name="Chat_CodeToggle" xml:space="preserve">
+    <value>코드</value>
+  </data>
   <data name="Chat_Seconds" xml:space="preserve">
     <value>초</value>
   </data>

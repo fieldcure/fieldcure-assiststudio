@@ -991,6 +991,24 @@ internal partial class WebViewChatRenderer
                     var code = token.text || '';
                     var lang = (token.lang || '').trim();
 
+                    // Header used by HTML/JSX preview blocks: a Preview/Code
+                    // segmented toggle plus a Copy button. The block-level
+                    // attribute data-view drives which child (.html-frame or
+                    // .code-view) is visible — see chat.html CSS.
+                    function previewHeader(label, copyTooltip) {
+                        var L = window._L || {};
+                        return '<div class="code-header">' +
+                                '<span class="code-lang">' + label + '</span>' +
+                                '<span class="diagram-actions">' +
+                                    '<span class="view-toggle-group">' +
+                                        '<button class="diagram-btn view-toggle-btn active" data-view="preview">' + (L.previewToggleLabel || 'Preview') + '</button>' +
+                                        '<button class="diagram-btn view-toggle-btn" data-view="code">' + (L.codeToggleLabel || 'Code') + '</button>' +
+                                    '</span>' +
+                                    '<button class="diagram-btn" data-act="copy" title="' + copyTooltip + '">' + (L.diagramCopyLabel || 'Copy') + '</button>' +
+                                '</span>' +
+                               '</div>';
+                    }
+
                     // Diagram blocks (Mermaid / SVG): wrap with the same .code-header
                     // structure as code blocks so the SVG/PNG/Copy actions feel native.
                     function diagramHeader(label) {
@@ -1039,17 +1057,15 @@ internal partial class WebViewChatRenderer
                             .replace(/"/g, '&quot;')
                             .replace(/</g, '&lt;')
                             .replace(/>/g, '&gt;');
-                        var htmlHeader = '<div class="code-header">' +
-                                '<span class="code-lang">html</span>' +
-                                '<span class="diagram-actions">' +
-                                    '<button class="diagram-btn" data-act="copy" title="' + (L.htmlPreviewCopyTooltip || 'Copy HTML source') + '">' + (L.diagramCopyLabel || 'Copy') + '</button>' +
-                                '</span>' +
-                               '</div>';
-                        return '<div class="diagram-block" data-kind="html">' +
-                                htmlHeader +
+                        var htmlHl;
+                        try { htmlHl = hljs.highlight(code, { language: 'html' }).value; }
+                        catch(e) { htmlHl = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+                        return '<div class="diagram-block" data-kind="html" data-view="preview">' +
+                                previewHeader('html', L.htmlPreviewCopyTooltip || 'Copy HTML source') +
                                 '<div class="html-frame">' +
                                     '<iframe sandbox="allow-scripts" srcdoc="' + attrEscaped + '"></iframe>' +
                                 '</div>' +
+                                '<pre class="code-view"><code class="hljs language-html">' + htmlHl + '</code></pre>' +
                                '</div>';
                     }
 
@@ -1058,21 +1074,83 @@ internal partial class WebViewChatRenderer
                     // as HTML. Imports are remapped to UMD globals; `export default`
                     // is hoisted to window.__default_export for the auto-mount.
                     // Scripts come from public CDNs (unpkg, cdn.tailwindcss.com).
+                    //
+                    // Babel runs programmatically (not auto via type="text/babel")
+                    // so we can catch parse/transform errors and surface them in
+                    // the on-iframe error banner instead of silently failing.
                     if (lang === 'jsx' || lang === 'tsx') {
                         var L2 = window._L || {};
                         var jsxResult = transformJsxArtifact(code);
-                        var transformed = jsxResult.code;
+                        var transformedB64 = utf8ToBase64(jsxResult.code);
                         var presets = (lang === 'tsx') ? 'react,typescript' : 'react';
                         var libScripts = jsxResult.libs.map(function(lib) {
                             return '<script src="' + JSX_LIB_CDN[lib] + '" crossorigin></script>';
                         }).join('');
+
+                        // Installed first so it can capture script load failures
+                        // (script.onerror bubbles via capture phase) and any
+                        // runtime/promise errors, including ones in CDN libs.
+                        var errorInfraJs =
+                            '(function(){' +
+                                'var buf=[];' +
+                                'window.__showPreviewError=function(m){' +
+                                    'if(!document.body){buf.push(m);return;}' +
+                                    'var d=document.getElementById("__preview_error");' +
+                                    'if(!d){d=document.createElement("div");d.id="__preview_error";' +
+                                        'var r=document.getElementById("root");' +
+                                        'document.body.insertBefore(d,r||document.body.firstChild);}' +
+                                    'd.appendChild(document.createTextNode(m+"\\n"));' +
+                                '};' +
+                                'window.addEventListener("error",function(e){' +
+                                    'if(e.target&&(e.target.tagName==="SCRIPT"||e.target.tagName==="LINK"))' +
+                                        'window.__showPreviewError("Failed to load: "+(e.target.src||e.target.href));' +
+                                    'else ' +
+                                        'window.__showPreviewError((e.message||"Error")+(e.filename?" @ "+e.filename+":"+e.lineno:""));' +
+                                '},true);' +
+                                'window.addEventListener("unhandledrejection",function(e){' +
+                                    'var r=e.reason;window.__showPreviewError("Unhandled promise rejection: "+(r&&r.message||r));' +
+                                '});' +
+                                'document.addEventListener("DOMContentLoaded",function(){' +
+                                    'while(buf.length)window.__showPreviewError(buf.shift());' +
+                                '});' +
+                            '})();';
+
+                        var bootstrapJs =
+                            'document.addEventListener("DOMContentLoaded",function(){' +
+                                'var b64=document.documentElement.getAttribute("data-jsx-source");' +
+                                'var presets=(document.documentElement.getAttribute("data-jsx-presets")||"react").split(",");' +
+                                'var src;try{src=decodeURIComponent(escape(atob(b64)));}' +
+                                'catch(e){window.__showPreviewError("Failed to decode source: "+e.message);return;}' +
+                                'if(typeof Babel==="undefined"){window.__showPreviewError("Babel did not load (check network access to unpkg.com).");return;}' +
+                                'if(typeof React==="undefined"||typeof ReactDOM==="undefined"){window.__showPreviewError("React or ReactDOM did not load.");return;}' +
+                                'var jsCode;try{jsCode=Babel.transform(src,{presets:presets}).code;}' +
+                                'catch(e){var loc=e.loc?" (line "+e.loc.line+", col "+e.loc.column+")":"";' +
+                                    'window.__showPreviewError("JSX/Babel parse: "+(e.message||e)+loc);return;}' +
+                                'var fn;try{fn=new Function(jsCode+"\\n;return (window.__default_export||(typeof App!==\\"undefined\\"?App:null)||(typeof Component!==\\"undefined\\"?Component:null));");}' +
+                                'catch(e){window.__showPreviewError("Compile: "+(e.message||e));return;}' +
+                                'var c;try{c=fn();}' +
+                                'catch(e){window.__showPreviewError("Script error: "+(e.message||e)+(e.stack?"\\n\\n"+e.stack:""));return;}' +
+                                'if(!c){window.__showPreviewError("No exported component found. Define `export default ...` or a top-level function `App`/`Component`.");return;}' +
+                                'try{ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(c));}' +
+                                'catch(e){window.__showPreviewError("Render: "+(e.message||e)+(e.stack?"\\n\\n"+e.stack:""));}' +
+                            '});';
+
+                        // Forward parent chat.html theme so the iframe's default
+                        // scrollbars (and any system-default surfaces) match. Set
+                        // at render time only; if the user later flips the theme,
+                        // existing iframes keep their original color-scheme until
+                        // re-rendered.
+                        var parentTheme = (document.documentElement.getAttribute('data-theme') === 'dark') ? 'dark' : 'light';
                         var hostHtml =
-                            '<!DOCTYPE html><html><head><meta charset="UTF-8"/>' +
+                            '<!DOCTYPE html><html data-theme="' + parentTheme + '" data-jsx-source="' + transformedB64 + '" data-jsx-presets="' + presets + '">' +
+                            '<head><meta charset="UTF-8"/>' +
                             '<meta name="viewport" content="width=device-width,initial-scale=1.0"/>' +
                             '<style>*,*::before,*::after{box-sizing:border-box}' +
-                            'html,body{margin:0;background:#fff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}' +
+                            'html{color-scheme:' + parentTheme + '}' +
+                            'html,body{margin:0;background:' + (parentTheme === 'dark' ? '#1e1e1e' : '#ffffff') + ';font-family:system-ui,-apple-system,Segoe UI,sans-serif}' +
                             '#root{min-height:100vh}' +
-                            '#__preview_error{padding:12px 16px;background:#2b1d1d;color:#ffb4b4;font:12px/1.5 ui-monospace,Consolas,monospace;white-space:pre-wrap;border-bottom:1px solid #5a2c2c}</style>' +
+                            '#__preview_error{padding:10px 14px;background:#2b1d1d;color:#ffb4b4;font:12px/1.5 ui-monospace,Consolas,monospace;white-space:pre-wrap;border-bottom:1px solid #5a2c2c}</style>' +
+                            '<script>' + errorInfraJs + '</script>' +
                             '<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin></script>' +
                             '<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin></script>' +
                             '<script>' + JSX_PRE_LIB_SHIM_JS + '</script>' +
@@ -1081,19 +1159,7 @@ internal partial class WebViewChatRenderer
                             libScripts +
                             '<script>' + JSX_POST_LIB_SHIM_JS + '</script>' +
                             '</head><body><div id="root"></div>' +
-                            '<script type="text/babel" data-presets="' + presets + '">\n' +
-                            transformed +
-                            '\n;(function(){' +
-                                'var c=null;' +
-                                'try{c=window.__default_export}catch(e){}' +
-                                'if(!c){try{c=App}catch(e){}}' +
-                                'if(!c){try{c=Component}catch(e){}}' +
-                                'var r=document.getElementById("root");' +
-                                'if(!c){var d=document.createElement("div");d.id="__preview_error";d.textContent="No exported component found. Define `export default ...` or a top-level `App`/`Component`.";document.body.insertBefore(d,r);return;}' +
-                                'try{ReactDOM.createRoot(r).render(React.createElement(c));}' +
-                                'catch(e){var d2=document.createElement("div");d2.id="__preview_error";d2.textContent="Render error: "+(e&&e.message||e);document.body.insertBefore(d2,r);}' +
-                            '})();' +
-                            '</script>' +
+                            '<script>' + bootstrapJs + '</script>' +
                             '</body></html>';
                         var attrEscaped2 = hostHtml
                             .replace(/&/g, '&amp;')
@@ -1101,17 +1167,18 @@ internal partial class WebViewChatRenderer
                             .replace(/</g, '&lt;')
                             .replace(/>/g, '&gt;');
                         var sourceB64 = utf8ToBase64(code);
-                        var jsxHeader = '<div class="code-header">' +
-                                '<span class="code-lang">' + lang + '</span>' +
-                                '<span class="diagram-actions">' +
-                                    '<button class="diagram-btn" data-act="copy" title="' + (L2.jsxPreviewCopyTooltip || 'Copy source') + '">' + (L2.diagramCopyLabel || 'Copy') + '</button>' +
-                                '</span>' +
-                               '</div>';
-                        return '<div class="diagram-block" data-kind="jsx" data-source-b64="' + sourceB64 + '">' +
-                                jsxHeader +
+                        var jsxHl;
+                        try { jsxHl = hljs.highlight(code, { language: lang }).value; }
+                        catch(e) {
+                            try { jsxHl = hljs.highlight(code, { language: 'javascript' }).value; }
+                            catch(e2) { jsxHl = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+                        }
+                        return '<div class="diagram-block" data-kind="jsx" data-view="preview" data-source-b64="' + sourceB64 + '">' +
+                                previewHeader(lang, L2.jsxPreviewCopyTooltip || 'Copy source') +
                                 '<div class="html-frame">' +
                                     '<iframe sandbox="allow-scripts" srcdoc="' + attrEscaped2 + '"></iframe>' +
                                 '</div>' +
+                                '<pre class="code-view"><code class="hljs language-' + lang + '">' + jsxHl + '</code></pre>' +
                                '</div>';
                     }
 

@@ -926,6 +926,48 @@
         display: block;
         background: #ffffff;
     }
+    /* Code view: shown when [data-view="code"]. Reuses hljs styling from
+       regular code blocks but capped so a long artifact does not blow out
+       the chat scroll. */
+    .diagram-block .code-view {
+        margin: 0;
+        max-height: 400px;
+        overflow: auto;
+        background: var(--code-bg);
+    }
+    .diagram-block .code-view code.hljs {
+        display: block;
+        padding: 12px 14px;
+        font: 12px/1.55 ui-monospace, Consolas, 'Cascadia Code', monospace;
+        background: transparent;
+    }
+    .diagram-block[data-view="preview"] .code-view { display: none; }
+    .diagram-block[data-view="code"] .html-frame { display: none; }
+
+    /* Segmented Preview/Code toggle inside the diagram header. */
+    .view-toggle-group {
+        display: inline-flex;
+        gap: 0;
+        margin-right: 4px;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    .view-toggle-group .view-toggle-btn {
+        border-radius: 0;
+        padding: 3px 10px;
+        background: var(--copy-btn-bg);
+        opacity: 0.65;
+    }
+    .view-toggle-group .view-toggle-btn:hover {
+        opacity: 1;
+    }
+    .view-toggle-group .view-toggle-btn.active {
+        background: var(--copy-btn-hover);
+        opacity: 1;
+    }
+    .view-toggle-group .view-toggle-btn + .view-toggle-btn {
+        border-left: 1px solid var(--code-border);
+    }
     .diagram-actions {
         display: flex;
         gap: 4px;
@@ -1235,6 +1277,10 @@
         pres.forEach(function(pre) {
             const code = pre.querySelector('code');
             if (!code) return;
+            // Skip pre elements that already live inside a diagram-block —
+            // those (.code-view inside HTML/JSX previews) are wired to the
+            // block's own header (Preview/Code toggle + Copy).
+            if (pre.closest('.diagram-block')) return;
 
             // Detect language from class
             var lang = '';
@@ -1258,17 +1304,12 @@
             wrapper.appendChild(header);
             wrapper.appendChild(pre);
 
-            // Copy button handler
+            // Copy button handler — flashCopied gives the unified visual state.
             var btn = header.querySelector('.copy-btn');
             btn.addEventListener('click', function() {
                 var text = code.textContent || '';
                 window.chrome.webview.postMessage('copy:' + text);
-                btn.textContent = window._L.copied;
-                btn.classList.add('copied');
-                setTimeout(function() {
-                    btn.textContent = window._L.copy;
-                    btn.classList.remove('copied');
-                }, 1500);
+                flashCopied(btn);
             });
         });
     }
@@ -1372,17 +1413,7 @@
         } else {
             window.chrome.webview.postMessage('copyImageUrl:' + imgEl.src);
         }
-        if (btn) flashCopyBtn(btn);
-    }
-
-    function flashCopyBtn(btn) {
-        var orig = btn.textContent;
-        btn.textContent = window._L.copied || 'Copied!';
-        btn.classList.add('copied');
-        setTimeout(function() {
-            btn.textContent = orig;
-            btn.classList.remove('copied');
-        }, 1500);
+        if (btn) flashCopied(btn);
     }
 
     function showImageToast(message) {
@@ -1839,7 +1870,22 @@
         var inner = block.querySelector('.svg-block, pre.mermaid, .html-frame');
         if (!inner) return;
 
-        var btns = block.querySelectorAll('.diagram-btn');
+        // Preview/Code segmented toggle (HTML and JSX blocks only)
+        var toggleBtns = block.querySelectorAll('.view-toggle-btn');
+        for (var t = 0; t < toggleBtns.length; t++) {
+            (function(tb) {
+                tb.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    var v = tb.getAttribute('data-view');
+                    block.setAttribute('data-view', v);
+                    for (var u = 0; u < toggleBtns.length; u++) {
+                        toggleBtns[u].classList.toggle('active', toggleBtns[u] === tb);
+                    }
+                });
+            })(toggleBtns[t]);
+        }
+
+        var btns = block.querySelectorAll('.diagram-btn:not(.view-toggle-btn)');
         for (var i = 0; i < btns.length; i++) {
             (function(btn) {
                 btn.addEventListener('click', function(e) {
@@ -1886,16 +1932,9 @@
         }
     }
 
-    /// Briefly swaps the button label to the localized "Copied!" string.
-    function flashCopied(btn) {
-        var orig = btn.textContent;
-        btn.textContent = (window._L && window._L.copied) || 'Copied!';
-        btn.classList.add('copied');
-        setTimeout(function() {
-            btn.textContent = orig;
-            btn.classList.remove('copied');
-        }, 1500);
-    }
+    // (single canonical flashCopied lives further down — the wireDiagramBlock
+    // path calls it by name; declaring it here too would override the canonical
+    // version due to JS hoisting order.)
 
     /// Returns the SVG string from a diagram container, ensuring xmlns is present.
     function serializeContainerSvg(container) {
@@ -1960,9 +1999,12 @@
         return btn;
     }
 
+    /// Canonical copy-feedback flasher: swaps the button label to the
+    /// localized "Copied!" string in green, then restores after 1.5s.
+    /// Used by every Copy button (image, code block, mermaid/svg/html/jsx).
     function flashCopied(btn) {
         var orig = btn.textContent;
-        btn.textContent = '\uE73E';
+        btn.textContent = (window._L && window._L.copied) || 'Copied!';
         btn.classList.add('copied');
         setTimeout(function() {
             btn.textContent = orig;
