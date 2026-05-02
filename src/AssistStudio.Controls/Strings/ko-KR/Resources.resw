@@ -298,6 +298,9 @@
   <data name="ToolElicitation_Submit" xml:space="preserve">
     <value>제출</value>
   </data>
+  <data name="ToolElicitation_RequiredField" xml:space="preserve">
+    <value>필수 항목입니다</value>
+  </data>
   <data name="Chat_SearchPrevTooltip" xml:space="preserve">
     <value>이전</value>
   </data>

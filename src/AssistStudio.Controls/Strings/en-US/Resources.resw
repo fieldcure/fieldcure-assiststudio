@@ -298,6 +298,9 @@ Add them in Profile settings.</value>
   <data name="ToolElicitation_Submit" xml:space="preserve">
     <value>Submit</value>
   </data>
+  <data name="ToolElicitation_RequiredField" xml:space="preserve">
+    <value>Required field</value>
+  </data>
   <data name="Chat_SearchPrevTooltip" xml:space="preserve">
     <value>Previous</value>
   </data>

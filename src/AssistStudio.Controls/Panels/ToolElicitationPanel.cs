@@ -195,8 +195,39 @@ public sealed partial class ToolElicitationPanel : Control
 
     #region Public Methods
 
-    /// <summary>Validates the current field values before a host-owned submit.</summary>
-    public bool TryValidate() => true;
+    /// <summary>
+    /// Validates the current field values. Marks each required field that is empty
+    /// or whitespace as invalid (with a localized error message) and returns
+    /// <see langword="false"/> when at least one required field is missing input.
+    /// Fields that are no longer empty have their invalid state cleared.
+    /// </summary>
+    public bool TryValidate()
+    {
+        string errorMessage;
+        try { errorMessage = Res.GetString("ToolElicitation_RequiredField"); }
+        catch { errorMessage = string.Empty; }
+        if (string.IsNullOrEmpty(errorMessage)) errorMessage = "Required field";
+
+        var allValid = true;
+        foreach (var field in _fieldItems)
+        {
+            if (!field.IsRequired)
+                continue;
+
+            if (string.IsNullOrWhiteSpace(field.CurrentValue))
+            {
+                field.ErrorMessage = errorMessage;
+                field.IsInvalid = true;
+                allValid = false;
+            }
+            else
+            {
+                field.IsInvalid = false;
+            }
+        }
+
+        return allValid;
+    }
 
     /// <summary>Collects current field values without raising panel events.</summary>
     public IDictionary<string, object?> GetContent()
@@ -298,7 +329,8 @@ public sealed partial class ToolElicitationPanel : Control
                 showLabel,
                 placeholder,
                 accessibilityName,
-                field.DefaultValue ?? string.Empty),
+                field.DefaultValue ?? string.Empty,
+                field.Required),
             _ => new ToolElicitationFieldViewModel(
                 field.Name,
                 ToolElicitationFieldKind.Text,
@@ -306,7 +338,8 @@ public sealed partial class ToolElicitationPanel : Control
                 showLabel,
                 placeholder,
                 accessibilityName,
-                field.DefaultValue ?? string.Empty),
+                field.DefaultValue ?? string.Empty,
+                field.Required),
         };
     }
 
@@ -321,7 +354,8 @@ public sealed partial class ToolElicitationPanel : Control
             showLabel,
             placeholderText: null,
             accessibilityName: labelText,
-            currentValue: selectedValue ?? string.Empty);
+            currentValue: selectedValue ?? string.Empty,
+            isRequired: field.Required);
 
         if (field.Options is null)
             return fieldViewModel;
@@ -545,6 +579,8 @@ public static class PasswordBoxBindingHelper
 public sealed partial class ToolElicitationFieldViewModel : INotifyPropertyChanged
 {
     private string _currentValue;
+    private bool _isInvalid;
+    private string _errorMessage = string.Empty;
 
     /// <summary>Initializes a new field view model.</summary>
     public ToolElicitationFieldViewModel(
@@ -554,7 +590,8 @@ public sealed partial class ToolElicitationFieldViewModel : INotifyPropertyChang
         bool showLabel,
         string? placeholderText,
         string accessibilityName,
-        string currentValue)
+        string currentValue,
+        bool isRequired = false)
     {
         Name = name;
         Kind = kind;
@@ -563,6 +600,7 @@ public sealed partial class ToolElicitationFieldViewModel : INotifyPropertyChang
         PlaceholderText = placeholderText;
         AccessibilityName = accessibilityName;
         _currentValue = currentValue;
+        IsRequired = isRequired;
     }
 
     /// <summary>Raised when a bindable property changes.</summary>
@@ -586,24 +624,62 @@ public sealed partial class ToolElicitationFieldViewModel : INotifyPropertyChang
     /// <summary>Gets the accessibility label for the input control.</summary>
     public string AccessibilityName { get; }
 
-    /// <summary>Gets the current text or selected option value for the field.</summary>
+    /// <summary>Gets whether the field must contain a non-empty value before submission.</summary>
+    public bool IsRequired { get; }
+
+    /// <summary>
+    /// Gets the current text or selected option value for the field. Setting a non-empty
+    /// value automatically clears the invalid flag so the error indicator hides as the
+    /// user fixes the field.
+    /// </summary>
     public string CurrentValue
     {
         get => _currentValue;
-        set => SetProperty(ref _currentValue, value);
+        set
+        {
+            if (!SetProperty(ref _currentValue, value))
+                return;
+
+            if (_isInvalid && !string.IsNullOrWhiteSpace(value))
+                IsInvalid = false;
+        }
     }
+
+    /// <summary>Gets or sets whether the field currently fails validation.</summary>
+    public bool IsInvalid
+    {
+        get => _isInvalid;
+        set
+        {
+            if (!SetProperty(ref _isInvalid, value))
+                return;
+
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ErrorVisibility)));
+        }
+    }
+
+    /// <summary>Gets or sets the validation error message shown when the field is invalid.</summary>
+    public string ErrorMessage
+    {
+        get => _errorMessage;
+        set => SetProperty(ref _errorMessage, value);
+    }
+
+    /// <summary>Gets the visibility of the inline error message based on <see cref="IsInvalid"/>.</summary>
+    public Visibility ErrorVisibility => _isInvalid ? Visibility.Visible : Visibility.Collapsed;
 
     /// <summary>Gets the option list for enum/boolean fields.</summary>
     public ObservableCollection<ToolElicitationOptionViewModel> Options { get; } = [];
 
     /// <summary>Updates a property backing field and raises change notification.</summary>
-    private void SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
+    private bool SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
     {
         if (EqualityComparer<T>.Default.Equals(field, value))
-            return;
+            return false;
 
         field = value;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        return true;
     }
 }
 

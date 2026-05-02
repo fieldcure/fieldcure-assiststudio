@@ -18,6 +18,9 @@ public sealed class ElicitationFieldInfo
     /// <summary>Optional description or placeholder text.</summary>
     public string? Description { get; init; }
 
+    /// <summary>Whether the field must be filled in before submission.</summary>
+    public bool Required { get; init; }
+
     /// <summary>Pre-selected or pre-filled default value.</summary>
     public string? DefaultValue { get; init; }
 

@@ -18,8 +18,13 @@ internal static class McpElicitationMapper
         var fields = new List<ElicitationFieldInfo>();
         if (schema?.Properties is null) return fields;
 
+        var required = schema.Required is { Count: > 0 }
+            ? new HashSet<string>(schema.Required, StringComparer.Ordinal)
+            : null;
+
         foreach (var (name, definition) in schema.Properties)
         {
+            var isRequired = required?.Contains(name) ?? false;
             var field = definition switch
             {
                 ElicitRequestParams.UntitledSingleSelectEnumSchema enumSchema =>
@@ -29,6 +34,7 @@ internal static class McpElicitationMapper
                         Type = ElicitationFieldType.Enum,
                         Title = enumSchema.Title,
                         Description = enumSchema.Description,
+                        Required = isRequired,
                         DefaultValue = enumSchema.Default,
                         Options = [.. enumSchema.Enum.Select(v => new ElicitationOptionInfo
                         {
@@ -44,6 +50,7 @@ internal static class McpElicitationMapper
                         Type = ElicitationFieldType.Enum,
                         Title = titledSchema.Title,
                         Description = titledSchema.Description,
+                        Required = isRequired,
                         DefaultValue = titledSchema.Default,
                         Options = [.. titledSchema.OneOf.Select(o => new ElicitationOptionInfo
                         {
@@ -59,6 +66,7 @@ internal static class McpElicitationMapper
                         Type = ElicitationFieldType.Boolean,
                         Title = boolSchema.Title,
                         Description = boolSchema.Description,
+                        Required = isRequired,
                         DefaultValue = boolSchema.Default?.ToString(),
                         Options =
                         [
@@ -73,6 +81,7 @@ internal static class McpElicitationMapper
                     Type = ElicitationFieldType.String,
                     Title = definition.Title,
                     Description = definition.Description,
+                    Required = isRequired,
                 },
             };
 

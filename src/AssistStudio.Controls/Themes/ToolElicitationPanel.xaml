@@ -57,6 +57,11 @@
                 FontWeight="SemiBold"
                 Visibility="{Binding LabelVisibility}" />
             <ItemsControl ItemsSource="{Binding Options}" ItemTemplate="{StaticResource ToolElicitationOptionTemplate}" />
+            <TextBlock
+                Text="{Binding ErrorMessage}"
+                FontSize="12"
+                Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                Visibility="{Binding ErrorVisibility}" />
         </StackPanel>
     </DataTemplate>
 
@@ -76,6 +81,11 @@
                 PlaceholderText="{Binding PlaceholderText}"
                 Text="{Binding CurrentValue, Mode=TwoWay}"
                 TextWrapping="Wrap" />
+            <TextBlock
+                Text="{Binding ErrorMessage}"
+                FontSize="12"
+                Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                Visibility="{Binding ErrorVisibility}" />
         </StackPanel>
     </DataTemplate>
 
@@ -94,6 +104,11 @@
                 PasswordRevealMode="Peek"
                 PlaceholderText="{Binding PlaceholderText}"
                 local:PasswordBoxBindingHelper.BoundPassword="{Binding CurrentValue, Mode=TwoWay}" />
+            <TextBlock
+                Text="{Binding ErrorMessage}"
+                FontSize="12"
+                Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                Visibility="{Binding ErrorVisibility}" />
         </StackPanel>
     </DataTemplate>
 
