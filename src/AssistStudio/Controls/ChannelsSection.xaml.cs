@@ -1,3 +1,4 @@
+using AssistStudio.Controls.Dialogs;
 using AssistStudio.Helpers;
 using AssistStudio.Mcp;
 using Microsoft.UI.Xaml;
@@ -11,10 +12,10 @@ namespace AssistStudio.Controls;
 
 /// <summary>
 /// Self-contained section that displays configured Outbox messaging channels.
-/// Reads channels via the <c>list_channels</c> MCP tool. Mutations are delegated
-/// to the Outbox CLI (<c>fieldcure-mcp-outbox add|remove</c>) spawned in a new
-/// console window; after the CLI exits we reload the list so the UI reflects
-/// the new channels.json state.
+/// Reads channels via the <c>list_channels</c> MCP tool. Channel additions are
+/// still delegated to the Outbox CLI setup flow; channel removal uses the
+/// Outbox MCP <c>remove_channel</c> tool and then reloads the list so the UI
+/// reflects the new channel store state.
 /// </summary>
 public sealed partial class ChannelsSection : UserControl
 {
@@ -92,15 +93,17 @@ public sealed partial class ChannelsSection : UserControl
     }
 
     /// <summary>
-    /// Launches the Outbox CLI in a new console window to remove a channel,
-    /// then reloads the list so the UI picks up the removal.
+    /// Confirms and removes a channel through the Outbox MCP server.
     /// </summary>
     private async void OnDeleteChannelClick(object sender, RoutedEventArgs e)
     {
         if (sender is not Button btn || btn.Tag is not string channelId)
             return;
 
-        await RunCliAsync("remove", channelId);
+        if (!await ConfirmDeleteAsync(channelId))
+            return;
+
+        await RemoveChannelAsync(channelId);
     }
 
     #endregion
@@ -248,9 +251,84 @@ public sealed partial class ChannelsSection : UserControl
     }
 
     /// <summary>
+    /// Shows a confirmation dialog before removing an Outbox channel.
+    /// </summary>
+    private async Task<bool> ConfirmDeleteAsync(string channelId)
+    {
+        var dialog = new ChannelDeleteConfirmDialog(channelId) { XamlRoot = XamlRoot };
+        return await dialog.ShowAsync() == ContentDialogResult.Primary;
+    }
+
+    /// <summary>
+    /// Removes an Outbox channel by invoking the MCP <c>remove_channel</c> tool.
+    /// </summary>
+    private async Task RemoveChannelAsync(string channelId)
+    {
+        AddChannelButton.IsEnabled = false;
+
+        try
+        {
+            var conn = await WaitForOutboxAsync();
+            if (conn is null)
+            {
+                ShowStatus(_loader.GetString("Connect_OutboxNotConnected")
+                    ?? "Unable to load channels");
+                return;
+            }
+
+            using var argsDoc = JsonDocument.Parse(JsonSerializer.Serialize(new { channel = channelId }));
+            var resultJson = await conn.CallToolWithProgressAsync(
+                "remove_channel", argsDoc.RootElement, null, CancellationToken.None);
+
+            if (!IsOkResult(resultJson, out var error))
+            {
+                LoggingService.LogError($"[Outbox] remove_channel failed for '{channelId}': {error}");
+                ShowStatus(error ?? (_loader.GetString("Connect_OutboxNotConnected")
+                    ?? "Unable to load channels"));
+                return;
+            }
+
+            LoggingService.LogInfo($"[Outbox] Channel removed via MCP: {channelId}");
+            await ReloadAsync();
+        }
+        catch (Exception ex)
+        {
+            LoggingService.LogError($"[Outbox] remove_channel failed: {ex.Message}");
+            ShowStatus(_loader.GetString("Connect_OutboxNotConnected")
+                ?? "Unable to load channels");
+        }
+        finally
+        {
+            AddChannelButton.IsEnabled = true;
+        }
+    }
+
+    /// <summary>
+    /// Parses a simple Outbox tool result and extracts an optional error message.
+    /// </summary>
+    private static bool IsOkResult(string? resultJson, out string? error)
+    {
+        error = null;
+        if (string.IsNullOrWhiteSpace(resultJson))
+            return false;
+
+        using var doc = JsonDocument.Parse(resultJson);
+        if (!doc.RootElement.TryGetProperty("status", out var status))
+            return false;
+
+        if (string.Equals(status.GetString(), "ok", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        error = doc.RootElement.TryGetProperty("error", out var errorElement)
+            ? errorElement.GetString()
+            : null;
+        return false;
+    }
+
+    /// <summary>
     /// Reloads the channel list by re-invoking <c>list_channels</c>. The Outbox
-    /// server re-reads <c>channels.json</c> on every call, so no reconnect is
-    /// required to surface CLI-driven changes.
+    /// server re-reads its channel store on every call, so no reconnect is
+    /// required to surface changes.
     /// </summary>
     private async Task ReloadAsync()
     {
@@ -289,7 +367,7 @@ public sealed partial class ChannelsSection : UserControl
 public sealed class ChannelRowViewModel
 {
     /// <summary>Initializes the row with display-ready fields resolved from the MCP payload.</summary>
-    /// <param name="id">Channel identifier used by the CLI <c>remove</c> command.</param>
+    /// <param name="id">Channel identifier used by the MCP <c>remove_channel</c> command.</param>
     /// <param name="displayType">Localized channel type label (bold column).</param>
     /// <param name="displayDetail">Channel name or <c>from</c> address (ellipsized).</param>
     /// <param name="deleteTooltip">Tooltip shown on the row's delete button.</param>
@@ -301,7 +379,7 @@ public sealed class ChannelRowViewModel
         DeleteTooltip = deleteTooltip;
     }
 
-    /// <summary>Gets the channel identifier passed back to the CLI <c>remove</c> command.</summary>
+    /// <summary>Gets the channel identifier passed back to the MCP <c>remove_channel</c> command.</summary>
     public string Id { get; }
 
     /// <summary>Gets the localized channel type label.</summary>

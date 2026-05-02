@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <UserControl
     x:Class="AssistStudio.Controls.ChannelsSection"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -43,7 +43,7 @@
                 <ItemsControl x:Name="ChannelList" Visibility="Collapsed">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <StackPanel Spacing="4" />
+                            <StackPanel Spacing="{StaticResource TightSpacing}" />
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
@@ -80,7 +80,7 @@
                                     VerticalAlignment="Center"
                                     TextTrimming="CharacterEllipsis" />
 
-                                <!-- Delete — dispatches to the Outbox CLI remove command. -->
+                                <!-- Delete — dispatches to the Outbox MCP remove_channel tool. -->
                                 <Button
                                     Grid.Column="3"
                                     Padding="6,2,6,2"

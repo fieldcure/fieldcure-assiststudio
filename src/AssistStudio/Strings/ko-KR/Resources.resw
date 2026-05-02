@@ -1361,6 +1361,18 @@
   <data name="Connect_DeleteChannel" xml:space="preserve">
     <value>채널 삭제</value>
   </data>
+  <data name="Connect_DeleteChannelConfirmMessage" xml:space="preserve">
+    <value>"{0}" 채널을 삭제하시겠습니까? 저장된 설정 데이터도 함께 삭제됩니다.</value>
+  </data>
+  <data name="ChannelDeleteConfirmDialog.Title" xml:space="preserve">
+    <value>채널 삭제</value>
+  </data>
+  <data name="ChannelDeleteConfirmDialog.PrimaryButtonText" xml:space="preserve">
+    <value>채널 삭제</value>
+  </data>
+  <data name="ChannelDeleteConfirmDialog.CloseButtonText" xml:space="preserve">
+    <value>취소</value>
+  </data>
   <data name="Embedding_OllamaNotRunning" xml:space="preserve">
     <value>Ollama가 실행되지 않습니다. ollama serve 명령으로 시작하세요</value>
   </data>

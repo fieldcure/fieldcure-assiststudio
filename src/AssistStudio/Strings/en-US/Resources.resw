@@ -1361,6 +1361,18 @@
   <data name="Connect_DeleteChannel" xml:space="preserve">
     <value>Delete channel</value>
   </data>
+  <data name="Connect_DeleteChannelConfirmMessage" xml:space="preserve">
+    <value>Delete channel "{0}"? This removes its stored setup data.</value>
+  </data>
+  <data name="ChannelDeleteConfirmDialog.Title" xml:space="preserve">
+    <value>Delete channel</value>
+  </data>
+  <data name="ChannelDeleteConfirmDialog.PrimaryButtonText" xml:space="preserve">
+    <value>Delete channel</value>
+  </data>
+  <data name="ChannelDeleteConfirmDialog.CloseButtonText" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
   <data name="Embedding_OllamaNotRunning" xml:space="preserve">
     <value>Ollama is not running. Start with: ollama serve</value>
   </data>

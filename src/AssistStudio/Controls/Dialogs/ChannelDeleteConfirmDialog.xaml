@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<local:ThemedContentDialog
+    x:Class="AssistStudio.Controls.Dialogs.ChannelDeleteConfirmDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:AssistStudio.Controls.Dialogs"
+    x:Uid="ChannelDeleteConfirmDialog"
+    Title="Delete channel"
+    PrimaryButtonText="Delete channel"
+    CloseButtonText="Cancel"
+    DefaultButton="Close">
+
+    <StackPanel Spacing="8" MinWidth="360" MaxWidth="480">
+        <TextBlock
+            Text="{x:Bind Message, Mode=OneTime}"
+            TextWrapping="Wrap" />
+    </StackPanel>
+</local:ThemedContentDialog>
