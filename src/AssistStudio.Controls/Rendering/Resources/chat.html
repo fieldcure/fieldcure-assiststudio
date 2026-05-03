@@ -1173,7 +1173,7 @@
     // Localization strings (overridable via setLocaleStrings)
     window._L = {
         copy: 'Copy',
-        copied: 'Copied!',
+        copied: 'Copied',
         continue_label: '\u25B6 Continue',
         code: 'code',
         copyPrompt: 'Copy prompt',
@@ -2055,9 +2055,18 @@
     /// Canonical copy-feedback flasher: swaps the button label to the
     /// localized "Copied!" string in green, then restores after 1.5s.
     /// Used by every Copy button (image, code block, mermaid/svg/html/jsx).
+    /// Wide buttons swap their label for "Copied!"; narrow icon buttons
+    /// (24x24 .msg-action-btn) swap to a ✔ glyph instead — the localized
+    /// label wraps to two lines inside that footprint and looks broken.
+    /// U+2714 HEAVY CHECK MARK is a BMP text glyph, so fonts treat it like
+    /// any letter (no color-emoji substitution); the .copied class still
+    /// tints it green via CSS for the same visual cue.
     function flashCopied(btn) {
         var orig = btn.textContent;
-        btn.textContent = (window._L && window._L.copied) || 'Copied!';
+        var isIcon = btn.classList.contains('msg-action-btn');
+        btn.textContent = isIcon
+            ? '✔'
+            : ((window._L && window._L.copied) || 'Copied!');
         btn.classList.add('copied');
         setTimeout(function() {
             btn.textContent = orig;

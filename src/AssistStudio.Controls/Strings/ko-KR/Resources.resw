@@ -121,7 +121,7 @@
     <value>복사</value>
   </data>
   <data name="Chat_Copied" xml:space="preserve">
-    <value>복사됨!</value>
+    <value>복사됨</value>
   </data>
   <data name="Chat_Continue" xml:space="preserve">
     <value>▶ 계속</value>

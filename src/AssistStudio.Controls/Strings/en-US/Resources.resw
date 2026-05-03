@@ -121,7 +121,7 @@
     <value>Copy</value>
   </data>
   <data name="Chat_Copied" xml:space="preserve">
-    <value>Copied!</value>
+    <value>Copied</value>
   </data>
   <data name="Chat_Continue" xml:space="preserve">
     <value>▶ Continue</value>
