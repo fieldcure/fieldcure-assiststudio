@@ -909,13 +909,154 @@ internal partial class WebViewChatRenderer
                     'window.Recharts = window.Recharts || window.recharts;' +
                     'window.THREE = window.THREE || window.three;';
 
+                // shadcn/ui CSS variables (HSL triplets) — lets `bg-primary`,
+                // `text-muted-foreground`, etc. resolve to actual colors. Light
+                // theme on :root, dark via [data-theme="dark"] (matches our
+                // tailwind config below).
+                var SHADCN_CSS_VARS_CSS =
+                    ':root{' +
+                        '--background:0 0% 100%;--foreground:222.2 84% 4.9%;' +
+                        '--card:0 0% 100%;--card-foreground:222.2 84% 4.9%;' +
+                        '--popover:0 0% 100%;--popover-foreground:222.2 84% 4.9%;' +
+                        '--primary:222.2 47.4% 11.2%;--primary-foreground:210 40% 98%;' +
+                        '--secondary:210 40% 96.1%;--secondary-foreground:222.2 47.4% 11.2%;' +
+                        '--muted:210 40% 96.1%;--muted-foreground:215.4 16.3% 46.9%;' +
+                        '--accent:210 40% 96.1%;--accent-foreground:222.2 47.4% 11.2%;' +
+                        '--destructive:0 84.2% 60.2%;--destructive-foreground:210 40% 98%;' +
+                        '--border:214.3 31.8% 91.4%;--input:214.3 31.8% 91.4%;--ring:222.2 84% 4.9%;' +
+                        '--radius:0.5rem;' +
+                    '}' +
+                    '[data-theme="dark"]{' +
+                        '--background:222.2 84% 4.9%;--foreground:210 40% 98%;' +
+                        '--card:222.2 84% 4.9%;--card-foreground:210 40% 98%;' +
+                        '--popover:222.2 84% 4.9%;--popover-foreground:210 40% 98%;' +
+                        '--primary:210 40% 98%;--primary-foreground:222.2 47.4% 11.2%;' +
+                        '--secondary:217.2 32.6% 17.5%;--secondary-foreground:210 40% 98%;' +
+                        '--muted:217.2 32.6% 17.5%;--muted-foreground:215 20.2% 65.1%;' +
+                        '--accent:217.2 32.6% 17.5%;--accent-foreground:210 40% 98%;' +
+                        '--destructive:0 62.8% 30.6%;--destructive-foreground:210 40% 98%;' +
+                        '--border:217.2 32.6% 17.5%;--input:217.2 32.6% 17.5%;--ring:212.7 26.8% 83.9%;' +
+                    '}';
+
+                // Tailwind config that wires the shadcn HSL vars into utility
+                // classes (`bg-primary`, `text-muted-foreground`, …). Set via
+                // the global `tailwind.config` AFTER the CDN tailwind script
+                // loads and BEFORE the user code paints anything.
+                var SHADCN_TAILWIND_CONFIG_JS =
+                    'if(window.tailwind){tailwind.config={' +
+                        'darkMode:["class","[data-theme=\\"dark\\"]"],' +
+                        'theme:{extend:{' +
+                            'colors:{' +
+                                'border:"hsl(var(--border))",input:"hsl(var(--input))",ring:"hsl(var(--ring))",' +
+                                'background:"hsl(var(--background))",foreground:"hsl(var(--foreground))",' +
+                                'primary:{DEFAULT:"hsl(var(--primary))",foreground:"hsl(var(--primary-foreground))"},' +
+                                'secondary:{DEFAULT:"hsl(var(--secondary))",foreground:"hsl(var(--secondary-foreground))"},' +
+                                'destructive:{DEFAULT:"hsl(var(--destructive))",foreground:"hsl(var(--destructive-foreground))"},' +
+                                'muted:{DEFAULT:"hsl(var(--muted))",foreground:"hsl(var(--muted-foreground))"},' +
+                                'accent:{DEFAULT:"hsl(var(--accent))",foreground:"hsl(var(--accent-foreground))"},' +
+                                'popover:{DEFAULT:"hsl(var(--popover))",foreground:"hsl(var(--popover-foreground))"},' +
+                                'card:{DEFAULT:"hsl(var(--card))",foreground:"hsl(var(--card-foreground))"}' +
+                            '},' +
+                            'borderRadius:{lg:"var(--radius)",md:"calc(var(--radius) - 2px)",sm:"calc(var(--radius) - 4px)"}' +
+                        '}}' +
+                    '};}';
+
+                // shadcn/ui stub: exposes the ~25 most common components on
+                // `window.__shadcn`. Visual fidelity over behavioral fidelity —
+                // composed primitives render as plain Tailwind-styled divs;
+                // controlled inputs (Switch/Checkbox/Tabs/Accordion) carry real
+                // useState. Stubs for Dialog/Popover/Tooltip/Select fall back
+                // to inline rendering of their children so layout is preserved
+                // even though the modal/floating behavior is missing.
+                var SHADCN_SHIM_JS =
+                    "(function(R){" +
+                    "if(!R){return;}" +
+                    "var h=R.createElement,uS=R.useState,uId=R.useId||function(){return 'id-'+Math.random().toString(36).slice(2,9);};" +
+                    "function cn(){var a=arguments,p=[],i;for(i=0;i<a.length;i++){if(a[i]&&typeof a[i]==='string')p.push(a[i]);}return p.join(' ');}" +
+                    "function pass(props){var o={},k;for(k in props){if(k!=='children'&&k!=='className'&&k!=='variant'&&k!=='size'&&k!=='asChild')o[k]=props[k];}return o;}" +
+                    // ---- primitives ----
+                    "var Button=function(p){p=p||{};var v=p.variant||'default',s=p.size||'default';" +
+                        "var vc={'default':'bg-primary text-primary-foreground hover:opacity-90','destructive':'bg-destructive text-destructive-foreground hover:opacity-90','outline':'border border-input bg-background hover:bg-accent hover:text-accent-foreground','secondary':'bg-secondary text-secondary-foreground hover:opacity-80','ghost':'hover:bg-accent hover:text-accent-foreground','link':'text-primary underline-offset-4 hover:underline'};" +
+                        "var sc={'default':'h-10 px-4 py-2','sm':'h-9 px-3','lg':'h-11 px-8','icon':'h-10 w-10'};" +
+                        "return h('button',Object.assign({className:cn('inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50',vc[v]||vc['default'],sc[s]||sc['default'],p.className)},pass(p)),p.children);};" +
+                    "var Card=function(p){p=p||{};return h('div',Object.assign({className:cn('rounded-lg border bg-card text-card-foreground shadow-sm',p.className)},pass(p)),p.children);};" +
+                    "var CardHeader=function(p){p=p||{};return h('div',Object.assign({className:cn('flex flex-col space-y-1.5 p-6',p.className)},pass(p)),p.children);};" +
+                    "var CardTitle=function(p){p=p||{};return h('h3',Object.assign({className:cn('text-2xl font-semibold leading-none tracking-tight',p.className)},pass(p)),p.children);};" +
+                    "var CardDescription=function(p){p=p||{};return h('p',Object.assign({className:cn('text-sm text-muted-foreground',p.className)},pass(p)),p.children);};" +
+                    "var CardContent=function(p){p=p||{};return h('div',Object.assign({className:cn('p-6 pt-0',p.className)},pass(p)),p.children);};" +
+                    "var CardFooter=function(p){p=p||{};return h('div',Object.assign({className:cn('flex items-center p-6 pt-0',p.className)},pass(p)),p.children);};" +
+                    "var Input=function(p){p=p||{};return h('input',Object.assign({className:cn('flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50',p.className)},pass(p)));};" +
+                    "var Label=function(p){p=p||{};return h('label',Object.assign({className:cn('text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70',p.className)},pass(p)),p.children);};" +
+                    "var Textarea=function(p){p=p||{};return h('textarea',Object.assign({className:cn('flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50',p.className)},pass(p)));};" +
+                    "var Badge=function(p){p=p||{};var v=p.variant||'default',vc={'default':'bg-primary text-primary-foreground','secondary':'bg-secondary text-secondary-foreground','destructive':'bg-destructive text-destructive-foreground','outline':'text-foreground border'};return h('div',Object.assign({className:cn('inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold',vc[v]||vc['default'],p.className)},pass(p)),p.children);};" +
+                    "var Alert=function(p){p=p||{};var v=p.variant||'default',vc={'default':'bg-background text-foreground','destructive':'border-destructive/50 text-destructive [&>svg]:text-destructive'};return h('div',Object.assign({role:'alert',className:cn('relative w-full rounded-lg border p-4 [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg+div]:translate-y-[-3px] [&:has(svg)]:pl-11',vc[v]||vc['default'],p.className)},pass(p)),p.children);};" +
+                    "var AlertTitle=function(p){p=p||{};return h('h5',Object.assign({className:cn('mb-1 font-medium leading-none tracking-tight',p.className)},pass(p)),p.children);};" +
+                    "var AlertDescription=function(p){p=p||{};return h('div',Object.assign({className:cn('text-sm [&_p]:leading-relaxed',p.className)},pass(p)),p.children);};" +
+                    "var Avatar=function(p){p=p||{};return h('span',Object.assign({className:cn('relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full bg-muted',p.className)},pass(p)),p.children);};" +
+                    "var AvatarImage=function(p){p=p||{};return h('img',Object.assign({className:cn('aspect-square h-full w-full',p.className)},pass(p)));};" +
+                    "var AvatarFallback=function(p){p=p||{};return h('span',Object.assign({className:cn('flex h-full w-full items-center justify-center bg-muted text-sm font-medium',p.className)},pass(p)),p.children);};" +
+                    "var Separator=function(p){p=p||{};var o=p.orientation||'horizontal';return h('div',Object.assign({className:cn('shrink-0 bg-border',o==='horizontal'?'h-px w-full':'h-full w-px',p.className)},pass(p)));};" +
+                    "var Progress=function(p){p=p||{};var v=Math.max(0,Math.min(100,p.value||0));return h('div',Object.assign({className:cn('relative h-4 w-full overflow-hidden rounded-full bg-secondary',p.className)},pass(p)),h('div',{className:'h-full bg-primary transition-all',style:{width:v+'%'}}));};" +
+                    "var Skeleton=function(p){p=p||{};return h('div',Object.assign({className:cn('animate-pulse rounded-md bg-muted',p.className)},pass(p)));};" +
+                    // ---- controlled primitives ----
+                    "var Switch=function(p){p=p||{};var ctrl=p.checked!==undefined,sa=uS(!!p.defaultChecked),checked=ctrl?p.checked:sa[0];" +
+                        "function toggle(){var nv=!checked;if(!ctrl)sa[1](nv);if(p.onCheckedChange)p.onCheckedChange(nv);}" +
+                        "return h('button',{type:'button',role:'switch','aria-checked':checked,onClick:toggle,className:cn('relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors',checked?'bg-primary':'bg-input',p.className)}," +
+                            "h('span',{className:cn('pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform',checked?'translate-x-5':'translate-x-0.5')}));};" +
+                    "var Checkbox=function(p){p=p||{};var ctrl=p.checked!==undefined,sa=uS(!!p.defaultChecked),checked=ctrl?p.checked:sa[0];" +
+                        "function toggle(){var nv=!checked;if(!ctrl)sa[1](nv);if(p.onCheckedChange)p.onCheckedChange(nv);}" +
+                        "return h('button',{type:'button',role:'checkbox','aria-checked':checked,onClick:toggle,className:cn('h-4 w-4 shrink-0 rounded-sm border border-primary inline-flex items-center justify-center',checked?'bg-primary text-primary-foreground':'bg-background',p.className)}," +
+                            "checked?h('span',{className:'text-xs leading-none'},'\\u2714'):null);};" +
+                    // ---- Tabs (context via React.createContext) ----
+                    "var TabsCtx=R.createContext({value:null,setValue:function(){}});" +
+                    "var Tabs=function(p){p=p||{};var ctrl=p.value!==undefined,sa=uS(p.defaultValue),value=ctrl?p.value:sa[0];" +
+                        "function setValue(nv){if(!ctrl)sa[1](nv);if(p.onValueChange)p.onValueChange(nv);}" +
+                        "return h(TabsCtx.Provider,{value:{value:value,setValue:setValue}},h('div',{className:cn(p.className)},p.children));};" +
+                    "var TabsList=function(p){p=p||{};return h('div',Object.assign({className:cn('inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground',p.className)},pass(p)),p.children);};" +
+                    "var TabsTrigger=function(p){p=p||{};var ctx=R.useContext(TabsCtx),active=ctx.value===p.value;" +
+                        "return h('button',{type:'button',onClick:function(){ctx.setValue(p.value);},className:cn('inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all',active?'bg-background text-foreground shadow-sm':'',p.className)},p.children);};" +
+                    "var TabsContent=function(p){p=p||{};var ctx=R.useContext(TabsCtx);if(ctx.value!==p.value)return null;return h('div',Object.assign({className:cn('mt-2',p.className)},pass(p)),p.children);};" +
+                    // ---- minimal stubs (graceful degradation, no portal/positioning) ----
+                    "var inlineDiv=function(cls){return function(p){p=p||{};return h('div',Object.assign({className:cn(cls||'',p.className)},pass(p)),p.children);};};" +
+                    "var Dialog=inlineDiv(),DialogTrigger=inlineDiv(),DialogContent=inlineDiv('rounded-lg border bg-background p-6 shadow-lg'),DialogHeader=inlineDiv('flex flex-col space-y-1.5 text-center sm:text-left'),DialogFooter=inlineDiv('flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2'),DialogTitle=function(p){p=p||{};return h('h2',Object.assign({className:cn('text-lg font-semibold leading-none tracking-tight',p.className)},pass(p)),p.children);},DialogDescription=function(p){p=p||{};return h('p',Object.assign({className:cn('text-sm text-muted-foreground',p.className)},pass(p)),p.children);};" +
+                    "var Popover=inlineDiv(),PopoverTrigger=inlineDiv(),PopoverContent=inlineDiv('rounded-md border bg-popover p-4 text-popover-foreground shadow-md');" +
+                    "var Tooltip=inlineDiv(),TooltipProvider=inlineDiv(),TooltipTrigger=inlineDiv(),TooltipContent=inlineDiv('rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground');" +
+                    "var Select=inlineDiv(),SelectTrigger=function(p){p=p||{};return h('button',Object.assign({type:'button',className:cn('flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm',p.className)},pass(p)),p.children);},SelectValue=function(p){p=p||{};return h('span',Object.assign({className:p.className},pass(p)),p.placeholder||p.children);},SelectContent=inlineDiv('rounded-md border bg-popover p-1'),SelectItem=function(p){p=p||{};return h('div',Object.assign({className:cn('relative flex cursor-default select-none items-center rounded-sm py-1.5 px-2 text-sm hover:bg-accent',p.className)},pass(p)),p.children);};" +
+                    "var DropdownMenu=inlineDiv(),DropdownMenuTrigger=inlineDiv(),DropdownMenuContent=inlineDiv('rounded-md border bg-popover p-1 shadow-md'),DropdownMenuItem=SelectItem,DropdownMenuSeparator=function(p){p=p||{};return h('div',Object.assign({className:cn('-mx-1 my-1 h-px bg-muted',p.className)},pass(p)));},DropdownMenuLabel=function(p){p=p||{};return h('div',Object.assign({className:cn('px-2 py-1.5 text-sm font-semibold',p.className)},pass(p)),p.children);};" +
+                    "var Sheet=inlineDiv(),SheetTrigger=inlineDiv(),SheetContent=inlineDiv('rounded-lg border bg-background p-6 shadow-lg'),SheetHeader=DialogHeader,SheetFooter=DialogFooter,SheetTitle=DialogTitle,SheetDescription=DialogDescription;" +
+                    "var Accordion=inlineDiv(),AccordionItem=inlineDiv('border-b'),AccordionTrigger=function(p){p=p||{};return h('button',Object.assign({type:'button',className:cn('flex flex-1 items-center justify-between py-4 font-medium hover:underline',p.className)},pass(p)),p.children);},AccordionContent=inlineDiv('pb-4 pt-0 text-sm');" +
+                    // ---- expose ----
+                    "window.__shadcn=Object.assign(window.__shadcn||{},{" +
+                        "cn:cn,Button:Button," +
+                        "Card:Card,CardHeader:CardHeader,CardTitle:CardTitle,CardDescription:CardDescription,CardContent:CardContent,CardFooter:CardFooter," +
+                        "Input:Input,Label:Label,Textarea:Textarea," +
+                        "Badge:Badge,Alert:Alert,AlertTitle:AlertTitle,AlertDescription:AlertDescription," +
+                        "Avatar:Avatar,AvatarImage:AvatarImage,AvatarFallback:AvatarFallback," +
+                        "Separator:Separator,Progress:Progress,Skeleton:Skeleton," +
+                        "Switch:Switch,Checkbox:Checkbox," +
+                        "Tabs:Tabs,TabsList:TabsList,TabsTrigger:TabsTrigger,TabsContent:TabsContent," +
+                        "Dialog:Dialog,DialogTrigger:DialogTrigger,DialogContent:DialogContent,DialogHeader:DialogHeader,DialogFooter:DialogFooter,DialogTitle:DialogTitle,DialogDescription:DialogDescription," +
+                        "Popover:Popover,PopoverTrigger:PopoverTrigger,PopoverContent:PopoverContent," +
+                        "Tooltip:Tooltip,TooltipProvider:TooltipProvider,TooltipTrigger:TooltipTrigger,TooltipContent:TooltipContent," +
+                        "Select:Select,SelectTrigger:SelectTrigger,SelectValue:SelectValue,SelectContent:SelectContent,SelectItem:SelectItem," +
+                        "DropdownMenu:DropdownMenu,DropdownMenuTrigger:DropdownMenuTrigger,DropdownMenuContent:DropdownMenuContent,DropdownMenuItem:DropdownMenuItem,DropdownMenuSeparator:DropdownMenuSeparator,DropdownMenuLabel:DropdownMenuLabel," +
+                        "Sheet:Sheet,SheetTrigger:SheetTrigger,SheetContent:SheetContent,SheetHeader:SheetHeader,SheetFooter:SheetFooter,SheetTitle:SheetTitle,SheetDescription:SheetDescription," +
+                        "Accordion:Accordion,AccordionItem:AccordionItem,AccordionTrigger:AccordionTrigger,AccordionContent:AccordionContent" +
+                    "});" +
+                    "})(window.React);";
+
                 /// Rewrites `import` and `export default` so user code runs under
                 /// Babel-standalone (no ES module support) against the UMD globals
                 /// the host shell loads from CDN. Unknown imports are stripped with
                 /// a comment so Babel does not throw. Returns { code, libs } where
                 /// `libs` is the list of import sources we should load via CDN.
                 function transformJsxArtifact(src) {
-                    function mapMod(mod) { return JSX_IMPORT_MAP[mod] || null; }
+                    function mapMod(mod) {
+                        // shadcn convention: any '@/components/ui/...' or
+                        // '@/lib/utils' resolves to the inlined window.__shadcn.
+                        if (mod.indexOf('@/') === 0) return 'window.__shadcn';
+                        return JSX_IMPORT_MAP[mod] || null;
+                    }
 
                     // First pass: collect every imported module that has a CDN entry.
                     var libsSeen = {};
@@ -1149,15 +1290,19 @@ internal partial class WebViewChatRenderer
                             'html{color-scheme:' + parentTheme + '}' +
                             'html,body{margin:0;background:' + (parentTheme === 'dark' ? '#1e1e1e' : '#ffffff') + ';font-family:system-ui,-apple-system,Segoe UI,sans-serif}' +
                             '#root{min-height:100vh}' +
-                            '#__preview_error{padding:10px 14px;background:#2b1d1d;color:#ffb4b4;font:12px/1.5 ui-monospace,Consolas,monospace;white-space:pre-wrap;border-bottom:1px solid #5a2c2c}</style>' +
+                            '#__preview_error{padding:10px 14px;background:#2b1d1d;color:#ffb4b4;font:12px/1.5 ui-monospace,Consolas,monospace;white-space:pre-wrap;border-bottom:1px solid #5a2c2c}' +
+                            SHADCN_CSS_VARS_CSS +
+                            '</style>' +
                             '<script>' + errorInfraJs + '</script>' +
                             '<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin></script>' +
                             '<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin></script>' +
                             '<script>' + JSX_PRE_LIB_SHIM_JS + '</script>' +
                             '<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin></script>' +
                             '<script src="https://cdn.tailwindcss.com"></script>' +
+                            '<script>' + SHADCN_TAILWIND_CONFIG_JS + '</script>' +
                             libScripts +
                             '<script>' + JSX_POST_LIB_SHIM_JS + '</script>' +
+                            '<script>' + SHADCN_SHIM_JS + '</script>' +
                             '</head><body><div id="root"></div>' +
                             '<script>' + bootstrapJs + '</script>' +
                             '</body></html>';
