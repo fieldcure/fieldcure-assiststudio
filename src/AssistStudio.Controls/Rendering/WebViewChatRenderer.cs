@@ -894,6 +894,17 @@ internal partial class WebViewChatRenderer
                     'tone':         'https://unpkg.com/tone@15.0.4/build/Tone.js'
                 };
 
+                // Implicit dependencies — UMD bundles that require other globals
+                // beyond React/ReactDOM. Loaded as a side-effect of pulling the
+                // primary lib (e.g. recharts inspects window.PropTypes for its
+                // internal validators).
+                var JSX_LIB_DEPS = {
+                    'recharts': ['prop-types']
+                };
+                var JSX_DEP_CDN = {
+                    'prop-types': 'https://unpkg.com/prop-types@15.8.1/prop-types.min.js'
+                };
+
                 // Some UMD bundles expect React on a differently-cased global
                 // (lucide-react@0.383 looks up `window.react` rather than the
                 // canonical `window.React`). Run before any lib script.
@@ -1057,6 +1068,15 @@ internal partial class WebViewChatRenderer
                         if (mod.indexOf('@/') === 0) return 'window.__shadcn';
                         return JSX_IMPORT_MAP[mod] || null;
                     }
+                    // For default/namespace imports we must read the global as a
+                    // property (window.X), not a binding. Otherwise patterns
+                    // like `import * as d3 from "d3"` become `const d3 = d3;`
+                    // and TDZ-fail because the RHS resolves to the const being
+                    // declared. Dotted paths (e.g. window.__shadcn) are
+                    // already property access, so leave as-is.
+                    function asProperty(g) {
+                        return g.indexOf('.') >= 0 ? g : 'window.' + g;
+                    }
 
                     // First pass: collect every imported module that has a CDN entry.
                     var libsSeen = {};
@@ -1087,7 +1107,7 @@ internal partial class WebViewChatRenderer
                         function(_m, name, mod) {
                             var g = mapMod(mod);
                             if (!g) return "/* import * as " + name + " from '" + mod + "' (unmapped, stripped) */";
-                            return 'const ' + name + ' = ' + g + ';';
+                            return 'const ' + name + ' = ' + asProperty(g) + ';';
                         });
 
                     // import X from "mod";
@@ -1096,7 +1116,8 @@ internal partial class WebViewChatRenderer
                         function(_m, name, mod) {
                             var g = mapMod(mod);
                             if (!g) return "/* import " + name + " from '" + mod + "' (unmapped, stripped) */";
-                            return 'const ' + name + ' = ' + g + '.default || ' + g + ';';
+                            var p = asProperty(g);
+                            return 'const ' + name + ' = ' + p + '.default || ' + p + ';';
                         });
 
                     // import "mod";  (side-effect only — drop)
@@ -1224,9 +1245,25 @@ internal partial class WebViewChatRenderer
                         var jsxResult = transformJsxArtifact(code);
                         var transformedB64 = utf8ToBase64(jsxResult.code);
                         var presets = (lang === 'tsx') ? 'react,typescript' : 'react';
-                        var libScripts = jsxResult.libs.map(function(lib) {
-                            return '<script src="' + JSX_LIB_CDN[lib] + '" crossorigin></script>';
-                        }).join('');
+                        // Order: each lib's deps first, then the lib itself.
+                        // De-dupe so two libs sharing a dep don't double-load.
+                        var loadedScripts = {};
+                        var libScriptList = [];
+                        jsxResult.libs.forEach(function(lib) {
+                            (JSX_LIB_DEPS[lib] || []).forEach(function(dep) {
+                                var depUrl = JSX_DEP_CDN[dep];
+                                if (depUrl && !loadedScripts[depUrl]) {
+                                    loadedScripts[depUrl] = true;
+                                    libScriptList.push('<script src="' + depUrl + '" crossorigin></script>');
+                                }
+                            });
+                            var url = JSX_LIB_CDN[lib];
+                            if (url && !loadedScripts[url]) {
+                                loadedScripts[url] = true;
+                                libScriptList.push('<script src="' + url + '" crossorigin></script>');
+                            }
+                        });
+                        var libScripts = libScriptList.join('');
 
                         // Installed first so it can capture script load failures
                         // (script.onerror bubbles via capture phase) and any
