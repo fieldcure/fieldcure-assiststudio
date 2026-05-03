@@ -182,11 +182,12 @@ public sealed partial class ChatPanel
         int? tokenCount = null,
         SummaryMeta? summary = null,
         bool isHidden = false,
-        bool isContinuation = false)
+        bool isContinuation = false,
+        bool isTruncated = false)
     {
         var msg = id is not null
-            ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, ThinkingContent = thinkingContent, Timestamp = timestamp ?? DateTime.UtcNow, ElapsedSeconds = elapsedSeconds, TokenCount = tokenCount, Summary = summary, IsHidden = isHidden, IsContinuation = isContinuation }
-            : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, ThinkingContent = thinkingContent, Timestamp = timestamp ?? DateTime.UtcNow, ElapsedSeconds = elapsedSeconds, TokenCount = tokenCount, Summary = summary, IsHidden = isHidden, IsContinuation = isContinuation };
+            ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, ThinkingContent = thinkingContent, Timestamp = timestamp ?? DateTime.UtcNow, ElapsedSeconds = elapsedSeconds, TokenCount = tokenCount, Summary = summary, IsHidden = isHidden, IsContinuation = isContinuation, IsTruncated = isTruncated }
+            : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, ThinkingContent = thinkingContent, Timestamp = timestamp ?? DateTime.UtcNow, ElapsedSeconds = elapsedSeconds, TokenCount = tokenCount, Summary = summary, IsHidden = isHidden, IsContinuation = isContinuation, IsTruncated = isTruncated };
         RegisterInTree(msg);
         _messages.Add(msg);
     }
@@ -298,6 +299,25 @@ public sealed partial class ChatPanel
         DiagnosticLogger.LogInfo($"[Chat] RenderRestoredMessages: {_messages.Count} messages");
         SwitchToChatLayout();
 
+        // Compute the id of the last visible-root assistant message in the
+        // active path. RenderAssistantBubbleAsync only renders one bubble per
+        // root assistant (tool-internal Assistants and Tool messages chain into
+        // it), so flagging that root is enough — we don't need a separate
+        // chain-tail check inside the loop. If this id is non-null and the
+        // root is IsTruncated, the renderer will paint a "끊긴 응답" hint in
+        // the timestamp line of that one bubble.
+        string? lastRootAssistantId = null;
+        for (var i = _messages.Count - 1; i >= 0; i--)
+        {
+            var m = _messages[i];
+            if (m.IsHidden) continue;
+            if (m.Role == ChatRole.Assistant && (m.ToolCalls is null || m.ToolCalls.Count == 0))
+            {
+                lastRootAssistantId = m.Id;
+                break;
+            }
+        }
+
         var renderedCount = 0;
         var pendingChain = new List<ChatMessage>();
 
@@ -317,7 +337,8 @@ public sealed partial class ChatPanel
                 // Finalize any pending assistant chain before rendering next user message
                 if (pendingChain.Count > 0)
                 {
-                    await RenderAssistantBubbleAsync(pendingChain);
+                    var isLast = pendingChain[0].Id == lastRootAssistantId;
+                    await RenderAssistantBubbleAsync(pendingChain, isLast);
                     pendingChain.Clear();
                     renderedCount++;
                 }
@@ -342,7 +363,8 @@ public sealed partial class ChatPanel
                 // New root assistant message — finalize previous chain if any
                 if (pendingChain.Count > 0)
                 {
-                    await RenderAssistantBubbleAsync(pendingChain);
+                    var isLast = pendingChain[0].Id == lastRootAssistantId;
+                    await RenderAssistantBubbleAsync(pendingChain, isLast);
                     pendingChain.Clear();
                     renderedCount++;
                 }
@@ -354,7 +376,8 @@ public sealed partial class ChatPanel
         // Finalize last pending assistant chain
         if (pendingChain.Count > 0)
         {
-            await RenderAssistantBubbleAsync(pendingChain);
+            var isLast = pendingChain[0].Id == lastRootAssistantId;
+            await RenderAssistantBubbleAsync(pendingChain, isLast);
             renderedCount++;
         }
 
@@ -367,7 +390,7 @@ public sealed partial class ChatPanel
     /// The <paramref name="chain"/> must contain the root assistant message first,
     /// followed by alternating tool-call assistant / tool-result messages.
     /// </summary>
-    private async Task RenderAssistantBubbleAsync(IReadOnlyList<ChatMessage> chain)
+    private async Task RenderAssistantBubbleAsync(IReadOnlyList<ChatMessage> chain, bool isLastInRestore = false)
     {
         if (chain.Count == 0) return;
 
@@ -435,11 +458,18 @@ public sealed partial class ChatPanel
         var finalSegment = (root.Content?.Length > consumedLength)
             ? root.Content[consumedLength..]
             : "";
+        // truncated stays false on the live path here so a saved truncated
+        // bubble does not silently sprout a Continue button after reload.
+        // Instead we surface restoredTruncated, which paints a discreet
+        // timestamp-line hint on just the last bubble (per isLastInRestore).
+        // Summary bubbles get no hint either way — their truncation has no
+        // user-actionable continuation.
         await _renderer.FinalizeMessageAsync(root.Id, finalSegment,
             tokenCount: root.TokenCount ?? 0,
             timestamp: root.Timestamp.ToString("O"),
             elapsedSeconds: root.ElapsedSeconds,
-            coveredTokenCount: root.Summary?.CoveredTokenCount ?? 0);
+            coveredTokenCount: root.Summary?.CoveredTokenCount ?? 0,
+            restoredTruncated: isLastInRestore && root.IsTruncated && !isSummary);
 
         // Restore assistant-generated inline media (e.g., Gemini image-generation output).
         if (root.ToolMedia is { Count: > 0 } generatedMedia)

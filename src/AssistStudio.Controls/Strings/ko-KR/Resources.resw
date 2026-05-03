@@ -130,6 +130,10 @@
     <value>이어진 응답</value>
     <comment>Small chip prepended to an assistant bubble that resumes a prior truncated response. Rendered as "↪ 이어진 응답" in the chat UI.</comment>
   </data>
+  <data name="Chat_TruncatedHint" xml:space="preserve">
+    <value>끊긴 응답</value>
+    <comment>Inline hint shown in the timestamp line of the last assistant bubble when a saved conversation is reloaded and that bubble was truncated by max-tokens. Tells the user they may want to send "계속" themselves.</comment>
+  </data>
   <data name="Chat_Code" xml:space="preserve">
     <value>코드</value>
   </data>

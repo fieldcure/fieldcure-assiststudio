@@ -183,6 +183,7 @@ public sealed partial class ChatPanel
             {
                 var result = await StreamAndExecuteAsync(assistantMessage, ct);
                 assistantMessage.TokenCount = result.Usage?.TotalTokens;
+                assistantMessage.IsTruncated = result.IsTruncated;
                 await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content,
                     result.IsTruncated, result.Usage?.TotalTokens ?? 0);
                 DiagnosticLogger.LogInfo($"[Chat] Response complete — tokens={result.Usage?.TotalTokens ?? 0}, truncated={result.IsTruncated}, cache_write={result.Usage?.CacheCreationInputTokens ?? 0}, cache_read={result.Usage?.CacheReadInputTokens ?? 0}");
@@ -294,6 +295,7 @@ public sealed partial class ChatPanel
             var result = await ConsumeStreamAsync(Provider.StreamAsync(request, ct), continuationAssistant, ct);
             DiagnosticLogger.LogInfo($"[Chat] Continue complete — appended={continuationAssistant.Content.Length} chars, tokens={result.Usage?.TotalTokens ?? 0}, truncated={result.IsTruncated}");
 
+            continuationAssistant.IsTruncated = result.IsTruncated;
             await _renderer.FinalizeMessageAsync(continuationAssistant.Id, continuationAssistant.Content, result.IsTruncated, result.Usage?.TotalTokens ?? 0);
 
             if (IsDebugMode)
@@ -1207,6 +1209,7 @@ public sealed partial class ChatPanel
         {
             var result = await StreamAndExecuteAsync(assistantMessage, ct);
             assistantMessage.TokenCount = result.Usage?.TotalTokens;
+            assistantMessage.IsTruncated = result.IsTruncated;
 
             await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content, result.IsTruncated, result.Usage?.TotalTokens ?? 0);
 
@@ -1321,6 +1324,7 @@ public sealed partial class ChatPanel
 
             var coveredTokens = result.Usage?.InputTokens ?? 0;
             var summaryTokens = result.Usage?.OutputTokens ?? 0;
+            summaryMessage.IsTruncated = result.IsTruncated;
             await _renderer.FinalizeMessageAsync(summaryMessage.Id, summaryMessage.Content, result.IsTruncated,
                 tokenCount: summaryTokens, coveredTokenCount: coveredTokens);
             DiagnosticLogger.LogInfo($"[Chat] StreamSummary complete — covered {coveredMessages.Count} messages, tokens {coveredTokens} → {summaryTokens}");

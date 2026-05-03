@@ -428,13 +428,23 @@ internal partial class WebViewChatRenderer
 
     /// <summary>
     /// Finalizes an assistant message with the full markdown content, truncation status, and token count.
+    /// <para/>
+    /// <paramref name="truncated"/> drives the live Continue button. It is only set during a
+    /// real (live) stream; restored conversations always pass <c>false</c> so a phantom
+    /// Continue click cannot bypass the new continuation flow.
+    /// <para/>
+    /// <paramref name="restoredTruncated"/> is the inverse — set only by the restore path
+    /// when the last assistant chain in a saved conversation was truncated. It does NOT
+    /// draw a button; it merely prefixes the timestamp line with a discreet "끊긴 응답"
+    /// hint so the user can choose to send "계속" themselves.
     /// </summary>
     public Task FinalizeMessageAsync(string id, string fullMarkdown, bool truncated = false, int tokenCount = 0,
-        string? timestamp = null, double? elapsedSeconds = null, int coveredTokenCount = 0)
+        string? timestamp = null, double? elapsedSeconds = null, int coveredTokenCount = 0,
+        bool restoredTruncated = false)
     {
         var tsArg = timestamp is not null ? Js(timestamp) : "null";
         var elapsedArg = elapsedSeconds.HasValue ? elapsedSeconds.Value.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) : "null";
-        var script = $"window.assistChat.finalizeMessage({Js(id)}, {Js(fullMarkdown)}, {(truncated ? "true" : "false")}, {tokenCount}, {tsArg}, {elapsedArg}, {coveredTokenCount})";
+        var script = $"window.assistChat.finalizeMessage({Js(id)}, {Js(fullMarkdown)}, {(truncated ? "true" : "false")}, {tokenCount}, {tsArg}, {elapsedArg}, {coveredTokenCount}, {(restoredTruncated ? "true" : "false")})";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 

@@ -2710,7 +2710,7 @@
             }
         },
 
-        finalizeMessage: function(id, fullText, truncated, tokenCount, timestamp, elapsedSeconds, coveredTokenCount) {
+        finalizeMessage: function(id, fullText, truncated, tokenCount, timestamp, elapsedSeconds, coveredTokenCount, restoredTruncated) {
             // Clean up progressive state
             var ps = _progressiveState[id];
             if (ps) clearTimeout(ps.timer);
@@ -2794,6 +2794,14 @@
                 var isoTime = timestamp || new Date().toISOString();
                 var timeStr = formatTimestamp(isoTime);
                 var parts = [];
+
+                // Restored truncated hint: prefixes the timestamp line so the user can
+                // tell at a glance that this saved bubble was cut off by max-tokens.
+                // Live truncated responses use the Continue button instead — this path
+                // is only taken when restoring a conversation from disk.
+                if (restoredTruncated && _L.truncatedHint) {
+                    parts.push(_L.truncatedHint);
+                }
 
                 if (tokenCount && tokenCount > 0) {
                     var formatted = tokenCount >= 1000

@@ -145,6 +145,16 @@ public class SavedMessage
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool IsContinuation { get; set; }
 
+    /// <summary>
+    /// True if the assistant response was cut off by a max-tokens / length
+    /// limit. Mirrors <see cref="ChatMessage.IsTruncated"/>. Surfaced after
+    /// reload as a "truncated" hint on the last assistant bubble so the user
+    /// can decide to send a manual "continue" (we don't auto-restore the live
+    /// Continue button). Default <c>false</c> omitted.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool IsTruncated { get; set; }
+
     #endregion
 }
 
