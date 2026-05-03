@@ -876,22 +876,31 @@ internal partial class WebViewChatRenderer
                     'mathjs': 'math',
                     'papaparse': 'Papa',
                     'chart.js': 'Chart',
-                    'tone': 'Tone'
+                    'tone': 'Tone',
+                    'xlsx': 'XLSX',
+                    'mammoth': 'mammoth',
+                    '@tensorflow/tfjs': 'tf'
                 };
 
                 // CDN script URLs for libraries beyond React/ReactDOM. React itself,
                 // Babel, and Tailwind are always loaded; everything here is opt-in
                 // based on what the user code actually imports.
                 var JSX_LIB_CDN = {
-                    'lucide-react': 'https://unpkg.com/lucide-react@0.383.0/dist/umd/lucide-react.min.js',
-                    'recharts':     'https://unpkg.com/recharts@2.12.7/umd/Recharts.js',
-                    'd3':           'https://unpkg.com/d3@7.9.0/dist/d3.min.js',
-                    'three':        'https://unpkg.com/three@0.128.0/build/three.min.js',
-                    'lodash':       'https://unpkg.com/lodash@4.17.21/lodash.min.js',
-                    'mathjs':       'https://unpkg.com/mathjs@13.2.0/lib/browser/math.js',
-                    'papaparse':    'https://unpkg.com/papaparse@5.4.1/papaparse.min.js',
-                    'chart.js':     'https://unpkg.com/chart.js@4.4.4/dist/chart.umd.js',
-                    'tone':         'https://unpkg.com/tone@15.0.4/build/Tone.js'
+                    'lucide-react':      'https://unpkg.com/lucide-react@0.383.0/dist/umd/lucide-react.min.js',
+                    'recharts':          'https://unpkg.com/recharts@2.12.7/umd/Recharts.js',
+                    'd3':                'https://unpkg.com/d3@7.9.0/dist/d3.min.js',
+                    'three':             'https://unpkg.com/three@0.128.0/build/three.min.js',
+                    'lodash':            'https://unpkg.com/lodash@4.17.21/lodash.min.js',
+                    'mathjs':            'https://unpkg.com/mathjs@13.2.0/lib/browser/math.js',
+                    'papaparse':         'https://unpkg.com/papaparse@5.4.1/papaparse.min.js',
+                    'chart.js':          'https://unpkg.com/chart.js@4.4.4/dist/chart.umd.js',
+                    'tone':              'https://unpkg.com/tone@15.0.4/build/Tone.js',
+                    // Beyond the spec-100 list — common Claude artifact deps.
+                    'xlsx':              'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js',
+                    'mammoth':           'https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js',
+                    // tfjs is ~3MB. First load is slow; subsequent renders hit
+                    // the WebView2 cache. Worth it for ML-related artifacts.
+                    '@tensorflow/tfjs':  'https://unpkg.com/@tensorflow/tfjs@4.22.0/dist/tf.min.js'
                 };
 
                 // Implicit dependencies — UMD bundles that require other globals
