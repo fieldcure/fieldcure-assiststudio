@@ -26,6 +26,46 @@ namespace FieldCure.AssistStudio.Controls.Rendering;
 internal partial class WebViewChatRenderer
 {
     /// <summary>
+    /// External CDN routes that the WebView2 is allowed to fetch from.
+    /// Every outbound http(s) request not matching one of these is blocked
+    /// by the <c>WebResourceRequested</c> filter — required for MS Store
+    /// security review since the artifact-preview iframe runs untrusted
+    /// model output that could otherwise pull in arbitrary scripts or
+    /// exfiltrate data via <c>fetch()</c>.
+    ///
+    /// Each entry is (host, path-prefix). Path prefix is matched against
+    /// <see cref="System.Uri.AbsolutePath"/>; an empty prefix matches any
+    /// path on the host. Keep in sync with the URLs hard-coded above in
+    /// <c>JSX_LIB_CDN</c> / <c>JSX_DEP_CDN</c> and the React/Babel/Tailwind
+    /// script tags in <c>JsxPreviewBranchJs</c>.
+    /// </summary>
+    internal static readonly (string Host, string PathPrefix)[] AllowedCdnRoutes =
+    [
+        // React + Babel + Tailwind core (always loaded by JSX host shell)
+        ("unpkg.com", "/react@"),
+        ("unpkg.com", "/react-dom@"),
+        ("unpkg.com", "/@babel/standalone@"),
+        ("cdn.tailwindcss.com", ""),
+
+        // JSX libs (opt-in based on user code imports)
+        ("unpkg.com", "/lucide-react@"),
+        ("unpkg.com", "/recharts@"),
+        ("unpkg.com", "/d3@"),
+        ("unpkg.com", "/three@"),
+        ("unpkg.com", "/lodash@"),
+        ("unpkg.com", "/mathjs@"),
+        ("unpkg.com", "/papaparse@"),
+        ("unpkg.com", "/chart.js@"),
+        ("unpkg.com", "/tone@"),
+        ("unpkg.com", "/xlsx@"),
+        ("unpkg.com", "/mammoth@"),
+        ("unpkg.com", "/@tensorflow/tfjs@"),
+
+        // Implicit deps (recharts → prop-types)
+        ("unpkg.com", "/prop-types@"),
+    ];
+
+    /// <summary>
     /// JS helpers (import maps, lib registry, shadcn shim, transforms)
     /// shared by both the HTML and JSX preview branches. Defined inside
     /// the marked configuration IIFE so the renderer.code closure can
@@ -403,13 +443,29 @@ internal partial class WebViewChatRenderer
                         'd.appendChild(document.createTextNode(m+"\\n"));' +
                     '};' +
                     'window.addEventListener("error",function(e){' +
+                        // Resource-load errors: report failed scripts/stylesheets only.
+                        // Images, media, fonts are best-effort — a broken-image icon is
+                        // a clearer signal than a generic "Error" banner.
                         'if(e.target&&(e.target.tagName==="SCRIPT"||e.target.tagName==="LINK"))' +
                             'window.__showPreviewError("Failed to load: "+(e.target.src||e.target.href));' +
-                        'else ' +
-                            'window.__showPreviewError((e.message||"Error")+(e.filename?" @ "+e.filename+":"+e.lineno:""));' +
+                        // Runtime errors carry e.message; resource errors do not. Skip the
+                        // empty case so a missing <img> never produces a content-less banner.
+                        'else if(e.message)' +
+                            'window.__showPreviewError(e.message+(e.filename?" @ "+e.filename+":"+e.lineno:""));' +
                     '},true);' +
                     'window.addEventListener("unhandledrejection",function(e){' +
                         'var r=e.reason;window.__showPreviewError("Unhandled promise rejection: "+(r&&r.message||r));' +
+                    '});' +
+                    // Per-artifact theme override: parent posts {type:"setTheme",theme:"light"|"dark"}
+                    // when the user clicks the sun/moon button. Flip <html data-theme> so the shadcn
+                    // CSS vars + Tailwind darkMode selector both update; also patch color-scheme and
+                    // body background so default UA surfaces (scrollbar, form controls) follow.
+                    'window.addEventListener("message",function(e){' +
+                        'if(!e.data||e.data.type!=="setTheme")return;' +
+                        'var t=e.data.theme==="dark"?"dark":"light";' +
+                        'document.documentElement.setAttribute("data-theme",t);' +
+                        'document.documentElement.style.colorScheme=t;' +
+                        'if(document.body)document.body.style.background=t==="dark"?"#1e1e1e":"#ffffff";' +
                     '});' +
                     'document.addEventListener("DOMContentLoaded",function(){' +
                         'while(buf.length)window.__showPreviewError(buf.shift());' +
@@ -478,8 +534,8 @@ internal partial class WebViewChatRenderer
                 try { jsxHl = hljs.highlight(code, { language: 'javascript' }).value; }
                 catch(e2) { jsxHl = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
             }
-            return '<div class="diagram-block" data-kind="jsx" data-view="preview" data-source-b64="' + sourceB64 + '">' +
-                    previewHeader(lang, L2.jsxPreviewCopyTooltip || 'Copy source') +
+            return '<div class="diagram-block" data-kind="jsx" data-view="preview" data-theme="' + parentTheme + '" data-source-b64="' + sourceB64 + '">' +
+                    previewHeader(lang, L2.jsxPreviewCopyTooltip || 'Copy source', parentTheme) +
                     '<div class="html-frame">' +
                         '<iframe sandbox="allow-scripts" srcdoc="' + attrEscaped2 + '"></iframe>' +
                     '</div>' +

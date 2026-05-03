@@ -134,6 +134,13 @@ internal partial class WebViewChatRenderer
         _webView.CoreWebView2.NavigationStarting += OnNavigationStarting;
         _webView.CoreWebView2.NewWindowRequested += OnNewWindowRequested;
         _webView.CoreWebView2.DownloadStarting += OnDownloadStarting;
+
+        // Restrict outbound network access to the artifact-preview CDN allow-list.
+        // The filter must be registered BEFORE any iframe runs, so do it here at
+        // initialization. See WebViewChatRenderer.ArtifactPreview.cs/AllowedCdnRoutes
+        // for the trusted hosts; everything else gets a 403.
+        _webView.CoreWebView2.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
+        _webView.CoreWebView2.WebResourceRequested += OnWebResourceRequested;
         _webView.CoreWebView2.IsDefaultDownloadDialogOpenChanged += (_, _) =>
         {
             if (_webView.CoreWebView2.IsDefaultDownloadDialogOpen)
@@ -581,6 +588,80 @@ internal partial class WebViewChatRenderer
     }
 
     /// <summary>
+    /// Enforces the CDN allow-list on every outbound WebView2 request (including iframes).
+    /// Local data:, about:, and the assiststudio.temp virtual host pass through. For remote
+    /// requests, the policy is split by resource type:
+    /// <list type="bullet">
+    ///   <item><description>Image / Media / Font: any https origin (passive resources —
+    ///   placeholder images like <c>i.pravatar.cc</c>, embedded videos, webfonts are
+    ///   common in artifact previews and don't execute code).</description></item>
+    ///   <item><description>Script / XHR / Fetch / WebSocket / EventSource / Stylesheet /
+    ///   Document / everything else: must match <see cref="AllowedCdnRoutes"/>. These can
+    ///   execute code or exfiltrate data and are the actual Store-review concern.</description></item>
+    /// </list>
+    /// Anything else is rejected with a synthesized 403 response.
+    /// </summary>
+    private void OnWebResourceRequested(CoreWebView2 sender, CoreWebView2WebResourceRequestedEventArgs args)
+    {
+        var uri = args.Request.Uri;
+        if (string.IsNullOrEmpty(uri))
+            return;
+
+        // Allow internal scheme requests (data:, blob:, about:) — these never leave the process.
+        if (uri.StartsWith("data:", StringComparison.OrdinalIgnoreCase) ||
+            uri.StartsWith("blob:", StringComparison.OrdinalIgnoreCase) ||
+            uri.StartsWith("about:", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        // Allow the temp-media virtual host (mapped to the local TempRoot folder).
+        if (uri.StartsWith("http://assiststudio.temp/", StringComparison.OrdinalIgnoreCase) ||
+            uri.StartsWith("https://assiststudio.temp/", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (!Uri.TryCreate(uri, UriKind.Absolute, out var parsedUri) ||
+            parsedUri.Scheme != Uri.UriSchemeHttps)
+        {
+            // Not https — block. (file:/ftp:/raw http: get rejected; chat.html itself
+            // is loaded via NavigateToString which is data:-equivalent and exempt above.)
+            args.Response = sender.Environment.CreateWebResourceResponse(
+                Content: null, StatusCode: 403, ReasonPhrase: "Forbidden",
+                Headers: "Content-Type: text/plain");
+            return;
+        }
+
+        // Passive resources (image/media/font) — allow from any https origin. They cannot
+        // execute attacker-controlled code; the URL is in the visible artifact source so
+        // there's no covert exfiltration channel beyond a tracking-pixel ping.
+        switch (args.ResourceContext)
+        {
+            case CoreWebView2WebResourceContext.Image:
+            case CoreWebView2WebResourceContext.Media:
+            case CoreWebView2WebResourceContext.Font:
+                return;
+        }
+
+        foreach (var (host, pathPrefix) in AllowedCdnRoutes)
+        {
+            if (string.Equals(parsedUri.Host, host, StringComparison.OrdinalIgnoreCase) &&
+                (pathPrefix.Length == 0 ||
+                 parsedUri.AbsolutePath.StartsWith(pathPrefix, StringComparison.OrdinalIgnoreCase)))
+            {
+                return;
+            }
+        }
+
+        DiagnosticLogger.LogWarning(
+            $"[ChatPanel] Blocked {args.ResourceContext} request to non-whitelisted URL: {uri}");
+        args.Response = sender.Environment.CreateWebResourceResponse(
+            Content: null, StatusCode: 403, ReasonPhrase: "Forbidden",
+            Headers: "Content-Type: text/plain");
+    }
+
+    /// <summary>
     /// Intercepts download requests from native audio/video controls (3-dot menu → Download)
     /// and routes them through the ImageSaveRequested event for FileSavePicker handling.
     /// </summary>
@@ -880,8 +961,22 @@ internal partial class WebViewChatRenderer
                     // segmented toggle plus a Copy button. The block-level
                     // attribute data-view drives which child (.html-frame or
                     // .code-view) is visible — see chat.html CSS.
-                    function previewHeader(label, copyTooltip) {
+                    // themeForToggle is 'light'|'dark' for JSX (renders a
+                    // sun/moon button that flips the iframe theme via
+                    // postMessage), or empty/null for HTML (raw user HTML
+                    // controls its own theme — no override possible).
+                    function previewHeader(label, copyTooltip, themeForToggle) {
                         var L = window._L || {};
+                        var themeBtn = '';
+                        if (themeForToggle) {
+                            // ☀ U+2600 / ☾ U+263E — BMP text glyphs (avoid emoji
+                            // rendering inconsistencies of 🌙 U+1F319). Shown icon
+                            // reflects the CURRENT theme; clicking flips it.
+                            var icon = (themeForToggle === 'dark') ? '☾' : '☀';
+                            themeBtn = '<button class="diagram-btn theme-toggle-btn" data-act="theme" title="' +
+                                        (L.previewThemeToggleTooltip || 'Toggle theme') + '">' +
+                                        icon + '</button>';
+                        }
                         return '<div class="code-header">' +
                                 '<span class="code-lang">' + label + '</span>' +
                                 '<span class="diagram-actions">' +
@@ -889,6 +984,7 @@ internal partial class WebViewChatRenderer
                                         '<button class="diagram-btn view-toggle-btn active" data-view="preview">' + (L.previewToggleLabel || 'Preview') + '</button>' +
                                         '<button class="diagram-btn view-toggle-btn" data-view="code">' + (L.codeToggleLabel || 'Code') + '</button>' +
                                     '</span>' +
+                                    themeBtn +
                                     '<button class="diagram-btn" data-act="copy" title="' + copyTooltip + '">' + (L.diagramCopyLabel || 'Copy') + '</button>' +
                                 '</span>' +
                                '</div>';

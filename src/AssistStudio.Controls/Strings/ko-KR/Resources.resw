@@ -204,6 +204,9 @@
   <data name="Chat_CodeToggle" xml:space="preserve">
     <value>코드</value>
   </data>
+  <data name="Chat_PreviewThemeToggleTooltip" xml:space="preserve">
+    <value>테마 전환</value>
+  </data>
   <data name="Chat_Seconds" xml:space="preserve">
     <value>초</value>
   </data>

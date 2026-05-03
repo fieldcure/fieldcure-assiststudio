@@ -204,6 +204,9 @@
   <data name="Chat_CodeToggle" xml:space="preserve">
     <value>Code</value>
   </data>
+  <data name="Chat_PreviewThemeToggleTooltip" xml:space="preserve">
+    <value>Toggle theme</value>
+  </data>
   <data name="Chat_Seconds" xml:space="preserve">
     <value>s</value>
   </data>

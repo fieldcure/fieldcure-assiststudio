@@ -1811,8 +1811,31 @@
         return text.replace(/\u2588$/, '').replace(/\u258C$/, '');
     }
 
+    /// Some models emit a full `<!DOCTYPE html>...</html>` document inline
+    /// (no fenced code block). Without this pre-processor, marked.js would
+    /// render the raw HTML directly into the chat — which means the model's
+    /// page literally injects into our document, breaking layout and bypassing
+    /// the artifact-preview sandbox. Wrap any such block in a ```html fence
+    /// so the HTML preview branch in marked's code renderer picks it up.
+    /// Existing fenced blocks (```...```) are left untouched.
+    function autoWrapDoctypeHtml(text) {
+        if (!/<!DOCTYPE\s+html/i.test(text)) return text;
+        var parts = text.split(/(```[\s\S]*?```)/);
+        for (var i = 0; i < parts.length; i++) {
+            // Even indices are outside fences; odd indices are fence content.
+            if (i % 2 === 0) {
+                parts[i] = parts[i].replace(
+                    /<!DOCTYPE\s+html[\s\S]*?<\/html>/gi,
+                    function(match) { return '\n\n```html\n' + match + '\n```\n\n'; }
+                );
+            }
+        }
+        return parts.join('');
+    }
+
     function renderMarkdown(fullText) {
         if (typeof marked !== 'undefined' && typeof hljs !== 'undefined') {
+            fullText = autoWrapDoctypeHtml(fullText);
             var html = fixCjkEmphasis(marked.parse(fullText));
             // Diagram blocks (mermaid + svg) share the same wrapper class.
             // Schedule mermaid rendering and toolbar wiring after innerHTML is set.
@@ -1911,6 +1934,18 @@
                             catch (e) { src = ''; }
                             window.chrome.webview.postMessage('copy-text:' + src);
                             flashCopied(btn);
+                        } else if (act === 'theme') {
+                            // Per-artifact theme override. Initial state mirrors the app
+                            // theme at render time; the toggle is independent thereafter so
+                            // a user can compare the same artifact in both themes.
+                            var current = block.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+                            var next = current === 'dark' ? 'light' : 'dark';
+                            block.setAttribute('data-theme', next);
+                            var iframeEl = inner.querySelector('iframe');
+                            if (iframeEl && iframeEl.contentWindow) {
+                                iframeEl.contentWindow.postMessage({ type: 'setTheme', theme: next }, '*');
+                            }
+                            btn.textContent = next === 'dark' ? '☾' : '☀';
                         }
                         return;
                     }
