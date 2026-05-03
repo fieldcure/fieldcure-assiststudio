@@ -178,6 +178,29 @@ public partial class ChatMessage : INotifyPropertyChanged
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public SummaryMeta? Summary { get; init; }
 
+    /// <summary>
+    /// True for messages the host inserts as part of an internal flow (e.g. the
+    /// "Continue writing from where you left off." user turn appended when the
+    /// user clicks the Continue button on a truncated assistant response).
+    /// Hidden messages MUST be sent to the provider as part of the prompt — they
+    /// shape the next assistant turn — but MUST NOT render as a chat bubble in
+    /// the UI. Persisted in <c>.astx</c> so the conversation tree round-trips
+    /// without the renderer suddenly showing a stray "Continue" bubble after
+    /// reload. Default <c>false</c> is omitted from JSON for backwards-compat
+    /// with existing files.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool IsHidden { get; init; }
+
+    /// <summary>
+    /// True for assistant messages that continue an earlier truncated response
+    /// (the user clicked Continue). The renderer prefixes a small "↪ continued"
+    /// label so the new bubble visually links back to the prior one. Persisted
+    /// so reload restores the marker; default <c>false</c> omitted from JSON.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool IsContinuation { get; init; }
+
     #endregion
 
     #region Tree Properties

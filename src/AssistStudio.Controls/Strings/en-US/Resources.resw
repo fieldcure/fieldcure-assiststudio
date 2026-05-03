@@ -126,6 +126,10 @@
   <data name="Chat_Continue" xml:space="preserve">
     <value>▶ Continue</value>
   </data>
+  <data name="Chat_ContinuationLabel" xml:space="preserve">
+    <value>continued</value>
+    <comment>Small chip prepended to an assistant bubble that resumes a prior truncated response. Rendered as "↪ continued" in the chat UI.</comment>
+  </data>
   <data name="Chat_Code" xml:space="preserve">
     <value>code</value>
   </data>

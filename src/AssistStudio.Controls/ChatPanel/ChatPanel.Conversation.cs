@@ -8,6 +8,23 @@ public sealed partial class ChatPanel
     #region Tree Methods
 
     /// <summary>
+    /// Predicate for messages that exist in the tree but should not show up as
+    /// branch-navigation siblings. Includes:
+    /// <list type="bullet">
+    ///   <item><description>Tool result messages.</description></item>
+    ///   <item><description>Assistant messages that only carry a tool-call (intermediate
+    ///   round of a tool chain — same response stream as their root).</description></item>
+    ///   <item><description>Messages flagged <see cref="ChatMessage.IsHidden"/> — currently
+    ///   the synthetic "Continue writing…" user turn appended when the user clicks the
+    ///   Continue button. Visible to the prompt builder, invisible to navigation.</description></item>
+    /// </list>
+    /// </summary>
+    private static bool IsTreeInvisible(ChatMessage m) =>
+        m.Role == ChatRole.Tool ||
+        (m.Role == ChatRole.Assistant && m.ToolCalls is { Count: > 0 }) ||
+        m.IsHidden;
+
+    /// <summary>
     /// Registers a message in the conversation tree.
     /// When <paramref name="updateActiveChild"/> is <c>true</c>, the parent message's
     /// <see cref="ChatMessage.ActiveChildId"/> is set to this message so that
@@ -27,18 +44,9 @@ public sealed partial class ChatPanel
             siblings.Add(msg);
         }
 
-        // Tool-internal messages (assistant tool-call requests and tool results) are
-        // not real branch points — they are part of the same response chain.
-        // Exclude them from the visible sibling count so the UI does not show
-        // spurious branch-navigation arrows when a tool chain lives alongside the
-        // next user message under the same parent.
-        static bool IsToolInternal(ChatMessage m) =>
-            m.Role == ChatRole.Tool ||
-            (m.Role == ChatRole.Assistant && m.ToolCalls is { Count: > 0 });
-
-        var visibleCount = siblings.Count(s => !IsToolInternal(s));
+        var visibleCount = siblings.Count(s => !IsTreeInvisible(s));
         foreach (var s in siblings)
-            s.SiblingCount = IsToolInternal(s) ? 1 : Math.Max(visibleCount, 1);
+            s.SiblingCount = IsTreeInvisible(s) ? 1 : Math.Max(visibleCount, 1);
 
         // Update the parent's active child pointer when on the active path
         if (updateActiveChild && msg.ParentId is not null)
@@ -136,14 +144,11 @@ public sealed partial class ChatPanel
             }
             else
             {
-                static bool IsToolInternal(ChatMessage m) =>
-                    m.Role == ChatRole.Tool ||
-                    (m.Role == ChatRole.Assistant && m.ToolCalls is { Count: > 0 });
-                var visibleCount = siblings.Count(s => !IsToolInternal(s));
+                var visibleCount = siblings.Count(s => !IsTreeInvisible(s));
                 for (var i = 0; i < siblings.Count; i++)
                 {
                     siblings[i].SiblingIndex = i;
-                    siblings[i].SiblingCount = IsToolInternal(siblings[i]) ? 1 : Math.Max(visibleCount, 1);
+                    siblings[i].SiblingCount = IsTreeInvisible(siblings[i]) ? 1 : Math.Max(visibleCount, 1);
                 }
             }
         }
@@ -175,11 +180,13 @@ public sealed partial class ChatPanel
         DateTime? timestamp = null,
         double? elapsedSeconds = null,
         int? tokenCount = null,
-        SummaryMeta? summary = null)
+        SummaryMeta? summary = null,
+        bool isHidden = false,
+        bool isContinuation = false)
     {
         var msg = id is not null
-            ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, ThinkingContent = thinkingContent, Timestamp = timestamp ?? DateTime.UtcNow, ElapsedSeconds = elapsedSeconds, TokenCount = tokenCount, Summary = summary }
-            : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, ThinkingContent = thinkingContent, Timestamp = timestamp ?? DateTime.UtcNow, ElapsedSeconds = elapsedSeconds, TokenCount = tokenCount, Summary = summary };
+            ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, ThinkingContent = thinkingContent, Timestamp = timestamp ?? DateTime.UtcNow, ElapsedSeconds = elapsedSeconds, TokenCount = tokenCount, Summary = summary, IsHidden = isHidden, IsContinuation = isContinuation }
+            : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, ThinkingContent = thinkingContent, Timestamp = timestamp ?? DateTime.UtcNow, ElapsedSeconds = elapsedSeconds, TokenCount = tokenCount, Summary = summary, IsHidden = isHidden, IsContinuation = isContinuation };
         RegisterInTree(msg);
         _messages.Add(msg);
     }
@@ -273,6 +280,21 @@ public sealed partial class ChatPanel
         if (!_isInitialized || _messages.Count == 0 || _hasRenderedRestored) return;
         _hasRenderedRestored = true;
 
+        // Crash-safe sweep: a hidden message (the synthetic "Continue writing…"
+        // user turn) must always be paired with a continuation assistant child.
+        // If the host died between RegisterInTree and the OnContinueRequested
+        // finally block (process kill, OOM, GPU reset), the file may carry a
+        // dangling hidden turn. Sending it to the next provider call would
+        // confuse the model — it would respond to "Continue writing from where
+        // you left off" with no prior context to continue from.
+        var orphanHidden = _messages
+            .Where(m => m.IsHidden &&
+                (!_childrenMap.TryGetValue(m.Id, out var ch) || ch.Count == 0))
+            .ToList();
+        foreach (var o in orphanHidden) UnregisterFromTree(o);
+        if (orphanHidden.Count > 0)
+            DiagnosticLogger.LogInfo($"[Chat] Restore: pruned {orphanHidden.Count} orphaned hidden message(s)");
+
         DiagnosticLogger.LogInfo($"[Chat] RenderRestoredMessages: {_messages.Count} messages");
         SwitchToChatLayout();
 
@@ -281,6 +303,15 @@ public sealed partial class ChatPanel
 
         foreach (var msg in _messages)
         {
+            // Hidden internal turns (the synthetic "Continue writing…" user
+            // message produced by OnContinueRequested) live in the tree so the
+            // prompt builder can see them, but the renderer must not draw a
+            // bubble — that would surface a phantom user message after reload.
+            // The next assistant message in the chain carries IsContinuation,
+            // which prepends the "↪ continued" chip and stands in for the
+            // hidden turn visually.
+            if (msg.IsHidden) continue;
+
             if (msg.Role == ChatRole.User)
             {
                 // Finalize any pending assistant chain before rendering next user message
@@ -342,7 +373,10 @@ public sealed partial class ChatPanel
 
         var root = chain[0];
         var isSummary = root.Summary is not null;
-        await _renderer.BeginAssistantMessageAsync(root.Id, root.ProviderName, root.ProviderModelId, isSummary);
+        await _renderer.BeginAssistantMessageAsync(
+            root.Id, root.ProviderName, root.ProviderModelId,
+            isSummary: isSummary,
+            isContinuation: root.IsContinuation);
 
         // Restore thinking block
         if (!string.IsNullOrEmpty(root.ThinkingContent))

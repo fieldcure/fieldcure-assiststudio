@@ -230,32 +230,58 @@ public sealed partial class ChatPanel
     #region Continue & Stop
 
     /// <summary>
-    /// Handles the continue request from the renderer to resume streaming an assistant message.
+    /// Handles the continue request from the renderer when the user clicks the
+    /// Continue button on a truncated assistant response. Splits the next turn
+    /// into its own bubble: a hidden "Continue writing…" user turn shapes the
+    /// prompt without rendering, and a fresh assistant message (flagged as a
+    /// continuation) hosts the new stream. The prior bubble is left untouched
+    /// — no destructive innerHTML rewrite, no re-parse of already-rendered
+    /// content, no JSX iframe reload.
     /// </summary>
     private async void OnContinueRequested(object? sender, string messageId)
     {
         if (!_isInitialized || Provider is null) return;
         DiagnosticLogger.LogInfo($"[Chat] Continue requested for message {messageId}");
 
-        // Find the assistant message to continue
-        var assistantMessage = _messages.LastOrDefault(m =>
+        // Locate the assistant message the Continue button belongs to.
+        var priorAssistant = _messages.LastOrDefault(m =>
             m.Role == ChatRole.Assistant && m.Id == messageId);
-        if (assistantMessage is null) return;
+        if (priorAssistant is null) return;
 
-        // Add a user message asking to continue (not shown in UI)
+        // Hidden user turn — sent to the provider as part of the prompt, but
+        // skipped by the renderer (see ChatMessage.IsHidden). Persisted so the
+        // tree round-trips through .astx without a phantom reload bubble.
         var continueMessage = new ChatMessage(ChatRole.User, "Continue writing from where you left off.")
         {
-            ParentId = assistantMessage.Id
+            ParentId = priorAssistant.Id,
+            IsHidden = true,
         };
         RegisterInTree(continueMessage);
         _messages.Add(continueMessage);
 
+        // Fresh assistant bubble for the new stream. IsContinuation drives the
+        // small "↪ continued" label the renderer prepends so the new bubble
+        // visually links back to priorAssistant.
+        var continuationAssistant = new ChatMessage(ChatRole.Assistant)
+        {
+            IsStreaming = true,
+            ProviderName = Provider.ProviderName,
+            ProviderModelId = Provider.ModelId,
+            ParentId = continueMessage.Id,
+            IsContinuation = true,
+        };
+        RegisterInTree(continuationAssistant);
+        _messages.Add(continuationAssistant);
+
+        await _renderer.BeginAssistantMessageAsync(
+            continuationAssistant.Id,
+            Provider.ProviderName,
+            Provider.ModelId,
+            isContinuation: true);
+        MessageAdded?.Invoke(this, continuationAssistant);
+
         try
         {
-            // Resume the existing assistant message bubble for continued streaming
-            assistantMessage.IsStreaming = true;
-            await _renderer.ResumeMessageAsync(assistantMessage.Id, assistantMessage.Content);
-
             if (_inputArea is not null)
                 _inputArea.IsInputEnabled = false;
             _streamingCts?.Cancel();
@@ -263,42 +289,50 @@ public sealed partial class ChatPanel
             var ct = _streamingCts.Token;
 
             var request = await CreateRequestAsync([.. _messages]);
-            DiagnosticLogger.LogInfo($"[Chat] Continue → StreamAsync (messages={_messages.Count}, priorContentLen={assistantMessage.Content.Length})");
+            DiagnosticLogger.LogInfo($"[Chat] Continue → StreamAsync (messages={_messages.Count}, priorContentLen={priorAssistant.Content.Length})");
 
-            var priorLength = assistantMessage.Content.Length;
-            var result = await ConsumeStreamAsync(Provider.StreamAsync(request, ct), assistantMessage, ct);
-            DiagnosticLogger.LogInfo($"[Chat] Continue complete — appended={assistantMessage.Content.Length - priorLength} chars, tokens={result.Usage?.TotalTokens ?? 0}, truncated={result.IsTruncated}");
+            var result = await ConsumeStreamAsync(Provider.StreamAsync(request, ct), continuationAssistant, ct);
+            DiagnosticLogger.LogInfo($"[Chat] Continue complete — appended={continuationAssistant.Content.Length} chars, tokens={result.Usage?.TotalTokens ?? 0}, truncated={result.IsTruncated}");
 
-            await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content, result.IsTruncated, result.Usage?.TotalTokens ?? 0);
+            await _renderer.FinalizeMessageAsync(continuationAssistant.Id, continuationAssistant.Content, result.IsTruncated, result.Usage?.TotalTokens ?? 0);
 
             if (IsDebugMode)
-            {
-                // Find the original user message for this assistant response
-                var idx2 = _messages.IndexOf(assistantMessage);
-                var origUserMsg = idx2 > 0 ? _messages[idx2 - 1] : null;
-                if (origUserMsg is not null)
-                    await _renderer.SetDebugDataAsync(origUserMsg.Id, Provider.LastRequestBody, assistantMessage.Id, Provider.LastRawResponse);
-            }
+                await _renderer.SetDebugDataAsync(continueMessage.Id, Provider.LastRequestBody, continuationAssistant.Id, Provider.LastRawResponse);
         }
         catch (OperationCanceledException)
         {
             DiagnosticLogger.LogInfo("[Chat] Continue cancelled by user");
-            await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content);
+            await _renderer.FinalizeMessageAsync(continuationAssistant.Id, continuationAssistant.Content);
         }
         catch (Exception ex)
         {
             DiagnosticLogger.LogException(ex);
-            assistantMessage.Content += $"\n\n[Error: {ex.Message}]";
-            await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content);
+            continuationAssistant.Content += $"\n\n[Error: {ex.Message}]";
+            await _renderer.FinalizeMessageAsync(continuationAssistant.Id, continuationAssistant.Content);
         }
         finally
         {
-            // Always drop the ephemeral continue user message from both _messages
-            // and the children tree, even on cancel/exception, so it never survives
-            // into save/load as an orphaned bubble. (GetAllMessages() reads from
-            // _childrenMap, so _messages.Remove alone is not enough.)
-            UnregisterFromTree(continueMessage);
-            assistantMessage.IsStreaming = false;
+            continuationAssistant.IsStreaming = false;
+
+            // Mid-flight orphan guard. If the stream produced nothing — user
+            // hit Stop before the first delta, network drop or 401/429 pre-
+            // flight — drop both the hidden "Continue writing…" turn and the
+            // empty assistant bubble so the tree round-trips clean. The
+            // catch blocks above append "[Error: …]" on real exceptions, so
+            // an empty Content here means "no answer attempted at all", which
+            // is exactly the orphan case worth scrubbing. Anything non-empty
+            // (real response, partial cancel, or "[Error]") is kept so the
+            // reader can see what happened.
+            if (string.IsNullOrEmpty(continuationAssistant.Content))
+            {
+                UnregisterFromTree(continuationAssistant);
+                UnregisterFromTree(continueMessage);
+                // Removes the empty bubble we created in BeginAssistantMessageAsync.
+                // priorAssistant is still in the DOM, so this only sweeps the new pair.
+                await _renderer.RemoveMessagesAfterAsync(priorAssistant.Id);
+                DiagnosticLogger.LogInfo("[Chat] Continue produced no content — pruned hidden turn and empty assistant bubble");
+            }
+
             await _renderer.SetStreamingAsync(false);
             if (_inputArea is not null)
             {

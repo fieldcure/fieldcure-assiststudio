@@ -1316,6 +1316,7 @@ public sealed partial class ChatPanel
                 ["copy"] = Res.GetString("Chat_Copy"),
                 ["copied"] = Res.GetString("Chat_Copied"),
                 ["continue_label"] = Res.GetString("Chat_Continue"),
+                ["continuationLabel"] = Res.GetString("Chat_ContinuationLabel"),
                 ["code"] = Res.GetString("Chat_Code"),
                 ["copyPrompt"] = Res.GetString("Chat_CopyPrompt"),
                 ["copyMessage"] = Res.GetString("Chat_CopyMessage"),

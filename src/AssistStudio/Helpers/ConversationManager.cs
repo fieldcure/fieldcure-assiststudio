@@ -129,6 +129,8 @@ public static class ConversationManager
                 ElapsedSeconds = m.ElapsedSeconds,
                 TokenCount = m.TokenCount,
                 Summary = m.Summary,
+                IsHidden = m.IsHidden,
+                IsContinuation = m.IsContinuation,
             };
 
             // Persist user attachments (images + text files including pasted text)

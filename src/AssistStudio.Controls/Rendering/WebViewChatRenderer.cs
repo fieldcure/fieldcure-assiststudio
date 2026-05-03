@@ -204,11 +204,15 @@ internal partial class WebViewChatRenderer
 
     /// <summary>
     /// Begins a new assistant message bubble in the chat UI with provider and model information.
+    /// When <paramref name="isContinuation"/> is true, the bubble is prefixed with a small
+    /// "↪ continued" label so the reader can see it picks up from the previous (truncated)
+    /// assistant message rather than answering a fresh prompt — the visual cue that hides
+    /// the "Continue writing…" user turn behind the scenes.
     /// </summary>
     public Task BeginAssistantMessageAsync(string id, string? providerName = null, string? modelId = null,
-        bool isSummary = false)
+        bool isSummary = false, bool isContinuation = false)
     {
-        var script = $"window.assistChat.beginAssistantMessage({Js(id)}, {Js(providerName ?? "")}, {Js(modelId ?? "")}, {(isSummary ? "true" : "false")})";
+        var script = $"window.assistChat.beginAssistantMessage({Js(id)}, {Js(providerName ?? "")}, {Js(modelId ?? "")}, {(isSummary ? "true" : "false")}, {(isContinuation ? "true" : "false")})";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 

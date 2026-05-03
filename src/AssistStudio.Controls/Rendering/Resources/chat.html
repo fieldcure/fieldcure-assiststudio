@@ -1089,6 +1089,18 @@
         opacity: 0.7;
     }
 
+    /* "↪ continued" chip — visual stand-in for the hidden "Continue writing…"
+       user turn. Sits above the provider badge of an assistant bubble whose
+       IsContinuation flag is set, signalling that this message resumes the
+       previous (truncated) assistant response. */
+    .continuation-chip {
+        font-size: 11px;
+        font-style: italic;
+        color: var(--timestamp-color);
+        opacity: 0.7;
+        margin-bottom: 4px;
+    }
+
     /* ===== Search Highlight ===== */
     mark.search-hl {
         background-color: rgba(255, 200, 0, 0.4);
@@ -2223,9 +2235,9 @@
             doScroll('instant');
         },
 
-        beginAssistantMessage: function(id, providerName, modelId, isSummary) {
+        beginAssistantMessage: function(id, providerName, modelId, isSummary, isContinuation) {
             var msg = document.createElement('div');
-            msg.className = 'message assistant';
+            msg.className = 'message assistant' + (isContinuation ? ' continuation' : '');
             msg.id = 'msg-' + id;
 
             // Summary divider
@@ -2234,6 +2246,18 @@
                 var hr = document.createElement('hr');
                 hr.className = 'summary-divider';
                 msg.appendChild(hr);
+            }
+
+            // Continuation chip \u2014 small "\u21aa continued" tag prepended above the
+            // bubble so the reader sees this message picks up from the prior
+            // (truncated) one. The synthetic "Continue writing\u2026" user turn that
+            // shapes the prompt is hidden; this chip is its visual stand-in.
+            if (isContinuation) {
+                msg.dataset.isContinuation = '1';
+                var chip = document.createElement('div');
+                chip.className = 'continuation-chip';
+                chip.textContent = '\u21aa ' + (window._L && window._L.continuationLabel ? window._L.continuationLabel : 'continued');
+                msg.appendChild(chip);
             }
 
             var badgeHtml = '';

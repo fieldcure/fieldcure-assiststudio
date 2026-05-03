@@ -126,6 +126,10 @@
   <data name="Chat_Continue" xml:space="preserve">
     <value>▶ 계속</value>
   </data>
+  <data name="Chat_ContinuationLabel" xml:space="preserve">
+    <value>이어진 응답</value>
+    <comment>Small chip prepended to an assistant bubble that resumes a prior truncated response. Rendered as "↪ 이어진 응답" in the chat UI.</comment>
+  </data>
   <data name="Chat_Code" xml:space="preserve">
     <value>코드</value>
   </data>

@@ -126,6 +126,25 @@ public class SavedMessage
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public SummaryMeta? Summary { get; set; }
 
+    /// <summary>
+    /// True for the synthetic "Continue writing…" user turn that the host
+    /// inserts when the user clicks the Continue button on a truncated
+    /// assistant response. Persisted so the conversation tree round-trips
+    /// correctly; the renderer skips it on load. Mirrors
+    /// <see cref="ChatMessage.IsHidden"/>. Default <c>false</c> omitted.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool IsHidden { get; set; }
+
+    /// <summary>
+    /// True for assistant messages that resume a prior truncated response.
+    /// Persisted so the renderer can restore the "↪ continued" chip on load.
+    /// Mirrors <see cref="ChatMessage.IsContinuation"/>. Default <c>false</c>
+    /// omitted.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool IsContinuation { get; set; }
+
     #endregion
 }
 
