@@ -21,48 +21,73 @@
 //                              user code in a React + Babel + Tailwind
 //                              host shell with a global error catcher.
 
+using Microsoft.Web.WebView2.Core;
+using System.IO;
+using System.Reflection;
+
 namespace FieldCure.AssistStudio.Controls.Rendering;
 
 internal partial class WebViewChatRenderer
 {
     /// <summary>
-    /// External CDN routes that the WebView2 is allowed to fetch from.
-    /// Every outbound http(s) request not matching one of these is blocked
-    /// by the <c>WebResourceRequested</c> filter — required for MS Store
-    /// security review since the artifact-preview iframe runs untrusted
-    /// model output that could otherwise pull in arbitrary scripts or
-    /// exfiltrate data via <c>fetch()</c>.
-    ///
-    /// Each entry is (host, path-prefix). Path prefix is matched against
-    /// <see cref="System.Uri.AbsolutePath"/>; an empty prefix matches any
-    /// path on the host. Keep in sync with the URLs hard-coded above in
-    /// <c>JSX_LIB_CDN</c> / <c>JSX_DEP_CDN</c> and the React/Babel/Tailwind
-    /// script tags in <c>JsxPreviewBranchJs</c>.
+    /// Virtual host name that serves the bundled JSX runtime libraries
+    /// (React, Babel, Tailwind, recharts, etc.) from embedded resources.
+    /// The artifact-preview iframe loads everything from this host instead
+    /// of unpkg.com / cdn.tailwindcss.com so the feature works air-gapped
+    /// (data-sovereignty story for medical / IP customers) and so old
+    /// .astx conversations re-render identically against the same locked
+    /// versions years later. Served by <see cref="TryServeVendorResource"/>.
+    /// </summary>
+    internal const string VendorHostName = "assiststudio.vendor";
+
+    /// <summary>
+    /// Filename → manifest-resource-name lookup for the JSX vendor bundle.
+    /// Built once on first request by scanning the executing assembly's
+    /// embedded resources for anything under <c>Resources/vendor/jsx/</c>.
+    /// Keyed case-insensitively on the filename only (so requests to
+    /// <c>https://assiststudio.vendor/react-18.3.1.development.js</c>
+    /// resolve regardless of the assembly's default namespace prefix).
+    /// </summary>
+    private static readonly Lazy<Dictionary<string, string>> VendorResourceMap = new(() =>
+    {
+        const string marker = ".vendor.jsx.";
+        var assembly = Assembly.GetExecutingAssembly();
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var name in assembly.GetManifestResourceNames())
+        {
+            var idx = name.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (idx < 0) continue;
+            map[name[(idx + marker.Length)..]] = name;
+        }
+        return map;
+    });
+
+    /// <summary>
+    /// External CDN routes the artifact-preview iframe is allowed to reach.
+    /// Vendored libs (see <see cref="VendorHostName"/>) cover the locked 17,
+    /// so these only fire for (a) JSX imports the user wrote that aren't in
+    /// <c>JSX_LIB_CDN</c> — auto-routed to esm.sh by transformJsxArtifact —
+    /// or (b) raw <c>&lt;script src="…"&gt;</c> tags inside HTML artifacts that
+    /// hard-code one of these hosts. Every entry is (host, path-prefix);
+    /// empty prefix matches any path on the host.
     /// </summary>
     internal static readonly (string Host, string PathPrefix)[] AllowedCdnRoutes =
     [
-        // React + Babel + Tailwind core (always loaded by JSX host shell)
-        ("unpkg.com", "/react@"),
-        ("unpkg.com", "/react-dom@"),
-        ("unpkg.com", "/@babel/standalone@"),
-        ("cdn.tailwindcss.com", ""),
-
-        // JSX libs (opt-in based on user code imports)
-        ("unpkg.com", "/lucide-react@"),
-        ("unpkg.com", "/recharts@"),
-        ("unpkg.com", "/d3@"),
-        ("unpkg.com", "/three@"),
-        ("unpkg.com", "/lodash@"),
-        ("unpkg.com", "/mathjs@"),
-        ("unpkg.com", "/papaparse@"),
-        ("unpkg.com", "/chart.js@"),
-        ("unpkg.com", "/tone@"),
-        ("unpkg.com", "/xlsx@"),
-        ("unpkg.com", "/mammoth@"),
-        ("unpkg.com", "/@tensorflow/tfjs@"),
-
-        // Implicit deps (recharts → prop-types)
-        ("unpkg.com", "/prop-types@"),
+        // JSX import auto-fallback — modern ESM CDN, Cloudflare-backed.
+        // transformJsxArtifact rewrites unmapped imports as dynamic import()
+        // against this host; the bootstrap awaits each one before render.
+        ("esm.sh", ""),
+        // Anthropic's official artifact CDN. Claude.ai itself loads long-tail
+        // libraries from here, so HTML artifacts that came from Claude often
+        // hard-code cdnjs <script> tags — keep this allowed for compat.
+        ("cdnjs.cloudflare.com", "/ajax/libs/"),
+        // jsDelivr — the other widely-used npm CDN. Models often pick this
+        // for raw <script src=…> in JSX/HTML artifacts when they don't trust
+        // the import system to resolve a library (e.g. mammoth, pdf.js).
+        ("cdn.jsdelivr.net", "/npm/"),
+        // Secondary fallback — esm.sh outage or packages it does not serve
+        // (rare, but unpkg has broader long-tail npm coverage).
+        ("unpkg.com", ""),
     ];
 
     /// <summary>
@@ -92,25 +117,27 @@ internal partial class WebViewChatRenderer
             '@tensorflow/tfjs': 'tf'
         };
 
-        // CDN script URLs for libraries beyond React/ReactDOM. React itself,
-        // Babel, and Tailwind are always loaded; everything here is opt-in
-        // based on what the user code actually imports.
+        // Vendored library URLs — served from embedded assembly resources
+        // through the assiststudio.vendor virtual host (see TryServeVendorResource
+        // in WebViewChatRenderer.ArtifactPreview.cs). React, Babel, and Tailwind
+        // are always loaded by the host shell below; everything here is opt-in
+        // based on what the user code actually imports. Filenames must match
+        // Resources/vendor/jsx/ exactly — no fallback to the network.
         var JSX_LIB_CDN = {
-            'lucide-react':      'https://unpkg.com/lucide-react@0.383.0/dist/umd/lucide-react.min.js',
-            'recharts':          'https://unpkg.com/recharts@2.12.7/umd/Recharts.js',
-            'd3':                'https://unpkg.com/d3@7.9.0/dist/d3.min.js',
-            'three':             'https://unpkg.com/three@0.128.0/build/three.min.js',
-            'lodash':            'https://unpkg.com/lodash@4.17.21/lodash.min.js',
-            'mathjs':            'https://unpkg.com/mathjs@13.2.0/lib/browser/math.js',
-            'papaparse':         'https://unpkg.com/papaparse@5.4.1/papaparse.min.js',
-            'chart.js':          'https://unpkg.com/chart.js@4.4.4/dist/chart.umd.js',
-            'tone':              'https://unpkg.com/tone@15.0.4/build/Tone.js',
+            'lucide-react':      'https://assiststudio.vendor/lucide-react-0.383.0.min.js',
+            'recharts':          'https://assiststudio.vendor/recharts-2.12.7.js',
+            'd3':                'https://assiststudio.vendor/d3-7.9.0.min.js',
+            'three':             'https://assiststudio.vendor/three-0.128.0.min.js',
+            'lodash':            'https://assiststudio.vendor/lodash-4.17.21.min.js',
+            'mathjs':            'https://assiststudio.vendor/mathjs-13.2.0.js',
+            'papaparse':         'https://assiststudio.vendor/papaparse-5.4.1.min.js',
+            'chart.js':          'https://assiststudio.vendor/chart-4.4.4.umd.js',
+            'tone':              'https://assiststudio.vendor/tone-15.0.4.js',
             // Beyond the spec-100 list — common Claude artifact deps.
-            'xlsx':              'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js',
-            'mammoth':           'https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js',
-            // tfjs is ~3MB. First load is slow; subsequent renders hit
-            // the WebView2 cache. Worth it for ML-related artifacts.
-            '@tensorflow/tfjs':  'https://unpkg.com/@tensorflow/tfjs@4.22.0/dist/tf.min.js'
+            'xlsx':              'https://assiststudio.vendor/xlsx-0.18.5.full.min.js',
+            'mammoth':           'https://assiststudio.vendor/mammoth-1.8.0.browser.min.js',
+            // tfjs is ~1.4MB. Loaded only when the artifact actually imports it.
+            '@tensorflow/tfjs':  'https://assiststudio.vendor/tfjs-4.22.0.min.js'
         };
 
         // Implicit dependencies — UMD bundles that require other globals
@@ -121,7 +148,7 @@ internal partial class WebViewChatRenderer
             'recharts': ['prop-types']
         };
         var JSX_DEP_CDN = {
-            'prop-types': 'https://unpkg.com/prop-types@15.8.1/prop-types.min.js'
+            'prop-types': 'https://assiststudio.vendor/prop-types-15.8.1.min.js'
         };
 
         // Some UMD bundles expect React on a differently-cased global
@@ -277,15 +304,32 @@ internal partial class WebViewChatRenderer
 
         /// Rewrites `import` and `export default` so user code runs under
         /// Babel-standalone (no ES module support) against the UMD globals
-        /// the host shell loads from CDN. Unknown imports are stripped with
-        /// a comment so Babel does not throw. Returns { code, libs } where
-        /// `libs` is the list of import sources we should load via CDN.
+        /// the host shell loads — either from the embedded vendor bundle
+        /// (sync `<script>` tags) or from esm.sh (async dynamic `import()`
+        /// in the bootstrap). Returns { code, libs, externals } where
+        ///   - `libs`      = vendored sources to load via `<script>` tags
+        ///   - `externals` = unmapped sources to dynamic-import from esm.sh
+        ///                   before user code runs. Each entry is
+        ///                   { name, url, global, source }.
+        /// Imports beginning with `@/` resolve to the inlined shadcn shim.
         function transformJsxArtifact(src) {
+            // Sanitize a module specifier to a valid JS identifier so it
+            // can be used as a window-global key for the async-loaded copy.
+            // 'plotly' → '__ext_plotly', 'd3-cloud' → '__ext_d3_cloud',
+            // '@scope/pkg' → '__ext__scope_pkg'.
+            function makeExternalGlobal(mod) {
+                return '__ext_' + mod.replace(/[^a-zA-Z0-9]/g, '_');
+            }
+
             function mapMod(mod) {
                 // shadcn convention: any '@/components/ui/...' or
                 // '@/lib/utils' resolves to the inlined window.__shadcn.
                 if (mod.indexOf('@/') === 0) return 'window.__shadcn';
-                return JSX_IMPORT_MAP[mod] || null;
+                if (JSX_IMPORT_MAP[mod]) return JSX_IMPORT_MAP[mod];
+                // Auto-fallback: bootstrap will dynamic-import this module
+                // from esm.sh and stash it under window[__ext_<mod>] before
+                // user code runs.
+                return makeExternalGlobal(mod);
             }
             // For default/namespace imports we must read the global as a
             // property (window.X), not a binding. Otherwise patterns
@@ -297,27 +341,49 @@ internal partial class WebViewChatRenderer
                 return g.indexOf('.') >= 0 ? g : 'window.' + g;
             }
 
-            // First pass: collect every imported module that has a CDN entry.
+            // First pass: classify every imported module.
+            //   - Mapped to a host-shell global (JSX_IMPORT_MAP) → no script
+            //     needed (React, ReactDOM, etc. are loaded by the host shell
+            //     unconditionally; libs in JSX_LIB_CDN add a <script> tag).
+            //   - shadcn (@/...)              → no script needed
+            //   - Anything else               → externals[] (esm.sh dynamic import)
+            // Order matters: must check JSX_IMPORT_MAP before falling through
+            // to externals, otherwise `import {useState} from 'react'` gets
+            // routed to esm.sh even though React is already on `window`.
             var libsSeen = {};
+            var externalsSeen = {};
             var importScanRe = /^[ \t]*import\s+(?:[^'"]+?\s+from\s+)?['"]([^'"]+)['"];?/gm;
             var scan;
             while ((scan = importScanRe.exec(src)) !== null) {
-                if (JSX_LIB_CDN[scan[1]]) libsSeen[scan[1]] = true;
+                var mod = scan[1];
+                if (mod.indexOf('@/') === 0) continue;
+                if (JSX_LIB_CDN[mod]) {
+                    libsSeen[mod] = true;
+                } else if (JSX_IMPORT_MAP[mod]) {
+                    // Already on window via the host shell — no fetch needed.
+                } else if (!externalsSeen[mod]) {
+                    externalsSeen[mod] = {
+                        name: mod,
+                        url: 'https://esm.sh/' + mod,
+                        global: makeExternalGlobal(mod),
+                        source: 'esm.sh'
+                    };
+                }
             }
             var libs = Object.keys(libsSeen);
+            var externals = Object.keys(externalsSeen).map(function(k){return externalsSeen[k];});
 
             // import { a, b as c } from "mod";
             src = src.replace(
                 /^[ \t]*import\s*\{\s*([^}]+?)\s*\}\s*from\s*['"]([^'"]+)['"];?[ \t]*$/gm,
                 function(_m, names, mod) {
                     var g = mapMod(mod);
-                    if (!g) return '/* import { ' + names + " } from '" + mod + "' (unmapped, stripped) */";
                     var dest = names.split(',').map(function(p) {
                         p = p.trim();
                         var asMatch = p.match(/^(\w+)\s+as\s+(\w+)$/);
                         return asMatch ? asMatch[1] + ': ' + asMatch[2] : p;
                     }).join(', ');
-                    return 'const { ' + dest + ' } = ' + g + ';';
+                    return 'const { ' + dest + ' } = ' + asProperty(g) + ';';
                 });
 
             // import * as X from "mod";
@@ -325,7 +391,6 @@ internal partial class WebViewChatRenderer
                 /^[ \t]*import\s*\*\s*as\s+(\w+)\s+from\s*['"]([^'"]+)['"];?[ \t]*$/gm,
                 function(_m, name, mod) {
                     var g = mapMod(mod);
-                    if (!g) return "/* import * as " + name + " from '" + mod + "' (unmapped, stripped) */";
                     return 'const ' + name + ' = ' + asProperty(g) + ';';
                 });
 
@@ -334,7 +399,6 @@ internal partial class WebViewChatRenderer
                 /^[ \t]*import\s+(\w+)\s+from\s*['"]([^'"]+)['"];?[ \t]*$/gm,
                 function(_m, name, mod) {
                     var g = mapMod(mod);
-                    if (!g) return "/* import " + name + " from '" + mod + "' (unmapped, stripped) */";
                     var p = asProperty(g);
                     return 'const ' + name + ' = ' + p + '.default || ' + p + ';';
                 });
@@ -356,7 +420,7 @@ internal partial class WebViewChatRenderer
             // export const / export function / etc.  →  drop the keyword
             src = src.replace(/^export\s+(?!default)/gm, '');
 
-            return { code: src, libs: libs };
+            return { code: src, libs: libs, externals: externals };
         }
 
         /// UTF-8 safe base64 encode for stashing original JSX source on a
@@ -387,7 +451,15 @@ internal partial class WebViewChatRenderer
             return '<div class="diagram-block" data-kind="html" data-view="preview">' +
                     previewHeader('html', L.htmlPreviewCopyTooltip || 'Copy HTML source') +
                     '<div class="html-frame">' +
-                        '<iframe sandbox="allow-scripts" srcdoc="' + attrEscaped + '"></iframe>' +
+                        // sandbox tokens:
+                        //   allow-scripts   — needed for any JS at all
+                        //   allow-modals    — <input type="file">, alert/confirm/prompt
+                        //                     (a missing modal token caused the WebView2
+                        //                     process to SEH-crash on first file picker)
+                        //   allow-downloads — blob: download anchors for exporters
+                        // Crucially we do NOT add allow-same-origin — the iframe stays on
+                        // a null origin so it cannot reach parent DOM, cookies, or storage.
+                        '<iframe sandbox="allow-scripts allow-modals allow-downloads" srcdoc="' + attrEscaped + '"></iframe>' +
                     '</div>' +
                     '<pre class="code-view"><code class="hljs language-html">' + htmlHl + '</code></pre>' +
                    '</div>';
@@ -472,14 +544,39 @@ internal partial class WebViewChatRenderer
                     '});' +
                 '})();';
 
+            // Encode the externals manifest so the iframe bootstrap can read it
+            // back as JSON. Empty array → "[]" (no dynamic imports happen).
+            var externalsJson = JSON.stringify(jsxResult.externals || []);
+            var externalsB64 = utf8ToBase64(externalsJson);
+
+            // Bootstrap is async because each unmapped JSX import becomes a
+            // dynamic import() against esm.sh. We must await all of those
+            // before Babel.transform / Function() / render, otherwise the
+            // user code references window.__ext_<mod> globals that aren't
+            // populated yet. Vendored libs (React, recharts, …) are still
+            // loaded synchronously via <script> tags above this script, so
+            // they're already on `window` when this IIFE starts.
             var bootstrapJs =
-                'document.addEventListener("DOMContentLoaded",function(){' +
+                'document.addEventListener("DOMContentLoaded",async function(){' +
                     'var b64=document.documentElement.getAttribute("data-jsx-source");' +
+                    'var extB64=document.documentElement.getAttribute("data-jsx-externals")||"";' +
                     'var presets=(document.documentElement.getAttribute("data-jsx-presets")||"react").split(",");' +
-                    'var src;try{src=decodeURIComponent(escape(atob(b64)));}' +
+                    'var src,externals;' +
+                    'try{src=decodeURIComponent(escape(atob(b64)));}' +
                     'catch(e){window.__showPreviewError("Failed to decode source: "+e.message);return;}' +
-                    'if(typeof Babel==="undefined"){window.__showPreviewError("Babel did not load (check network access to unpkg.com).");return;}' +
-                    'if(typeof React==="undefined"||typeof ReactDOM==="undefined"){window.__showPreviewError("React or ReactDOM did not load.");return;}' +
+                    'try{externals=extB64?JSON.parse(decodeURIComponent(escape(atob(extB64)))):[];}' +
+                    'catch(e){window.__showPreviewError("Failed to decode externals: "+e.message);return;}' +
+                    'if(typeof Babel==="undefined"){window.__showPreviewError("Babel did not load from the bundled runtime.");return;}' +
+                    'if(typeof React==="undefined"||typeof ReactDOM==="undefined"){window.__showPreviewError("React or ReactDOM did not load from the bundled runtime.");return;}' +
+                    // Pre-load every esm.sh module the import scan flagged. Failures stop
+                    // the whole render so the user sees a precise message naming the lib
+                    // and source — invaluable for air-gap diagnosis (IT can whitelist the
+                    // exact host, or the user knows which import to replace).
+                    'for(var i=0;i<externals.length;i++){' +
+                        'var ext=externals[i];' +
+                        'try{window[ext.global]=await import(ext.url);}' +
+                        'catch(e){window.__showPreviewError("Failed to load \\""+ext.name+"\\" from "+ext.source+": "+(e&&e.message||e));return;}' +
+                    '}' +
                     'var jsCode;try{jsCode=Babel.transform(src,{presets:presets}).code;}' +
                     'catch(e){var loc=e.loc?" (line "+e.loc.line+", col "+e.loc.column+")":"";' +
                         'window.__showPreviewError("JSX/Babel parse: "+(e.message||e)+loc);return;}' +
@@ -499,7 +596,7 @@ internal partial class WebViewChatRenderer
             // re-rendered.
             var parentTheme = (document.documentElement.getAttribute('data-theme') === 'dark') ? 'dark' : 'light';
             var hostHtml =
-                '<!DOCTYPE html><html data-theme="' + parentTheme + '" data-jsx-source="' + transformedB64 + '" data-jsx-presets="' + presets + '">' +
+                '<!DOCTYPE html><html data-theme="' + parentTheme + '" data-jsx-source="' + transformedB64 + '" data-jsx-externals="' + externalsB64 + '" data-jsx-presets="' + presets + '">' +
                 '<head><meta charset="UTF-8"/>' +
                 '<meta name="viewport" content="width=device-width,initial-scale=1.0"/>' +
                 '<style>*,*::before,*::after{box-sizing:border-box}' +
@@ -510,11 +607,11 @@ internal partial class WebViewChatRenderer
                 SHADCN_CSS_VARS_CSS +
                 '</style>' +
                 '<script>' + errorInfraJs + '</script>' +
-                '<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin></script>' +
-                '<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin></script>' +
+                '<script src="https://assiststudio.vendor/react-18.3.1.development.js" crossorigin></script>' +
+                '<script src="https://assiststudio.vendor/react-dom-18.3.1.development.js" crossorigin></script>' +
                 '<script>' + JSX_PRE_LIB_SHIM_JS + '</script>' +
-                '<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin></script>' +
-                '<script src="https://cdn.tailwindcss.com"></script>' +
+                '<script src="https://assiststudio.vendor/babel-standalone-7.29.0.min.js" crossorigin></script>' +
+                '<script src="https://assiststudio.vendor/tailwindcss-3.4.17.js"></script>' +
                 '<script>' + SHADCN_TAILWIND_CONFIG_JS + '</script>' +
                 libScripts +
                 '<script>' + JSX_POST_LIB_SHIM_JS + '</script>' +
@@ -534,13 +631,108 @@ internal partial class WebViewChatRenderer
                 try { jsxHl = hljs.highlight(code, { language: 'javascript' }).value; }
                 catch(e2) { jsxHl = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
             }
+            // Source-aware indicator so air-gap users / IT can identify the
+            // exact host to whitelist (or which import to vendor) without
+            // digging through devtools. Empty string when no externals.
+            var externalNote = '';
+            if (jsxResult.externals && jsxResult.externals.length) {
+                externalNote = (L2.jsxPreviewExternalsLabel || 'Loaded externally') + ': ' +
+                    jsxResult.externals.map(function(e){return e.name + ' (' + e.source + ')';}).join(', ');
+            }
             return '<div class="diagram-block" data-kind="jsx" data-view="preview" data-theme="' + parentTheme + '" data-source-b64="' + sourceB64 + '">' +
-                    previewHeader(lang, L2.jsxPreviewCopyTooltip || 'Copy source', parentTheme) +
+                    previewHeader(lang, L2.jsxPreviewCopyTooltip || 'Copy source', parentTheme, externalNote) +
                     '<div class="html-frame">' +
-                        '<iframe sandbox="allow-scripts" srcdoc="' + attrEscaped2 + '"></iframe>' +
+                        // Same sandbox token set as the HTML branch above — see comment there.
+                        '<iframe sandbox="allow-scripts allow-modals allow-downloads" srcdoc="' + attrEscaped2 + '"></iframe>' +
                     '</div>' +
                     '<pre class="code-view"><code class="hljs language-' + lang + '">' + jsxHl + '</code></pre>' +
                    '</div>';
         }
         """;
+
+    /// <summary>
+    /// Maps a JSX-bundle filename to the Content-Type header the WebView2
+    /// expects on the synthesized response. JS is the only type we serve
+    /// today, but this leaves room for a vendored CSS file (e.g. tailwind
+    /// preflight) without another conditional in the call site.
+    /// </summary>
+    /// <param name="fileName">Vendor filename including extension.</param>
+    /// <returns>MIME type string, defaulting to <c>application/javascript</c>.</returns>
+    private static string ContentTypeFor(string fileName)
+    {
+        if (fileName.EndsWith(".css", StringComparison.OrdinalIgnoreCase))
+            return "text/css; charset=utf-8";
+        if (fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            return "application/json; charset=utf-8";
+        if (fileName.EndsWith(".woff2", StringComparison.OrdinalIgnoreCase))
+            return "font/woff2";
+        return "application/javascript; charset=utf-8";
+    }
+
+    /// <summary>
+    /// Intercepts <c>https://assiststudio.vendor/&lt;file&gt;</c> requests
+    /// and serves the matching embedded resource directly from the assembly,
+    /// bypassing the disk entirely. Called from
+    /// <see cref="OnWebResourceRequested"/> before the CDN allow-list check
+    /// so vendored URLs never escape to the network.
+    ///
+    /// Returns <c>true</c> if the URI was a vendor URL and the response was
+    /// set (either 200 with the resource or 404 if the file is missing);
+    /// <c>false</c> if the URI is not a vendor URL and the caller should
+    /// continue with normal handling.
+    /// </summary>
+    /// <param name="parsedUri">The parsed request URI.</param>
+    /// <param name="args">WebResourceRequested event args to populate.</param>
+    /// <param name="env">CoreWebView2 environment (for response synthesis).</param>
+    internal static bool TryServeVendorResource(
+        Uri parsedUri,
+        CoreWebView2WebResourceRequestedEventArgs args,
+        CoreWebView2Environment env)
+    {
+        if (!string.Equals(parsedUri.Host, VendorHostName, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var fileName = parsedUri.AbsolutePath.TrimStart('/');
+        if (string.IsNullOrEmpty(fileName))
+        {
+            args.Response = env.CreateWebResourceResponse(
+                Content: null, StatusCode: 404, ReasonPhrase: "Not Found",
+                Headers: "Content-Type: text/plain");
+            return true;
+        }
+
+        if (!VendorResourceMap.Value.TryGetValue(fileName, out var resourceName))
+        {
+            args.Response = env.CreateWebResourceResponse(
+                Content: null, StatusCode: 404, ReasonPhrase: "Not Found",
+                Headers: "Content-Type: text/plain");
+            return true;
+        }
+
+        // GetManifestResourceStream returns a fresh UnmanagedMemoryStream each
+        // call backed by the assembly's mapped image. WinUI 3's CoreWebView2
+        // projection expects an IRandomAccessStream, so wrap it via the
+        // System.IO.WindowsRuntimeStreamExtensions adapter — the underlying
+        // bytes are still served zero-copy from the assembly image.
+        var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName);
+        if (stream is null)
+        {
+            args.Response = env.CreateWebResourceResponse(
+                Content: null, StatusCode: 404, ReasonPhrase: "Not Found",
+                Headers: "Content-Type: text/plain");
+            return true;
+        }
+
+        // Sandbox iframes have a null origin and load these scripts with the
+        // `crossorigin` attribute, so CORS headers are required even though
+        // the content never leaves the process.
+        var headers =
+            "Content-Type: " + ContentTypeFor(fileName) + "\r\n" +
+            "Access-Control-Allow-Origin: *\r\n" +
+            "Cache-Control: public, max-age=31536000, immutable";
+        args.Response = env.CreateWebResourceResponse(
+            Content: stream.AsRandomAccessStream(),
+            StatusCode: 200, ReasonPhrase: "OK", Headers: headers);
+        return true;
+    }
 }

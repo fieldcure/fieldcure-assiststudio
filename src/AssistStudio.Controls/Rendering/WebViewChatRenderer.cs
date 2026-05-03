@@ -134,6 +134,7 @@ internal partial class WebViewChatRenderer
         _webView.CoreWebView2.NavigationStarting += OnNavigationStarting;
         _webView.CoreWebView2.NewWindowRequested += OnNewWindowRequested;
         _webView.CoreWebView2.DownloadStarting += OnDownloadStarting;
+        _webView.CoreWebView2.ProcessFailed += OnProcessFailed;
 
         // Restrict outbound network access to the artifact-preview CDN allow-list.
         // The filter must be registered BEFORE any iframe runs, so do it here at
@@ -589,15 +590,24 @@ internal partial class WebViewChatRenderer
 
     /// <summary>
     /// Enforces the CDN allow-list on every outbound WebView2 request (including iframes).
-    /// Local data:, about:, and the assiststudio.temp virtual host pass through. For remote
-    /// requests, the policy is split by resource type:
-    /// <list type="bullet">
-    ///   <item><description>Image / Media / Font: any https origin (passive resources —
-    ///   placeholder images like <c>i.pravatar.cc</c>, embedded videos, webfonts are
-    ///   common in artifact previews and don't execute code).</description></item>
-    ///   <item><description>Script / XHR / Fetch / WebSocket / EventSource / Stylesheet /
-    ///   Document / everything else: must match <see cref="AllowedCdnRoutes"/>. These can
-    ///   execute code or exfiltrate data and are the actual Store-review concern.</description></item>
+    /// The order below is the request-time decision tree:
+    /// <list type="number">
+    ///   <item><description><c>data:</c>, <c>blob:</c>, <c>about:</c> — internal schemes,
+    ///   never leave the process; pass through.</description></item>
+    ///   <item><description><c>assiststudio.temp</c> virtual host — local media folder
+    ///   mapped via <see cref="CoreWebView2.SetVirtualHostNameToFolderMapping"/>;
+    ///   pass through.</description></item>
+    ///   <item><description><c>assiststudio.vendor</c> virtual host — JSX runtime bundle
+    ///   served from embedded assembly resources by <see cref="TryServeVendorResource"/>;
+    ///   responds with the matching script (200) or 404. The artifact-preview iframe
+    ///   loads React, Babel, Tailwind, recharts, etc. through here so the feature works
+    ///   air-gapped.</description></item>
+    ///   <item><description>Image / Media / Font over https — any origin. Passive resources
+    ///   that cannot execute attacker-controlled code; allowed for placeholder avatars,
+    ///   embedded videos, and webfonts.</description></item>
+    ///   <item><description>Everything else over https — must match
+    ///   <see cref="AllowedCdnRoutes"/> (cdnjs.cloudflare.com fallback for stray model
+    ///   output that hard-codes Anthropic's own CDN).</description></item>
     /// </list>
     /// Anything else is rejected with a synthesized 403 response.
     /// </summary>
@@ -632,6 +642,12 @@ internal partial class WebViewChatRenderer
                 Headers: "Content-Type: text/plain");
             return;
         }
+
+        // JSX vendor bundle (React, Babel, Tailwind, recharts, …) served from
+        // embedded assembly resources via the assiststudio.vendor virtual host.
+        // Never touches the network — works air-gapped and pins exact versions.
+        if (TryServeVendorResource(parsedUri, args, sender.Environment))
+            return;
 
         // Passive resources (image/media/font) — allow from any https origin. They cannot
         // execute attacker-controlled code; the URL is in the visible artifact source so
@@ -671,6 +687,27 @@ internal partial class WebViewChatRenderer
         var uri = args.DownloadOperation.Uri;
         if (!string.IsNullOrEmpty(uri))
             ImageSaveRequested?.Invoke(this, uri);
+    }
+
+    /// <summary>
+    /// Logs WebView2 process failures so iframe / browser-process crashes
+    /// don't bubble up as opaque <c>SEHException</c> in the host main loop.
+    /// Most artifact-iframe crashes (file picker, GPU driver, OOM under
+    /// heavy artifacts) land here. Logging the kind + reason + exit code
+    /// lets us tell a sandbox-permission issue ("file picker crashed render
+    /// process") apart from a real bug.
+    /// </summary>
+    private void OnProcessFailed(CoreWebView2 sender, CoreWebView2ProcessFailedEventArgs args)
+    {
+        var frameCount = 0;
+        try { frameCount = args.FrameInfosForFailedProcess?.Count ?? 0; }
+        catch { /* property can throw on certain failure kinds — ignore */ }
+
+        DiagnosticLogger.LogWarning(
+            $"[ChatPanel] WebView2 process failed: kind={args.ProcessFailedKind}, " +
+            $"reason={args.Reason}, exitCode={args.ExitCode}, " +
+            $"desc='{args.ProcessDescription}', module='{args.FailureSourceModulePath}', " +
+            $"affectedFrames={frameCount}");
     }
 
     /// <summary>
@@ -965,7 +1002,11 @@ internal partial class WebViewChatRenderer
                     // sun/moon button that flips the iframe theme via
                     // postMessage), or empty/null for HTML (raw user HTML
                     // controls its own theme — no override possible).
-                    function previewHeader(label, copyTooltip, themeForToggle) {
+                    // externalNote (optional, JSX only) is a pre-built
+                    // human-readable string like "Loaded externally: plotly
+                    // (esm.sh)" rendered muted between the language label
+                    // and the action group. Empty string = no indicator.
+                    function previewHeader(label, copyTooltip, themeForToggle, externalNote) {
                         var L = window._L || {};
                         var themeBtn = '';
                         if (themeForToggle) {
@@ -977,8 +1018,21 @@ internal partial class WebViewChatRenderer
                                         (L.previewThemeToggleTooltip || 'Toggle theme') + '">' +
                                         icon + '</button>';
                         }
+                        var extInfo = '';
+                        if (externalNote) {
+                            // Inline style instead of a stylesheet rule so the marker is
+                            // self-contained — no chat.html CSS dependency to track.
+                            var escaped = String(externalNote)
+                                .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                                .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+                            extInfo = '<span class="ext-libs-note" title="' + escaped + '" ' +
+                                      'style="font-style:italic;opacity:0.65;font-size:0.85em;' +
+                                      'margin-left:10px;overflow:hidden;text-overflow:ellipsis;' +
+                                      'white-space:nowrap;max-width:40%;">' + escaped + '</span>';
+                        }
                         return '<div class="code-header">' +
                                 '<span class="code-lang">' + label + '</span>' +
+                                extInfo +
                                 '<span class="diagram-actions">' +
                                     '<span class="view-toggle-group">' +
                                         '<button class="diagram-btn view-toggle-btn active" data-view="preview">' + (L.previewToggleLabel || 'Preview') + '</button>' +
@@ -1038,7 +1092,8 @@ internal partial class WebViewChatRenderer
                     // shell, then render through the same sandboxed iframe pipeline
                     // as HTML. Imports are remapped to UMD globals; `export default`
                     // is hoisted to window.__default_export for the auto-mount.
-                    // Scripts come from public CDNs (unpkg, cdn.tailwindcss.com).
+                    // All scripts load from the assiststudio.vendor virtual host
+                    // (embedded assembly resources — no network access required).
                     //
                     // Babel runs programmatically (not auto via type="text/babel")
                     // so we can catch parse/transform errors and surface them in

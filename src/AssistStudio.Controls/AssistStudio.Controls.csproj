@@ -56,6 +56,15 @@
     <EmbeddedResource Include="Rendering\Resources\vendor\mermaid.min.js" />
     <EmbeddedResource Include="Rendering\Resources\vendor\katex.min.css" />
     <EmbeddedResource Include="Rendering\Resources\vendor\katex-fonts\*.woff2" />
+    <!--
+      Artifact-preview JSX runtime — full bundle vendoring of the 17 JS libraries
+      Anthropic's Claude.ai loads in its artifact iframe. Embedded so the preview
+      works in air-gapped environments (data-sovereignty story for medical / IP
+      customers) and so old .astx conversations re-render identically years later
+      against the same locked versions. See WebViewChatRenderer.OnWebResourceRequested
+      for the assiststudio.vendor virtual host that serves these.
+    -->
+    <EmbeddedResource Include="Rendering\Resources\vendor\jsx\*.js" />
   </ItemGroup>
 
 </Project>
