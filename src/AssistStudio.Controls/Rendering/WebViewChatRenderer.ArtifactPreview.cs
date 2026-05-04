@@ -391,64 +391,60 @@ internal partial class WebViewChatRenderer
             var externals = Object.keys(externalsSeen).map(function(k){return externalsSeen[k];});
 
             // Helper: split a "{ a, b as c }" clause into a destructuring body
-            // ("a, b: c"). Reused across the named-only and default+named forms.
+            // ("a, b: c"). Reused across every form that has a named clause.
             function destructureNames(names) {
                 return names.split(',').map(function(p) {
                     p = p.trim();
+                    if (!p) return '';
                     var asMatch = p.match(/^(\w+)\s+as\s+(\w+)$/);
                     return asMatch ? asMatch[1] + ': ' + asMatch[2] : p;
-                }).join(', ');
+                }).filter(Boolean).join(', ');
             }
 
-            // import X, { a, b as c } from "mod";  — default + named combined
-            // (must run before the named-only rewriter so the leading default
-            // identifier isn't left on the line). React's UMD bundle has no
-            // `.default`, so default-binding falls back to the namespace itself.
+            // Unified ESM-import rewriter — handles every form ECMAScript
+            // permits in one regex pass, and tolerates multi-line brace
+            // bodies (`[\s\S]*?` instead of `[^}]*?`) so artifacts that wrap
+            // long named lists across lines still match. Alternatives are
+            // ordered so the more specific multi-clause forms are tried
+            // before the single-clause forms — otherwise the bare `\w+`
+            // default branch would happily swallow the leading identifier
+            // of `import X, { ... }` and leave the brace body untouched.
+            //
+            //   1. `import X, * as Y from "mod"`           → default + namespace
+            //   2. `import X, { a, b as c } from "mod"`    → default + named
+            //   3. `import * as X from "mod"`              → namespace
+            //   4. `import { a, b as c } from "mod"`       → named
+            //   5. `import X from "mod"`                   → default
+            //
+            // Default-binding emits `(.default || namespace)` because UMD
+            // bundles (React, Lodash, …) put their export on the namespace
+            // itself with no `.default` property, while ES-module bundles
+            // distinguish them — the OR fallback covers both shapes.
             src = src.replace(
-                /^[ \t]*import\s+(\w+)\s*,\s*\{\s*([^}]+?)\s*\}\s*from\s*['"]([^'"]+)['"];?[ \t]*$/gm,
-                function(_m, defName, names, mod) {
+                /^[ \t]*import\s+(?:(\w+)\s*,\s*\*\s*as\s+(\w+)|(\w+)\s*,\s*\{([\s\S]*?)\}|\*\s*as\s+(\w+)|\{([\s\S]*?)\}|(\w+))\s+from\s*['"]([^'"]+)['"][ \t]*;?/gm,
+                function(_m, defWithNs, nsAfterDef, defWithNamed, namedAfterDef, nsOnly, namedOnly, defOnly, mod) {
                     var g = mapMod(mod);
                     var p = asProperty(g);
-                    return 'const ' + defName + ' = ' + p + '.default || ' + p + '; ' +
-                           'const { ' + destructureNames(names) + ' } = ' + p + ';';
+                    var parts = [];
+                    var defName = defWithNs || defWithNamed || defOnly;
+                    if (defName) {
+                        parts.push('const ' + defName + ' = ' + p + '.default || ' + p + ';');
+                    }
+                    if (nsAfterDef) {
+                        parts.push('const ' + nsAfterDef + ' = ' + p + ';');
+                    } else if (namedAfterDef) {
+                        var d1 = destructureNames(namedAfterDef);
+                        if (d1) parts.push('const { ' + d1 + ' } = ' + p + ';');
+                    } else if (nsOnly) {
+                        parts.push('const ' + nsOnly + ' = ' + p + ';');
+                    } else if (namedOnly) {
+                        var d2 = destructureNames(namedOnly);
+                        if (d2) parts.push('const { ' + d2 + ' } = ' + p + ';');
+                    }
+                    return parts.join(' ');
                 });
 
-            // import X, * as N from "mod";  — default + namespace combined
-            src = src.replace(
-                /^[ \t]*import\s+(\w+)\s*,\s*\*\s*as\s+(\w+)\s+from\s*['"]([^'"]+)['"];?[ \t]*$/gm,
-                function(_m, defName, nsName, mod) {
-                    var g = mapMod(mod);
-                    var p = asProperty(g);
-                    return 'const ' + defName + ' = ' + p + '.default || ' + p + '; ' +
-                           'const ' + nsName + ' = ' + p + ';';
-                });
-
-            // import { a, b as c } from "mod";
-            src = src.replace(
-                /^[ \t]*import\s*\{\s*([^}]+?)\s*\}\s*from\s*['"]([^'"]+)['"];?[ \t]*$/gm,
-                function(_m, names, mod) {
-                    var g = mapMod(mod);
-                    return 'const { ' + destructureNames(names) + ' } = ' + asProperty(g) + ';';
-                });
-
-            // import * as X from "mod";
-            src = src.replace(
-                /^[ \t]*import\s*\*\s*as\s+(\w+)\s+from\s*['"]([^'"]+)['"];?[ \t]*$/gm,
-                function(_m, name, mod) {
-                    var g = mapMod(mod);
-                    return 'const ' + name + ' = ' + asProperty(g) + ';';
-                });
-
-            // import X from "mod";
-            src = src.replace(
-                /^[ \t]*import\s+(\w+)\s+from\s*['"]([^'"]+)['"];?[ \t]*$/gm,
-                function(_m, name, mod) {
-                    var g = mapMod(mod);
-                    var p = asProperty(g);
-                    return 'const ' + name + ' = ' + p + '.default || ' + p + ';';
-                });
-
-            // import "mod";  (side-effect only — drop)
+            // import "mod";  (bare side-effect import — drop)
             src = src.replace(/^[ \t]*import\s+['"][^'"]+['"];?[ \t]*$/gm, '');
 
             // export default function NAMED  →  named function expression on window
