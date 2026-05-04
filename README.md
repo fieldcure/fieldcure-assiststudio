@@ -75,7 +75,7 @@ AssistStudio is two things:
 
 | Project | NuGet Package | TFM | Key Types |
 |---------|--------------|-----|-----------|
-| **Ai.Providers** | `FieldCure.Ai.Providers` | `net8.0` | `IAiProvider`, `StreamEvent`, `IAssistTool`, `AiRequest`, `AiResponse`, `ChatMessage`, `ProviderPreset`, `CustomProviderConfig`, `McpToolAdapter`, `ImageCompressor`, `IMultiContentTool`, `MediaContent` |
+| **Ai.Providers** | `FieldCure.Ai.Providers` | `net8.0` | `IAiProvider`, `StreamEvent`, `IAssistTool`, `AiRequest`, `AiResponse`, `ChatMessage`, `ProviderModel`, `CustomProviderConfig`, `McpToolAdapter`, `ImageCompressor`, `IMultiContentTool`, `MediaContent` |
 | **Ai.Execution** | `FieldCure.Ai.Execution` | `net8.0` | `IAgentLoop`, `AgentLoop`, `ISubAgentExecutor`, `SubAgentExecutor`, `AgentLoopContext`, `AgentLoopResult` |
 | **AssistStudio.Core** | `FieldCure.AssistStudio.Core` | `net8.0` | `ISpecialist`, `KnowledgeBase`, `ToolCallExecutor`, `ToolResolver`, `IWorkspaceContext`, `BuiltInServerConfig`, `Profile` |
 | **AssistStudio.Controls** | `FieldCure.AssistStudio.Controls.WinUI` | `net8.0-windows10.0.19041.0`<br>`net9.0-windows10.0.19041.0` | `ChatPanel`, `ComposeBar`, `AttachmentPreviewBar`, `ToolApprovalPanel`, `ToolElicitationPanel`, `ChatTheme` |
@@ -258,19 +258,19 @@ The main control. Provides a complete chat experience: message list (WebView2), 
                   SystemPrompt="You are a helpful assistant."
                   Theme="Dark"
                   Placeholder="Type a message..."
-                  AvailablePresets="{x:Bind ViewModel.Presets}"
-                  SelectedPreset="{x:Bind ViewModel.CurrentPreset, Mode=TwoWay}"
+                  AvailableModels="{x:Bind ViewModel.Models}"
+                  SelectedModel="{x:Bind ViewModel.CurrentModel, Mode=TwoWay}"
                   RegisteredTools="{x:Bind ViewModel.Tools}"
                   WorkspaceContext="{x:Bind ViewModel.Workspace}" />
 ```
 
-**Key dependency properties:** `Provider`, `SystemPrompt`, `Theme`, `Title`, `Placeholder`, `AvailablePresets`, `SelectedPreset`, `AvailableProfiles`, `SelectedProfile`, `RegisteredTools`, `WorkspaceContext`, `UtilityProvider`, `AutoTitle`, `AutoSummarize`, `MaxInputTokens`, `MaxToolCallRounds`, `RecentTurnsToKeep`, `IsDebugMode`, `ShowTitleBar`, `AllowAttachments`, `IsReadOnly`, `FontFamily`, `FontSize`, `ChatZoomFactor`, `EmptyStateContent`
+**Key dependency properties:** `Provider`, `SystemPrompt`, `Theme`, `Title`, `Placeholder`, `AvailableModels`, `SelectedModel`, `AvailableProfiles`, `SelectedProfile`, `RegisteredTools`, `WorkspaceContext`, `UtilityProvider`, `AutoTitle`, `AutoSummarize`, `MaxInputTokens`, `MaxToolCallRounds`, `RecentTurnsToKeep`, `IsDebugMode`, `ShowTitleBar`, `AllowAttachments`, `IsReadOnly`, `FontFamily`, `FontSize`, `ChatZoomFactor`, `EmptyStateContent`
 
-**Events:** `PresetChanged`, `ProfileChanged`, `MessageAdded`, `TitleGenerated`, `TitleEditRequested`, `KeyboardShortcutPressed`
+**Events:** `ModelChanged`, `ProfileChanged`, `MessageAdded`, `TitleGenerated`, `TitleEditRequested`, `KeyboardShortcutPressed`
 
 ### ComposeBar
 
-The chat input area — text box, attach button, preset/profile selectors. Used internally by `ChatPanel`, but can be placed standalone.
+The chat input area — text box, attach button, model/profile selectors. Used internally by `ChatPanel`, but can be placed standalone.
 
 ### AttachmentPreviewBar
 
@@ -327,10 +327,10 @@ No manual `dotnet tool update` step is needed. `dnx` resolves within the pinned 
 
 ## Configuration
 
-### Provider presets
+### Provider models
 
 ```csharp
-var preset = new ProviderPreset
+var model = new ProviderModel
 {
     Name = "Claude Sonnet",
     ProviderType = "Claude",

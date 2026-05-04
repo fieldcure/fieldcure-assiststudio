@@ -45,7 +45,6 @@ graph TD
 
     App --> Prov
     App --> DPImg
-    App -. "planned, Windows only" .-> DPAudio
     Prov --> DP
 
     Rag --> DP
@@ -133,7 +132,7 @@ you need.
 | Consumer | DP core | .Imaging | .Ocr | .Audio | Notes |
 |---|:---:|:---:|:---:|:---:|---|
 | Ai.Providers | ✅ | — | — | — | Text extraction for document attachments; `IMediaDocumentParser` cast resolves via `.Imaging` when App registers it |
-| AssistStudio App | (via Ai.Providers) | ✅ | — | 🟡 (planned, Win only) | Registers `AddImagingSupport()` at startup so PDFs attach as rendered pages for vision models. `AddAudioSupport()` registration planned for audio attachment transcription. |
+| AssistStudio App | (via Ai.Providers) | ✅ | — | — | Registers `AddImagingSupport()` at startup so PDFs attach as rendered pages for vision models. Audio attachments are not transcribed by the App itself; speech-to-text indexing of audio files is handled by Mcp.Rag. |
 | Mcp.Essentials | ✅ | — | — | — | Text-only document read; OCR removed in this refactor |
 | Mcp.Filesystem | ✅ | — | — | — | Also hosts `convert_to_markdown` / `convert_directory_to_markdown` tools |
 | Mcp.Rag | ✅ | — | ✅ (Win only) | ✅ (Win only) | Both `.Ocr` and `.Audio` referenced via MSBuild `Condition="$([MSBuild]::IsOSPlatform('Windows'))"`; `WINDOWS_OCR` and `WINDOWS_AUDIO` compile symbols gate the `AddOcrSupport` / `AddAudioSupport` calls. Audio model size auto-selected at startup via `WhisperEnvironment.RecommendModelSize(QualityBias.Accuracy)`; per-chunk metadata records `audio.model_size` and `audio.transcribed_at` for reindex auditing. Linux builds produce a cross-platform server with text-only PDF indexing and no audio transcription. Shipped in Mcp.Rag v2.3.0. |
