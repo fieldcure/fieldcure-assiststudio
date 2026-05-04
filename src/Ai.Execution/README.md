@@ -48,9 +48,8 @@ using FieldCure.Ai.Execution.Models;
 
 var executor = new SubAgentExecutor(
     agentLoop: new AgentLoop(),
-    resolveProvider: preset => ProviderFactory.Create(preset),
-    resolveTools: (servers, allowed, ct) => BootstrapMcpTools(servers, allowed, ct),
-    defaultPresetName: "Claude"
+    resolveProvider: model => ProviderFactory.Create(model),
+    resolveTools: (servers, allowed, ct) => BootstrapMcpTools(servers, allowed, ct)
 );
 
 var result = await executor.ExecuteAsync(new SubAgentRequest

@@ -182,7 +182,7 @@ DiagnosticLogger.OnInfo = msg => logger.LogInformation(msg);
 | `IAssistTool` | Tool/function calling interface with optional confirmation |
 | `AiRequest` / `AiResponse` | Request and response models |
 | `ChatMessage` | Conversation message with role, content, attachments, and tree branching |
-| `ProviderPreset` | Saved provider configuration — model, temperature, thinking, PDF capability |
+| `ProviderModel` | Saved provider configuration — model, temperature, thinking, PDF capability (renamed from `ProviderPreset` in `Ai.Providers` 0.7.0) |
 | `McpToolAdapter` | Bridges MCP tools to `IAssistTool` (zero MCP SDK dependency) |
 
 ## Related Packages

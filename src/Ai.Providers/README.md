@@ -19,14 +19,14 @@ AI provider clients for Claude, OpenAI, Gemini, Ollama, and Groq with shared mod
 using FieldCure.Ai.Providers.Models;
 using FieldCure.Ai.Providers;
 
-var preset = new ProviderPreset
+var model = new ProviderModel
 {
     ProviderType = "Claude",
     ApiKey = "sk-...",
     ModelId = "claude-sonnet-4-6",
 };
 
-var provider = ProviderFactory.Create(preset);
+var provider = ProviderFactory.Create(model);
 
 var request = new AiRequest
 {
@@ -51,7 +51,7 @@ Console.WriteLine(response.Content);
 - `ChatMessage`, `ChatRole` — conversation messages (with `MediaItems` for media persistence)
 - `AiRequest`, `AiResponse` — LLM request/response
 - `AiResponse.IsTruncated` — `true` when the provider stopped because it hit the `max_tokens` cap (Claude `stop_reason=max_tokens`, OpenAI `finish_reason=length`, Gemini `MAX_TOKENS`, Ollama `done_reason=length`). Consumers should treat the response as incomplete rather than a graceful completion.
-- `ProviderPreset` — provider configuration
+- `ProviderModel` — provider configuration (renamed from `ProviderPreset` in v0.7.0)
 - `CustomProviderConfig` — custom OpenAI-compatible provider registration (Id, DisplayName, BaseUrl)
 
 **Tool calling**

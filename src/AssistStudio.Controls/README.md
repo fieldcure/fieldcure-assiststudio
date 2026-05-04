@@ -57,15 +57,15 @@ Chat.Provider = new ClaudeProvider(apiKey: "sk-ant-...", modelId: "claude-sonnet
 
 ### ChatPanel
 
-The main control. Provides message list (WebView2), input area, streaming, attachments, thinking blocks, conversation branching, presets, and profiles.
+The main control. Provides message list (WebView2), input area, streaming, attachments, thinking blocks, conversation branching, models, and profiles.
 
 ```xml
 <assist:ChatPanel Provider="{x:Bind ViewModel.Provider, Mode=OneWay}"
                   SystemPrompt="You are a helpful assistant."
                   Theme="Dark"
                   Placeholder="Type a message..."
-                  AvailablePresets="{x:Bind ViewModel.Presets}"
-                  SelectedPreset="{x:Bind ViewModel.CurrentPreset, Mode=TwoWay}"
+                  AvailableModels="{x:Bind ViewModel.Models}"
+                  SelectedModel="{x:Bind ViewModel.CurrentModel, Mode=TwoWay}"
                   RegisteredTools="{x:Bind ViewModel.Tools}"
                   WorkspaceContext="{x:Bind ViewModel.Workspace}" />
 ```
@@ -79,8 +79,8 @@ The main control. Provides message list (WebView2), input area, streaming, attac
 | `Provider` | `IAiProvider` | Active AI provider for completions and streaming |
 | `UtilityProvider` | `IAiProvider` | Provider for auto-titling and summarization |
 | `SystemPrompt` | `string` | System prompt prepended to every request |
-| `AvailablePresets` | `IList` | Provider presets for the selector |
-| `SelectedPreset` | `ProviderPreset` | Currently active preset |
+| `AvailableModels` | `IList<ProviderModel>` | Provider models for the selector (renamed from `AvailablePresets` in 0.19.0) |
+| `SelectedModel` | `ProviderModel` | Currently active model (renamed from `SelectedPreset` in 0.19.0) |
 | `AvailableProfiles` | `IList<Profile>` | Profile list for the selector |
 | `SelectedProfile` | `Profile` | Currently active profile |
 
@@ -141,9 +141,9 @@ The main control. Provides message list (WebView2), input area, streaming, attac
 
 ### ComposeBar
 
-Chat input area — text box, attach button, preset/profile selectors. Used internally by `ChatPanel`, but can be placed standalone.
+Chat input area — text box, attach button, model/profile selectors. Used internally by `ChatPanel`, but can be placed standalone.
 
-**Dependency Properties:** `Placeholder`, `IsInputEnabled`, `AvailablePresets`, `SelectedPreset`, `AvailableProfiles`, `SelectedProfile`
+**Dependency Properties:** `Placeholder`, `IsInputEnabled`, `AvailableModels`, `SelectedModel`, `AvailableProfiles`, `SelectedProfile`
 
 ### AttachmentPreviewBar
 
