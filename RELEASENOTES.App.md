@@ -1,5 +1,39 @@
 ﻿# Release Notes — AssistStudio App
 
+## v0.18.0 (2026-05-04)
+
+### Added
+- **ModelPicker** (5-phase rollout) — replaces the per-tab "preset" dropdown with a multi-model selector backed by `ProviderModel` (one provider can enable N models). New `ModelsPage` UX lists every model under its provider, supports bulk Enable-all toggles and inline placeholder copy, and edits broadcast to every entry sharing the same provider type via `ProviderModelBroadcast`. Profile picker resolves through the new `Profile.PreferredModelName` (legacy `PreferredProviderType` / `PreferredModelId` are read once on first load and migrated). ComposeBar, the auxiliary task selector (Title / Summary / SubAgent / Specialist / Embedding), and the SDK Sample all use the same `ModelPicker` control.
+- **Split Continue + reload "truncated" hint** — the synthetic "Continue writing…" user turn is now hidden, and the resumed assistant reply renders as a separate bubble with a "↪ continued" chip. Reloading a saved conversation that hit `max_tokens` shows a discreet "truncated" hint on the last assistant bubble (no phantom Continue button).
+- **Outbox channel add via MCP elicitation** — replaces the child-process flow that previously launched the Outbox provisioning UI. Adding a Slack / Discord / Gmail / Naver / SMTP / Telegram / KakaoTalk / Microsoft channel now runs the same `ToolElicitationPanel` flow as any other MCP server. Channel deletion also goes through Outbox MCP.
+- **`IElicitationPresenter`** abstraction — extracted MCP elicitation handling so consumers (App + future hosts) can register a presenter and reuse the elicitation pipeline outside the chat surface.
+- **Judgment specialist routing guard** — `JudgmentRoutingGuide` now explicitly forbids delegating net-new generation work (`build X`, `write the code`, `create a component`) to Critique / RedTeam / DevilsAdvocate. The guide carries an evaluation-only scope clause and a misrouting-examples block. `SubAgentTool` exposes a public `ToolName` constant so the routing guide and the tool manifest stay in sync.
+- **Persist audio + document attachments in `.astx`** — `AttachmentType.Audio` and document chips now round-trip through the conversation archive.
+- **Persist Gemini-generated images** — assistant-message inline images produced by Gemini image-generation models are saved as media and reload identically.
+- **KB page refresh button + indexing-completed log line** — manual refresh on `KnowledgeBasesPage`; KB indexing logs a single "completed" entry on success for at-a-glance status.
+- **Drop-to-open for `.astx`** — already shipped in 0.17.0, polished here for the new `ModelPicker` flow.
+
+### Fixed
+- **Continue flow no longer leaks orphan user messages into saved conversations** (carried over from 0.16.0; doubly hardened by the split-Continue redesign).
+- **Null `MimeType` in tool media restoration** — older `.astx` files written before MIME detection landed are now restored without a null-deref.
+- **Claude model identifiers corrected** — built-in presets now use `claude-haiku-4-5` and `claude-opus-4-7` (the earlier identifiers were aliased and could resolve to the wrong tier).
+- **RAG v2.4.2 structured error envelope** — the App now detects the new `{ "status": "error", ... }` shape and surfaces it as a tool failure instead of treating the envelope as a successful result.
+- **ModelPicker UX polish** — placeholders, bulk Enable-all toggle, Mock-provider demo-default backfill, group label "demo", and ProfilesPage visual fallback to the first model when the stored selection is null.
+
+### Changed
+- **Per-specialist provider override** lookup migrated to `MigrateAuxiliaryModelKeys` startup helper (`TitlePreset` / `SummaryPreset` / `SubAgentPreset` / `EmbeddingPreset` / `ContextualizerPreset` / `Specialist_*_Preset` → `*Model` variants).
+- **English-only output and developer comments** — Korean strings in `MarkdownExporter` output text and a handful of XML doc comments translated to English (public-repo prep). Resource (`.resw`) entries for both en-US and ko-KR remain untouched and continue to localize user-facing UI.
+- **Accessibility — explicit `AutomationProperties.Name` on every icon-only button** in `KbCard`, `McpServerCard`, `MemoryEntryCard`, `OllamaProviderSection`, `CloudProviderSection`, `ScheduleCard`, `ChannelsSection`, `Memory_*`, `KB_*`, and the `Settings/*` pages. Existing `x:Uid` covers most; new `<x:Uid>.AutomationProperties.Name` resw entries (en-US + ko-KR) fill the gaps. Plain text + icon buttons (e.g. `AddChannelButton`) intentionally untouched — their visible text is the accessible name.
+- **`Package.appxmanifest`** version bumped 0.15.0.0 → 0.18.0.0 to match the project version.
+
+### Rebuilt against
+- `FieldCure.AssistStudio.Controls.WinUI` 0.19.0 (HTML/JSX artifact preview, ModelPicker, split-Continue, document/audio chips, Gemini inline image, accessibility AutomationProperties pass)
+- `FieldCure.Ai.Execution` 0.4.0 (`SubAgentRequest.PresetName` → `ModelName`, `SubAgentResult.UsedPreset` → `UsedModel`)
+- `FieldCure.Ai.Providers` 0.7.0 (`ProviderPreset` → `ProviderModel`, `ChatMessage.IsHidden` / `IsContinuation` / `IsTruncated`, `ProviderModelBroadcast`, Gemini inline image output, audio attachment scaffold)
+- `FieldCure.AssistStudio.Core` 0.19.0 (`Profile.PreferredModelName`)
+
+---
+
 ## v0.17.0 (2026-04-27)
 
 ### Added
