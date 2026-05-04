@@ -1,5 +1,35 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Controls.WinUI
 
+## v0.19.0 (2026-05-04)
+
+### Added
+- **HTML / JSX artifact preview** — fenced ```html``` and ```jsx``` code blocks now render in a sandboxed (`allow-scripts`, no `same-origin`) iframe with a Preview / Code toggle and live theme sync. The iframe ships React 18, ReactDOM, Babel-standalone, Tailwind, recharts, lucide-react, three.js, d3, lodash, mathjs, papaparse, Chart.js, Tone, SheetJS (xlsx), mammoth, TensorFlow.js, and prop-types as vendored UMD bundles served from `https://assiststudio.vendor/` via a strict CDN whitelist; unmapped imports fall back to `https://esm.sh/` with a clear error if the fetch fails. shadcn/ui imports resolve against an inline component shim (~25 primitives) so artifacts written for the Claude hosted environment render visually faithful without a real component library. Hooks (`useState`, `useEffect`, `useRef`, …) are also lifted onto `window` so import-less artifacts work as written, and an artifact's own `ReactDOM.render(...)` tail call is now accepted as the entry point in addition to `export default` / `App` / `Component`.
+- **`ModelPicker` control** — replaces the per-tab provider dropdown with a multi-model selector (one provider can list N enabled models). Hosted inside `ComposeBar` and the auxiliary-task model selector. Includes a `ModelPickerEntry` view-model and reusable templates.
+- **Continue split into its own bubble** — the synthetic "Continue writing…" user turn that the Continue button used to inject is now hidden (`ChatMessage.IsHidden`), and the resumed assistant reply renders as a separate bubble with a small "↪ continued" chip (`ChatMessage.IsContinuation`). Reloading a saved conversation that was cut off at `max_tokens` shows a discreet "truncated" hint on the last assistant bubble (`ChatMessage.IsTruncated`) instead of a phantom Continue button.
+- **In-chat scroll-to-bottom button** — small floating chevron appears when the conversation is scrolled away from the latest message.
+- **Document and audio attachment chips** — DOCX/PDF/etc. and audio files now render with proper chip styling alongside images. Audio chips include a send-time reject bar for providers that don't accept audio.
+- **Gemini inline image output** — assistant messages from Gemini image-generation models render the inlined image into the bubble, not as a tool result, and persist through `.astx` save/reload like other attached media.
+- **Elicitation `SubmitMode`** — `ToolElicitationPanel` exposes a Submit mode (raise event vs. self-close) so external hosts can mount the panel inside their own dialog without the panel forcing the close. Required-field validation runs before Submit fires.
+- **Explicit `AutomationProperties.Name` on icon-only buttons** — templated controls (ChatPanel/ComposeBar/ToolApprovalPanel/etc.) wire their PART_* icon buttons through `AutomationHelper.SetAutomation`, and previously-tooltip-only buttons in the host app namespace now carry `<x:Uid>.AutomationProperties.Name` resw entries in en-US and ko-KR.
+
+### Fixed
+- **JSX import rewriter** consolidated into a single multi-form pass that handles `default`, `named`, `namespace`, `default + named`, `default + namespace`, and bare side-effect imports. Multi-line brace bodies (`import { a, b,\n  c } from "mod"`) and `import X, { ... }` combinations no longer fall through to Babel and crash with `SyntaxError: Cannot use import statement outside a module`.
+- **Artifact preview iframe width** — assistant messages carrying a `.diagram-block` now claim the full chat column width so 700×500 canvases don't end up cramped with horizontal scroll. Plain-text replies are unaffected.
+- **TDZ shadowing** in default/namespace import rewrites — duplicate `const` bindings collapsed to a single declaration when the module is imported in more than one form.
+- **ChatPanel duplicated provider placeholder** when the provider name equals the model id (no separate model line collapsed correctly).
+- **Latent `PasswordBox` elicitation regression** — secret-looking fields rendered as `TextBox` in some host configurations.
+
+### Changed
+- **Chat column widened** from 800px to 1100px so artifact iframes have room for typical dashboards / docx viewers without the first paint forcing a horizontal scroll. Artifact iframe default height lifted from 400px to 540px (still drag-resizable).
+- **Copy feedback** — wide buttons keep the "Copied" label, narrow icon buttons swap to a ✔ glyph (text wrapped to two lines in the 24×24 footprint and looked broken). Toast tone toned down.
+- **Public-repo prep** — Korean strings in XML doc comments and developer-facing comments translated to English. The lone intentional Korean literal (`ChatPanel.Features.cs:200` Title prefix list) is kept — it matches LLM responses written in Korean.
+- Rebuilt against **FieldCure.AssistStudio.Core 0.19.0** (Profile `PreferredModelName`) and **FieldCure.Ai.Providers 0.7.0** (`ProviderPreset → ProviderModel` rename, `ChatMessage.IsHidden` / `IsContinuation` / `IsTruncated`, audio attachments, Gemini inline images).
+
+### Internal
+- Artifact preview JS literals split out of `WebViewChatRenderer.cs` into `WebViewChatRenderer.ArtifactPreview.cs` for reviewability.
+
+---
+
 ## v0.18.0 (2026-04-27)
 
 ### Added
