@@ -1,5 +1,22 @@
 ﻿# Release Notes — FieldCure.Ai.Execution
 
+## v0.4.0 (2026-05-04)
+
+### Breaking
+- **`SubAgentRequest.PresetName` renamed to `ModelName`** — follows the `ProviderPreset → ProviderModel` rename in `Ai.Providers` 0.7.0.
+- **`SubAgentResult.UsedPreset` renamed to `UsedModel`** — same rationale.
+
+### Changed
+- Rebuilt against **FieldCure.Ai.Providers 0.7.0**. Picks up `ChatMessage.IsHidden` / `IsContinuation` / `IsTruncated`, `ProviderModelBroadcast` helper, Gemini inline image output, and the audio attachment scaffold transitively.
+
+### Migration
+- Direct rename — fix-up is mechanical:
+  - `req.PresetName = "Claude"` → `req.ModelName = "Claude"`
+  - `result.UsedPreset` → `result.UsedModel`
+- No semantic change; the field still holds the resolved provider/model identifier or `null` for inherit-from-parent.
+
+---
+
 ## v0.3.3 (2026-04-27)
 
 ### Changed
