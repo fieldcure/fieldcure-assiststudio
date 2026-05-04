@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
-    <Version>0.4.0</Version>
+    <Version>0.4.1</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CA1416</NoWarn>
 
@@ -22,7 +22,7 @@
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;agent;execution;sub-agent;tool-use;llm</PackageTags>
-    <PackageReleaseNotes>v0.4.0: Breaking — SubAgentRequest.PresetName renamed to ModelName, SubAgentResult.UsedPreset renamed to UsedModel (mechanical fix-up). Rebuilt against Ai.Providers 0.7.0 (ChatMessage.IsHidden/IsContinuation/IsTruncated, ProviderModelBroadcast helper, Gemini inline image output, audio attachment scaffold).</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.4.1: README-only patch. The SubAgentExecutor quick-start sample on nuget.org passed a defaultPresetName argument that was removed in 0.3.0; the page now compiles as written and the lambda parameter name matches the renamed SubAgentRequest.ModelName property. No code, dependency, or behaviour change from 0.4.0.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

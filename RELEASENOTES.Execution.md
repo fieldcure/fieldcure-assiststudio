@@ -1,5 +1,12 @@
 ﻿# Release Notes — FieldCure.Ai.Execution
 
+## v0.4.1 (2026-05-04)
+
+### Fixed
+- **README quick-start sample** on the nuget.org package page passed a `defaultPresetName: "Claude"` argument to `SubAgentExecutor`'s constructor — that parameter was removed in 0.3.0 ("null PresetName resolved by caller's fallback policy") and the README never caught up. The lambda parameter name was also stale (`preset` → `model`, matching the rename of `SubAgentRequest.PresetName` to `ModelName` in 0.4.0). Package contents are byte-identical to 0.4.0 apart from the embedded README; pin to 0.4.1 if you came in via the package page.
+
+---
+
 ## v0.4.0 (2026-05-04)
 
 ### Breaking
