@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
-    <Version>0.7.0</Version>
+    <Version>0.7.1</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CA1416</NoWarn>
 
@@ -22,7 +22,7 @@
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;claude;openai;gemini;ollama;llm;provider;streaming</PackageTags>
-    <PackageReleaseNotes>v0.7.0: Breaking — ProviderPreset renamed to ProviderModel (JSON migration shims included). Added ChatMessage.IsHidden / IsContinuation / IsTruncated for split-Continue and reload-truncated flows; ProviderModelBroadcast helper; Gemini inline image output persisted as ToolMedia (image-generation models); audio attachment scaffold. Fixed Gemini image variants rejecting thinkingConfig, image / flash-lite models skipping tool manifest, Gemini 2.5 Pro thinking budget=0 rejection. Public-repo prep: MarkdownExporter output strings are now English-only. Internal: DocumentParsers reference pinned from 2.* to 2.0.* to prevent silent minor upgrades.</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.7.1: README-only patch. The v0.7.0 quick-start sample on nuget.org still referenced ProviderPreset (renamed to ProviderModel in this minor); the page now compiles as written. No code, dependency, or behaviour change from 0.7.0.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

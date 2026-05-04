@@ -1,5 +1,12 @@
 ﻿# Release Notes — FieldCure.Ai.Providers
 
+## v0.7.1 (2026-05-04)
+
+### Fixed
+- **README quick-start sample** on the nuget.org package page still referenced `ProviderPreset` (renamed to `ProviderModel` in 0.7.0). The package contents are byte-identical to 0.7.0 apart from the embedded README; pin to 0.7.1 if you came in via the package page and need the snippet to compile as written.
+
+---
+
 ## v0.7.0 (2026-05-04)
 
 ### Breaking
