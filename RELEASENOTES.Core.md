@@ -1,5 +1,21 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Core
 
+## v0.19.0 (2026-05-04)
+
+### Breaking
+- **`Profile.PreferredProviderType` and `Profile.PreferredModelId` removed**, replaced by a single `PreferredModelName` that points at a `ProviderModel.Name` directly. Old profile JSON keeps loading via the legacy fields (`LegacyPreferredProviderType` / `LegacyPreferredModelId`), which the host migrates once and clears on next save. External consumers reading these fields directly need to switch to `PreferredModelName`.
+
+### Changed
+- Rebuilt against **FieldCure.Ai.Providers 0.7.0** (`ProviderPreset → ProviderModel` rename, `ChatMessage.IsHidden` / `IsContinuation` / `IsTruncated`, `ProviderModelBroadcast`, Gemini inline image output, audio attachment scaffold).
+
+### Migration
+- For external code that read profiles directly:
+  - `profile.PreferredProviderType` → use `profile.PreferredModelName` and look up the `ProviderModel` to derive the type.
+  - `profile.PreferredModelId` → same `PreferredModelName` lookup gives you the model id.
+- For `.astx` / saved profile JSON: no action needed — first load runs the legacy → `PreferredModelName` migration in-place.
+
+---
+
 ## v0.18.0 (2026-04-27)
 
 ### Breaking — namespace rename

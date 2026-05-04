@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
-    <Version>0.18.0</Version>
+    <Version>0.19.0</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CA1416</NoWarn>
 
@@ -22,7 +22,7 @@
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;claude;openai;gemini;ollama;llm;provider;streaming</PackageTags>
-    <PackageReleaseNotes>v0.18.0: BREAKING — public namespaces renamed to include the .Core segment (FieldCure.AssistStudio.{Helpers,Models,Tools} → FieldCure.AssistStudio.Core.{Helpers,Models,Tools}). External consumers must update using statements; see RELEASENOTES.Core.md for a migration script. Adds invoke_tool dispatcher (lets Claude-class models reach external MCP tools without delegate_task), Gemini thoughtSignature round-trip via ToolCall.ProviderSignature, gpt-5+ reasoning-model recognition, and judgment specialist hardening (ExpectedFirstHeading / ForbiddenTrailingHeadings, per-specialist constants). XML docs added across Helpers.</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.19.0: Breaking — Profile.PreferredProviderType + PreferredModelId removed, replaced by a single PreferredModelName pointing at ProviderModel.Name (legacy fields kept for one-shot JSON migration). Rebuilt against Ai.Providers 0.7.0 (ProviderPreset → ProviderModel rename, ChatMessage.IsHidden/IsContinuation/IsTruncated, ProviderModelBroadcast helper, Gemini inline image output, audio attachment scaffold).</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
