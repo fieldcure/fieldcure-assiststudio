@@ -154,7 +154,7 @@ public static class MarkdownExporter
         if (msg.Summary is not null)
         {
             sb.AppendLine("<details open>");
-            sb.AppendLine($"<summary><b>Assistant</b> (요약)</summary>");
+            sb.AppendLine($"<summary><b>Assistant</b> (summary)</summary>");
             sb.AppendLine();
             AppendSummaryBlockquote(sb, msg.Summary);
         }
@@ -210,11 +210,11 @@ public static class MarkdownExporter
         var count = summary.CoveredMessageIds.Count;
         if (summary.CoveredTokenCount > 0)
         {
-            sb.AppendLine($"> 이전 메시지 {count}개 (약 {summary.CoveredTokenCount:N0} 토큰)를 요약한 내용입니다.");
+            sb.AppendLine($"> Summary of the previous {count} message(s) (~{summary.CoveredTokenCount:N0} tokens).");
         }
         else
         {
-            sb.AppendLine($"> 이전 메시지 {count}개를 요약한 내용입니다.");
+            sb.AppendLine($"> Summary of the previous {count} message(s).");
         }
         sb.AppendLine();
     }

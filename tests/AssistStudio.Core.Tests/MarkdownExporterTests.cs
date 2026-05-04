@@ -81,7 +81,7 @@ public class MarkdownExporterTests
     }
 
     [TestMethod]
-    public void Export_SummaryMessage_MarkedAsYoyak()
+    public void Export_SummaryMessage_MarkedAsSummary()
     {
         var summary = new SummaryMeta
         {
@@ -95,8 +95,8 @@ public class MarkdownExporterTests
 
         var result = MarkdownExporter.Export(messages);
 
-        StringAssert.Contains(result.Markdown, "<summary><b>Assistant</b> (요약)</summary>");
-        StringAssert.Contains(result.Markdown, "이전 메시지 12개 (약 3,450 토큰)를 요약한 내용입니다.");
+        StringAssert.Contains(result.Markdown, "<summary><b>Assistant</b> (summary)</summary>");
+        StringAssert.Contains(result.Markdown, "Summary of the previous 12 message(s) (~3,450 tokens).");
     }
 
     [TestMethod]
@@ -114,8 +114,8 @@ public class MarkdownExporterTests
 
         var result = MarkdownExporter.Export(messages);
 
-        StringAssert.Contains(result.Markdown, "이전 메시지 3개를 요약한 내용입니다.");
-        Assert.IsFalse(result.Markdown.Contains("토큰"));
+        StringAssert.Contains(result.Markdown, "Summary of the previous 3 message(s).");
+        Assert.IsFalse(result.Markdown.Contains("tokens"));
     }
 
     [TestMethod]

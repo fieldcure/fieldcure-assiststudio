@@ -435,8 +435,8 @@ internal partial class WebViewChatRenderer
     /// <para/>
     /// <paramref name="restoredTruncated"/> is the inverse — set only by the restore path
     /// when the last assistant chain in a saved conversation was truncated. It does NOT
-    /// draw a button; it merely prefixes the timestamp line with a discreet "끊긴 응답"
-    /// hint so the user can choose to send "계속" themselves.
+    /// draw a button; it merely prefixes the timestamp line with a discreet "truncated"
+    /// hint so the user can choose to resume themselves.
     /// </summary>
     public Task FinalizeMessageAsync(string id, string fullMarkdown, bool truncated = false, int tokenCount = 0,
         string? timestamp = null, double? elapsedSeconds = null, int coveredTokenCount = 0,

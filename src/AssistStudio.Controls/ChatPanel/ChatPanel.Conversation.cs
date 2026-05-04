@@ -304,7 +304,7 @@ public sealed partial class ChatPanel
         // root assistant (tool-internal Assistants and Tool messages chain into
         // it), so flagging that root is enough — we don't need a separate
         // chain-tail check inside the loop. If this id is non-null and the
-        // root is IsTruncated, the renderer will paint a "끊긴 응답" hint in
+        // root is IsTruncated, the renderer will paint a "truncated" hint in
         // the timestamp line of that one bubble.
         string? lastRootAssistantId = null;
         for (var i = _messages.Count - 1; i >= 0; i--)

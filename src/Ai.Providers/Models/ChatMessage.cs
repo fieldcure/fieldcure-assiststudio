@@ -206,10 +206,10 @@ public partial class ChatMessage : INotifyPropertyChanged
     /// max-tokens / length limit rather than a clean end-of-turn. Set on the
     /// in-memory message at finalize time using the same flag the renderer
     /// uses to draw the live Continue button. Persisted so a saved
-    /// conversation can show a discreet "끊긴 응답 / truncated" hint on the
-    /// last assistant bubble after reload — letting the user choose to send
-    /// "계속" themselves rather than auto-restoring the Continue button
-    /// (which is a live-only affordance). Default <c>false</c> omitted.
+    /// conversation can show a discreet "truncated" hint on the last assistant
+    /// bubble after reload — letting the user choose to resume themselves
+    /// rather than auto-restoring the Continue button (which is a live-only
+    /// affordance). Default <c>false</c> omitted.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool IsTruncated { get; set; }
