@@ -390,17 +390,45 @@ internal partial class WebViewChatRenderer
             var libs = Object.keys(libsSeen);
             var externals = Object.keys(externalsSeen).map(function(k){return externalsSeen[k];});
 
+            // Helper: split a "{ a, b as c }" clause into a destructuring body
+            // ("a, b: c"). Reused across the named-only and default+named forms.
+            function destructureNames(names) {
+                return names.split(',').map(function(p) {
+                    p = p.trim();
+                    var asMatch = p.match(/^(\w+)\s+as\s+(\w+)$/);
+                    return asMatch ? asMatch[1] + ': ' + asMatch[2] : p;
+                }).join(', ');
+            }
+
+            // import X, { a, b as c } from "mod";  — default + named combined
+            // (must run before the named-only rewriter so the leading default
+            // identifier isn't left on the line). React's UMD bundle has no
+            // `.default`, so default-binding falls back to the namespace itself.
+            src = src.replace(
+                /^[ \t]*import\s+(\w+)\s*,\s*\{\s*([^}]+?)\s*\}\s*from\s*['"]([^'"]+)['"];?[ \t]*$/gm,
+                function(_m, defName, names, mod) {
+                    var g = mapMod(mod);
+                    var p = asProperty(g);
+                    return 'const ' + defName + ' = ' + p + '.default || ' + p + '; ' +
+                           'const { ' + destructureNames(names) + ' } = ' + p + ';';
+                });
+
+            // import X, * as N from "mod";  — default + namespace combined
+            src = src.replace(
+                /^[ \t]*import\s+(\w+)\s*,\s*\*\s*as\s+(\w+)\s+from\s*['"]([^'"]+)['"];?[ \t]*$/gm,
+                function(_m, defName, nsName, mod) {
+                    var g = mapMod(mod);
+                    var p = asProperty(g);
+                    return 'const ' + defName + ' = ' + p + '.default || ' + p + '; ' +
+                           'const ' + nsName + ' = ' + p + ';';
+                });
+
             // import { a, b as c } from "mod";
             src = src.replace(
                 /^[ \t]*import\s*\{\s*([^}]+?)\s*\}\s*from\s*['"]([^'"]+)['"];?[ \t]*$/gm,
                 function(_m, names, mod) {
                     var g = mapMod(mod);
-                    var dest = names.split(',').map(function(p) {
-                        p = p.trim();
-                        var asMatch = p.match(/^(\w+)\s+as\s+(\w+)$/);
-                        return asMatch ? asMatch[1] + ': ' + asMatch[2] : p;
-                    }).join(', ');
-                    return 'const { ' + dest + ' } = ' + asProperty(g) + ';';
+                    return 'const { ' + destructureNames(names) + ' } = ' + asProperty(g) + ';';
                 });
 
             // import * as X from "mod";
