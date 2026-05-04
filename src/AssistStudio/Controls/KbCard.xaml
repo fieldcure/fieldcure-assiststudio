@@ -80,7 +80,7 @@
                              Maximum="100"
                              VerticalAlignment="Center" />
 
-                <Button x:Name="StopButton" Grid.Column="1"
+                <Button x:Name="StopButton" x:Uid="KbCard_StopButton" Grid.Column="1"
                         Style="{ThemeResource SubtleButtonStyle}"
                         Padding="6" Margin="8,0,0,0"
                         Click="StopButton_Click">
@@ -112,7 +112,7 @@
                         Padding="8,4,8,4" FontSize="12" Margin="8,0,0,0"
                         Click="CancelDeferredButton_Click" />
 
-                <Button x:Name="DeferredDeleteButton" Grid.Column="3"
+                <Button x:Name="DeferredDeleteButton" x:Uid="KbCard_DeferredDeleteButton" Grid.Column="3"
                         Style="{ThemeResource SubtleButtonStyle}"
                         Padding="6"
                         Click="DeleteButton_Click">
@@ -144,6 +144,7 @@
                     Visibility="Collapsed">
                     <Button
                         x:Name="SettingsButton"
+                        x:Uid="KbCard_SettingsButton"
                         Style="{ThemeResource SubtleButtonStyle}"
                         Padding="6"
                         Click="SettingsButton_Click">
@@ -154,6 +155,7 @@
                     </Button>
                     <Button
                         x:Name="ReindexButton"
+                        x:Uid="KbCard_ReindexButton"
                         Style="{ThemeResource SubtleButtonStyle}"
                         Padding="6">
                         <ToolTipService.ToolTip>
@@ -183,6 +185,7 @@
                     </Button>
                     <Button
                         x:Name="DeleteButton"
+                        x:Uid="KbCard_DeleteButton"
                         Style="{ThemeResource SubtleButtonStyle}"
                         Padding="6"
                         Click="DeleteButton_Click">

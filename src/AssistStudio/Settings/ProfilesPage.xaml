@@ -60,7 +60,9 @@
                             <FontIcon Glyph="&#xE710;" FontSize="14" />
                         </Button>
                         <Button
-                            x:Name="ResetProfileButton" Grid.Column="2"
+                            x:Name="ResetProfileButton"
+                            x:Uid="Profiles_ResetProfileBtn"
+                            Grid.Column="2"
                             Click="OnResetProfileClicked"
                             ToolTipService.Placement="Mouse"
                             Padding="6"

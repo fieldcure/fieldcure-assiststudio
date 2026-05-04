@@ -270,6 +270,9 @@
   <data name="Memory_RefreshButton.ToolTipService.ToolTip" xml:space="preserve">
     <value>Refresh</value>
   </data>
+  <data name="Memory_RefreshButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Refresh memory list</value>
+  </data>
   <data name="Memory_Empty.Text" xml:space="preserve">
     <value>No memories saved yet.</value>
   </data>
@@ -290,6 +293,9 @@
   </data>
   <data name="Memory_DeleteButton.ToolTipService.ToolTip" xml:space="preserve">
     <value>Delete</value>
+  </data>
+  <data name="Memory_DeleteButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Delete memory entry</value>
   </data>
   <data name="Memory_Hint.Text" xml:space="preserve">
     <value>Memories are saved during conversations. Ask the AI to remember or forget information.</value>
@@ -477,6 +483,9 @@
   <data name="Models_RefreshModels.ToolTipService.ToolTip" xml:space="preserve">
     <value>Refresh model list</value>
   </data>
+  <data name="Models_RefreshModels.AutomationProperties.Name" xml:space="preserve">
+    <value>Refresh model list</value>
+  </data>
   <data name="Models_EnableAllModels.Content" xml:space="preserve">
     <value>Enable all</value>
   </data>
@@ -614,6 +623,9 @@
   </data>
   <data name="ModelDialog_PullCustomBtn.ToolTipService.ToolTip" xml:space="preserve">
     <value>Download</value>
+  </data>
+  <data name="ModelDialog_PullCustomBtn.AutomationProperties.Name" xml:space="preserve">
+    <value>Download custom model</value>
   </data>
   <data name="ModelDialog_DeleteConfirmTitle" xml:space="preserve">
     <value>Delete Model</value>
@@ -1220,6 +1232,9 @@
   <data name="Profiles_DeleteProfile.AutomationProperties.Name" xml:space="preserve">
     <value>Delete profile</value>
   </data>
+  <data name="Profiles_ResetProfileBtn.AutomationProperties.Name" xml:space="preserve">
+    <value>Reset profile to defaults</value>
+  </data>
   <data name="Models_RemoveKey.AutomationProperties.Name" xml:space="preserve">
     <value>Remove API key</value>
   </data>
@@ -1330,6 +1345,9 @@
   </data>
   <data name="Connect_WolframAppIdHint" xml:space="preserve">
     <value>Full Results API — developer.wolframalpha.com</value>
+  </data>
+  <data name="SearchEngine_WolframClearButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Remove Wolfram|Alpha App ID</value>
   </data>
   <data name="Connect_EmbeddingModel" xml:space="preserve">
     <value>Embedding model</value>
@@ -1646,6 +1664,9 @@
   <data name="Schedule_RefreshButton.ToolTipService.ToolTip" xml:space="preserve">
     <value>Refresh</value>
   </data>
+  <data name="Schedule_RefreshButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Refresh schedule list</value>
+  </data>
   <data name="Schedule_Empty.Text" xml:space="preserve">
     <value>No scheduled tasks registered.</value>
   </data>
@@ -1687,6 +1708,9 @@
   </data>
   <data name="Models_AddCustomProvider.ToolTipService.ToolTip" xml:space="preserve">
     <value>Add provider</value>
+  </data>
+  <data name="Models_AddCustomProvider.AutomationProperties.Name" xml:space="preserve">
+    <value>Add custom provider</value>
   </data>
   <data name="Models_DeleteCustomProvider" xml:space="preserve">
     <value>Delete provider</value>
@@ -1799,19 +1823,43 @@
   <data name="KbCard_StopButtonTip.Content" xml:space="preserve">
     <value>Cancel indexing</value>
   </data>
+  <data name="KbCard_StopButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Cancel indexing</value>
+  </data>
+  <data name="KbCard_DeferredDeleteButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Delete knowledge base</value>
+  </data>
+  <data name="KbCard_SettingsButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Knowledge base settings</value>
+  </data>
+  <data name="KbCard_ReindexButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Re-index knowledge base</value>
+  </data>
+  <data name="KbCard_DeleteButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Delete knowledge base</value>
+  </data>
   <data name="KbCard_NoMatchText.Text" xml:space="preserve">
     <value>No matches in this knowledge base</value>
   </data>
   <data name="KB_CreateButtonTip.Content" xml:space="preserve">
     <value>Create knowledge base</value>
   </data>
+  <data name="KB_CreateButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Create knowledge base</value>
+  </data>
   <data name="KB_RefreshButton.ToolTipService.ToolTip" xml:space="preserve">
     <value>Refresh</value>
+  </data>
+  <data name="KB_RefreshButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Refresh knowledge base list</value>
   </data>
   <data name="ScheduleCard_DeleteButtonTip.Content" xml:space="preserve">
     <value>Delete</value>
   </data>
   <data name="ScheduleCard_DeleteButton.ToolTipService.ToolTip" xml:space="preserve">
     <value>Delete</value>
+  </data>
+  <data name="ScheduleCard_DeleteButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Delete scheduled task</value>
   </data>
 </root>

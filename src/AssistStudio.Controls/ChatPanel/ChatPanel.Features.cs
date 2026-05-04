@@ -314,7 +314,11 @@ public sealed partial class ChatPanel
 
             // Wire click handlers (once)
             if (_folderAddButton is not null)
+            {
                 _folderAddButton.Click += (s, e2) => WorkspaceFolderAddRequested?.Invoke(this, EventArgs.Empty);
+                AutomationHelper.SetAutomation(_folderAddButton, "ChatPanelFolderAddButton",
+                    nameKey: "Folder_AddButton");
+            }
             if (_folderList is not null)
                 _folderList.ItemsSource = _folderItems;
             if (_kbSelector is not null)

@@ -270,6 +270,9 @@
   <data name="Memory_RefreshButton.ToolTipService.ToolTip" xml:space="preserve">
     <value>새로 고침</value>
   </data>
+  <data name="Memory_RefreshButton.AutomationProperties.Name" xml:space="preserve">
+    <value>메모리 목록 새로 고침</value>
+  </data>
   <data name="Memory_Empty.Text" xml:space="preserve">
     <value>저장된 메모리가 없습니다.</value>
   </data>
@@ -290,6 +293,9 @@
   </data>
   <data name="Memory_DeleteButton.ToolTipService.ToolTip" xml:space="preserve">
     <value>삭제</value>
+  </data>
+  <data name="Memory_DeleteButton.AutomationProperties.Name" xml:space="preserve">
+    <value>메모리 항목 삭제</value>
   </data>
   <data name="Memory_Hint.Text" xml:space="preserve">
     <value>AI가 대화에서 기억한 정보입니다. 대화 중 기억하거나 잊도록 요청할 수 있습니다.</value>
@@ -477,6 +483,9 @@
   <data name="Models_RefreshModels.ToolTipService.ToolTip" xml:space="preserve">
     <value>모델 목록 새로고침</value>
   </data>
+  <data name="Models_RefreshModels.AutomationProperties.Name" xml:space="preserve">
+    <value>모델 목록 새로고침</value>
+  </data>
   <data name="Models_EnableAllModels.Content" xml:space="preserve">
     <value>모두 활성화</value>
   </data>
@@ -614,6 +623,9 @@
   </data>
   <data name="ModelDialog_PullCustomBtn.ToolTipService.ToolTip" xml:space="preserve">
     <value>다운로드</value>
+  </data>
+  <data name="ModelDialog_PullCustomBtn.AutomationProperties.Name" xml:space="preserve">
+    <value>커스텀 모델 다운로드</value>
   </data>
   <data name="ModelDialog_DeleteConfirmTitle" xml:space="preserve">
     <value>모델 삭제</value>
@@ -1220,6 +1232,9 @@
   <data name="Profiles_DeleteProfile.AutomationProperties.Name" xml:space="preserve">
     <value>프로필 삭제</value>
   </data>
+  <data name="Profiles_ResetProfileBtn.AutomationProperties.Name" xml:space="preserve">
+    <value>기본값으로 프로필 재설정</value>
+  </data>
   <data name="Models_RemoveKey.AutomationProperties.Name" xml:space="preserve">
     <value>API 키 삭제</value>
   </data>
@@ -1330,6 +1345,9 @@
   </data>
   <data name="Connect_WolframAppIdHint" xml:space="preserve">
     <value>Full Results API — developer.wolframalpha.com</value>
+  </data>
+  <data name="SearchEngine_WolframClearButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Wolfram|Alpha App ID 삭제</value>
   </data>
   <data name="Connect_EmbeddingModel" xml:space="preserve">
     <value>임베딩 모델</value>
@@ -1646,6 +1664,9 @@
   <data name="Schedule_RefreshButton.ToolTipService.ToolTip" xml:space="preserve">
     <value>새로 고침</value>
   </data>
+  <data name="Schedule_RefreshButton.AutomationProperties.Name" xml:space="preserve">
+    <value>스케줄 목록 새로 고침</value>
+  </data>
   <data name="Schedule_Empty.Text" xml:space="preserve">
     <value>등록된 스케줄이 없습니다.</value>
   </data>
@@ -1687,6 +1708,9 @@
   </data>
   <data name="Models_AddCustomProvider.ToolTipService.ToolTip" xml:space="preserve">
     <value>프로바이더 추가</value>
+  </data>
+  <data name="Models_AddCustomProvider.AutomationProperties.Name" xml:space="preserve">
+    <value>커스텀 프로바이더 추가</value>
   </data>
   <data name="Models_DeleteCustomProvider" xml:space="preserve">
     <value>프로바이더 삭제</value>
@@ -1799,19 +1823,43 @@
   <data name="KbCard_StopButtonTip.Content" xml:space="preserve">
     <value>인덱싱 취소</value>
   </data>
+  <data name="KbCard_StopButton.AutomationProperties.Name" xml:space="preserve">
+    <value>인덱싱 취소</value>
+  </data>
+  <data name="KbCard_DeferredDeleteButton.AutomationProperties.Name" xml:space="preserve">
+    <value>지식베이스 삭제</value>
+  </data>
+  <data name="KbCard_SettingsButton.AutomationProperties.Name" xml:space="preserve">
+    <value>지식베이스 설정</value>
+  </data>
+  <data name="KbCard_ReindexButton.AutomationProperties.Name" xml:space="preserve">
+    <value>지식베이스 재인덱싱</value>
+  </data>
+  <data name="KbCard_DeleteButton.AutomationProperties.Name" xml:space="preserve">
+    <value>지식베이스 삭제</value>
+  </data>
   <data name="KbCard_NoMatchText.Text" xml:space="preserve">
     <value>이 지식베이스에 일치하는 내용이 없습니다</value>
   </data>
   <data name="KB_CreateButtonTip.Content" xml:space="preserve">
     <value>지식베이스 생성</value>
   </data>
+  <data name="KB_CreateButton.AutomationProperties.Name" xml:space="preserve">
+    <value>지식베이스 생성</value>
+  </data>
   <data name="KB_RefreshButton.ToolTipService.ToolTip" xml:space="preserve">
     <value>새로 고침</value>
+  </data>
+  <data name="KB_RefreshButton.AutomationProperties.Name" xml:space="preserve">
+    <value>지식 베이스 목록 새로 고침</value>
   </data>
   <data name="ScheduleCard_DeleteButtonTip.Content" xml:space="preserve">
     <value>삭제</value>
   </data>
   <data name="ScheduleCard_DeleteButton.ToolTipService.ToolTip" xml:space="preserve">
     <value>삭제</value>
+  </data>
+  <data name="ScheduleCard_DeleteButton.AutomationProperties.Name" xml:space="preserve">
+    <value>예약된 작업 삭제</value>
   </data>
 </root>

@@ -123,6 +123,7 @@
                     <Button
                         Grid.Column="2"
                         x:Name="WolframClearButton"
+                        x:Uid="SearchEngine_WolframClearButton"
                         Style="{StaticResource SubtleButtonStyle}"
                         Padding="6"
                         VerticalAlignment="Center"
