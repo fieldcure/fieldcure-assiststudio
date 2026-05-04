@@ -249,6 +249,12 @@ public partial class App : Application
             try { await BuiltInServerHelper.InitializeToolsAsync(); }
             catch (Exception ex) { LoggingService.LogWarning($"[BuiltIn] Initialization failed: {ex.Message}"); }
 
+            // One-shot retirement of the pre-dnx tools/ folder. Runner v2.0.1+
+            // resolves itself and its stateless MCP servers through dnx, so this
+            // folder is now pure dead weight; leaving stale binaries behind would
+            // cause version-skew failures.
+            _ = Task.Run(BuiltInServerHelper.RemoveLegacyToolPathFolderAsync);
+
             // Clean up orphan KB folders before serve acquires SQLite handles
             RagProcessManager.StartPruneOrphans();
 

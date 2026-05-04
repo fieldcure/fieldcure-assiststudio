@@ -2,6 +2,7 @@
 using FieldCure.AssistStudio.Core.Models;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.ApplicationModel.Resources;
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace AssistStudio.Mcp;
@@ -47,7 +48,7 @@ public static class BuiltInServerHelper
         [FilesystemKey] = "1.*",
         [RagKey] = "2.*",
         [OutboxKey] = "2.*",
-        [RunnerKey] = "1.*",
+        [RunnerKey] = "2.*",
         [EssentialsKey] = "2.*",
     };
 
@@ -366,6 +367,46 @@ public static class BuiltInServerHelper
     public static async Task InitializeToolsAsync()
     {
         await RefreshVersionCacheAsync();
+    }
+
+    /// <summary>
+    /// Removes the retired <c>%LOCALAPPDATA%\FieldCure\AssistStudio\tools</c> folder
+    /// left over from the pre-dnx install scheme. The folder used to host both the
+    /// Runner exec worker and stateless MCP server binaries; Runner v2.0.1+ resolves
+    /// all of these through <c>dnx</c> instead, so the folder is now pure dead weight
+    /// — and stale binaries inside it cause version-skew failures (e.g. a v1 worker
+    /// hitting a v2 DB schema). Idempotent: no-op once the folder is gone.
+    /// </summary>
+    public static Task RemoveLegacyToolPathFolderAsync()
+    {
+        try
+        {
+            var toolsDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "FieldCure", "AssistStudio", "tools");
+            if (!Directory.Exists(toolsDir))
+                return Task.CompletedTask;
+
+            var removed = Directory.EnumerateFiles(toolsDir, "*.exe", SearchOption.TopDirectoryOnly)
+                .Select(Path.GetFileName)
+                .ToList();
+
+            Directory.Delete(toolsDir, recursive: true);
+
+            LoggingService.LogInfo(
+                removed.Count > 0
+                    ? $"[BuiltIn] Removed retired tool-path folder ({string.Join(", ", removed)}). " +
+                      "dnx is now the sole install/version path for built-in servers."
+                    : $"[BuiltIn] Removed empty retired tool-path folder: {toolsDir}");
+        }
+        catch (Exception ex)
+        {
+            LoggingService.LogWarning(
+                $"[BuiltIn] Failed to remove retired tool-path folder: " +
+                $"{ex.GetType().Name}: {ex.Message}");
+        }
+
+        return Task.CompletedTask;
     }
 
     /// <summary>
