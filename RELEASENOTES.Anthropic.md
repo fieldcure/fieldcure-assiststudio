@@ -1,5 +1,18 @@
 # Release Notes — FieldCure.AssistStudio.Anthropic
 
+## v0.1.0-preview.3 (2026-05-04)
+
+### Changed
+- Rebuilt against **FieldCure.Ai.Providers 0.7.0** (`ProviderPreset → ProviderModel` rename, `ChatMessage.IsHidden` / `IsContinuation` / `IsTruncated`, audio attachment scaffold) and **FieldCure.AssistStudio.Core 0.19.0** (`Profile.PreferredModelName`). No public API changes in this package.
+
+### Internal
+- `AnthropicMessageConverter.ConvertAssistantMessage` `<remarks>` now spells out the precise rule that kept thinking blocks dropped: text-only multi-turn is fine without thinking blocks, but a `tool_use` block requires the preceding `thinking` block (with its original signature) to be included or the API rejects with 422. Tool support is currently out of scope for this converter; signature round-trip will land alongside tool support per a future ADR. No behavior change.
+
+### Notes
+- Preview-stability guarantees still apply: any release before `1.0.0` may break public API.
+
+---
+
 ## v0.1.0-preview.2 (2026-04-27)
 
 ### Changed
