@@ -154,9 +154,26 @@ internal partial class WebViewChatRenderer
         // Some UMD bundles expect React on a differently-cased global
         // (lucide-react@0.383 looks up `window.react` rather than the
         // canonical `window.React`). Run before any lib script.
+        //
+        // Also expose React hooks (useState, useEffect, useRef, …) as bare
+        // globals so artifacts that skip `import { useState } from "react"`
+        // — the Anthropic artifact convention — resolve the hooks instead
+        // of throwing `ReferenceError: useRef is not defined`. Models
+        // trained on Claude's hosted artifacts assume hooks are top-level;
+        // without this shim every hook reference in import-less code fails.
         var JSX_PRE_LIB_SHIM_JS =
             'window.react = window.React;' +
-            'window.reactDom = window.ReactDOM;';
+            'window.reactDom = window.ReactDOM;' +
+            '(function(R){if(!R)return;' +
+                'var hooks=["useState","useEffect","useRef","useCallback","useMemo",' +
+                    '"useContext","useReducer","useLayoutEffect","useImperativeHandle",' +
+                    '"useDebugValue","useId","useTransition","useDeferredValue",' +
+                    '"useSyncExternalStore","useInsertionEffect"];' +
+                'for(var i=0;i<hooks.length;i++){if(R[hooks[i]])window[hooks[i]]=R[hooks[i]];}' +
+                'var utils=["Fragment","createElement","createContext","memo","forwardRef",' +
+                    '"lazy","Suspense","StrictMode"];' +
+                'for(var j=0;j<utils.length;j++){if(R[utils[j]])window[utils[j]]=R[utils[j]];}' +
+            '})(window.React);';
 
         // After UMD libs initialize, normalize their exported globals to
         // the names our import map expects. lucide-react@0.383 exposes
@@ -584,8 +601,16 @@ internal partial class WebViewChatRenderer
                     'catch(e){window.__showPreviewError("Compile: "+(e.message||e));return;}' +
                     'var c;try{c=fn();}' +
                     'catch(e){window.__showPreviewError("Script error: "+(e.message||e)+(e.stack?"\\n\\n"+e.stack:""));return;}' +
-                    'if(!c){window.__showPreviewError("No exported component found. Define `export default ...` or a top-level function `App`/`Component`.");return;}' +
-                    'try{ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(c));}' +
+                    // If no exported component was found but user code already
+                    // rendered into #root via its own ReactDOM.render call,
+                    // treat that as success — no error, no second render.
+                    // Skipping the second render avoids createRoot warning
+                    // about "container already passed to render" and prevents
+                    // the user-rendered tree from being torn down.
+                    'var rootEl=document.getElementById("root");' +
+                    'if(!c){if(rootEl&&rootEl.childNodes.length>0)return;' +
+                        'window.__showPreviewError("No exported component found. Define `export default ...` or a top-level function `App`/`Component`.");return;}' +
+                    'try{ReactDOM.createRoot(rootEl).render(React.createElement(c));}' +
                     'catch(e){window.__showPreviewError("Render: "+(e.message||e)+(e.stack?"\\n\\n"+e.stack:""));}' +
                 '});';
 
