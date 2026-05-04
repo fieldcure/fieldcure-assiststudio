@@ -1,5 +1,12 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Core
 
+## v0.19.1 (2026-05-04)
+
+### Fixed
+- **README transitive-dependencies table** on the nuget.org package page still listed `ProviderPreset` (renamed to `ProviderModel` in `Ai.Providers` 0.7.0). The entry now points at the current type with an inline "renamed from" note. Package contents are byte-identical to 0.19.0 apart from the embedded README.
+
+---
+
 ## v0.19.0 (2026-05-04)
 
 ### Breaking

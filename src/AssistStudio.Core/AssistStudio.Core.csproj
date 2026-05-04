@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
-    <Version>0.19.0</Version>
+    <Version>0.19.1</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CA1416</NoWarn>
 
@@ -22,7 +22,7 @@
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;claude;openai;gemini;ollama;llm;provider;streaming</PackageTags>
-    <PackageReleaseNotes>v0.19.0: Breaking — Profile.PreferredProviderType + PreferredModelId removed, replaced by a single PreferredModelName pointing at ProviderModel.Name (legacy fields kept for one-shot JSON migration). Rebuilt against Ai.Providers 0.7.0 (ProviderPreset → ProviderModel rename, ChatMessage.IsHidden/IsContinuation/IsTruncated, ProviderModelBroadcast helper, Gemini inline image output, audio attachment scaffold).</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.19.1: README-only patch. The transitive-dependencies table on the nuget.org page still listed ProviderPreset (renamed to ProviderModel in Ai.Providers 0.7.0); the entry now reflects the current type with an inline "renamed from" note. No code, dependency, or behaviour change from 0.19.0.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
