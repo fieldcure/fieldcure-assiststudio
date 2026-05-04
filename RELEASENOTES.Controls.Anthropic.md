@@ -1,5 +1,20 @@
 # Release Notes — FieldCure.AssistStudio.Controls.WinUI.Anthropic
 
+## v0.1.0-preview.3 (2026-05-04)
+
+### Changed
+- Rebuilt against **FieldCure.AssistStudio.Anthropic 0.1.0-preview.3**, **FieldCure.AssistStudio.Controls.WinUI 0.19.0** (HTML/JSX artifact preview, ModelPicker, split-Continue + reload truncated hint, document/audio chips, Gemini inline image rendering, elicitation SubmitMode, accessibility AutomationProperties.Name pass), **FieldCure.Ai.Providers 0.7.0** (`ProviderPreset → ProviderModel` rename), and **FieldCure.AssistStudio.Core 0.19.0** (`Profile.PreferredModelName`). No public API changes in this package.
+
+### Dependencies
+- `FieldCure.AssistStudio.Anthropic 0.1.0-preview.3`
+- `FieldCure.AssistStudio.Controls.WinUI 0.19.0+`
+
+### Notes
+- Preview-stability guarantees still apply: any release before `1.0.0` may break public API.
+- Canonical integration reference: in-repo [`samples/AnthropicSdkSample`](../samples/AnthropicSdkSample/) — same patterns now demonstrate JSX artifact previews and the per-model `MaxTokens` guidance.
+
+---
+
 ## v0.1.0-preview.2 (2026-04-27)
 
 ### Added
