@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
-    <Version>0.6.0</Version>
+    <Version>0.7.0</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CA1416</NoWarn>
 
@@ -22,7 +22,7 @@
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;claude;openai;gemini;ollama;llm;provider;streaming</PackageTags>
-    <PackageReleaseNotes>v0.6.0: Anthropic prompt caching across Claude system prompt / conversation prefix / tool manifests (lower input-token cost on long sessions). gpt-5+ recognised as reasoning-model family (max_completion_tokens, default temperature 1.0); o-series detection tightened. Gemini 2.x thoughtSignature round-trip via ToolCall.ProviderSignature (fixes "Function call is missing a thought_signature" on tool follow-ups). Claude Opus 4.7+ omits temperature (server now rejects it). Fix Gemini function_response wrapping for JSON-array tool returns. XML docs across internals; rebuild against AssistStudio.Core 0.18.0.</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.7.0: Breaking — ProviderPreset renamed to ProviderModel (JSON migration shims included). Added ChatMessage.IsHidden / IsContinuation / IsTruncated for split-Continue and reload-truncated flows; ProviderModelBroadcast helper; Gemini inline image output persisted as ToolMedia (image-generation models); audio attachment scaffold. Fixed Gemini image variants rejecting thinkingConfig, image / flash-lite models skipping tool manifest, Gemini 2.5 Pro thinking budget=0 rejection. Public-repo prep: MarkdownExporter output strings are now English-only. Internal: DocumentParsers reference pinned from 2.* to 2.0.* to prevent silent minor upgrades.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -35,7 +35,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="FieldCure.DocumentParsers" Version="2.*" />
+    <PackageReference Include="FieldCure.DocumentParsers" Version="2.0.*" />
     <PackageReference Include="SkiaSharp" Version="3.119.2" />
   </ItemGroup>
 

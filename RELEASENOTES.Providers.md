@@ -1,5 +1,31 @@
 ﻿# Release Notes — FieldCure.Ai.Providers
 
+## v0.7.0 (2026-05-04)
+
+### Breaking
+- **`ProviderPreset` renamed to `ProviderModel`** — the in-memory preset record carries model selection alongside endpoint/key, so the type name now reflects its scope. JSON migration shims keep older `.astx` files and saved settings loadable; new files emit the new shape.
+
+### Added
+- **`ChatMessage.IsHidden`** — flags messages the host inserts as part of an internal flow (e.g. the synthetic "Continue writing…" user turn behind the Continue button) so they're sent to the provider as prompt context but never rendered as a chat bubble.
+- **`ChatMessage.IsContinuation`** — assistant flag for replies that resume an earlier truncated response. The renderer prefixes a small "↪ continued" chip.
+- **`ChatMessage.IsTruncated`** — assistant flag set when the provider stopped on `max_tokens`. Persisted so a saved conversation can show a "truncated" hint on reload without auto-restoring the live Continue affordance.
+- **`ProviderModelBroadcast` helper** — extracted from the settings UI so callers can fan-out a single edit (e.g. API key change) across every `ProviderModel` sharing the same provider type. Includes unit tests.
+- **Gemini inline image output** — assistant `ToolMedia` now stores `inlineData` parts from Gemini image-generation models (`gemini-2.5-flash-image`, `gemini-2.0-flash-preview-image-generation`). Persists and reloads through `.astx` like tool-result media.
+- **Audio attachment scaffold** — `AttachmentType.Audio` + `.astx` serialization. Per-provider gating happens at send time; existing image/text attachment paths unaffected.
+
+### Fixed
+- **Gemini image variants reject `thinkingConfig`** — image-generation models return `INVALID_ARGUMENT` even for `thinkingBudget=0`. The provider now omits the entire `thinkingConfig` block on those model IDs.
+- **Gemini image and `flash-lite` models skip tools** — these variants don't support function calling; sending a tool manifest produced 400 errors.
+- **Gemini 2.5 Pro thinking budget rejection** — Pro tier requires thinking on (`thinkingBudget=0` is rejected). The provider now reports `ThinkingSupport.Required` and forces a non-zero budget.
+
+### Changed
+- **English-only output strings** — `MarkdownExporter` summary header and blockquote text were Korean; now English (public-repo prep). XML doc comments referencing the same Korean strings translated as well. The one Korean literal that remains (`ChatPanel.Features.cs:200` Title prefix list) is intentional — it matches LLM responses written in Korean.
+
+### Internal
+- **DocumentParsers ref pinned** — `FieldCure.DocumentParsers` reference changed from `2.*` to `2.0.*` so a future `2.1` minor cannot silently upgrade in published packages without an explicit Ai.Providers release.
+
+---
+
 ## v0.6.0 (2026-04-27)
 
 ### Added
