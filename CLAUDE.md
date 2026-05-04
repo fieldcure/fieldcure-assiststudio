@@ -22,7 +22,6 @@ src/
 ├── AssistStudio.Core/                   → NuGet: FieldCure.AssistStudio.Core (net8.0)
 │   ├── ISpecialist                      Specialist agent abstraction
 │   ├── Models/                          Profile, McpServerConfig, KnowledgeBase, WorkspaceContext, …
-│   ├── Tools/                           Built-in memory tools (RememberTool, ForgetTool)
 │   └── Helpers/                         ToolResolver, ToolCallExecutor, ModelCompatibility, OllamaHelper, …
 │
 ├── AssistStudio.Controls/               → NuGet: FieldCure.AssistStudio.Controls.WinUI
