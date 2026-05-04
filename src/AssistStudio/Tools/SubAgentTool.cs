@@ -71,8 +71,16 @@ public sealed class SubAgentTool : IAssistTool
 
     #region IAssistTool Implementation
 
+    /// <summary>
+    /// Canonical tool name. Exposed as a constant so prompt builders
+    /// (e.g., <see cref="JudgmentRoutingGuide"/>, specialist system prompts)
+    /// can reference the same identifier the model sees in its tool manifest
+    /// without hard-coding the string in two places.
+    /// </summary>
+    public const string ToolName = "delegate_task";
+
     /// <inheritdoc/>
-    public string Name => "delegate_task";
+    public string Name => ToolName;
 
     /// <inheritdoc/>
     public string DisplayName => "Sub-Agent";
