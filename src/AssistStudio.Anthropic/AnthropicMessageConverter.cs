@@ -108,10 +108,16 @@ public static class AnthropicMessageConverter
 
     /// <summary>Converts a <see cref="ChatRole.Assistant"/> message to an Anthropic <see cref="MessageParam"/>.</summary>
     /// <remarks>
-    /// Thinking content is intentionally dropped because <see cref="ChatMessage"/> does not preserve
-    /// the original thinking block signature. Sending a blank signature would cause a 422 error
-    /// on multi-turn conversations with extended thinking enabled.
-    /// TODO: Signature preservation requires adding a ThinkingSignature field to ChatMessage.
+    /// Drops thinking blocks when reconstructing assistant messages for the API.
+    /// This is correct for text-only multi-turn — Anthropic accepts assistant
+    /// messages without thinking blocks even when extended thinking is enabled.
+    /// However, when a <c>tool_use</c> block is present, Anthropic requires the
+    /// preceding thinking block (with its original signature) to be included;
+    /// dropping it causes a 422 in that scenario. Tool support is currently
+    /// out of scope for this converter (see the <see cref="ChatRole.Tool"/>
+    /// branch in <see cref="Convert"/>). When tool + thinking are added,
+    /// implement signature round-trip per ADR-### (Extended Thinking Signature
+    /// Round-trip) before relaxing this drop.
     /// </remarks>
     private static MessageParam ConvertAssistantMessage(ChatMessage msg)
     {
