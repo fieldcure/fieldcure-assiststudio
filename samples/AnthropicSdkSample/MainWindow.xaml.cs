@@ -411,7 +411,15 @@ public sealed partial class MainWindow : Window
         // Build SDK params via the Controls.Anthropic helper. The helper enables Anthropic
         // prompt caching by default, so consumers benefit from cache hits on repeated prefixes
         // (system prompt, attachments, tool results) simply by using this entry point.
-        var parameters = ChatPanel.BuildAnthropicParams(modelId, maxTokens: 4096);
+        //
+        // MaxTokens caps the assistant response length. 16k is comfortable for typical
+        // artifacts (Lorenz/Mandelbrot visualizers, dashboard JSX, ~200-line React
+        // components) without tripping the truncated-hint banner. Per-model output caps
+        // (Anthropic, late 2025): claude-opus-4-7 = 32k, claude-sonnet-4-6 = 64k,
+        // claude-haiku-4-5 = 16k (64k with the extended-output beta header). Bump this
+        // when you routinely see truncated responses, or wire it to a per-model lookup
+        // if you ship multiple model choices to end users.
+        var parameters = ChatPanel.BuildAnthropicParams(modelId, maxTokens: 16384);
 
         // Stream directly from the Anthropic SDK, wired to the Stop button
         var ct = handle.CancellationToken;
