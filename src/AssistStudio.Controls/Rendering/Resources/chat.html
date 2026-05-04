@@ -120,6 +120,16 @@
     }
     .message.user { align-self: flex-end; }
     .message.assistant { align-self: flex-start; }
+    /* Without an explicit width an assistant flex item shrinks to its
+       content's preferred size. That is the right behavior for plain
+       text replies (a 3-word answer should not stretch a 1100px bubble),
+       but a sandboxed iframe carries no intrinsic width — its parent
+       collapses to text-line width and the artifact previews end up
+       cramped with horizontal scroll. When a .diagram-block is present
+       (HTML/JSX/Mermaid/SVG/image), force the message item to occupy
+       the whole chat column so artifacts get the room they need.
+       :has() ships in Chromium 105+, well below the WebView2 floor. */
+    .message.assistant:has(.diagram-block) { width: 100%; }
 
     .message-bubble {
         padding: 10px 14px;
