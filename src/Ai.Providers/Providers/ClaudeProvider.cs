@@ -516,14 +516,29 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
 
         // Extended thinking: add thinking config (temperature must be absent
         // when thinking is on). Newer Claude models (opus-4-7 and up) have
-        // also deprecated the temperature parameter entirely.
+        // also deprecated the temperature parameter entirely. Opus 4.7 also
+        // dropped the legacy "thinking.type=enabled" form in favor of
+        // "thinking.type=adaptive" with a separate "output_config.effort"
+        // dial; sending the legacy form yields a 400 with
+        // "thinking.type.enabled is not supported for this model".
         if (request.ThinkingEnabled)
         {
-            body["thinking"] = new JsonObject
+            if (IsAdaptiveThinkingModel(ModelId))
             {
-                ["type"] = "enabled",
-                ["budget_tokens"] = thinkingBudget
-            };
+                body["thinking"] = new JsonObject { ["type"] = "adaptive" };
+                body["output_config"] = new JsonObject
+                {
+                    ["effort"] = MapBudgetToEffort(request.ThinkingBudget)
+                };
+            }
+            else
+            {
+                body["thinking"] = new JsonObject
+                {
+                    ["type"] = "enabled",
+                    ["budget_tokens"] = thinkingBudget
+                };
+            }
         }
         else if (!IsTemperatureDeprecated(ModelId))
         {
@@ -581,6 +596,29 @@ public partial class ClaudeProvider : IAiProvider, IDisposable
         if (!int.TryParse(match.Groups[1].Value, out var major)) return false;
         if (!int.TryParse(match.Groups[2].Value, out var minor)) return false;
         return major > 4 || (major == 4 && minor >= 7);
+    }
+
+    /// <summary>
+    /// Returns true for Claude models that require the new adaptive-thinking
+    /// API shape (<c>thinking.type=adaptive</c> with <c>output_config.effort</c>)
+    /// instead of the legacy <c>thinking.type=enabled</c> with
+    /// <c>budget_tokens</c>. Currently the same gate as
+    /// <see cref="IsTemperatureDeprecated"/> — Opus 4.7 and newer.
+    /// </summary>
+    private static bool IsAdaptiveThinkingModel(string modelId)
+        => IsTemperatureDeprecated(modelId);
+
+    /// <summary>
+    /// Maps a legacy <c>ThinkingBudget</c> token count onto the adaptive-mode
+    /// <c>output_config.effort</c> level expected by Opus 4.7+. Defaults to
+    /// <c>"medium"</c> when no budget is provided.
+    /// </summary>
+    private static string MapBudgetToEffort(int? budget)
+    {
+        if (budget is null) return "medium";
+        if (budget < 4096) return "low";
+        if (budget < 16000) return "medium";
+        return "high";
     }
 
     private static long? TryGetCacheTokens(JsonElement usage, string propertyName)
