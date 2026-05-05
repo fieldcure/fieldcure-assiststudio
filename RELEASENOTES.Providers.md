@@ -1,5 +1,15 @@
 ﻿# Release Notes — FieldCure.Ai.Providers
 
+## v0.7.2 (2026-05-05)
+
+### Fixed
+- **Claude Opus 4.7+ extended-thinking requests rejected** — Opus 4.7 dropped the legacy `thinking.type=enabled` + `budget_tokens` shape and now returns `400 thinking.type.enabled is not supported for this model`. `ClaudeProvider` now emits `thinking.type=adaptive` paired with a separate `output_config.effort` dial (`low` / `medium` / `high`) for Opus 4.7 and newer. The existing `AiRequest.ThinkingBudget` token count is mapped onto the effort level (`< 4096 = low`, `< 16000 = medium`, `≥ 16000 = high`; `medium` when unset) so callers don't need to know which shape applies for a given model. Older Claude models keep the legacy `enabled` + `budget_tokens` form unchanged.
+
+### Internal
+- No public API changes. No dependency changes.
+
+---
+
 ## v0.7.1 (2026-05-04)
 
 ### Fixed

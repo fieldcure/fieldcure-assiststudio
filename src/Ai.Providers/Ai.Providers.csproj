@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
-    <Version>0.7.1</Version>
+    <Version>0.7.2</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CA1416</NoWarn>
 
@@ -22,7 +22,7 @@
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;claude;openai;gemini;ollama;llm;provider;streaming</PackageTags>
-    <PackageReleaseNotes>v0.7.1: README-only patch. The v0.7.0 quick-start sample on nuget.org still referenced ProviderPreset (renamed to ProviderModel in this minor); the page now compiles as written. No code, dependency, or behaviour change from 0.7.0.</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.7.2: Fixes Claude Opus 4.7+ extended-thinking requests. The legacy thinking.type=enabled + budget_tokens shape is rejected by Opus 4.7 with "thinking.type.enabled is not supported for this model". ClaudeProvider now emits thinking.type=adaptive paired with output_config.effort (low/medium/high derived from the existing ThinkingBudget token count) for Opus 4.7 and newer; older Claude models keep the legacy shape. No public API changes.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
