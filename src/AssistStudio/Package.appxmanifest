@@ -36,7 +36,7 @@
       EntryPoint="$targetentrypoint$">
       <uap:VisualElements
         DisplayName="AssistStudio"
-        Description="AssistStudio"
+        Description="Native Windows AI chat workspace. Connect to Claude, OpenAI, Gemini, Groq, or local Ollama models — attach documents, run MCP tools, search the web, and preview HTML/JSX artifacts inline."
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png">
