@@ -2350,7 +2350,14 @@
             content.className = 'thinking-content';
             block.appendChild(header);
             block.appendChild(content);
-            bubble.appendChild(block);
+            // Insert above .content so streaming text accumulates below the thinking block,
+            // matching how tool blocks position themselves (see appendToolBlock).
+            var contentSpan = bubble.querySelector('.content');
+            if (contentSpan) {
+                bubble.insertBefore(block, contentSpan);
+            } else {
+                bubble.appendChild(block);
+            }
             doScroll('instant');
         },
 
