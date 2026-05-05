@@ -3,13 +3,12 @@
 **AI Chat Controls for WinUI 3 + Windows AI Workspace App — Bring Your Own Key, pick any provider.**
 
 [![NuGet Providers](https://img.shields.io/nuget/v/FieldCure.Ai.Providers?label=Ai.Providers)](https://www.nuget.org/packages/FieldCure.Ai.Providers)
-[![NuGet Execution](https://img.shields.io/nuget/v/FieldCure.Ai.Execution?label=Ai.Execution)](https://www.nuget.org/packages/FieldCure.Ai.Execution)
 [![NuGet Core](https://img.shields.io/nuget/v/FieldCure.AssistStudio.Core?label=Core)](https://www.nuget.org/packages/FieldCure.AssistStudio.Core)
 [![NuGet Controls](https://img.shields.io/nuget/v/FieldCure.AssistStudio.Controls.WinUI?label=Controls.WinUI)](https://www.nuget.org/packages/FieldCure.AssistStudio.Controls.WinUI)
-[![NuGet Anthropic](https://img.shields.io/nuget/vpre/FieldCure.AssistStudio.Anthropic?label=Anthropic&include_prereleases)](https://www.nuget.org/packages/FieldCure.AssistStudio.Anthropic)
-[![NuGet Controls.Anthropic](https://img.shields.io/nuget/vpre/FieldCure.AssistStudio.Controls.WinUI.Anthropic?label=Controls.WinUI.Anthropic&include_prereleases)](https://www.nuget.org/packages/FieldCure.AssistStudio.Controls.WinUI.Anthropic)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![.NET](https://img.shields.io/badge/.NET-8.0%2B-purple)](https://dotnet.microsoft.com/)
+
+> Adapter, runner, and MCP-server packages have their own badges in [Packages](#packages).
 
 AssistStudio is two things:
 
@@ -17,6 +16,18 @@ AssistStudio is two things:
 2. **A Windows-native AI workspace app** for cloud and local models, profiles, tools, and structured conversations.
 
 ![Chat conversation with Markdown and syntax highlighting](docs/chat-conversation.png)
+
+## Contents
+
+- [Features](#features)
+- [Architecture](#architecture)
+- [Quick Start](#quick-start)
+- [Providers](#providers)
+- [Controls](#controls)
+- [MCP Integration](#mcp-integration)
+- [Configuration](#configuration)
+- [Requirements](#requirements)
+- [Packages](#packages)
 
 ### Architecture Overview
 
@@ -86,6 +97,10 @@ AssistStudio is two things:
 > **Core is platform-agnostic** (`net8.0`). It has no Windows-specific dependencies — you can reference it from a console app, a server, or any .NET project.
 
 See [Dependency Graph](docs/dependencies.md) for the full cross-repository package dependency map.
+
+**Choose your path:**
+- **Building with the libraries** — start with [Quick Start](#quick-start) below; the [Controls package README](src/AssistStudio.Controls/README.md) covers ChatPanel template parts and the full property reference.
+- **Running the workspace app** — clone this repo and `dotnet run --project src/AssistStudio` (Microsoft Store release coming soon).
 
 ---
 
@@ -168,54 +183,31 @@ await foreach (var evt in provider.StreamAsync(request))
 
 ### Implementing a custom provider
 
-Implement `IAiProvider` to integrate any AI service:
+Implement `IAiProvider` to integrate any AI service. The interface boils down to:
 
 ```csharp
-using FieldCure.Ai.Providers.Models;
-using FieldCure.Ai.Providers;
-
-public class MyCustomProvider : IAiProvider
+public interface IAiProvider
 {
-    public string ProviderName => "MyService";
-    public string ModelId => "my-model-v1";
-    public TokenUsage? LastUsage { get; private set; }
-    public bool IsTruncated { get; private set; }
-    public string? LastRequestBody { get; private set; }
-    public string? LastRawResponse { get; private set; }
-    public PdfCapability PdfCapability => PdfCapability.TextExtraction;
+    string ProviderName { get; }
+    string ModelId { get; }
+    PdfCapability PdfCapability { get; }
+    TokenUsage? LastUsage { get; }
 
-    public async Task<AiResponse> CompleteAsync(AiRequest request, CancellationToken ct = default)
-    {
-        // Call your API, return an AiResponse
-        throw new NotImplementedException();
-    }
-
-    public async IAsyncEnumerable<StreamEvent> StreamAsync(
-        AiRequest request,
-        [EnumeratorCancellation] CancellationToken ct = default)
-    {
-        yield return new StreamEvent.TextDelta("Hello ");
-        yield return new StreamEvent.TextDelta("from MyService!");
-        yield return new StreamEvent.StreamCompleted(false);
-    }
-
-    public Task<IReadOnlyList<AiModel>> ListModelsAsync(CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<AiModel>>(
-            [new AiModel("my-model-v1", "My Model", "myservice")]);
-
-    public Task<ConnectionInfo> ValidateConnectionAsync(CancellationToken ct = default)
-        => Task.FromResult(new ConnectionInfo(true, null, null, null));
-
-    public ThinkingSupport GetThinkingSupport(string modelId)
-        => ThinkingSupport.NotSupported;
+    Task<AiResponse> CompleteAsync(AiRequest request, CancellationToken ct = default);
+    IAsyncEnumerable<StreamEvent> StreamAsync(AiRequest request, CancellationToken ct = default);
+    Task<IReadOnlyList<AiModel>> ListModelsAsync(CancellationToken ct = default);
+    Task<ConnectionInfo> ValidateConnectionAsync(CancellationToken ct = default);
+    ThinkingSupport GetThinkingSupport(string modelId);
 }
 ```
 
-Then assign it to a `ChatPanel`:
+Assign your implementation to a `ChatPanel`:
 
 ```csharp
 Chat.Provider = new MyCustomProvider();
 ```
+
+See [docs/CustomProvider.md](docs/CustomProvider.md) for a complete walkthrough — full skeleton, streaming, tool calling, and how to register it with `ProviderFactory`.
 
 ### Third-party SDK adapters
 
@@ -264,9 +256,7 @@ The main control. Provides a complete chat experience: message list (WebView2), 
                   WorkspaceContext="{x:Bind ViewModel.Workspace}" />
 ```
 
-**Key dependency properties:** `Provider`, `SystemPrompt`, `Theme`, `Title`, `Placeholder`, `AvailableModels`, `SelectedModel`, `AvailableProfiles`, `SelectedProfile`, `RegisteredTools`, `WorkspaceContext`, `UtilityProvider`, `AutoTitle`, `AutoSummarize`, `MaxInputTokens`, `MaxToolCallRounds`, `RecentTurnsToKeep`, `IsDebugMode`, `ShowTitleBar`, `AllowAttachments`, `IsReadOnly`, `FontFamily`, `FontSize`, `ChatZoomFactor`, `EmptyStateContent`
-
-**Events:** `ModelChanged`, `ProfileChanged`, `MessageAdded`, `TitleGenerated`, `TitleEditRequested`, `KeyboardShortcutPressed`
+See the [Controls package README](src/AssistStudio.Controls/README.md) for the full dependency-property reference (provider/model, workspace, knowledge base, tools, behavior, theming) and the events list. The same content is published on the [NuGet package page](https://www.nuget.org/packages/FieldCure.AssistStudio.Controls.WinUI).
 
 ### ComposeBar
 
@@ -310,14 +300,9 @@ MCP servers are configured with Stdio or HTTP transport and connected at app sta
 
 ### Built-in MCP Servers
 
-The workspace app bundles MCP servers that are auto-installed and managed:
+The workspace app bundles a set of MCP servers (Essentials, Filesystem, Knowledge Base, Outbox, Runner) — see [Packages → MCP Servers](#mcp-servers) below for the full list with descriptions and badges.
 
-- **Essentials** ([`FieldCure.Mcp.Essentials`](https://www.nuget.org/packages/FieldCure.Mcp.Essentials)) — 12–16 tools: HTTP client, web search (Bing/Serper/SerpApi/Tavily + category search for news/images/scholar/patents), web/document fetching, shell commands, JavaScript sandbox, environment info, file I/O, persistent memory (`remember`/`forget`).
-- **Filesystem** ([`FieldCure.Mcp.Filesystem`](https://www.nuget.org/packages/FieldCure.Mcp.Filesystem)) — Secure file operations within workspace folders. Per-tab instances with MCP Roots protocol for dynamic folder updates.
-- **Knowledge Base** ([`FieldCure.Mcp.Rag`](https://www.nuget.org/packages/FieldCure.Mcp.Rag)) — Multi-KB document indexing and search for RAG. Shared server with `kb_id` parameter, per-conversation KB selection, and embedding model configuration.
-- **Outbox** ([`FieldCure.Mcp.Outbox`](https://www.nuget.org/packages/FieldCure.Mcp.Outbox)) — Send messages via Slack, Discord, Telegram, Email (Gmail / Naver / generic SMTP), Microsoft (Outlook), and KakaoTalk. Shared instance across all tabs; channels are added/removed from the Settings → Connect page.
-- **Runner** ([`FieldCure.AssistStudio.Runner`](https://www.nuget.org/packages/FieldCure.AssistStudio.Runner)) — Headless LLM task runner with Windows Task Scheduler-backed cron scheduling. Windows-only.
-- **BuiltInServerHelper** — Launches each built-in server as `dnx <PackageId>@<Major>.* --yes …` at startup. `dnx` fetches and caches the latest in-range version directly from NuGet; AssistStudio polls NuGet on a 24-hour interval and surfaces an in-app notification when a new in-range build appears. Read-only tools (read, list, search) skip user approval.
+**BuiltInServerHelper** launches each built-in server as `dnx <PackageId>@<Major>.* --yes …` at startup. `dnx` fetches and caches the latest in-range version directly from NuGet; AssistStudio polls NuGet on a 24-hour interval and surfaces an in-app notification when a new in-range build appears. Read-only tools (read, list, search) skip user approval.
 
 #### Update model
 
