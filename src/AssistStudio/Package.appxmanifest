@@ -9,15 +9,15 @@
   IgnorableNamespaces="uap uap3 rescap">
 
   <Identity
-    Name="eb7d0593-4bf7-4104-9990-3e1260bb6004"
-    Publisher="CN=&quot;Fieldcure Co., Ltd.&quot;, O=&quot;Fieldcure Co., Ltd.&quot;, L=Seongbuk-gu, S=Seoul, C=KR"
+    Name="FieldCure.AssistStudio"
+    Publisher="CN=A80E919A-6580-4166-AB2F-FE2743DB5FE2"
     Version="0.18.0.0" />
 
-  <mp:PhoneIdentity PhoneProductId="eb7d0593-4bf7-4104-9990-3e1260bb6004" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
+  <mp:PhoneIdentity PhoneProductId="35a3b62a-fec5-4067-8206-6b7c969b6389" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
     <DisplayName>AssistStudio</DisplayName>
-    <PublisherDisplayName>diluculo</PublisherDisplayName>
+    <PublisherDisplayName>FieldCure</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 
