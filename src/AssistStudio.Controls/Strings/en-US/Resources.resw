@@ -384,8 +384,26 @@ Add them in Profile settings.</value>
   <data name="FolderFlyout_RemoveFolderAccessibilityName" xml:space="preserve">
     <value>Remove folder: {0}</value>
   </data>
-  <data name="ChatPanel_Greeting" xml:space="preserve">
+  <data name="ChatPanel_Greeting_1" xml:space="preserve">
     <value>How can I help you today?</value>
+  </data>
+  <data name="ChatPanel_Greeting_2" xml:space="preserve">
+    <value>What are we working on?</value>
+  </data>
+  <data name="ChatPanel_Greeting_3" xml:space="preserve">
+    <value>Ready when you are.</value>
+  </data>
+  <data name="ChatPanel_Greeting_4" xml:space="preserve">
+    <value>What can I help you build today?</value>
+  </data>
+  <data name="ChatPanel_Greeting_5" xml:space="preserve">
+    <value>Ask me anything.</value>
+  </data>
+  <data name="ChatPanel_Greeting_6" xml:space="preserve">
+    <value>Where shall we start?</value>
+  </data>
+  <data name="ChatPanel_Greeting_7" xml:space="preserve">
+    <value>What are you curious about today?</value>
   </data>
   <data name="Folder_Tooltip" xml:space="preserve">
     <value>Folder Settings</value>

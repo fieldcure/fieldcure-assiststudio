@@ -384,8 +384,26 @@
   <data name="FolderFlyout_RemoveFolderAccessibilityName" xml:space="preserve">
     <value>폴더 제거: {0}</value>
   </data>
-  <data name="ChatPanel_Greeting" xml:space="preserve">
-    <value>무엇을 도와드릴까요?</value>
+  <data name="ChatPanel_Greeting_1" xml:space="preserve">
+    <value>오늘 무엇을 도와드릴까요?</value>
+  </data>
+  <data name="ChatPanel_Greeting_2" xml:space="preserve">
+    <value>오늘은 무엇을 작업할까요?</value>
+  </data>
+  <data name="ChatPanel_Greeting_3" xml:space="preserve">
+    <value>준비됐습니다.</value>
+  </data>
+  <data name="ChatPanel_Greeting_4" xml:space="preserve">
+    <value>오늘은 무엇을 만들어볼까요?</value>
+  </data>
+  <data name="ChatPanel_Greeting_5" xml:space="preserve">
+    <value>무엇이든 물어보세요.</value>
+  </data>
+  <data name="ChatPanel_Greeting_6" xml:space="preserve">
+    <value>어디서부터 시작할까요?</value>
+  </data>
+  <data name="ChatPanel_Greeting_7" xml:space="preserve">
+    <value>오늘은 뭐가 궁금하세요?</value>
   </data>
   <data name="Folder_Tooltip" xml:space="preserve">
     <value>폴더 설정</value>

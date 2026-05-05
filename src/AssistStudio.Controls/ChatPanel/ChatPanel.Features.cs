@@ -223,27 +223,32 @@ public sealed partial class ChatPanel
     }
 
     /// <summary>
-    /// Updates the title text, showing a greeting when no conversation is active
-    /// or the actual title when a conversation has started.
-    /// Also toggles edit/refresh button visibility accordingly.
+    /// Updates the title text and edit/refresh button visibility. The header
+    /// shows the conversation title when one exists, otherwise it falls back
+    /// to the localized greeting — even mid-conversation, until the
+    /// auto-titler (or the user) populates <see cref="Title"/>. Edit and
+    /// refresh buttons appear only once a real title is present.
     /// </summary>
     private void UpdateTitleDisplay()
     {
         if (_titleText is null) return;
 
-        if (_isConversationActive)
+        var hasRealTitle = _isConversationActive && !string.IsNullOrEmpty(Title);
+
+        if (hasRealTitle)
         {
-            _titleText.Text = Title ?? "";
-            if (_titleEditButton is not null) _titleEditButton.Visibility = Visibility.Visible;
-            if (_titleRefreshButton is not null) _titleRefreshButton.Visibility = Visibility.Visible;
+            _titleText.Text = Title!;
         }
         else
         {
             _greetingText ??= LoadGreeting();
             _titleText.Text = _greetingText;
-            if (_titleEditButton is not null) _titleEditButton.Visibility = Visibility.Collapsed;
-            if (_titleRefreshButton is not null) _titleRefreshButton.Visibility = Visibility.Collapsed;
         }
+
+        if (_titleEditButton is not null)
+            _titleEditButton.Visibility = hasRealTitle ? Visibility.Visible : Visibility.Collapsed;
+        if (_titleRefreshButton is not null)
+            _titleRefreshButton.Visibility = hasRealTitle ? Visibility.Visible : Visibility.Collapsed;
     }
 
     /// <summary>
@@ -263,11 +268,23 @@ public sealed partial class ChatPanel
     }
 
     /// <summary>
-    /// Loads the greeting text from resources.
+    /// Number of localized greeting variants defined in <c>Resources.resw</c>
+    /// (<c>ChatPanel_Greeting_1</c>..<c>ChatPanel_Greeting_N</c>). When adding
+    /// or removing variants, update both this constant and the resw files.
+    /// </summary>
+    private const int GreetingVariantCount = 7;
+
+    /// <summary>
+    /// Loads a random greeting from the localized variant pool. Falls back to
+    /// the first variant (or a hard-coded English string) if a resource lookup
+    /// fails for any reason.
     /// </summary>
     private static string LoadGreeting()
     {
-        return Res.GetString("ChatPanel_Greeting") ?? "How can I help you today?";
+        var index = System.Random.Shared.Next(1, GreetingVariantCount + 1);
+        return Res.GetString($"ChatPanel_Greeting_{index}")
+            ?? Res.GetString("ChatPanel_Greeting_1")
+            ?? "How can I help you today?";
     }
 
     #endregion

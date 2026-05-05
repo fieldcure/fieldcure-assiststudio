@@ -301,8 +301,34 @@ public sealed partial class ChatPanel : Control, IDisposable
     public void Dispose()
     {
         _streamingCts?.Cancel();
+        _currentTurn = null;
+        _editingMessage = null;
         _messages.Clear();
         _childrenMap.Clear();
+
+        // Imperative control state that does not flow through bindings — must be
+        // reset so a recycled container does not leak the previous tab's draft
+        // text, attachments, edit-mode state, or active-conversation flag onto
+        // the next tab. Otherwise the new tab opens with the prior textarea
+        // content and a Title-bar (instead of the greeting) until something
+        // forces re-render.
+        _isConversationActive = false;
+        // Drop the cached greeting so the next empty-state render picks a
+        // fresh random variant from the localized pool.
+        _greetingText = null;
+        if (_inputArea is not null)
+        {
+            _inputArea.Text = string.Empty;
+            _inputArea.ClearAttachments();
+            _inputArea.IsEditing = false;
+            _inputArea.IsInputEnabled = true;
+        }
+
+        // Workspace folders + KB id are per-conversation; the new VM populates
+        // them in AttachPanel only when it has saved data, so reset to defaults
+        // here to avoid showing the previous tab's folder/KB selection.
+        WorkspaceFolders = null;
+        KnowledgeBaseId = null;
 
         if (_chatWebView is not null)
         {

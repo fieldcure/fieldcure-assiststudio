@@ -283,7 +283,13 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         int tabNumber = 0)
     {
         CurrentPreset = preset;
-        _title = preset.Name;
+        // Title starts empty until either the auto-titler runs or the user
+        // edits it. The header in ChatPanel falls back to the localized
+        // greeting whenever Title is empty (regardless of conversation
+        // activity), so transient mid-conversation states — e.g., a tool
+        // approval panel that opens before the AI finishes its first turn —
+        // still read as "fresh" instead of leaking the model name.
+        _title = string.Empty;
 
         var prefix = Res.GetString("Tab_NewConversation");
         _tabHeader = tabNumber > 0 ? $"{prefix} {tabNumber}" : prefix;
@@ -696,7 +702,8 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         // Create new provider — conversation history is preserved
         Provider = ProviderFactory.Create(preset);
         CurrentPreset = preset;
-        Title = preset.Name;
+        // Do not overwrite Title here. Switching the model mid-conversation
+        // should not clobber an auto-generated or user-edited title.
 
         // Invalidate sub-agent tool so it picks up the new default preset
         _subAgentTool = null;
