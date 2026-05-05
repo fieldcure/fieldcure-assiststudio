@@ -759,6 +759,14 @@ public static class AppSettings
     private static ObservableCollection<ProviderModel>? _modelsCache;
 
     /// <summary>
+    /// Path to the provider models JSON file. A file is used instead of
+    /// <see cref="ApplicationDataContainer"/> values to avoid the 8KB per-setting
+    /// limit, which a populated multi-provider config easily exceeds.
+    /// </summary>
+    private static string ProviderModelsFilePath
+        => Path.Combine(ApplicationData.Current.LocalFolder.Path, "provider-models.json");
+
+    /// <summary>
     /// Persists provider models to local storage, saving API keys securely via the password vault.
     /// Per-Provider broadcast fields (MaxTokens, Temperature, StreamingEnabled, PdfCapability,
     /// ThinkingEnabled, ThinkingOverride, ThinkingBudget) are forced to share the value of
@@ -769,25 +777,49 @@ public static class AppSettings
     {
         ProviderModelBroadcast.Apply(models);
 
-        // Save API keys to PasswordVault, serialize rest to JSON
-        foreach (var p in models)
+        // Credential operations (PasswordVault writes + Win32 Credential Manager
+        // sync) are slow — each call is a COM round-trip and can take seconds at
+        // 20+ models. Run them only when an API key actually differs from what
+        // is in the in-memory cache. A model checkbox toggle does not change
+        // any key, so this short-circuits the common case.
+        if (HaveApiKeysChanged(models))
         {
-            if (p.RequiresApiKey && !string.IsNullOrEmpty(p.ApiKey))
+            foreach (var p in models)
             {
-                PasswordVaultHelper.SaveApiKey(p.ProviderType, p.ApiKey);
+                if (p.RequiresApiKey && !string.IsNullOrEmpty(p.ApiKey))
+                    PasswordVaultHelper.SaveApiKey(p.ProviderType, p.ApiKey);
             }
+            // Sync to Win32 Credential Manager for external processes (Runner)
+            PasswordVaultHelper.SyncToCredentialManager();
         }
 
-        // Sync to Win32 Credential Manager for external processes (Runner)
-        PasswordVaultHelper.SyncToCredentialManager();
+        var fullList = models as List<ProviderModel> ?? [.. models];
 
-        var list = models as List<ProviderModel> ?? [.. models];
-        var json = JsonSerializer.Serialize(list, AppJsonContext.Default.ListProviderModel);
-        Settings.Values["ProviderModels"] = json;
+        // Drop synthetic placeholder entries (empty ModelId). AppendCustomProviderModels
+        // adds these at load time to represent a custom provider with no enabled models;
+        // once real entries exist, the placeholder is stale and should not be persisted.
+        // FixupMockModelIds normalizes Mock entries before this point, so any remaining
+        // empty ModelId is a phantom.
+        var persistList = fullList.Where(m => !string.IsNullOrEmpty(m.ModelId)).ToList();
+        var json = JsonSerializer.Serialize(persistList, AppJsonContext.Default.ListProviderModel);
 
-        // Update cache with the just-saved models (already have API keys in memory)
-        if (list.Count > 0)
-            _modelsCache = new ObservableCollection<ProviderModel>(list);
+        try
+        {
+            File.WriteAllText(ProviderModelsFilePath, json);
+            // One-time migration: drop the legacy LocalSettings copy after the
+            // first successful file write so it stops bumping the 8KB ceiling.
+            if (Settings.Values.ContainsKey("ProviderModels"))
+                Settings.Values.Remove("ProviderModels");
+        }
+        catch (Exception ex)
+        {
+            LoggingService.LogException(ex);
+        }
+
+        // Update cache with the in-memory list (including any synthetic entries the
+        // model picker still needs at runtime — they just aren't persisted).
+        if (fullList.Count > 0)
+            _modelsCache = new ObservableCollection<ProviderModel>(fullList);
 
         ModelsChanged?.Invoke(null, EventArgs.Empty);
     }
@@ -806,7 +838,22 @@ public static class AppSettings
         if (_modelsCache is not null)
             return new ObservableCollection<ProviderModel>(_modelsCache);
 
-        var json = Settings.Values["ProviderModels"] as string;
+        // Prefer the file-based store. Falls back to the legacy LocalSettings
+        // copy so users who upgrade across this change don't lose their config —
+        // SaveModels migrates them to the file on the next save.
+        string? json = null;
+        try
+        {
+            if (File.Exists(ProviderModelsFilePath))
+                json = File.ReadAllText(ProviderModelsFilePath);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.LogException(ex);
+        }
+        if (string.IsNullOrEmpty(json))
+            json = Settings.Values["ProviderModels"] as string;
+
         ObservableCollection<ProviderModel>? result = null;
 
         if (!string.IsNullOrEmpty(json))
@@ -886,6 +933,46 @@ public static class AppSettings
         return results;
     }
 
+
+    /// <summary>
+    /// Returns <c>true</c> when the per-provider API keys in <paramref name="models"/>
+    /// differ from the values currently held in <see cref="_modelsCache"/>. Used to
+    /// avoid the slow PasswordVault + Credential Manager round-trip on writes that
+    /// touch only model-list metadata (e.g., enabling/disabling a checkbox).
+    /// Returns <c>true</c> when there is no cache yet (first save in the session)
+    /// so the credential store is always populated at least once.
+    /// </summary>
+    /// <param name="models">The new model list about to be persisted.</param>
+    private static bool HaveApiKeysChanged(IList<ProviderModel> models)
+    {
+        if (_modelsCache is null) return true;
+
+        static Dictionary<string, string> KeysByProvider(IEnumerable<ProviderModel> source)
+        {
+            var result = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var m in source)
+            {
+                if (!m.RequiresApiKey) continue;
+                // First non-empty key per provider wins; empty keys do not
+                // overwrite a previously seen real key.
+                if (!result.TryGetValue(m.ProviderType, out var existing) || string.IsNullOrEmpty(existing))
+                    result[m.ProviderType] = m.ApiKey ?? "";
+            }
+            return result;
+        }
+
+        var oldKeys = KeysByProvider(_modelsCache);
+        var newKeys = KeysByProvider(models);
+
+        if (oldKeys.Count != newKeys.Count) return true;
+        foreach (var (provider, key) in newKeys)
+        {
+            if (!oldKeys.TryGetValue(provider, out var prior) ||
+                !string.Equals(prior, key, StringComparison.Ordinal))
+                return true;
+        }
+        return false;
+    }
 
     /// <summary>
     /// Ensures every Mock-provider entry carries <see cref="MockDefaultModelId"/>
