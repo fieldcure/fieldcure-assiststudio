@@ -45,19 +45,6 @@ public static class ConversationManager
     private static readonly JsonTypeInfo<ManifestData> ManifestTypeInfo =
         IndentedJsonContext.Default.ManifestData;
 
-    /// <summary>Semaphore to ensure only one save runs at a time.</summary>
-    private static readonly SemaphoreSlim _saveLock = new(1, 1);
-
-    /// <summary>Cancellation source for the debounce timer. Replaced on each new trigger.</summary>
-    private static CancellationTokenSource? _debounceCts;
-
-    /// <summary>Tracks the currently running auto-save task for flush support.</summary>
-    private static Task? _pendingAutoSave;
-
-    /// <summary>Debounce interval for auto-save. Short enough to feel instant,
-    /// long enough to coalesce rapid-fire triggers (Send + immediate response).</summary>
-    private static readonly TimeSpan DebounceInterval = TimeSpan.FromMilliseconds(300);
-
     #endregion
 
     #region Public Methods
@@ -70,25 +57,6 @@ public static class ConversationManager
     {
         _conversationsFolder = Path.Combine(baseFolderPath, "Conversations");
         Directory.CreateDirectory(_conversationsFolder);
-    }
-
-    /// <summary>
-    /// Save conversation to the internal Conversations folder.
-    /// </summary>
-    public static async Task SaveConversationAsync(
-        string tabName,
-        string? providerPresetName,
-        IReadOnlyList<ChatMessage> messages,
-        string? activeRootChildId = null,
-        Dictionary<string, BuiltInServerConfig>? builtInServers = null,
-        string? conversationId = null)
-    {
-        EnsureInitialized();
-        if (messages.Count == 0) return;
-
-        var fileName = SanitizeFileName(tabName) + FileExtension;
-        var filePath = Path.Combine(_conversationsFolder, fileName);
-        await SaveToFileAsync(filePath, tabName, providerPresetName, messages, activeRootChildId, builtInServers, conversationId);
     }
 
     /// <summary>
@@ -391,87 +359,6 @@ public static class ConversationManager
         }
     }
 
-    /// <summary>
-    /// Schedules a debounced auto-save for the given conversation.
-    /// Rapid-fire calls within <see cref="DebounceInterval"/> are coalesced.
-    /// The actual save runs on a background thread to avoid blocking the UI.
-    /// At most one save runs concurrently; one additional save is queued.
-    /// </summary>
-    public static void ScheduleAutoSave(
-        string? filePath,
-        string tabName,
-        string? providerPresetName,
-        IReadOnlyList<ChatMessage> messages,
-        string? activeRootChildId,
-        Dictionary<string, BuiltInServerConfig>? builtInServers,
-        string? conversationId)
-    {
-        // Cancel any pending debounce timer
-        _debounceCts?.Cancel();
-        _debounceCts?.Dispose();
-        _debounceCts = new CancellationTokenSource();
-        var ct = _debounceCts.Token;
-
-        // Capture message list reference (not a snapshot of field values).
-        // ChatMessage objects are shared references — SaveToFileAsync reads
-        // ActiveChildId etc. at serialization time, picking up the latest values.
-        var messagesCopy = messages.ToList();
-
-        _pendingAutoSave = Task.Run(async () =>
-        {
-            try
-            {
-                await Task.Delay(DebounceInterval, ct);
-            }
-            catch (OperationCanceledException)
-            {
-                return; // Debounce reset — a newer save will take over
-            }
-
-            await _saveLock.WaitAsync(CancellationToken.None);
-            try
-            {
-                if (filePath is not null)
-                    await SaveToFileAsync(filePath, tabName, providerPresetName, messagesCopy, activeRootChildId, builtInServers, conversationId);
-                else
-                    await SaveConversationAsync(tabName, providerPresetName, messagesCopy, activeRootChildId, builtInServers, conversationId);
-            }
-            catch (Exception ex)
-            {
-                LoggingService.LogException(ex);
-            }
-            finally
-            {
-                _saveLock.Release();
-            }
-        });
-    }
-
-    /// <summary>
-    /// Cancels any pending auto-save. Call after an explicit Save/SaveAs
-    /// to prevent a stale auto-save from overwriting the just-saved file.
-    /// </summary>
-    public static void CancelPendingAutoSave()
-    {
-        _debounceCts?.Cancel();
-    }
-
-    /// <summary>
-    /// Waits for any in-progress or pending auto-save to complete.
-    /// Call this on app shutdown to ensure data is flushed before exit.
-    /// </summary>
-    public static async Task FlushAutoSaveAsync()
-    {
-        // Cancel debounce timer so the pending save fires immediately
-        _debounceCts?.Cancel();
-
-        if (_pendingAutoSave is not null)
-        {
-            try { await _pendingAutoSave; }
-            catch { /* already logged */ }
-        }
-    }
-
     #endregion
 
     #region Private Methods
@@ -574,13 +461,6 @@ public static class ConversationManager
         {
             return "0.0.0";
         }
-    }
-
-    /// <summary>Sanitizes a file name by replacing invalid characters with underscores.</summary>
-    private static string SanitizeFileName(string name)
-    {
-        var invalid = Path.GetInvalidFileNameChars();
-        return string.Concat(name.Select(c => invalid.Contains(c) ? '_' : c));
     }
 
     /// <summary>Throws if <see cref="Initialize"/> has not been called.</summary>

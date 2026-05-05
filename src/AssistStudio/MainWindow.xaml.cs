@@ -304,7 +304,6 @@ public sealed partial class MainWindow : Window
             if (messages.Count == 0) return;
             LoggingService.LogInfo($"[File] Save: {Path.GetFileName(tab.FilePath)}, messages={messages.Count}");
             await ConversationManager.SaveToFileAsync(tab.FilePath, tab.Title, tab.CurrentPreset?.Name, messages, tab.GetActiveRootChildId(), tab.GetBuiltInServers());
-            ConversationManager.CancelPendingAutoSave();
             tab.IsDirty = false;
             AppSettings.AddRecentFile(tab.FilePath);
         }
@@ -347,7 +346,6 @@ public sealed partial class MainWindow : Window
             var presetName = tab.CurrentPreset?.Name;
             LoggingService.LogInfo($"[File] SaveAs: {Path.GetFileName(file.Path)}, messages={messages.Count}");
             await ConversationManager.SaveToFileAsync(file.Path, tab.Title, presetName, messages, tab.GetActiveRootChildId(), tab.GetBuiltInServers());
-            ConversationManager.CancelPendingAutoSave();
             tab.FilePath = file.Path;
             tab.IsDirty = false;
             tab.HasBeenSaved = true;
@@ -636,7 +634,6 @@ public sealed partial class MainWindow : Window
     {
         if (!await HandleDeferredQueueOnCloseAsync()) return;
         _appWindow!.Hide();
-        await ConversationManager.FlushAutoSaveAsync();
         await ShutdownMcpServersAsync();
         LoggingService.LogInfo("[App] Exiting process...");
         ExitProcess(0);
@@ -718,7 +715,6 @@ public sealed partial class MainWindow : Window
         {
             if (!await HandleDeferredQueueOnCloseAsync()) return;
             _appWindow!.Hide();
-            await ConversationManager.FlushAutoSaveAsync();
             await ShutdownMcpServersAsync();
             ChatPanel.CleanupTempMedia();
             LoggingService.LogInfo("[App] Exiting process...");
@@ -758,7 +754,6 @@ public sealed partial class MainWindow : Window
 
         if (!await HandleDeferredQueueOnCloseAsync()) return;
         _appWindow!.Hide();
-        await ConversationManager.FlushAutoSaveAsync();
         await ShutdownMcpServersAsync();
         ChatPanel.CleanupTempMedia();
         LoggingService.LogInfo("[App] Exiting process...");

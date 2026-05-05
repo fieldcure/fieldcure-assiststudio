@@ -302,44 +302,6 @@ public partial class MainViewModel : ObservableObject
         return Task.FromResult(vm);
     }
 
-    /// <summary>
-    /// Saves a single tab's conversation to its file path or to the default conversation store.
-    /// </summary>
-    public static async Task SaveTabAsync(ChatTabViewModel? tab)
-    {
-        if (tab is null) return;
-
-        var messages = tab.GetAllMessages();
-        if (messages.Count == 0) return;
-
-        var tabName = tab.Title;
-        var presetName = tab.CurrentPreset?.Name;
-
-        try
-        {
-            var rootChildId = tab.GetActiveRootChildId();
-            var builtInServers = tab.GetBuiltInServers();
-            // Generate conversation ID if not yet assigned
-            tab.ConversationId ??= Guid.NewGuid().ToString("N");
-            if (tab.FilePath is not null)
-                await ConversationManager.SaveToFileAsync(tab.FilePath, tabName, presetName, messages, rootChildId, builtInServers, tab.ConversationId);
-            else
-                await ConversationManager.SaveConversationAsync(tabName, presetName, messages, rootChildId, builtInServers, tab.ConversationId);
-            tab.IsDirty = false;
-        }
-        catch (Exception ex) { LoggingService.LogException(ex); }
-    }
-
-    /// <summary>
-    /// Saves all open tabs' conversations.
-    /// </summary>
-    public async Task SaveAllAsync()
-    {
-        foreach (var tab in Tabs)
-        {
-            await SaveTabAsync(tab);
-        }
-    }
 
     /// <summary>
     /// Disposes and removes the specified tab from the collection.

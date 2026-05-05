@@ -250,23 +250,10 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// Notifies the UI that the tab icon source may have changed when dirty state changes.
-    /// Triggers debounced auto-save when the conversation becomes dirty.
     /// </summary>
     partial void OnIsDirtyChanged(bool value)
     {
         OnPropertyChanged(nameof(TabIconSource));
-
-        if (value)
-        {
-            var messages = GetAllMessages();
-            if (messages.Count > 0)
-            {
-                ConversationId ??= Guid.NewGuid().ToString("N");
-                ConversationManager.ScheduleAutoSave(
-                    FilePath, Title, CurrentPreset?.Name, messages,
-                    GetActiveRootChildId(), GetBuiltInServers(), ConversationId);
-            }
-        }
     }
 
     /// <summary>
