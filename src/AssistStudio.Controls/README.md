@@ -83,6 +83,7 @@ The main control. Provides message list (WebView2), input area, streaming, attac
 | `SelectedModel` | `ProviderModel` | Currently active model (renamed from `SelectedPreset` in 0.19.0) |
 | `AvailableProfiles` | `IList<Profile>` | Profile list for the selector |
 | `SelectedProfile` | `Profile` | Currently active profile |
+| `GroupDisplayNameResolver` | `Func<string, string?>?` | Optional host-supplied resolver mapping a raw `ProviderType` (e.g., `"Custom_046A…"`) to a readable group label (e.g., `"MiniMax"`) shown in the model picker headers. Falls back to the raw `ProviderType` (with a `Mock → "demo"` alias) when unset. *(0.20.0+)* |
 
 **Workspace & context**
 
@@ -143,7 +144,7 @@ The main control. Provides message list (WebView2), input area, streaming, attac
 
 Chat input area — text box, attach button, model/profile selectors. Used internally by `ChatPanel`, but can be placed standalone.
 
-**Dependency Properties:** `Placeholder`, `IsInputEnabled`, `AvailableModels`, `SelectedModel`, `AvailableProfiles`, `SelectedProfile`
+**Dependency Properties:** `Placeholder`, `IsInputEnabled`, `AvailableModels`, `SelectedModel`, `AvailableProfiles`, `SelectedProfile`, `GroupDisplayNameResolver`
 
 ### AttachmentPreviewBar
 

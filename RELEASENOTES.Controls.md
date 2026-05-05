@@ -1,5 +1,21 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Controls.WinUI
 
+## v0.20.0 (2026-05-05)
+
+### Added
+- **`ChatPanel.GroupDisplayNameResolver` / `ComposeBar.GroupDisplayNameResolver`** — optional `Func<string, string?>` delegates the host injects so user-defined custom-provider IDs (e.g., `Custom_046A…`) display as readable names (e.g., `MiniMax`) in the model picker group headers and the selected-model summary. Falls back to the raw `ProviderType` string (with a `Mock → "demo"` alias) when no resolver is supplied, preserving the standalone Controls behavior. `ModelPicker` group headers (`ObservableGroup.Key`) now also pick up the resolved name so flyout headers and the selected-model line match.
+- **Seven greeting variants** — the empty-state header used to read a single fixed string (`"How can I help you today?"`); a fresh tab now picks one of seven localized variants (en-US + ko-KR) at random per render. New resw keys `ChatPanel_Greeting_1` … `ChatPanel_Greeting_7`; the legacy `ChatPanel_Greeting` key is removed.
+
+### Fixed
+- **Empty-state header leaked the model id** — switching the model mid-conversation overwrote `Title` with the provider name, and a transient empty title (e.g., a tool approval that opened before the AI's first reply landed) flashed the model id instead of the greeting. The header now falls back to the greeting whenever `Title` is empty (regardless of conversation activity), and edit/refresh affordances appear only once a real title exists.
+- **Thinking block anchored below streamed text** — `appendThinkingBlock` used to push the disclosure section to the end of the bubble, so once streaming text started arriving the thinking block landed below the assistant's reply. It now inserts above the `.content` span, matching tool-block placement.
+- **Tab recycle leaked previous tab's UI state** — `ChatPanel.Dispose` now resets the imperative per-tab fields that don't flow through bindings (current turn, editing-message reference, draft text, attachments, edit-mode flag, conversation-active flag, cached greeting, workspace folders, knowledge-base selection) so a recycled container starts at empty-state instead of inheriting the previous tab's compose-bar contents and header text.
+
+### Changed
+- Rebuilt against the same **FieldCure.AssistStudio.Core 0.19.1** and **FieldCure.Ai.Providers 0.7.2**. No new transitive deps.
+
+---
+
 ## v0.19.0 (2026-05-04)
 
 ### Added

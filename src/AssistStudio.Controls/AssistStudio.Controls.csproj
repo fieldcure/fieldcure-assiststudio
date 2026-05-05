@@ -9,7 +9,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
-    <Version>0.19.0</Version>
+    <Version>0.20.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
@@ -25,7 +25,7 @@
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;chat;winui;winui3;controls;claude;openai;gemini;ollama;webview2</PackageTags>
-    <PackageReleaseNotes>v0.19.0: HTML/JSX artifact preview — sandboxed iframe with React 18 + Tailwind + 17 vendored libs (recharts, lucide-react, three, d3, lodash, mathjs, papaparse, Chart.js, Tone, SheetJS, mammoth, TensorFlow.js, prop-types, …) served from a strict CDN whitelist, esm.sh fallback for unmapped imports, shadcn/ui inline shim, hooks-as-globals, and self-render acceptance. ModelPicker control with multi-model-per-provider integrated into ComposeBar and the auxiliary task selector. Continue split into its own bubble (ChatMessage.IsHidden + IsContinuation) with a reload "truncated" hint (IsTruncated) replacing the phantom Continue button. Document and audio attachment chips. Gemini inline image rendering persisted through .astx. Elicitation SubmitMode for external dialog hosting + required-field validation. Explicit AutomationProperties.Name on icon-only buttons. JSX import rewriter consolidated into one multi-form pass (default+named/namespace, multi-line bodies). Chat column widened 800→1100px, artifact iframe 400→540px. Public-repo prep: Korean strings translated to English. Rebuilt against Core 0.19.0 + Ai.Providers 0.7.0.</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.20.0: New public API — ChatPanel.GroupDisplayNameResolver and ComposeBar.GroupDisplayNameResolver (Func&lt;string, string?&gt;) so hosts can map raw ProviderType IDs (e.g., "Custom_046A…") to readable display names (e.g., "MiniMax") in the model picker group headers and the selected-model summary; falls back to the raw ProviderType (Mock → "demo") when unset. Greeting picks one of seven localized variants per render (en-US + ko-KR). Empty-state header now falls back to the greeting whenever Title is empty — switching the model mid-conversation no longer clobbers an auto-generated/user-edited title, and a transient pre-first-reply state no longer flashes the model id. Thinking block anchors above the streamed assistant text (matches tool-block placement). ChatPanel.Dispose now resets imperative per-tab state (current turn, edit-mode flag, draft text, attachments, workspace folders, KB selection, conversation-active flag) so a recycled container can't leak the previous tab's UI state into the next. Rebuilt against same Core 0.19.1 + Ai.Providers 0.7.2.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
