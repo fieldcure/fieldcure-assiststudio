@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
-    <Version>0.19.1</Version>
+    <Version>0.19.2</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CA1416</NoWarn>
 
@@ -22,7 +22,7 @@
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;claude;openai;gemini;ollama;llm;provider;streaming</PackageTags>
-    <PackageReleaseNotes>v0.19.1: README-only patch. The transitive-dependencies table on the nuget.org page still listed ProviderPreset (renamed to ProviderModel in Ai.Providers 0.7.0); the entry now reflects the current type with an inline "renamed from" note. No code, dependency, or behaviour change from 0.19.0.</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.19.2: Rebuilt against FieldCure.Ai.Providers 0.7.2 so the Claude Opus 4.7 adaptive thinking-shape fix flows transitively to consumers of FieldCure.AssistStudio.Controls.WinUI / .Core (NuGet's lowest-applicable resolver previously stayed pinned to 0.7.1 through Core 0.19.1). No code or public API changes.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

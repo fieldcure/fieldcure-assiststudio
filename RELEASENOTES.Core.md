@@ -1,5 +1,15 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Core
 
+## v0.19.2 (2026-05-05)
+
+### Changed
+- **Rebuilt against FieldCure.Ai.Providers 0.7.2** so the Claude Opus 4.7 adaptive thinking-shape fix propagates transitively to consumers of `FieldCure.AssistStudio.Controls.WinUI` / `.Core`. NuGet's lowest-applicable resolver previously kept transitive consumers pinned to `Ai.Providers 0.7.1` through `Core 0.19.1`'s `>= 0.7.1` constraint; this patch lifts the floor to `>= 0.7.2`.
+
+### Internal
+- No code or public API changes. Package contents are byte-identical to 0.19.1 apart from the bumped `FieldCure.Ai.Providers` dependency floor.
+
+---
+
 ## v0.19.1 (2026-05-04)
 
 ### Fixed
