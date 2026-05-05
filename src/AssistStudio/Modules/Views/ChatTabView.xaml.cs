@@ -1,4 +1,5 @@
-﻿using AssistStudio.Modules.ViewModels;
+﻿using AssistStudio.Modules.Helpers;
+using AssistStudio.Modules.ViewModels;
 using FieldCure.AssistStudio.Controls;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -49,6 +50,10 @@ public sealed partial class ChatTabView : UserControl
     public ChatTabView()
     {
         InitializeComponent();
+        // Inject the host-side resolver so the model picker shows
+        // user-defined custom-provider names (e.g., "MiniMax") instead of
+        // raw "Custom_<guid>" identifiers.
+        Panel.GroupDisplayNameResolver = ModelPickerAdapter.ResolveGroupDisplayName;
     }
 
     #endregion

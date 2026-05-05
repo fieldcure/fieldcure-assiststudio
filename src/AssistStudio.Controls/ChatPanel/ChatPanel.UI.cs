@@ -1001,6 +1001,10 @@ public sealed partial class ChatPanel
         _emptyStatePanel = GetTemplateChild("PART_EmptyStatePanel") as Grid;
         _emptyStateContent = GetTemplateChild("PART_EmptyStateContent") as StackPanel;
         _inputArea = GetTemplateChild("PART_InputArea") as ComposeBar;
+        // Forward any host-supplied custom-provider display name resolver to
+        // the embedded ComposeBar now that the template part exists.
+        if (_inputArea is not null)
+            _inputArea.GroupDisplayNameResolver = _groupDisplayNameResolver;
         _chatLayout = GetTemplateChild("PART_ChatLayout") as Grid;
         _titleBar = GetTemplateChild("PART_TitleBar") as StackPanel;
         _titleText = GetTemplateChild("PART_TitleText") as TextBlock;

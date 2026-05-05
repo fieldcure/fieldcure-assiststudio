@@ -153,6 +153,34 @@ public sealed partial class ChatPanel : Control, IDisposable
     private ComposeBar? _inputArea;
 
     /// <summary>
+    /// Backing field for <see cref="GroupDisplayNameResolver"/>. Stored on
+    /// the panel so the value survives template re-application and is pushed
+    /// to <see cref="_inputArea"/> as soon as that template part resolves.
+    /// </summary>
+    private System.Func<string, string?>? _groupDisplayNameResolver;
+
+    /// <summary>
+    /// Optional host-supplied resolver that maps a raw <c>ProviderType</c>
+    /// string (e.g., <c>"Custom_046a..."</c>) to a user-facing group display
+    /// name (e.g., <c>"MiniMax"</c>) for the model picker inside the
+    /// embedded <see cref="ComposeBar"/>. The Controls package is
+    /// host-agnostic and cannot resolve user-defined custom provider names
+    /// by itself; the host (typically the desktop app via <c>AppSettings</c>)
+    /// injects this delegate. <c>null</c> falls back to the raw
+    /// <c>ProviderType</c> with a special-case for <c>Mock</c>.
+    /// </summary>
+    public System.Func<string, string?>? GroupDisplayNameResolver
+    {
+        get => _groupDisplayNameResolver;
+        set
+        {
+            _groupDisplayNameResolver = value;
+            if (_inputArea is not null)
+                _inputArea.GroupDisplayNameResolver = value;
+        }
+    }
+
+    /// <summary>
     /// The grid layout containing the WebView and input area during active chat.
     /// </summary>
     private Grid? _chatLayout;

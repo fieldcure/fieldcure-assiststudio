@@ -92,7 +92,7 @@ internal static class ModelPickerAdapter
     /// </summary>
     /// <param name="providerType">The <see cref="ProviderModel.ProviderType"/> value.</param>
     /// <returns>The group display name.</returns>
-    private static string ResolveGroupDisplayName(string providerType)
+    public static string ResolveGroupDisplayName(string providerType)
     {
         if (providerType == "Mock") return "demo";
         if (providerType.StartsWith("Custom_", StringComparison.Ordinal))

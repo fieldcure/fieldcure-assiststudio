@@ -864,18 +864,25 @@ public sealed partial class ComposeBar
     /// <param name="models">The source list (contains <see cref="ProviderModel"/> and
     /// optional <c>"-"</c> separator strings).</param>
     /// <returns>The projected entries.</returns>
-    private static IList<ModelPickerEntry> BuildEntries(IList models)
+    private IList<ModelPickerEntry> BuildEntries(IList models)
     {
         var result = new List<ModelPickerEntry>(models.Count);
         foreach (var obj in models)
         {
             if (obj is not ProviderModel model) continue;
+            // Prefer the host-supplied resolver (e.g., AppSettings maps
+            // "Custom_046a..." → "MiniMax"); fall back to "demo" for Mock and
+            // to the raw ProviderType otherwise.
+            var resolved = GroupDisplayNameResolver?.Invoke(model.ProviderType);
+            var groupDisplayName = !string.IsNullOrEmpty(resolved)
+                ? resolved
+                : model.ProviderType == "Mock" ? "demo" : model.ProviderType;
             result.Add(new ModelPickerEntry
             {
                 ModelId = model.ModelId,
                 DisplayName = model.ModelId,
                 GroupKey = model.ProviderType,
-                GroupDisplayName = model.ProviderType == "Mock" ? "demo" : model.ProviderType,
+                GroupDisplayName = groupDisplayName,
                 Tag = model,
             });
         }

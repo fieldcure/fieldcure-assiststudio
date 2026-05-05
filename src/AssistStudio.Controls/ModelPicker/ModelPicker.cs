@@ -1,13 +1,10 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using CommunityToolkit.Mvvm.Collections;
+﻿using CommunityToolkit.Mvvm.Collections;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.Windows.ApplicationModel.Resources;
+using System.Collections;
 using Windows.System;
 
 namespace FieldCure.AssistStudio.Controls;
@@ -231,7 +228,12 @@ public sealed class ModelPicker : Control
             var ordered = group
                 .OrderBy(e => e.DisplayName ?? e.ModelId, StringComparer.OrdinalIgnoreCase)
                 .ToList();
-            _groupedView.Add(new ObservableGroup<string, ModelPickerEntry>(group.Key, ordered));
+            // The XAML group header binds to ObservableGroup.Key, so use the
+            // resolved GroupDisplayName here (falling back to the raw GroupKey
+            // when the host did not supply one). This keeps headers like
+            // "MiniMax" instead of leaking internal IDs like "Custom_046A...".
+            var headerText = ordered.FirstOrDefault()?.GroupDisplayName ?? group.Key;
+            _groupedView.Add(new ObservableGroup<string, ModelPickerEntry>(headerText, ordered));
         }
     }
 

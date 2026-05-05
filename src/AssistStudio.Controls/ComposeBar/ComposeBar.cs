@@ -21,6 +21,17 @@ public sealed partial class ComposeBar : Control
     #region Fields
 
     /// <summary>
+    /// Optional host-supplied resolver that maps a raw <c>ProviderType</c>
+    /// string (e.g., <c>"Custom_046a..."</c>) to a user-facing group display
+    /// name (e.g., <c>"MiniMax"</c>) for the model picker. The Controls
+    /// package is host-agnostic and cannot resolve user-defined custom
+    /// provider names by itself; the host (typically the desktop app via
+    /// <c>AppSettings</c>) injects this delegate. <c>null</c> falls back to
+    /// the raw <c>ProviderType</c> with a special-case for <c>Mock</c>.
+    /// </summary>
+    public System.Func<string, string?>? GroupDisplayNameResolver { get; set; }
+
+    /// <summary>
     /// Flag to suppress preset changed events during programmatic ComboBox updates.
     /// </summary>
     private bool _suppressModelChanged;
