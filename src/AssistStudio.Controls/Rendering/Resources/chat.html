@@ -734,6 +734,11 @@
         transition: background 0.15s, border-color 0.15s;
         box-sizing: border-box;
     }
+    .attachment-chip[data-text-att-id] { cursor: pointer; }
+    .attachment-chip[data-text-att-id]:hover {
+        background: var(--bg-hover);
+        border-color: var(--text-secondary);
+    }
     .attachment-chip-thumb {
         width: 36px;
         height: 36px;
@@ -768,7 +773,7 @@
     /* ===== Text Popover Modal ===== */
     .text-popover-backdrop {
         position: fixed; inset: 0;
-        backdrop-filter: blur(8px);
+        backdrop-filter: blur(3px);
         z-index: 9998;
     }
     [data-theme="light"] .text-popover-backdrop { background: rgba(255,255,255,0.6); }
@@ -789,6 +794,14 @@
         display: flex; align-items: center; gap: 8px;
         padding: 12px 16px;
         border-bottom: 1px solid var(--border-color);
+    }
+    /* Tooltips on header action buttons live near the card's right edge.
+       The default left:100% anchor pushes them past the card boundary, where
+       overflow:hidden clips them ("Close" -> "C"). Anchor to the right so the
+       tooltip grows leftward, staying inside the card. */
+    .text-popover-header [data-tooltip]:hover::after {
+        left: auto;
+        right: 0;
     }
     .text-popover-title {
         flex: 1; font-size: 13px; font-weight: 600;
@@ -1467,6 +1480,23 @@
     // Global registry for text attachment data (cleared on page reload via NavigateToString)
     window.__textAttachments = {};
 
+    // Delegated click/keyboard handler for text attachment chips. Inline onclick="..."
+    // attributes can't reach functions defined inside this IIFE, so we wire chips by
+    // their data-text-att-id attribute instead.
+    document.addEventListener('click', function(e) {
+        var chip = e.target.closest('[data-text-att-id]');
+        if (!chip) return;
+        e.stopPropagation();
+        openTextModal(chip.getAttribute('data-text-att-id'));
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        var chip = e.target.closest && e.target.closest('[data-text-att-id]');
+        if (!chip) return;
+        e.preventDefault();
+        openTextModal(chip.getAttribute('data-text-att-id'));
+    });
+
     function renderAttachments(attachments) {
         if (!attachments || attachments.length === 0) return '';
         var showNumbers = attachments.length >= 2;
@@ -1563,7 +1593,7 @@
         window.__textAttachments[id] = att;
 
         return '<div class="attachment-chip" id="' + id +
-            '" onclick="openTextModal(\'' + id + '\')">' +
+            '" data-text-att-id="' + id + '" role="button" tabindex="0">' +
             '<div class="attachment-chip-thumb attachment-chip-thumb-icon">' +
             '<span class="attachment-chip-glyph">' + iconGlyph + '</span>' +
             '</div>' +
@@ -1571,10 +1601,25 @@
             '</div>';
     }
 
+    // Saved html+body overflow values while the text modal is open. Used to
+    // restore the chat panel scroll behavior after close. null when no modal
+    // is open (or after restore). Locking both html and body covers the cases
+    // where chromium uses either as the viewport's scrolling element.
+    var _savedDocOverflow = null;
+
     function openTextModal(cardId) {
         var att = window.__textAttachments && window.__textAttachments[cardId];
         if (!att) return;
         closeTextModal();
+
+        // Lock background scroll. Saving before assignment so re-open does not
+        // capture the just-locked 'hidden' value as the original.
+        _savedDocOverflow = {
+            html: document.documentElement.style.overflow,
+            body: document.body.style.overflow
+        };
+        document.documentElement.style.overflow = 'hidden';
+        document.body.style.overflow = 'hidden';
 
         var backdrop = document.createElement('div');
         backdrop.className = 'text-popover-backdrop';
@@ -1599,10 +1644,34 @@
         copyBtn.className = 'msg-action-btn';
         copyBtn.setAttribute('data-tooltip', 'Copy all');
         copyBtn.textContent = '\uE8C8';
-        copyBtn.addEventListener('click', function(e) {
+        copyBtn.addEventListener('click', async function(e) {
             e.stopPropagation();
-            navigator.clipboard.writeText(att.fullContent || '');
-            flashCopyBtn(copyBtn);
+            var text = att.fullContent || '';
+            var ok = false;
+            try {
+                await navigator.clipboard.writeText(text);
+                ok = true;
+            } catch (err) {
+                console.error('[chat] navigator.clipboard.writeText failed:', err);
+                // Legacy fallback for WebView2 contexts where Clipboard API blocks
+                var ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.top = '-9999px';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.focus();
+                ta.select();
+                try {
+                    ok = document.execCommand('copy');
+                } catch (e2) {
+                    console.error('[chat] execCommand fallback failed:', e2);
+                }
+                document.body.removeChild(ta);
+            }
+            var origGlyph = copyBtn.textContent;
+            copyBtn.textContent = ok ? '✓' : '✗';
+            setTimeout(function() { copyBtn.textContent = origGlyph; }, ok ? 1200 : 1500);
         });
 
         var closeBtn = document.createElement('button');
@@ -1644,6 +1713,11 @@
         el = document.getElementById('text-popover-card');
         if (el) el.remove();
         document.removeEventListener('keydown', _textModalEscHandler);
+        if (_savedDocOverflow) {
+            document.documentElement.style.overflow = _savedDocOverflow.html;
+            document.body.style.overflow = _savedDocOverflow.body;
+            _savedDocOverflow = null;
+        }
     }
 
     function _textModalEscHandler(e) {
