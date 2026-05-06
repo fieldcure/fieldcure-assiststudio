@@ -1070,9 +1070,15 @@
         display: none;
     }
 
-    /* Streaming: disable Edit/Retry actions (Copy remains active) */
+    /* Streaming: disable Edit/Retry actions (Copy remains active) and the
+       branch nav arrows. Switching branches mid-stream would orphan the
+       in-flight assistant message in the inactive tree branch (the API call
+       still runs and tokens are spent), so we lock the arrows until the
+       current turn finishes. The user can still switch branches once
+       streaming completes. */
     body[data-streaming="true"] .msg-action-btn.action-edit,
-    body[data-streaming="true"] .msg-action-btn.action-retry {
+    body[data-streaming="true"] .msg-action-btn.action-retry,
+    body[data-streaming="true"] .branch-nav button {
         pointer-events: none;
         opacity: 0.4;
     }
@@ -2349,6 +2355,11 @@
         prevBtn.textContent = '\u25C0';
         prevBtn.disabled = index <= 0;
         prevBtn.addEventListener('click', function() {
+            // Mirror the CSS pointer-events:none guard with a runtime check \u2014
+            // the CSS rule alone is sufficient for mouse, but a defensive
+            // guard keeps the same gate honest if the rule is ever reordered
+            // or the button is activated programmatically.
+            if (document.body.getAttribute('data-streaming') === 'true') return;
             window.chrome.webview.postMessage('branch:' + msgId + ':-1');
         });
 
@@ -2359,6 +2370,7 @@
         nextBtn.textContent = '\u25B6';
         nextBtn.disabled = index >= count - 1;
         nextBtn.addEventListener('click', function() {
+            if (document.body.getAttribute('data-streaming') === 'true') return;
             window.chrome.webview.postMessage('branch:' + msgId + ':1');
         });
 
