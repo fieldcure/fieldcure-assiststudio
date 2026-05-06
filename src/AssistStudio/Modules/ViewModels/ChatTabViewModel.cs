@@ -403,6 +403,22 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         var ragServerId = $"builtin_{BuiltInServerHelper.RagKey}";
         panel.IsKnowledgeBaseEnabled = SelectedProfile?.EnabledServers.Contains(ragServerId) ?? false;
 
+        // Spin up the per-tab Filesystem MCP server when restoring an .astx that
+        // had workspace folders. Without this call, ConnectFilesystemAsync only
+        // runs from OnProfileChanged (user switches profile) or
+        // OnWorkspaceFoldersChanged (user adds/removes a folder via the
+        // flyout) — neither fires on .astx restore, so the AI's tool list ends
+        // up missing read_file / list_directory etc., and the model has to
+        // route through Essentials' shell exec to inspect the workspace. The
+        // alive-vs-missing toast logic inside ConnectFilesystemAsync still
+        // applies, so a reopened conversation whose folders are gone gets
+        // the Warning toast it deserves.
+        if (panel.IsWorkspaceEnabled
+            && panel.WorkspaceFolders is { Count: > 0 } restoredFolders)
+        {
+            await ConnectFilesystemAsync(restoredFolders);
+        }
+
         // Memory text is now fetched from Essentials MCP at send time (PrepareToolsForSendAsync)
 
         // Relay keyboard shortcut from WebView2 (separate HWND)
