@@ -467,9 +467,16 @@ public partial class MainViewModel : ObservableObject
             currentKey = next.Id ?? rootKey;
         }
 
-        // First pass: register branch-only messages in the tree (not on the active path)
+        // First pass: register branch-only messages in the tree (not on the active path).
+        // Attachments and ToolMedia must be threaded here too — without them the
+        // branch ChatMessage is created with empty media, so switching back to
+        // the inactive branch later would render an empty bubble (no chip).
         foreach (var msg in messages.Where(m => !activePath.Contains(m.Id)))
-            vm.RegisterBranchMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId, msg.Id, msg.ParentId, msg.ToolCalls, msg.ToolCallId, msg.ActiveChildId, msg.Timestamp, msg.IsHidden, msg.IsContinuation, msg.IsTruncated);
+        {
+            var branchAtts = msg.Id is not null && loadedAttachments?.TryGetValue(msg.Id, out var ba) == true ? ba : null;
+            var branchTm = msg.Id is not null && loadedToolMedia?.TryGetValue(msg.Id, out var bt) == true ? bt : null;
+            vm.RegisterBranchMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId, msg.Id, msg.ParentId, msg.ToolCalls, msg.ToolCallId, msg.ActiveChildId, branchAtts, branchTm, msg.Timestamp, msg.IsHidden, msg.IsContinuation, msg.IsTruncated);
+        }
 
         // Second pass: add active path messages in tree-walk order (parent→child chain)
         // File order may differ from active path order when branches are interleaved.

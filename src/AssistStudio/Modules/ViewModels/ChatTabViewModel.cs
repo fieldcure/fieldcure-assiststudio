@@ -242,7 +242,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// Branch-only messages queued before the ChatPanel is available.
     /// These are registered in the tree but not added to the active path.
     /// </summary>
-    private readonly List<(ChatRole Role, string Content, string? ProviderName, string? ModelId, string? Id, string? ParentId, IReadOnlyList<ToolCall>? ToolCalls, string? ToolCallId, string? ActiveChildId, DateTime? Timestamp, bool IsHidden, bool IsContinuation, bool IsTruncated)> _pendingBranchMessages = [];
+    private readonly List<(ChatRole Role, string Content, string? ProviderName, string? ModelId, string? Id, string? ParentId, IReadOnlyList<ToolCall>? ToolCalls, string? ToolCallId, string? ActiveChildId, IReadOnlyList<ChatAttachment>? Attachments, IReadOnlyList<MediaContent>? ToolMedia, DateTime? Timestamp, bool IsHidden, bool IsContinuation, bool IsTruncated)> _pendingBranchMessages = [];
 
     #endregion
 
@@ -421,12 +421,15 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         panel.SpecialistDisplayNameResolver = name =>
             Specialists.SpecialistRegistry.Instance.TryGet(name, out var s) ? s.DisplayName : null;
 
-        // Flush branch messages first (tree-only, not active path)
-        foreach (var (role, content, providerName, modelId, id, parentId, toolCalls, toolCallId, activeChildId, timestamp, isHidden, isContinuation, isTruncated) in _pendingBranchMessages)
+        // Flush branch messages first (tree-only, not active path).
+        // Attachments and ToolMedia must be set on the inactive-branch ChatMessage
+        // here, otherwise switching back to that branch later would render an
+        // empty bubble (the branch's media wasn't restored from disk).
+        foreach (var (role, content, providerName, modelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia, timestamp, isHidden, isContinuation, isTruncated) in _pendingBranchMessages)
         {
             var msg = id is not null
-                ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = modelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Timestamp = timestamp ?? DateTime.UtcNow, IsHidden = isHidden, IsContinuation = isContinuation, IsTruncated = isTruncated }
-                : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = modelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Timestamp = timestamp ?? DateTime.UtcNow, IsHidden = isHidden, IsContinuation = isContinuation, IsTruncated = isTruncated };
+                ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = modelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, Timestamp = timestamp ?? DateTime.UtcNow, IsHidden = isHidden, IsContinuation = isContinuation, IsTruncated = isTruncated }
+                : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = modelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, Timestamp = timestamp ?? DateTime.UtcNow, IsHidden = isHidden, IsContinuation = isContinuation, IsTruncated = isTruncated };
             panel.RegisterBranchMessage(msg);
         }
         _pendingBranchMessages.Clear();
@@ -503,6 +506,8 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         string? id = null, string? parentId = null,
         IReadOnlyList<ToolCall>? toolCalls = null, string? toolCallId = null,
         string? activeChildId = null,
+        IReadOnlyList<ChatAttachment>? attachments = null,
+        IReadOnlyList<MediaContent>? toolMedia = null,
         DateTime? timestamp = null,
         bool isHidden = false,
         bool isContinuation = false,
@@ -511,13 +516,13 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         if (Panel is not null)
         {
             var msg = id is not null
-                ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Timestamp = timestamp ?? DateTime.UtcNow, IsHidden = isHidden, IsContinuation = isContinuation, IsTruncated = isTruncated }
-                : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Timestamp = timestamp ?? DateTime.UtcNow, IsHidden = isHidden, IsContinuation = isContinuation, IsTruncated = isTruncated };
+                ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, Timestamp = timestamp ?? DateTime.UtcNow, IsHidden = isHidden, IsContinuation = isContinuation, IsTruncated = isTruncated }
+                : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, Timestamp = timestamp ?? DateTime.UtcNow, IsHidden = isHidden, IsContinuation = isContinuation, IsTruncated = isTruncated };
             Panel.RegisterBranchMessage(msg);
         }
         else
         {
-            _pendingBranchMessages.Add((role, content, providerName, providerModelId, id, parentId, toolCalls, toolCallId, activeChildId, timestamp, isHidden, isContinuation, isTruncated));
+            _pendingBranchMessages.Add((role, content, providerName, providerModelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia, timestamp, isHidden, isContinuation, isTruncated));
         }
     }
 
