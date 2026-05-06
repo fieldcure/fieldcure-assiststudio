@@ -1155,7 +1155,7 @@
     <value>Essentials file tools are replaced by Workspace when enabled.</value>
   </data>
   <data name="Mcp_ServersConnecting" xml:space="preserve">
-    <value>Connecting to {0} MCP server(s)…</value>
+    <value>Connecting MCP servers ({0}) — this may take a few seconds…</value>
   </data>
   <data name="Mcp_ServersConnected" xml:space="preserve">
     <value>{0} MCP server(s) connected</value>

@@ -82,7 +82,14 @@ public class McpServerRegistry : IAsyncDisposable
     /// </summary>
     /// <param name="configs">Server configurations to connect.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>A list of error messages for failed connections, if any.</returns>
+    /// <returns>A list of error messages (formatted as <c>"name: error"</c>) for failed connections, if any.</returns>
+    /// <remarks>
+    /// This method does not post UI notifications — the caller is responsible for
+    /// surfacing progress and results. <see cref="App"/> startup wraps both
+    /// external (<c>ConnectAllAsync</c>) and built-in (<c>ConnectBuiltInAsync</c>)
+    /// batches in a single combined infobar so the user sees one start-to-finish
+    /// message regardless of which batch the servers belong to.
+    /// </remarks>
     public async Task<IReadOnlyList<string>> ConnectAllAsync(
         IEnumerable<McpServerConfig> configs,
         CancellationToken ct = default)
@@ -103,12 +110,6 @@ public class McpServerRegistry : IAsyncDisposable
             }
         }
         finally { _lock.Release(); }
-
-        // Show "connecting" notification while servers start (first launch may be slow)
-        var connectingToken = NotificationCenter.Instance.PostPersistent(
-            InfoBarSeverity.Informational,
-            string.Format(_loader.GetString("Mcp_ServersConnecting"), configList.Count),
-            string.Empty);
 
         // Phase 2: Connect all in parallel (no lock — I/O bound)
         var tasks = connections.Select(async x =>
@@ -133,29 +134,10 @@ public class McpServerRegistry : IAsyncDisposable
         var results = await Task.WhenAll(tasks);
         ToolsChanged?.Invoke(this, EventArgs.Empty);
 
-        NotificationCenter.Instance.Dismiss(connectingToken);
-
-        var errors = results.Where(r => r.Error is not null).Select(r => $"{r.Name}: {r.Error}").ToList();
-
-        var connected = _connections.Count(c => c.IsConnected);
-        if (connected > 0)
-        {
-            NotificationCenter.Instance.Post(
-                InfoBarSeverity.Success,
-                string.Format(_loader.GetString("Mcp_ServersConnected"), connected),
-                string.Empty);
-        }
-
-        if (errors.Count > 0)
-        {
-            NotificationCenter.Instance.Post(
-                InfoBarSeverity.Warning,
-                _loader.GetString("Mcp_ConnectionFailed"),
-                string.Join(", ", errors.Select(e => e.Split(':')[0])),
-                5000);
-        }
-
-        return errors;
+        return results
+            .Where(r => r.Error is not null)
+            .Select(r => $"{r.Name}: {r.Error}")
+            .ToList();
     }
 
     /// <summary>
@@ -281,7 +263,14 @@ public class McpServerRegistry : IAsyncDisposable
     /// <param name="serverKey">The built-in server key (e.g., "filesystem").</param>
     /// <param name="config">The server configuration.</param>
     /// <param name="ct">Cancellation token.</param>
-    public async Task ConnectBuiltInAsync(
+    /// <returns>
+    /// <see langword="null"/> on success or when the server was skipped (already
+    /// connected, disabled, no folders, exe missing). On failure, returns the
+    /// error formatted as <c>"name: error"</c> — same shape as the entries in
+    /// <see cref="ConnectAllAsync"/>'s result so the caller can concatenate the
+    /// two batches into one error list for a unified failure infobar.
+    /// </returns>
+    public async Task<string?> ConnectBuiltInAsync(
         string serverKey,
         BuiltInServerConfig config,
         CancellationToken ct = default)
@@ -300,7 +289,7 @@ public class McpServerRegistry : IAsyncDisposable
             if (existing is not null && existing.IsConnected)
             {
                 LoggingService.LogInfo($"[MCP] Built-in {serverKey} already connected, skipping");
-                return;
+                return null;
             }
 
             // Remove failed or disconnected existing connection
@@ -316,7 +305,7 @@ public class McpServerRegistry : IAsyncDisposable
             {
                 // Disabled, no folders, or exe not found — just fire event for suppress fallback
                 ToolsChanged?.Invoke(this, EventArgs.Empty);
-                return;
+                return null;
             }
 
             connection = CreateConnection(mcpConfig);
@@ -328,6 +317,7 @@ public class McpServerRegistry : IAsyncDisposable
         }
 
         // Phase 2: Connect outside lock (slow I/O — allows parallelism)
+        string? error = null;
         try
         {
             await connection.ConnectAsync(ct);
@@ -336,20 +326,12 @@ public class McpServerRegistry : IAsyncDisposable
         {
             LoggingService.LogError($"[MCP] Built-in server failed: {serverKey} — {ex.Message}");
             // Connection stays in error state, tools will be empty
+            error = $"{connection.Config.Name}: {ex.Message}";
         }
 
         ToolsChanged?.Invoke(this, EventArgs.Empty);
+        return error;
     }
-
-    /// <summary>
-    /// Updates a built-in server's configuration (e.g., when folders change).
-    /// Alias for <see cref="ConnectBuiltInAsync"/> — handles disconnect + reconnect atomically.
-    /// </summary>
-    public Task UpdateBuiltInAsync(
-        string serverKey,
-        BuiltInServerConfig config,
-        CancellationToken ct = default)
-        => ConnectBuiltInAsync(serverKey, config, ct);
 
     /// <summary>
     /// Gets the connection for a built-in server, if any.

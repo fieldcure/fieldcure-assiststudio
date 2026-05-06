@@ -6,7 +6,9 @@ using FieldCure.AssistStudio.Core.Helpers;
 using FieldCure.DocumentParsers.Imaging;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.AppLifecycle;
+using Microsoft.Windows.ApplicationModel.Resources;
 using System.Runtime.InteropServices;
 using System.Web;
 using Windows.ApplicationModel.Activation;
@@ -27,6 +29,14 @@ public partial class App : Application
     /// Gets the main application window instance.
     /// </summary>
     public MainWindow? MainWindow { get; private set; }
+
+    /// <summary>
+    /// Resource loader used by <see cref="InitializeMcpAsync"/> to localize the
+    /// unified MCP-startup infobar (Mcp_ServersConnecting / Mcp_ServersConnected /
+    /// Mcp_ConnectionFailed). Static so the async startup helper can read it
+    /// without an instance reference.
+    /// </summary>
+    private static readonly ResourceLoader _loader = new();
 
     /// <summary>
     /// Gets the app-level MCP server registry singleton.
@@ -218,6 +228,12 @@ public partial class App : Application
 
     /// <summary>
     /// Loads saved MCP server configurations and connects to enabled servers.
+    /// External and built-in connects run in parallel under a single combined
+    /// "Connecting MCP servers (N)…" infobar so the user sees one start-to-finish
+    /// notification regardless of which batch the servers belong to. The infobar
+    /// covers the common case (zero external + a few built-in), where the prior
+    /// per-batch pattern left the user with a silent 7–15 s window during the
+    /// dnx fetch / serve start.
     /// </summary>
     private static async Task InitializeMcpAsync()
     {
@@ -227,10 +243,33 @@ public partial class App : Application
             // so external processes (Runner serve/exec) can access them
             PasswordVaultHelper.SyncToCredentialManager();
 
-            // Connect external (user-configured) MCP servers first — these are
-            // independent of built-in server updates and can start immediately.
             var configs = await AppSettings.LoadMcpServersAsync();
+            var builtInConfigs = AppSettings.BuiltInServers;
             LoggingService.LogInfo($"[App] Initializing MCP servers ({configs.Count} configs)");
+
+            // Pre-count what we will actually try to connect — must mirror the
+            // filter predicates used below for ConnectAllAsync (IsEnabled) and
+            // ConnectBuiltInAsync (key != filesystem AND IsEnabled AND (shared
+            // OR has folders)). The total feeds the unified "connecting" infobar.
+            var enabledExternalCount = configs.Count(c => c.IsEnabled);
+            var enabledBuiltInCount = builtInConfigs.Count(kv =>
+                kv.Key != BuiltInServerHelper.FilesystemKey
+                && kv.Value.IsEnabled
+                && (BuiltInServerHelper.IsSharedServer(kv.Key) || kv.Value.Folders.Count > 0));
+            var totalCount = enabledExternalCount + enabledBuiltInCount;
+
+            // Single persistent infobar covering both batches. Dismissed only
+            // after BOTH WhenAll completions; the success / warning summary is
+            // posted by this method, not by McpServerRegistry — that registry
+            // intentionally returns errors and posts no UI of its own.
+            var connectingToken = Guid.Empty;
+            if (totalCount > 0)
+            {
+                connectingToken = NotificationCenter.Instance.PostPersistent(
+                    InfoBarSeverity.Informational,
+                    string.Format(_loader.GetString("Mcp_ServersConnecting"), totalCount),
+                    string.Empty);
+            }
 
             // Auto-update external servers installed as global .NET tools BEFORE
             // connecting, so a newer binary is picked up and we avoid file-lock
@@ -238,10 +277,10 @@ public partial class App : Application
             // is a parallel sweep and typically completes well under a second when
             // tools are already at latest; network issues log a warning but do not
             // block.
-            if (configs.Count > 0)
+            if (enabledExternalCount > 0)
                 await ExternalDotnetToolUpdater.CheckAndUpdateAsync(configs);
 
-            var externalTask = configs.Count > 0
+            var externalTask = enabledExternalCount > 0
                 ? McpRegistry.ConnectAllAsync(configs)
                 : Task.FromResult<IReadOnlyList<string>>([]);
 
@@ -260,20 +299,51 @@ public partial class App : Application
             // FieldCure.Mcp.Rag v2.4.4 — folding it into serve removed the
             // dnx fetch-lock race that the prior separate prune-orphans
             // process triggered on cold caches.
-            var builtInConfigs = AppSettings.BuiltInServers;
+            // Materialized to List so the tasks actually fire here (Select is
+            // lazy; WhenAll's enumeration would still trigger them, but ToList
+            // makes the parallel-launch point explicit and matches the rest of
+            // this method's "fire then await" structure).
             var builtInTasks = builtInConfigs
                 .Where(kv => kv.Key != BuiltInServerHelper.FilesystemKey
                              && kv.Value.IsEnabled
                              && (BuiltInServerHelper.IsSharedServer(kv.Key) || kv.Value.Folders.Count > 0))
-                .Select(kv => McpRegistry.ConnectBuiltInAsync(kv.Key, kv.Value));
-            await Task.WhenAll(builtInTasks);
+                .Select(kv => McpRegistry.ConnectBuiltInAsync(kv.Key, kv.Value))
+                .ToList();
+            var builtInResults = await Task.WhenAll(builtInTasks);
 
             // Background: check NuGet for newer versions (fire-and-forget)
             _ = Task.Run(BuiltInServerHelper.CheckForUpdatesInBackgroundAsync);
 
-            // Report external server connection errors
-            var errors = await externalTask;
-            foreach (var error in errors)
+            var externalErrors = await externalTask;
+
+            // Combine errors from both batches into the same "name: message"
+            // shape so the failure infobar can render them with the same
+            // .Split(':')[0] name extractor.
+            var allErrors = externalErrors
+                .Concat(builtInResults.OfType<string>())
+                .ToList();
+
+            if (connectingToken != Guid.Empty)
+                NotificationCenter.Instance.Dismiss(connectingToken);
+
+            var connected = totalCount - allErrors.Count;
+            if (totalCount > 0 && connected > 0)
+            {
+                NotificationCenter.Instance.Post(
+                    InfoBarSeverity.Success,
+                    string.Format(_loader.GetString("Mcp_ServersConnected"), connected),
+                    string.Empty);
+            }
+            if (allErrors.Count > 0)
+            {
+                NotificationCenter.Instance.Post(
+                    InfoBarSeverity.Warning,
+                    _loader.GetString("Mcp_ConnectionFailed"),
+                    string.Join(", ", allErrors.Select(e => e.Split(':')[0])),
+                    5000);
+            }
+
+            foreach (var error in externalErrors)
                 LoggingService.LogWarning($"MCP connect failed: {error}");
         }
         catch (Exception ex)
