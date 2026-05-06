@@ -384,8 +384,26 @@ public sealed partial class KnowledgeBasesPage : Page
     }
 
     /// <summary>
+    /// Sentinel returned by <see cref="StartReindexAsync"/> when the RAG server
+    /// reported <c>already_running</c>, the post-call <c>get_index_info</c>
+    /// confirmed nothing is actually indexing, and the silent cancel+retry
+    /// recovery path also failed to clear the stuck state. Surfaces an
+    /// explicit "RAG state inconsistent" dialog through
+    /// <see cref="HandleStartReindexResultAsync"/>.
+    /// </summary>
+    private const string StuckAlreadyRunning = "stuck_already_running";
+
+    /// <summary>
     /// Calls the <c>start_reindex</c> MCP tool to queue an indexing request.
     /// Returns the <c>status</c> string from the response, or <c>null</c> on failure.
+    /// On <c>already_running</c> performs a self-diagnosis: if
+    /// <c>get_index_info</c> shows no actual indexing in progress, the queue
+    /// has a stale lock — try a silent <c>cancel_reindex</c> + retry once.
+    /// (RAG &gt;= 2.4.3 self-heals on the next call via the same sweep, so the
+    /// retry typically resolves the symptom transparently. Older RAG versions
+    /// keep returning <c>already_running</c>; in that case
+    /// <see cref="StuckAlreadyRunning"/> is returned to surface a dialog.)
+    /// All paths log a diagnostic line so the recovery decision is auditable.
     /// </summary>
     private static async Task<string?> StartReindexAsync(
         string kbId, string? partialMode = null, bool force = false, bool deferred = false)
@@ -397,32 +415,103 @@ public sealed partial class KnowledgeBasesPage : Page
             return null;
         }
 
+        string? status;
         try
         {
-            var argsObj = new Dictionary<string, object?> { ["kb_id"] = kbId };
-            if (partialMode is not null) argsObj["partial_mode"] = partialMode;
-            if (force) argsObj["force"] = true;
-            if (deferred) argsObj["deferred"] = true;
-
-            var argsJson = JsonSerializer.Serialize(argsObj);
-            var args = JsonDocument.Parse(argsJson).RootElement;
-            var result = await connection.CallToolWithProgressAsync("start_reindex", args, null);
-
-            using var doc = JsonDocument.Parse(result);
-            var status = doc.RootElement.GetProperty("status").GetString();
-
-            LoggingService.LogInfo($"[KB] start_reindex({kbId}): status={status}" +
-                (partialMode is not null ? $", partial={partialMode}" : "") +
-                (deferred ? ", deferred" : "") +
-                (force ? ", force" : ""));
-
-            return status;
+            status = await CallStartReindexAsync(connection, kbId, partialMode, force, deferred);
         }
         catch (Exception ex)
         {
             LoggingService.LogWarning($"[KB] start_reindex failed: {kbId} — {ex.Message}");
             return null;
         }
+
+        if (status != "already_running") return status;
+
+        // already_running self-diagnosis ----------------------------------
+        // Compare the file-side guard (start_reindex's StartedAt entry) with
+        // the engine-side state (SQLite _indexing_lock surfaced through
+        // get_index_info). The two disagreeing means a previous orchestrator
+        // crashed before clearing its queue mark — exactly the bug RAG 2.4.3
+        // self-heals on entry, but we also try recovery here so older RAG
+        // installs and any race-window survivors recover transparently.
+        var info = await KbMcpClient.GetIndexInfoAsync(kbId);
+        if (info is null)
+        {
+            LoggingService.LogWarning(
+                $"[KB] start_reindex({kbId}): already_running but get_index_info unavailable — " +
+                "cannot diagnose stale lock, treating as genuine concurrent run");
+            return status;
+        }
+        if (info.IsIndexing)
+        {
+            LoggingService.LogInfo(
+                $"[KB] start_reindex({kbId}): already_running confirmed by get_index_info " +
+                "(genuine concurrent indexing in progress)");
+            return status;
+        }
+
+        LoggingService.LogWarning(
+            $"[KB] start_reindex({kbId}): already_running but get_index_info reports is_indexing=false — " +
+            "stale lock detected, attempting silent recovery (cancel + retry)");
+
+        // Cancel — on RAG 2.4.3+ this triggers the same recovery sweep as
+        // start_reindex; on older versions the cancel itself is a noop for
+        // a "running" entry but we still call it for forward compatibility.
+        await CancelReindexAsync(kbId);
+
+        string? retryStatus;
+        try
+        {
+            retryStatus = await CallStartReindexAsync(connection, kbId, partialMode, force, deferred);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.LogWarning(
+                $"[KB] start_reindex retry threw for {kbId} — {ex.GetType().Name}: {ex.Message}");
+            return StuckAlreadyRunning;
+        }
+
+        if (retryStatus is not null and not "already_running")
+        {
+            LoggingService.LogInfo(
+                $"[KB] start_reindex({kbId}): auto-recovered from stale lock — retry status={retryStatus}");
+            return retryStatus;
+        }
+
+        LoggingService.LogWarning(
+            $"[KB] start_reindex({kbId}): auto-recovery FAILED — retry status={retryStatus ?? "null"}; " +
+            "manual RAG restart likely required");
+        return StuckAlreadyRunning;
+    }
+
+    /// <summary>
+    /// Builds the args envelope, invokes the <c>start_reindex</c> MCP tool, and
+    /// returns the parsed <c>status</c> field. Shared between the initial call
+    /// and the post-recovery retry inside <see cref="StartReindexAsync"/>.
+    /// </summary>
+    private static async Task<string?> CallStartReindexAsync(
+        Mcp.McpServerConnection connection,
+        string kbId, string? partialMode, bool force, bool deferred)
+    {
+        var argsObj = new Dictionary<string, object?> { ["kb_id"] = kbId };
+        if (partialMode is not null) argsObj["partial_mode"] = partialMode;
+        if (force) argsObj["force"] = true;
+        if (deferred) argsObj["deferred"] = true;
+
+        var argsJson = JsonSerializer.Serialize(argsObj);
+        var args = JsonDocument.Parse(argsJson).RootElement;
+        var result = await connection.CallToolWithProgressAsync("start_reindex", args, null);
+
+        using var doc = JsonDocument.Parse(result);
+        var status = doc.RootElement.GetProperty("status").GetString();
+
+        LoggingService.LogInfo($"[KB] start_reindex({kbId}): status={status}" +
+            (partialMode is not null ? $", partial={partialMode}" : "") +
+            (deferred ? ", deferred" : "") +
+            (force ? ", force" : ""));
+
+        return status;
     }
 
     /// <summary>
@@ -452,16 +541,37 @@ public sealed partial class KnowledgeBasesPage : Page
 
     /// <summary>
     /// Shows a failure dialog for start_reindex and returns <c>true</c> if the
-    /// caller should continue (success) or <c>false</c> if indexing did not queue.
+    /// caller should continue (success) or <c>false</c> if indexing did not
+    /// queue. Three failure paths surface a dialog: server not connected
+    /// (<c>null</c>), KB not found, and the post-recovery stuck-lock state
+    /// (<see cref="StuckAlreadyRunning"/>) — the last is the user-facing exit
+    /// when our silent retry could not clear a lingering RAG-side lock.
     /// </summary>
     private async Task<bool> HandleStartReindexResultAsync(string? status)
     {
-        if (status is not null and not "not_found") return true;
+        if (status is not null and not "not_found" and not StuckAlreadyRunning) return true;
 
-        var title = _loader.GetString("KB_PreflightFailureTitle") ?? "Cannot start re-indexing";
-        var body = status == "not_found"
-            ? "Knowledge base not found."
-            : "RAG server is not connected.";
+        string title;
+        string body;
+        if (status == StuckAlreadyRunning)
+        {
+            title = _loader.GetString("KB_StuckLockTitle")
+                    ?? "Indexing state inconsistent";
+            body = _loader.GetString("KB_StuckLockBody")
+                   ?? "The RAG server reports an indexing job is already running, but no actual indexing is in progress. " +
+                      "Automatic recovery did not succeed.\n\n" +
+                      "Please restart the app to clear the RAG server state, then try indexing again.";
+        }
+        else if (status == "not_found")
+        {
+            title = _loader.GetString("KB_PreflightFailureTitle") ?? "Cannot start re-indexing";
+            body = "Knowledge base not found.";
+        }
+        else
+        {
+            title = _loader.GetString("KB_PreflightFailureTitle") ?? "Cannot start re-indexing";
+            body = "RAG server is not connected.";
+        }
 
         LoggingService.LogWarning($"[KB] start_reindex surfaced failure to user: {title} — {body}");
 
