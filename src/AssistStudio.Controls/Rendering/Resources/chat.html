@@ -41,6 +41,9 @@
         --edit-save-hover: #484848;
         --bg-hover: rgba(0, 0, 0, 0.04);
         --accent-subtle: rgba(0, 120, 212, 0.12);
+        /* Solid accent for active states (chip indicator, focused borders).
+           Hardcoded to Fluent default until system accent binding lands. */
+        --accent-strong: #0078d4;
     }
 
     [data-theme="dark"] {
@@ -74,6 +77,7 @@
         --edit-save-hover: #b0b0b0;
         --bg-hover: rgba(255, 255, 255, 0.06);
         --accent-subtle: rgba(96, 205, 255, 0.15);
+        --accent-strong: #60cdff;
     }
 
     /* ===== Base Reset ===== */
@@ -258,7 +262,6 @@
         cursor: pointer;
         list-style: none;
     }
-    .tool-block details > summary::-webkit-details-marker { display: none; }
     .tool-block .tool-chevron {
         transition: transform 0.15s ease;
         font-size: 13px;
@@ -321,7 +324,6 @@
         cursor: pointer;
         list-style: none;
     }
-    .summary-block details > summary::-webkit-details-marker { display: none; }
     .summary-block .tool-chevron {
         transition: transform 0.15s ease;
         font-size: 13px;
@@ -353,7 +355,13 @@
         margin: 2px 0;
     }
 
-    /* ===== Tool Running Animation ===== */
+    /* ===== Tool Running Animation =====
+       Gradient text shimmer. background-clip:text is CSS Backgrounds L4 (still
+       in CR), supported in Chromium long enough to be safe for WebView2 but
+       not in Visual Studio's CSS schema — both lines emit a "not a valid
+       value" warning that is a known false positive. Removing either kills
+       the effect (Chromium honors the unprefixed form, but the prefixed line
+       is left in for resilience). */
     .tool-header.tool-running {
         background: linear-gradient(
             90deg,
@@ -465,7 +473,6 @@
         cursor: pointer;
         list-style: none;
     }
-    .search-result-block details > summary::-webkit-details-marker { display: none; }
     .search-hits {
         margin-top: 6px;
         padding-left: 16px;
@@ -548,9 +555,13 @@
     .message-bubble.rendered strong, .rendered-zone strong { font-weight: 600; }
     .message-bubble.rendered em, .rendered-zone em { font-style: italic; }
 
-    /* ===== Inline Code ===== */
-    .message-bubble.rendered code:not(pre code),
-    .rendered-zone code:not(pre code) {
+    /* ===== Inline Code =====
+       :not(pre) > code matches code elements whose direct parent is not pre,
+       which catches all markdown inline-code positions (<p><code>, <li><code>,
+       etc.) without using a complex selector inside :not() — the latter is
+       valid Selectors L4 but trips Visual Studio's older CSS schema. */
+    .message-bubble.rendered :not(pre) > code,
+    .rendered-zone :not(pre) > code {
         background: var(--inline-code-bg);
         padding: 2px 6px;
         border-radius: 4px;
@@ -731,13 +742,20 @@
         background: var(--code-bg);
         border: 1px solid var(--border-color);
         border-radius: 10px;
-        transition: background 0.15s, border-color 0.15s;
+        transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
         box-sizing: border-box;
     }
-    .attachment-chip[data-text-att-id] { cursor: pointer; }
-    .attachment-chip[data-text-att-id]:hover {
+    .attachment-chip[data-att-id] { cursor: pointer; }
+    .attachment-chip[data-att-id]:hover {
         background: var(--bg-hover);
         border-color: var(--text-secondary);
+    }
+    /* Active chip = its preview is currently expanded. accent-subtle
+       background plus accent-strong border are unambiguous on their own;
+       additional inset stripe was visual noise. */
+    .attachment-chip.is-active {
+        background: var(--accent-subtle);
+        border-color: var(--accent-strong);
     }
     .attachment-chip-thumb {
         width: 36px;
@@ -770,59 +788,83 @@
         word-break: break-all;
     }
 
-    /* ===== Text Popover Modal ===== */
-    .text-popover-backdrop {
-        position: fixed; inset: 0;
-        backdrop-filter: blur(3px);
-        z-index: 9998;
+    /* ===== Inline Attachment Preview ===== */
+    /* Grid trick: 0fr -> 1fr animates content-aware height without measuring. */
+    .attachment-preview-wrap {
+        display: grid;
+        grid-template-rows: 0fr;
+        transition: grid-template-rows 200ms ease-out, margin-bottom 200ms ease-out;
     }
-    [data-theme="light"] .text-popover-backdrop { background: rgba(255,255,255,0.6); }
-    [data-theme="dark"] .text-popover-backdrop { background: rgba(0,0,0,0.7); }
-    .text-popover-card {
-        position: fixed; top: 50%; left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 9999;
-        background: var(--bg-primary);
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-        width: 70vw; max-width: 800px; max-height: 85vh;
-        display: flex; flex-direction: column;
+    .attachment-preview-wrap.is-open {
+        grid-template-rows: 1fr;
+        margin-bottom: 8px;
+    }
+    .attachment-preview {
         overflow: hidden;
+        min-height: 0;
+        border-radius: 10px;
+        background: var(--bg-primary);
     }
-    .text-popover-header {
+    .attachment-preview-wrap.is-open > .attachment-preview {
+        border: 1px solid var(--border-color);
+    }
+    .attachment-preview-header {
         display: flex; align-items: center; gap: 8px;
-        padding: 12px 16px;
+        padding: 8px 12px;
         border-bottom: 1px solid var(--border-color);
+        background: var(--code-header-bg);
     }
-    /* Tooltips on header action buttons live near the card's right edge.
-       The default left:100% anchor pushes them past the card boundary, where
-       overflow:hidden clips them ("Close" -> "C"). Anchor to the right so the
-       tooltip grows leftward, staying inside the card. */
-    .text-popover-header [data-tooltip]:hover::after {
+    /* Same right-edge clipping risk as the old modal had — anchor tooltips
+       to the right so "Close" stays inside the preview card. */
+    .attachment-preview-header [data-tooltip]:hover::after {
         left: auto;
         right: 0;
     }
-    .text-popover-title {
-        flex: 1; font-size: 13px; font-weight: 600;
+    .attachment-preview-title {
+        flex: 1;
+        font-size: 12px;
+        font-weight: 600;
         color: var(--text-primary);
-        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
-    .text-popover-body {
-        font-family: 'Cascadia Code', 'Consolas', 'D2Coding', monospace;
-        font-size: 12px; line-height: 1.5;
-        white-space: pre; overflow: auto;
-        max-height: calc(85vh - 80px);
-        padding: 16px; margin: 0;
-        color: var(--code-text); background: var(--code-bg);
-    }
-    .text-popover-banner {
-        padding: 8px 16px;
+    .attachment-preview-banner {
+        padding: 6px 14px;
         background: var(--code-header-bg);
         color: var(--timestamp-color);
         font-size: 11px;
         border-bottom: 1px solid var(--border-color);
     }
+    .attachment-preview-body-text {
+        font-family: 'Cascadia Code', 'Consolas', 'D2Coding', monospace;
+        font-size: 12px;
+        line-height: 1.5;
+        white-space: pre;
+        overflow: auto;
+        max-height: min(50vh, 520px);
+        padding: 12px 16px;
+        margin: 0;
+        color: var(--code-text);
+        background: var(--code-bg);
+    }
+    .attachment-preview-body-image {
+        background: var(--code-bg);
+        padding: 16px;
+        text-align: center;
+        max-height: min(60vh, 600px);
+        overflow: auto;
+    }
+    .attachment-preview-body-image img {
+        max-width: 100%;
+        max-height: calc(min(60vh, 600px) - 32px);
+        object-fit: contain;
+        display: inline-block;
+    }
+    /* Bubble grows to fit its content, so the wide preview slot naturally
+       expands the bubble width when open. align-self stays flex-end on the
+       parent .message.user, preserving right-alignment as the user identity
+       cue even while expanded. */
 
     /* ===== KaTeX Math ===== */
     .katex-display {
@@ -1477,29 +1519,35 @@
         }
     }
 
-    // Global registry for text attachment data (cleared on page reload via NavigateToString)
-    window.__textAttachments = {};
+    // Per-chip preview payload (text fullContent, image base64, ...). Cleared
+    // on page reload via NavigateToString since chip ids are random per render.
+    var _previewData = {};
 
-    // Delegated click/keyboard handler for text attachment chips. Inline onclick="..."
-    // attributes can't reach functions defined inside this IIFE, so we wire chips by
-    // their data-text-att-id attribute instead.
+    // Delegated click/keyboard handler for attachment chips. Inline onclick
+    // attributes can't reach IIFE-scoped functions, and per-chip listeners
+    // would need re-wiring on every appendUserMessage; one delegate keeps it
+    // simple for both fresh sends and conversation reload.
     document.addEventListener('click', function(e) {
-        var chip = e.target.closest('[data-text-att-id]');
+        var chip = e.target.closest('.attachment-chip[data-att-id]');
         if (!chip) return;
         e.stopPropagation();
-        openTextModal(chip.getAttribute('data-text-att-id'));
+        togglePreview(chip);
     });
     document.addEventListener('keydown', function(e) {
         if (e.key !== 'Enter' && e.key !== ' ') return;
-        var chip = e.target.closest && e.target.closest('[data-text-att-id]');
+        var chip = e.target.closest && e.target.closest('.attachment-chip[data-att-id]');
         if (!chip) return;
         e.preventDefault();
-        openTextModal(chip.getAttribute('data-text-att-id'));
+        togglePreview(chip);
     });
 
     function renderAttachments(attachments) {
         if (!attachments || attachments.length === 0) return '';
         var showNumbers = attachments.length >= 2;
+        // Preview slot is built on-demand in togglePreview. Rendering it
+        // upfront left an empty display:grid container in every user bubble
+        // which extended the bubble's shrink-to-fit width — visible as a
+        // wider-than-needed gray rectangle around the chip row.
         var html = '<div class="attachment-container">';
         for (var i = 0; i < attachments.length; i++) {
             var att = attachments[i];
@@ -1528,8 +1576,11 @@
 
     // id is Math.random generated (alphanumeric only) — no sanitization needed
     function renderImageChip(att, num) {
+        var id = 'att-' + Math.random().toString(36).substr(2, 9);
         var displayName = formatChipName(att.fileName || 'Image', num);
-        return '<div class="attachment-chip">' +
+        _previewData[id] = att;
+        return '<div class="attachment-chip" id="' + id +
+            '" data-att-id="' + id + '" role="button" tabindex="0" aria-expanded="false">' +
             '<img class="attachment-chip-thumb" src="data:' +
             escapeHtml(att.mimeType || 'image/png') + ';base64,' + att.base64 + '" />' +
             '<div class="attachment-chip-name">' + escapeHtml(displayName) + '</div>' +
@@ -1585,15 +1636,13 @@
     }
 
     function renderTextChip(att, num) {
-        var id = 'text-att-' + Math.random().toString(36).substr(2, 9);
+        var id = 'att-' + Math.random().toString(36).substr(2, 9);
         var rawName = att.source === 'pasted' ? 'Pasted text' : (att.fileName || 'Untitled');
         var displayName = formatChipName(rawName, num);
         var iconGlyph = att.source === 'pasted' ? '\uE77F' : '\uE8A5';
-
-        window.__textAttachments[id] = att;
-
+        _previewData[id] = att;
         return '<div class="attachment-chip" id="' + id +
-            '" data-text-att-id="' + id + '" role="button" tabindex="0">' +
+            '" data-att-id="' + id + '" role="button" tabindex="0" aria-expanded="false">' +
             '<div class="attachment-chip-thumb attachment-chip-thumb-icon">' +
             '<span class="attachment-chip-glyph">' + iconGlyph + '</span>' +
             '</div>' +
@@ -1601,127 +1650,260 @@
             '</div>';
     }
 
-    // Saved html+body overflow values while the text modal is open. Used to
-    // restore the chat panel scroll behavior after close. null when no modal
-    // is open (or after restore). Locking both html and body covers the cases
-    // where chromium uses either as the viewport's scrolling element.
-    var _savedDocOverflow = null;
+    // ===== Inline Attachment Preview =====
+    //
+    // Single preview slot per user bubble (above the chip row, inside the
+    // bubble). Click an attachment chip -> preview slot fills with its content
+    // and the bubble naturally grows to fit. Click another chip -> swap. Click
+    // active chip again or its Close button -> collapse.
+    //
+    // Closing policies \u2014 protect the user's intent:
+    //   - Outside-click does NOT close (multitasking: read paste while
+    //     scrolling/composing).
+    //   - Esc does NOT close (reserved for ComposeBar focus-clear).
+    //   - New message arrival, scroll, swap to other tab keep the preview.
+    //   - WebView2 reload (conversation switch) clears state naturally.
+    //
+    // Each user bubble has its own preview slot, so multiple bubbles can have
+    // their previews open simultaneously \u2014 fits the policy above.
 
-    function openTextModal(cardId) {
-        var att = window.__textAttachments && window.__textAttachments[cardId];
+    /// <summary>
+    /// Toggle the preview slot inside the bubble that owns this chip.
+    /// - same chip clicked while active -> close
+    /// - different chip clicked while another active -> swap
+    /// - no active -> open
+    /// </summary>
+    function togglePreview(chip) {
+        var attId = chip.getAttribute('data-att-id');
+        var att = _previewData[attId];
         if (!att) return;
-        closeTextModal();
+        // Audio/document have no previewable payload yet (backlog).
+        if (att.type !== 'image' && att.type !== 'text') return;
 
-        // Lock background scroll. Saving before assignment so re-open does not
-        // capture the just-locked 'hidden' value as the original.
-        _savedDocOverflow = {
-            html: document.documentElement.style.overflow,
-            body: document.body.style.overflow
-        };
-        document.documentElement.style.overflow = 'hidden';
-        document.body.style.overflow = 'hidden';
+        var bubble = chip.closest('.message-bubble');
+        if (!bubble) return;
 
-        var backdrop = document.createElement('div');
-        backdrop.className = 'text-popover-backdrop';
-        backdrop.id = 'text-popover-backdrop';
-        backdrop.addEventListener('click', closeTextModal);
+        var wrap = bubble.querySelector('.attachment-preview-wrap');
+        var currentActive = bubble.querySelector('.attachment-chip.is-active');
 
-        var card = document.createElement('div');
-        card.className = 'text-popover-card';
-        card.id = 'text-popover-card';
-
-        // Header: title + copy + close
-        var header = document.createElement('div');
-        header.className = 'text-popover-header';
-
-        var title = document.createElement('span');
-        title.className = 'text-popover-title';
-        title.textContent = att.source === 'pasted'
-            ? 'Pasted text \u00B7 ' + (att.charCount || 0).toLocaleString() + ' chars \u00B7 ' + (att.lineCount || 0).toLocaleString() + ' lines'
-            : att.fileName;
-
-        var copyBtn = document.createElement('button');
-        copyBtn.className = 'msg-action-btn';
-        copyBtn.setAttribute('data-tooltip', 'Copy all');
-        copyBtn.textContent = '\uE8C8';
-        copyBtn.addEventListener('click', async function(e) {
-            e.stopPropagation();
-            var text = att.fullContent || '';
-            var ok = false;
-            try {
-                await navigator.clipboard.writeText(text);
-                ok = true;
-            } catch (err) {
-                console.error('[chat] navigator.clipboard.writeText failed:', err);
-                // Legacy fallback for WebView2 contexts where Clipboard API blocks
-                var ta = document.createElement('textarea');
-                ta.value = text;
-                ta.style.position = 'fixed';
-                ta.style.top = '-9999px';
-                ta.style.opacity = '0';
-                document.body.appendChild(ta);
-                ta.focus();
-                ta.select();
-                try {
-                    ok = document.execCommand('copy');
-                } catch (e2) {
-                    console.error('[chat] execCommand fallback failed:', e2);
-                }
-                document.body.removeChild(ta);
+        // Toggle close: same chip clicked while it's the active one
+        if (currentActive === chip) {
+            chip.classList.remove('is-active');
+            chip.setAttribute('aria-expanded', 'false');
+            if (wrap) {
+                wrap.classList.remove('is-open');
+                wrap.setAttribute('aria-hidden', 'true');
+                // Remove from DOM after the collapse animation so the wrap
+                // doesn't keep extending the bubble's shrink-to-fit width
+                // while invisible. Guard against quick re-open during the
+                // animation window.
+                setTimeout(function () {
+                    if (wrap.parentNode && !wrap.classList.contains('is-open')) {
+                        wrap.parentNode.removeChild(wrap);
+                    }
+                }, 220);
             }
-            var origGlyph = copyBtn.textContent;
-            copyBtn.textContent = ok ? '✓' : '✗';
-            setTimeout(function() { copyBtn.textContent = origGlyph; }, ok ? 1200 : 1500);
+            // Restore focus to the chip so keyboard Tab order continues from
+            // here (close-via-Close-button or close-via-Enter both land here).
+            chip.focus();
+            return;
+        }
+
+        // Create the preview wrap on-demand. Keeping it absent from closed
+        // bubbles avoids an empty display:grid container affecting the
+        // bubble's intrinsic width.
+        if (!wrap) {
+            wrap = document.createElement('div');
+            wrap.className = 'attachment-preview-wrap';
+            wrap.setAttribute('aria-hidden', 'true');
+            var newSlot = document.createElement('div');
+            newSlot.className = 'attachment-preview';
+            newSlot.setAttribute('role', 'region');
+            newSlot.setAttribute('aria-label', 'Attachment preview');
+            wrap.appendChild(newSlot);
+            var chipContainer = bubble.querySelector('.attachment-container');
+            if (chipContainer) {
+                bubble.insertBefore(wrap, chipContainer);
+            } else {
+                bubble.insertBefore(wrap, bubble.firstChild);
+            }
+        }
+        var slot = wrap.querySelector('.attachment-preview');
+
+        // Build content into the slot
+        slot.innerHTML = '';
+        if (att.type === 'image') buildImagePreview(slot, att);
+        else if (att.type === 'text') buildTextPreview(slot, att);
+
+        // Swap or open: deactivate any previous chip in this bubble, activate
+        // the new one, expand the slot.
+        if (currentActive) {
+            currentActive.classList.remove('is-active');
+            currentActive.setAttribute('aria-expanded', 'false');
+        }
+        chip.classList.add('is-active');
+        chip.setAttribute('aria-expanded', 'true');
+
+        if (!wrap.classList.contains('is-open')) {
+            // RAF: ensure the freshly-inserted wrap's collapsed state is
+            // committed to layout before is-open triggers the transition.
+            requestAnimationFrame(function () {
+                wrap.classList.add('is-open');
+                wrap.setAttribute('aria-hidden', 'false');
+            });
+        }
+
+        // Focus the Copy button so keyboard users land on the most likely next
+        // action; Tab continues to Close (and Save for images).
+        var copyBtn = slot.querySelector('[data-action="copy"]');
+        if (copyBtn) copyBtn.focus();
+
+        // Bubble just grew taller. Keep the chip near the viewport so the user
+        // doesn't lose their place after the expand animation.
+        chip.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+
+    /// <summary>
+    /// Build header (title + action buttons) and append it to the slot.
+    /// actions: array of { action, tooltip, glyph, handler(btn) }.
+    /// </summary>
+    function buildPreviewHeader(slot, title, actions) {
+        var header = document.createElement('div');
+        header.className = 'attachment-preview-header';
+        var titleEl = document.createElement('span');
+        titleEl.className = 'attachment-preview-title';
+        titleEl.textContent = title;
+        header.appendChild(titleEl);
+        actions.forEach(function (a) {
+            var btn = document.createElement('button');
+            btn.className = 'msg-action-btn';
+            btn.setAttribute('data-action', a.action);
+            btn.setAttribute('data-tooltip', a.tooltip);
+            btn.textContent = a.glyph;
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                a.handler(btn);
+            });
+            header.appendChild(btn);
         });
+        slot.appendChild(header);
+    }
 
-        var closeBtn = document.createElement('button');
-        closeBtn.className = 'msg-action-btn';
-        closeBtn.setAttribute('data-tooltip', 'Close');
-        closeBtn.textContent = '\uE711';
-        closeBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            closeTextModal();
-        });
+    /// <summary>Render text-attachment preview (header + truncation banner + pre body).</summary>
+    function buildTextPreview(slot, att) {
+        var meta = ' \u00B7 ' + (att.charCount || 0).toLocaleString() + ' chars \u00B7 ' + (att.lineCount || 0).toLocaleString() + ' lines';
+        var title = (att.source === 'pasted' ? 'Pasted text' : (att.fileName || 'Untitled')) + meta;
 
-        header.appendChild(title);
-        header.appendChild(copyBtn);
-        header.appendChild(closeBtn);
-        card.appendChild(header);
+        buildPreviewHeader(slot, title, [
+            {
+                action: 'copy',
+                tooltip: (window._L && window._L.copy) || 'Copy',
+                glyph: '\uE8C8',
+                handler: function (btn) { copyTextToClipboard(att.fullContent || '', btn); }
+            },
+            {
+                action: 'close',
+                tooltip: 'Close',
+                glyph: '\uE711',
+                handler: function () { closeActivePreviewIn(slot); }
+            }
+        ]);
 
-        // Truncation banner
         if (att.isTruncated) {
             var banner = document.createElement('div');
-            banner.className = 'text-popover-banner';
+            banner.className = 'attachment-preview-banner';
             banner.textContent = 'Showing first 100 KB of ' + (att.charCount || 0).toLocaleString() + ' chars';
-            card.appendChild(banner);
+            slot.appendChild(banner);
         }
 
-        // Body (pre tag, textContent for XSS safety)
+        // textContent guarantees no HTML injection from arbitrary pasted text.
         var body = document.createElement('pre');
-        body.className = 'text-popover-body';
+        body.className = 'attachment-preview-body-text';
         body.textContent = att.fullContent || '';
-
-        card.appendChild(body);
-        document.body.appendChild(backdrop);
-        document.body.appendChild(card);
-        document.addEventListener('keydown', _textModalEscHandler);
+        slot.appendChild(body);
     }
 
-    function closeTextModal() {
-        var el = document.getElementById('text-popover-backdrop');
-        if (el) el.remove();
-        el = document.getElementById('text-popover-card');
-        if (el) el.remove();
-        document.removeEventListener('keydown', _textModalEscHandler);
-        if (_savedDocOverflow) {
-            document.documentElement.style.overflow = _savedDocOverflow.html;
-            document.body.style.overflow = _savedDocOverflow.body;
-            _savedDocOverflow = null;
+    /// <summary>Render image-attachment preview (header with Copy/Save/Close + img body).</summary>
+    function buildImagePreview(slot, att) {
+        buildPreviewHeader(slot, att.fileName || 'Image', [
+            {
+                action: 'copy',
+                tooltip: (window._L && window._L.imageCopy) || 'Copy to clipboard',
+                glyph: '\uE8C8',
+                handler: function (btn) {
+                    var img = slot.querySelector('img');
+                    if (img) copyImage(img, btn);
+                }
+            },
+            {
+                action: 'save',
+                tooltip: (window._L && window._L.imageSave) || 'Save image',
+                glyph: '\uE74E',
+                handler: function () {
+                    var img = slot.querySelector('img');
+                    if (img) downloadImage(img);
+                }
+            },
+            {
+                action: 'close',
+                tooltip: 'Close',
+                glyph: '\uE711',
+                handler: function () { closeActivePreviewIn(slot); }
+            }
+        ]);
+
+        var body = document.createElement('div');
+        body.className = 'attachment-preview-body-image';
+        var img = document.createElement('img');
+        img.src = 'data:' + (att.mimeType || 'image/png') + ';base64,' + att.base64;
+        img.alt = att.fileName || 'Image';
+        body.appendChild(img);
+        slot.appendChild(body);
+    }
+
+    /// <summary>Helper used by Close buttons to toggle off the bubble's active chip.</summary>
+    function closeActivePreviewIn(slot) {
+        var bubble = slot.closest('.message-bubble');
+        if (!bubble) return;
+        var active = bubble.querySelector('.attachment-chip.is-active');
+        if (active) togglePreview(active);
+    }
+
+    /// <summary>
+    /// Copy text via Clipboard API with execCommand textarea fallback. WebView2
+    /// occasionally rejects the Clipboard API depending on focus / secure
+    /// context state; the fallback covers those cases. Visual feedback through
+    /// the existing flashCopied helper on success or a transient mark on failure.
+    /// </summary>
+    async function copyTextToClipboard(text, btn) {
+        var ok = false;
+        try {
+            await navigator.clipboard.writeText(text);
+            ok = true;
+        } catch (err) {
+            console.error('[chat] navigator.clipboard.writeText failed:', err);
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.top = '-9999px';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            try {
+                ok = document.execCommand('copy');
+            } catch (e2) {
+                console.error('[chat] execCommand fallback failed:', e2);
+            }
+            document.body.removeChild(ta);
         }
-    }
-
-    function _textModalEscHandler(e) {
-        if (e.key === 'Escape') { e.preventDefault(); closeTextModal(); }
+        if (ok) {
+            flashCopied(btn);
+        } else {
+            var orig = btn.textContent;
+            btn.textContent = '\u2717';
+            setTimeout(function () { btn.textContent = orig; }, 1500);
+        }
     }
 
     function fixCjkEmphasis(html) {
