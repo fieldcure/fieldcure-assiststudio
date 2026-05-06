@@ -4,6 +4,7 @@ using FieldCure.AssistStudio.Core.Models;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
@@ -137,6 +138,14 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
         ErrorMessage = null;
         LoggingService.LogInfo($"[MCP] Connecting: {Config.Name} ({Config.TransportType})");
 
+        // Measure end-to-end connect latency. The signal we want is "how long
+        // did the user wait for this server to come online" — covers transport
+        // creation, dnx package fetch on cold cache, McpClient handshake, and
+        // ListTools round-trip. All five built-ins kick off in parallel, so
+        // the per-connection elapsed reflects real first-launch contention,
+        // not isolated package-resolution time.
+        var connectSw = Stopwatch.StartNew();
+
         try
         {
             var transport = CreateTransport();
@@ -217,11 +226,15 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
                 })];
 
             State = McpConnectionState.Connected;
-            LoggingService.LogInfo($"[MCP] Connected: {Config.Name}, tools={Tools.Count}");
+            connectSw.Stop();
+            LoggingService.LogInfo(
+                $"[MCP] Connected: {Config.Name}, tools={Tools.Count}, elapsed={connectSw.ElapsedMilliseconds}ms");
         }
         catch (Exception ex)
         {
-            LoggingService.LogError($"[MCP] Connection failed: {Config.Name} — {ex.Message}");
+            connectSw.Stop();
+            LoggingService.LogError(
+                $"[MCP] Connection failed: {Config.Name} after {connectSw.ElapsedMilliseconds}ms — {ex.Message}");
             ErrorMessage = ex.Message;
             State = McpConnectionState.Error;
             throw;
