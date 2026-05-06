@@ -444,6 +444,9 @@ Add them in Profile settings.</value>
   <data name="FolderFlyout_RemoveTooltip" xml:space="preserve">
     <value>Remove</value>
   </data>
+  <data name="FolderFlyout_FolderMissing" xml:space="preserve">
+    <value>Folder not found on disk</value>
+  </data>
   <data name="ChatPanel_ControlName" xml:space="preserve">
     <value>Chat panel</value>
   </data>

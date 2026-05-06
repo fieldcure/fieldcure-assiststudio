@@ -921,14 +921,28 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     #region Private Methods
 
     /// <summary>
-    /// Connects (or reconnects) the per-tab Filesystem MCP server with the given folders.
-    /// If already connected, disconnects first. If no folders, just disconnects.
-    /// On a successful initial connection (interactive add of the first folder, or
-    /// .astx restore with N pre-saved folders) a single toast notification is posted
-    /// so the user can confirm "the workspace is now usable" without polling the UI.
-    /// Subsequent folder additions go through <c>UpdateWorkspaceFoldersAsync</c> on
-    /// the existing connection and intentionally do not re-toast.
+    /// Connects (or reconnects) the per-tab Filesystem MCP server with the folders
+    /// that currently exist on disk.
     /// </summary>
+    /// <remarks>
+    /// Folders saved in <c>WorkspaceFolders</c> (and persisted in <c>.astx</c>) may
+    /// no longer exist by the time the conversation is reopened — the user could
+    /// have moved, renamed, or unmounted them. Missing folders are <b>kept</b> in
+    /// <c>WorkspaceFolders</c> (and the <c>.astx</c>) so the user can still see
+    /// them in the flyout (with a warning icon) and recover by restoring the disk
+    /// path; only the live MCP server receives the filtered alive set, since the
+    /// filesystem server either rejects missing folders at startup or fails every
+    /// per-tool call against them.
+    /// <para>
+    /// On a successful initial connection a single toast is posted so the user
+    /// confirms "the workspace is now usable" without polling the UI. When some
+    /// folders are missing the toast severity upgrades to <see cref="InfoBarSeverity.Warning"/>
+    /// and the title appends " — missing: {N}". When every folder is missing,
+    /// no connection is attempted and a Warning-only toast surfaces the situation.
+    /// Subsequent folder additions go through <c>UpdateWorkspaceFoldersAsync</c>
+    /// on the existing connection and intentionally do not re-toast.
+    /// </para>
+    /// </remarks>
     private async Task ConnectFilesystemAsync(IReadOnlyList<string> folders)
     {
         // Disconnect existing per-tab filesystem server
@@ -940,9 +954,23 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 
         if (folders.Count == 0) return;
 
+        var aliveFolders = folders.Where(System.IO.Directory.Exists).ToList();
+        var missingCount = folders.Count - aliveFolders.Count;
+
+        if (aliveFolders.Count == 0)
+        {
+            // All saved folders missing — no connection to make. Surface this
+            // explicitly so the user knows why the workspace is unreachable.
+            NotificationCenter.Instance.Post(
+                InfoBarSeverity.Warning,
+                string.Format(Res.GetString("Mcp_WorkspaceFoldersAllMissing"), missingCount),
+                string.Empty);
+            return;
+        }
+
         var mcpConfig = BuiltInServerHelper.CreateMcpServerConfig(
             BuiltInServerHelper.FilesystemKey,
-            new BuiltInServerConfig { IsEnabled = true, Folders = [.. folders] });
+            new BuiltInServerConfig { IsEnabled = true, Folders = [.. aliveFolders] });
         if (mcpConfig is null) return;
 
         // Unique ID per tab to allow multiple filesystem instances in the registry
@@ -952,38 +980,44 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             mcpConfig, supportsRoots: true);
 
         if (_filesystemConnection.IsConnected)
-            PostFilesystemConnectedToast(folders);
+            PostFilesystemConnectedToast(aliveFolders, missingCount);
     }
 
     /// <summary>
     /// Posts the localized "workspace folder(s) connected" toast for an initial
-    /// connect. Splits singular vs plural so a single-folder connect surfaces
-    /// the folder's last path segment (more useful than a count of 1) while a
-    /// multi-folder connect (.astx restore) shows the count instead — listing
-    /// every folder name would be too long for a transient infobar.
+    /// connect. Splits singular vs plural based on <paramref name="aliveFolders"/>
+    /// (single-folder shows the last path segment, multi-folder shows the count
+    /// because listing every name would overflow the infobar). Appends a
+    /// " — missing: {N}" suffix and upgrades severity to Warning when any of
+    /// the requested folders were missing on disk.
     /// </summary>
-    /// <param name="folders">The folder list that was just connected.</param>
-    private static void PostFilesystemConnectedToast(IReadOnlyList<string> folders)
+    /// <param name="aliveFolders">Folders that actually existed and were passed to the MCP server.</param>
+    /// <param name="missingCount">Number of requested folders that were missing on disk (zero is the common case).</param>
+    private static void PostFilesystemConnectedToast(IReadOnlyList<string> aliveFolders, int missingCount)
     {
-        if (folders.Count == 1)
+        string title;
+        if (aliveFolders.Count == 1)
         {
             // Trim trailing separators so "C:\Users\foo\Documents\" still yields "Documents".
-            var trimmed = folders[0].TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+            var trimmed = aliveFolders[0].TrimEnd(
+                System.IO.Path.DirectorySeparatorChar,
+                System.IO.Path.AltDirectorySeparatorChar);
             var name = System.IO.Path.GetFileName(trimmed);
             if (string.IsNullOrEmpty(name)) name = trimmed; // root-only path (e.g. "C:\")
-
-            NotificationCenter.Instance.Post(
-                InfoBarSeverity.Success,
-                string.Format(Res.GetString("Mcp_WorkspaceFolderConnected"), name),
-                string.Empty);
+            title = string.Format(Res.GetString("Mcp_WorkspaceFolderConnected"), name);
         }
         else
         {
-            NotificationCenter.Instance.Post(
-                InfoBarSeverity.Success,
-                string.Format(Res.GetString("Mcp_WorkspaceFoldersConnected"), folders.Count),
-                string.Empty);
+            title = string.Format(Res.GetString("Mcp_WorkspaceFoldersConnected"), aliveFolders.Count);
         }
+
+        if (missingCount > 0)
+            title += string.Format(Res.GetString("Mcp_WorkspaceFoldersMissingSuffix"), missingCount);
+
+        NotificationCenter.Instance.Post(
+            missingCount > 0 ? InfoBarSeverity.Warning : InfoBarSeverity.Success,
+            title,
+            string.Empty);
     }
 
     // RAG is now a shared multi-KB server — per-tab ConnectRagAsync/DisconnectRagAsync removed.

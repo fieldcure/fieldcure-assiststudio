@@ -444,6 +444,9 @@
   <data name="FolderFlyout_RemoveTooltip" xml:space="preserve">
     <value>제거</value>
   </data>
+  <data name="FolderFlyout_FolderMissing" xml:space="preserve">
+    <value>디스크에서 폴더를 찾을 수 없음</value>
+  </data>
   <data name="ChatPanel_ControlName" xml:space="preserve">
     <value>채팅 패널</value>
   </data>

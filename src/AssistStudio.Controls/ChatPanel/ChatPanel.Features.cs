@@ -391,16 +391,23 @@ public sealed partial class ChatPanel
         var removeTooltipText = Res.GetString("FolderFlyout_RemoveTooltip") ?? "Remove";
         var removeFolderNameFormat = Res.GetString("FolderFlyout_RemoveFolderAccessibilityName");
         if (string.IsNullOrEmpty(removeFolderNameFormat)) removeFolderNameFormat = "Remove folder: {0}";
+        var missingTooltipText = Res.GetString("FolderFlyout_FolderMissing") ?? "Folder not found on disk";
 
         _folderItems.Clear();
         foreach (var folder in folders)
         {
             var capturedFolder = folder;
+            // Existence is re-evaluated every time the flyout opens — folders may
+            // have come back since the last open (e.g., reattached external drive),
+            // so the warning icon naturally appears or clears without a refresh.
+            var isMissing = !System.IO.Directory.Exists(capturedFolder);
             _folderItems.Add(new FolderFlyoutItemViewModel(
                 folderPath: capturedFolder,
                 removeTooltip: removeTooltipText,
                 removeButtonName: string.Format(removeFolderNameFormat, capturedFolder),
                 rowOpacity: isEnabled ? 1.0 : 0.5,
+                isMissing: isMissing,
+                missingTooltip: missingTooltipText,
                 removeAction: () =>
                 {
                     var updated = folders.Where(f => f != capturedFolder).ToList();
@@ -886,17 +893,38 @@ public sealed partial class ChatPanel
 internal sealed class FolderFlyoutItemViewModel
 {
     /// <summary>Initializes a new folder flyout row view model.</summary>
+    /// <param name="folderPath">The displayed folder path.</param>
+    /// <param name="removeTooltip">Tooltip shown on the remove button.</param>
+    /// <param name="removeButtonName">Accessibility name for the remove button.</param>
+    /// <param name="rowOpacity">Opacity applied to the row when workspace access is disabled.</param>
+    /// <param name="isMissing">
+    /// <see langword="true"/> when <paramref name="folderPath"/> does not exist on
+    /// disk at the moment the flyout is populated. Drives the warning-icon column
+    /// in the row template and is also reflected in the row tooltip via
+    /// <paramref name="missingTooltip"/>. Missing folders remain in the saved
+    /// <c>WorkspaceFolders</c> list (and the <c>.astx</c>) so a temporary unmount
+    /// or rename can be recovered without losing the conversation's intent.
+    /// </param>
+    /// <param name="missingTooltip">
+    /// Localized "Folder not found on disk" tooltip surfaced when
+    /// <paramref name="isMissing"/> is true; ignored otherwise.
+    /// </param>
+    /// <param name="removeAction">Action invoked when the user clicks the remove button.</param>
     public FolderFlyoutItemViewModel(
         string folderPath,
         string removeTooltip,
         string removeButtonName,
         double rowOpacity,
+        bool isMissing,
+        string missingTooltip,
         Action removeAction)
     {
         FolderPath = folderPath;
         RemoveTooltip = removeTooltip;
         RemoveButtonName = removeButtonName;
         RowOpacity = rowOpacity;
+        IsMissing = isMissing;
+        MissingTooltip = missingTooltip;
         RemoveCommand = new DelegateCommand(removeAction);
     }
 
@@ -911,6 +939,20 @@ internal sealed class FolderFlyoutItemViewModel
 
     /// <summary>Gets the row opacity used when workspace access is disabled.</summary>
     public double RowOpacity { get; }
+
+    /// <summary>Gets a value indicating whether the folder is missing on disk.</summary>
+    public bool IsMissing { get; }
+
+    /// <summary>Gets the tooltip surfaced on the missing-folder warning icon.</summary>
+    public string MissingTooltip { get; }
+
+    /// <summary>
+    /// Gets the visibility for the missing-folder warning icon. Pre-computed here
+    /// rather than at the binding via a converter — there is no <c>Bool→Visibility</c>
+    /// converter in this assembly and adding one for a single use case is more
+    /// boilerplate than the <see cref="Visibility"/> property itself.
+    /// </summary>
+    public Visibility MissingIconVisibility => IsMissing ? Visibility.Visible : Visibility.Collapsed;
 
     /// <summary>Gets the command that removes the folder from the conversation workspace list.</summary>
     public ICommand RemoveCommand { get; }

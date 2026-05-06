@@ -10,12 +10,29 @@
     <DataTemplate x:Key="ChatPanelFolderItemTemplate">
         <Grid>
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <TextBlock
+            <!--
+                Warning icon (Segoe Fluent Icons E7BA) appears when the folder
+                no longer exists on disk. The folder remains in the saved list
+                so it can recover when the disk path comes back.
+            -->
+            <FontIcon
                 Grid.Column="0"
+                Margin="8,0,0,0"
+                VerticalAlignment="Center"
+                FontSize="12"
+                Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                Glyph="&#xE7BA;"
+                ToolTipService.ToolTip="{Binding MissingTooltip}"
+                ToolTipService.Placement="Mouse"
+                Visibility="{Binding MissingIconVisibility}" />
+
+            <TextBlock
+                Grid.Column="1"
                 Margin="8,0,0,0"
                 VerticalAlignment="Center"
                 FontSize="12"
@@ -24,7 +41,7 @@
                 TextTrimming="CharacterEllipsis" />
 
             <Button
-                Grid.Column="1"
+                Grid.Column="2"
                 Padding="4"
                 VerticalAlignment="Center"
                 AutomationProperties.AutomationId="ChatPanelFolderFlyoutRemoveButton"

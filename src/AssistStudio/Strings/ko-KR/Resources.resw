@@ -1163,6 +1163,12 @@
   <data name="Mcp_WorkspaceFoldersConnected" xml:space="preserve">
     <value>작업 폴더 {0}개 연결됨</value>
   </data>
+  <data name="Mcp_WorkspaceFoldersMissingSuffix" xml:space="preserve">
+    <value> — 누락: {0}</value>
+  </data>
+  <data name="Mcp_WorkspaceFoldersAllMissing" xml:space="preserve">
+    <value>작업 폴더 모두 누락 ({0}개)</value>
+  </data>
   <data name="Mcp_ServersConnected" xml:space="preserve">
     <value>MCP 서버 {0}개 연결됨</value>
   </data>

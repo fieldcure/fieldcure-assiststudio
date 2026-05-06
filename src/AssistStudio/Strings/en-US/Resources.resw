@@ -1163,6 +1163,12 @@
   <data name="Mcp_WorkspaceFoldersConnected" xml:space="preserve">
     <value>Workspace folders connected ({0})</value>
   </data>
+  <data name="Mcp_WorkspaceFoldersMissingSuffix" xml:space="preserve">
+    <value> — missing: {0}</value>
+  </data>
+  <data name="Mcp_WorkspaceFoldersAllMissing" xml:space="preserve">
+    <value>Workspace folders not found ({0})</value>
+  </data>
   <data name="Mcp_ServersConnected" xml:space="preserve">
     <value>{0} MCP server(s) connected</value>
   </data>
