@@ -163,8 +163,8 @@ public sealed partial class KnowledgeBasesPage : Page
         if (result != ContentDialogResult.Primary) return;
 
         // Logical deletion: remove config.json. Physical folder cleanup
-        // happens via prune-orphans at next app startup. Serve cache is
-        // cleaned up lazily on next GetKb() call.
+        // happens inside RAG serve startup (since RAG v2.4.4) on the next
+        // app launch. Serve cache is cleaned up lazily on next GetKb() call.
         KnowledgeBaseStore.Delete(kbId);
         await CancelReindexAsync(kbId);
         LoggingService.LogInfo($"[KB] Deleted (config.json removed): {kbId}");

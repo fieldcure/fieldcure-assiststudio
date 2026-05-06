@@ -7,10 +7,11 @@ namespace AssistStudio.Mcp;
 
 /// <summary>
 /// Manages RAG orchestrator spawning and cancel file lifecycle.
-/// Indexing requests go through <c>start_reindex</c> MCP tool — this class
-/// only handles the deferred-sweep orchestrator spawn (app shutdown) and
-/// the <c>prune-orphans</c> CLI. <see cref="CancelExec"/> is still used to
-/// request graceful cancellation of a running indexing process.
+/// Indexing requests go through the <c>start_reindex</c> MCP tool — this
+/// class only handles the deferred-sweep orchestrator spawn (app shutdown).
+/// <see cref="CancelExec"/> is still used to request graceful cancellation
+/// of a running indexing process. Orphan KB folder cleanup is owned by RAG
+/// serve itself (since v2.4.4) and is no longer spawned from the app.
 /// </summary>
 public static class RagProcessManager
 {
@@ -86,43 +87,6 @@ public static class RagProcessManager
         catch (Exception ex)
         {
             LoggingService.LogError($"[RAG] Failed to start exec-queue: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// Spawns a detached <c>prune-orphans</c> process to clean up orphan KB folders.
-    /// Should be called at app startup <b>before</b> the RAG serve process starts,
-    /// to avoid SQLite handle contention.
-    /// </summary>
-    public static void StartPruneOrphans()
-    {
-        if (!KnowledgeBaseStore.AnyExists())
-            return;
-
-        var (command, prefixArgs) = BuiltInServerHelper.GetLaunchSpecForProcess(BuiltInServerHelper.RagKey);
-        if (string.IsNullOrEmpty(command))
-            return;
-
-        var psi = new ProcessStartInfo
-        {
-            FileName = command,
-            CreateNoWindow = true,
-            UseShellExecute = false,
-        };
-        foreach (var a in prefixArgs) psi.ArgumentList.Add(a);
-        psi.ArgumentList.Add("prune-orphans");
-        psi.ArgumentList.Add("--base-path");
-        psi.ArgumentList.Add(KnowledgeBaseStore.BasePath);
-
-        LoggingService.LogInfo($"[RAG] Starting prune-orphans: {command} {string.Join(' ', psi.ArgumentList)}");
-
-        try
-        {
-            Process.Start(psi);
-        }
-        catch (Exception ex)
-        {
-            LoggingService.LogError($"[RAG] Failed to start prune-orphans: {ex.Message}");
         }
     }
 

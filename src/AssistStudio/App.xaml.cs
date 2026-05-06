@@ -255,10 +255,11 @@ public partial class App : Application
             // cause version-skew failures.
             _ = Task.Run(BuiltInServerHelper.RemoveLegacyToolPathFolderAsync);
 
-            // Clean up orphan KB folders before serve acquires SQLite handles
-            RagProcessManager.StartPruneOrphans();
-
-            // Start built-in servers (filesystem is per-tab, skip here)
+            // Start built-in servers (filesystem is per-tab, skip here).
+            // Orphan KB folder cleanup runs inside RAG serve at startup as of
+            // FieldCure.Mcp.Rag v2.4.4 — folding it into serve removed the
+            // dnx fetch-lock race that the prior separate prune-orphans
+            // process triggered on cold caches.
             var builtInConfigs = AppSettings.BuiltInServers;
             var builtInTasks = builtInConfigs
                 .Where(kv => kv.Key != BuiltInServerHelper.FilesystemKey
