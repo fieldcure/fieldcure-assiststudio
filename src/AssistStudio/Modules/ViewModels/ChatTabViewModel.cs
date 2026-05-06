@@ -923,6 +923,11 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Connects (or reconnects) the per-tab Filesystem MCP server with the given folders.
     /// If already connected, disconnects first. If no folders, just disconnects.
+    /// On a successful initial connection (interactive add of the first folder, or
+    /// .astx restore with N pre-saved folders) a single toast notification is posted
+    /// so the user can confirm "the workspace is now usable" without polling the UI.
+    /// Subsequent folder additions go through <c>UpdateWorkspaceFoldersAsync</c> on
+    /// the existing connection and intentionally do not re-toast.
     /// </summary>
     private async Task ConnectFilesystemAsync(IReadOnlyList<string> folders)
     {
@@ -945,6 +950,40 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 
         _filesystemConnection = await App.McpRegistry.AddAndConnectAsync(
             mcpConfig, supportsRoots: true);
+
+        if (_filesystemConnection.IsConnected)
+            PostFilesystemConnectedToast(folders);
+    }
+
+    /// <summary>
+    /// Posts the localized "workspace folder(s) connected" toast for an initial
+    /// connect. Splits singular vs plural so a single-folder connect surfaces
+    /// the folder's last path segment (more useful than a count of 1) while a
+    /// multi-folder connect (.astx restore) shows the count instead — listing
+    /// every folder name would be too long for a transient infobar.
+    /// </summary>
+    /// <param name="folders">The folder list that was just connected.</param>
+    private static void PostFilesystemConnectedToast(IReadOnlyList<string> folders)
+    {
+        if (folders.Count == 1)
+        {
+            // Trim trailing separators so "C:\Users\foo\Documents\" still yields "Documents".
+            var trimmed = folders[0].TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+            var name = System.IO.Path.GetFileName(trimmed);
+            if (string.IsNullOrEmpty(name)) name = trimmed; // root-only path (e.g. "C:\")
+
+            NotificationCenter.Instance.Post(
+                InfoBarSeverity.Success,
+                string.Format(Res.GetString("Mcp_WorkspaceFolderConnected"), name),
+                string.Empty);
+        }
+        else
+        {
+            NotificationCenter.Instance.Post(
+                InfoBarSeverity.Success,
+                string.Format(Res.GetString("Mcp_WorkspaceFoldersConnected"), folders.Count),
+                string.Empty);
+        }
     }
 
     // RAG is now a shared multi-KB server — per-tab ConnectRagAsync/DisconnectRagAsync removed.

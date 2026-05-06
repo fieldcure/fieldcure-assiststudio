@@ -1157,6 +1157,12 @@
   <data name="Mcp_ServersConnecting" xml:space="preserve">
     <value>Connecting MCP servers ({0}) — this may take a few seconds…</value>
   </data>
+  <data name="Mcp_WorkspaceFolderConnected" xml:space="preserve">
+    <value>Workspace folder connected: {0}</value>
+  </data>
+  <data name="Mcp_WorkspaceFoldersConnected" xml:space="preserve">
+    <value>Workspace folders connected ({0})</value>
+  </data>
   <data name="Mcp_ServersConnected" xml:space="preserve">
     <value>{0} MCP server(s) connected</value>
   </data>

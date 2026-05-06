@@ -334,7 +334,7 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
             _currentFolders = [.. folders];
         }
 
-        LoggingService.LogInfo($"[MCP] Roots updated: {folders.Count} folders");
+        LoggingService.LogInfo($"[MCP] Workspace folders updated: {folders.Count}");
         await _client.SendNotificationAsync("notifications/roots/list_changed", ct);
     }
 
