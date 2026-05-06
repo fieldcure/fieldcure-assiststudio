@@ -403,22 +403,6 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         var ragServerId = $"builtin_{BuiltInServerHelper.RagKey}";
         panel.IsKnowledgeBaseEnabled = SelectedProfile?.EnabledServers.Contains(ragServerId) ?? false;
 
-        // Spin up the per-tab Filesystem MCP server when restoring an .astx that
-        // had workspace folders. Without this call, ConnectFilesystemAsync only
-        // runs from OnProfileChanged (user switches profile) or
-        // OnWorkspaceFoldersChanged (user adds/removes a folder via the
-        // flyout) — neither fires on .astx restore, so the AI's tool list ends
-        // up missing read_file / list_directory etc., and the model has to
-        // route through Essentials' shell exec to inspect the workspace. The
-        // alive-vs-missing toast logic inside ConnectFilesystemAsync still
-        // applies, so a reopened conversation whose folders are gone gets
-        // the Warning toast it deserves.
-        if (panel.IsWorkspaceEnabled
-            && panel.WorkspaceFolders is { Count: > 0 } restoredFolders)
-        {
-            await ConnectFilesystemAsync(restoredFolders);
-        }
-
         // Memory text is now fetched from Essentials MCP at send time (PrepareToolsForSendAsync)
 
         // Relay keyboard shortcut from WebView2 (separate HWND)
@@ -482,6 +466,31 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             panel.DispatcherQueue?.TryEnqueue(
                 Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
                 () => panel.FocusInput());
+        }
+
+        // Spin up the per-tab Filesystem MCP server when restoring an .astx
+        // that had workspace folders. ConnectFilesystemAsync otherwise only
+        // runs from OnProfileChanged (user switches profile) or
+        // OnWorkspaceFoldersChanged (user adds/removes a folder via the
+        // flyout) — neither fires on .astx restore, so without this call the
+        // AI's tool list ends up missing read_file / list_directory etc., and
+        // the model has to route through Essentials' shell exec to inspect
+        // the workspace.
+        //
+        // Done last on purpose. Awaiting earlier in this method suspends
+        // AttachPanel for the duration of the dnx fetch + serve startup
+        // (1–3 s on a cold cache), which delays the force-push tools block
+        // above and surfaces as a flickering tool button in the compose bar.
+        // The AttachPanel work that the UI depends on is already complete by
+        // this point; the filesystem connection completing 1–3 s later flows
+        // into the compose bar via the McpRegistry.ToolsChanged → debounced
+        // RefreshTools path. The alive-vs-missing toast logic inside
+        // ConnectFilesystemAsync still applies, so a reopened conversation
+        // whose folders are gone gets the Warning toast it deserves.
+        if (panel.IsWorkspaceEnabled
+            && panel.WorkspaceFolders is { Count: > 0 } restoredFolders)
+        {
+            await ConnectFilesystemAsync(restoredFolders);
         }
     }
 
