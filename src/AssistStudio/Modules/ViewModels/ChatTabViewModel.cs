@@ -367,7 +367,8 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     public async void AttachPanel(ChatPanel panel)
     {
         Panel = panel;
-        LoggingService.LogInfo($"[Tab] Panel attached: {Title}, pending={_pendingMessages.Count}, initialized={panel.IsInitialized}");
+        var titleForLog = string.IsNullOrEmpty(Title) ? "(untitled)" : Title;
+        LoggingService.LogInfo($"[Tab] Panel attached: {titleForLog} [{Id}], pending={_pendingMessages.Count}, initialized={panel.IsInitialized}");
 
         // Fresh panels also start with IsInitialized == false, so we only force
         // reinitialization for containers that were explicitly disposed and recycled.
