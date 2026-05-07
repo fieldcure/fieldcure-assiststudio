@@ -410,9 +410,23 @@ public sealed partial class ChatPanel
                 missingTooltip: missingTooltipText,
                 removeAction: () =>
                 {
-                    var updated = folders.Where(f => f != capturedFolder).ToList();
+                    // Read live state from WorkspaceFolders, not the snapshot
+                    // captured when the flyout opened — the user may remove
+                    // multiple folders in one open session, and each click
+                    // must operate on the result of the previous removals.
+                    var current = WorkspaceFolders?.ToList() ?? [];
+                    var updated = current.Where(f => f != capturedFolder).ToList();
                     WorkspaceFolders = updated.Count > 0 ? updated : null;
                     WorkspaceFoldersChanged?.Invoke(this, updated);
+
+                    // Drop the row from the flyout's bound ObservableCollection
+                    // immediately. PopulateFolderFlyout only re-runs on the next
+                    // Flyout.Opening event, so without this the removed row
+                    // would linger until the user closed and reopened the
+                    // flyout — visually stale and confusing.
+                    var matched = _folderItems.FirstOrDefault(i => i.FolderPath == capturedFolder);
+                    if (matched is not null)
+                        _folderItems.Remove(matched);
                 }));
         }
 
