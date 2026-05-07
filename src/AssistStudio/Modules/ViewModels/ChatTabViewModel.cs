@@ -468,29 +468,46 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                 () => panel.FocusInput());
         }
 
-        // Spin up the per-tab Filesystem MCP server when restoring an .astx
-        // that had workspace folders. ConnectFilesystemAsync otherwise only
-        // runs from OnProfileChanged (user switches profile) or
-        // OnWorkspaceFoldersChanged (user adds/removes a folder via the
-        // flyout) — neither fires on .astx restore, so without this call the
-        // AI's tool list ends up missing read_file / list_directory etc., and
-        // the model has to route through Essentials' shell exec to inspect
-        // the workspace.
+        // .astx restore is the fourth filesystem-connect trigger (alongside
+        // OnProfileChanged, OnWorkspaceFoldersChanged, and the tool-list
+        // toggle in OnProfileToolSettingsChanged). At this point the saved
+        // state has been applied: panel.IsWorkspaceEnabled reflects whether
+        // "filesystem" is checked in the active profile, and panel.WorkspaceFolders
+        // holds whatever the conversation had on save. If both are true,
+        // spawn the per-tab Filesystem MCP subprocess so the AI's tool list
+        // gets read_file / list_directory on the very first send rather than
+        // forcing the user to toggle Workspace off-and-on.
         //
-        // Done last on purpose. Awaiting earlier in this method suspends
+        // Fire-and-forget intentionally — awaiting here would suspend
         // AttachPanel for the duration of the dnx fetch + serve startup
-        // (1–3 s on a cold cache), which delays the force-push tools block
-        // above and surfaces as a flickering tool button in the compose bar.
-        // The AttachPanel work that the UI depends on is already complete by
-        // this point; the filesystem connection completing 1–3 s later flows
-        // into the compose bar via the McpRegistry.ToolsChanged → debounced
-        // RefreshTools path. The alive-vs-missing toast logic inside
-        // ConnectFilesystemAsync still applies, so a reopened conversation
-        // whose folders are gone gets the Warning toast it deserves.
+        // (1-3 s on a cold cache) and that would visibly delay the
+        // force-push tools block above. ConnectFilesystemAsync flows its own
+        // toast and triggers McpRegistry.ToolsChanged on completion, which
+        // the registry-level RefreshTools subscriber handles.
         if (panel.IsWorkspaceEnabled
             && panel.WorkspaceFolders is { Count: > 0 } restoredFolders)
         {
-            await ConnectFilesystemAsync(restoredFolders);
+            _ = TryConnectFilesystemAsync(restoredFolders, "AttachPanel/.astx restore");
+        }
+    }
+
+    /// <summary>
+    /// Wraps <see cref="ConnectFilesystemAsync"/> in a try/catch for fire-and-forget
+    /// callers (such as <see cref="AttachPanel"/>) so an exception does not surface
+    /// as an unobserved task — the connect is best-effort and any failure is logged
+    /// rather than crashing the tab restore flow.
+    /// </summary>
+    /// <param name="folders">Folders to pass to <see cref="ConnectFilesystemAsync"/>.</param>
+    /// <param name="origin">Short label included in failure logs to identify the caller.</param>
+    private async Task TryConnectFilesystemAsync(IReadOnlyList<string> folders, string origin)
+    {
+        try
+        {
+            await ConnectFilesystemAsync(folders);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.LogWarning($"[Tab] Filesystem connect failed ({origin}): {ex.Message}");
         }
     }
 
@@ -670,13 +687,41 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Handles tool settings changes from the shared Profile instance.
+    /// Handles tool settings changes from the shared <see cref="Profile"/> instance —
+    /// specifically the tool-list checkboxes that toggle which servers the
+    /// active profile exposes. This is the third filesystem-connect trigger:
+    /// when the user checks <c>filesystem</c> in the tool list while
+    /// <c>WorkspaceFolders</c> already has folders, the per-tab Filesystem
+    /// subprocess must come up; conversely, unchecking the tool tears the
+    /// connection down so the registry no longer advertises stale file tools.
     /// </summary>
     private void OnProfileToolSettingsChanged(object? sender, EventArgs e)
     {
         if (sender is not Profile profile) return;
         LoggingService.LogInfo($"[Tab] Profile.ToolSettingsChanged: {profile.Name}");
         RefreshTools();
+
+        // Reconcile filesystem connection state with the new "checked / not"
+        // setting. Folders are kept on the panel regardless of the toggle,
+        // matching the same disconnect-but-preserve behavior used by
+        // OnProfileChanged when the new profile turns workspace off.
+        var filesystemServerId = $"builtin_{BuiltInServerHelper.FilesystemKey}";
+        var isWorkspaceEnabled = profile.EnabledServers.Contains(filesystemServerId);
+
+        if (!isWorkspaceEnabled)
+        {
+            if (_filesystemConnection is not null)
+            {
+                var connectionToRemove = _filesystemConnection;
+                _filesystemConnection = null;
+                _ = App.McpRegistry.RemoveAsync(connectionToRemove);
+            }
+        }
+        else if (_filesystemConnection is null
+                 && Panel?.WorkspaceFolders is { Count: > 0 } folders)
+        {
+            _ = TryConnectFilesystemAsync(folders, "OnProfileToolSettingsChanged");
+        }
     }
 
     /// <summary>
@@ -950,6 +995,40 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// that currently exist on disk.
     /// </summary>
     /// <remarks>
+    /// <b>Lifecycle principle — KEEP THIS PRINCIPLE INTACT.</b>
+    /// <para>
+    /// The per-tab Filesystem subprocess exists if and only if <i>both</i> of:
+    /// </para>
+    /// <list type="number">
+    /// <item><c>filesystem</c> is checked in the active profile's tool list
+    /// (i.e., <c>profile.EnabledServers</c> contains
+    /// <c>builtin_filesystem</c>), AND</item>
+    /// <item>at least one workspace folder is configured on the panel.</item>
+    /// </list>
+    /// <para>
+    /// Connection is triggered at the moment those two conditions <i>become</i>
+    /// true together, by exactly four call sites — and no others. Adding new
+    /// triggers is a layering violation; if a new state-change should connect
+    /// filesystem, route it through one of the existing four paths.
+    /// </para>
+    /// <list type="bullet">
+    /// <item><see cref="OnProfileChanged"/> — user switches profile and the new
+    /// profile has filesystem checked while folders are present.</item>
+    /// <item><see cref="OnProfileToolSettingsChanged"/> — user toggles the
+    /// filesystem checkbox in the tool list while folders are present.</item>
+    /// <item><see cref="OnWorkspaceFoldersChanged"/> — user adds the first
+    /// folder while filesystem is already checked.</item>
+    /// <item><see cref="AttachPanel"/> — restoring an .astx whose saved state
+    /// already satisfies both conditions (fire-and-forget at the end of the
+    /// method so the compose bar's force-push tools block is not delayed).</item>
+    /// </list>
+    /// <para>
+    /// Send-time logic in <see cref="PrepareToolsForSendAsync"/> is for
+    /// <i>tool exposure</i>, not connection. It decides which already-connected
+    /// servers' tools the model sees this turn; it does <b>not</b> spawn
+    /// subprocesses lazily.
+    /// </para>
+    /// <para>
     /// Folders saved in <c>WorkspaceFolders</c> (and persisted in <c>.astx</c>) may
     /// no longer exist by the time the conversation is reopened — the user could
     /// have moved, renamed, or unmounted them. Missing folders are <b>kept</b> in
@@ -958,6 +1037,7 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// path; only the live MCP server receives the filtered alive set, since the
     /// filesystem server either rejects missing folders at startup or fails every
     /// per-tool call against them.
+    /// </para>
     /// <para>
     /// On a successful initial connection a single toast is posted so the user
     /// confirms "the workspace is now usable" without polling the UI. When some
