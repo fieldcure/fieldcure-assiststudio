@@ -8,7 +8,16 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            arch: x64
+          - os: windows-11-arm
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    name: build-${{ matrix.arch }}
 
     steps:
       - uses: actions/checkout@v4
@@ -20,10 +29,11 @@ jobs:
             8.0.x
             9.0.x
 
-      # Local dev pins SDK 10 preview via global.json, but windows-latest
-      # ships SDK 10.0.201 as the highest installed and lacks the matching
-      # VS 18 AppxPackage tooling, so WindowsAppSDK's MrtCore.PriGen fails.
-      # Rewrite global.json to pin SDK 9 for CI only.
+      # Local dev pins SDK 10 preview via global.json, but the hosted runners
+      # ship SDK 10.0.201 as the highest installed and lack the matching VS 18
+      # AppxPackage tooling, so WindowsAppSDK's MrtCore.PriGen fails. Rewrite
+      # global.json to pin SDK 9 for CI only. Same fix applies to both x64 and
+      # ARM64 runners.
       - name: Pin SDK to 9.0 for CI
         shell: pwsh
         run: |
@@ -49,10 +59,10 @@ jobs:
           Write-Host "Using AppxPackage tools from $appxToolsPath"
 
       - name: Restore
-        run: dotnet restore FieldCure.AssistStudio.slnx
+        run: dotnet restore FieldCure.AssistStudio.slnx -p:Platform=${{ matrix.arch }}
 
       - name: Build
-        run: dotnet build FieldCure.AssistStudio.slnx --no-restore --configuration Release -p:PublishProfile= -p:PublishReadyToRun=false
+        run: dotnet build FieldCure.AssistStudio.slnx --no-restore --configuration Release -p:Platform=${{ matrix.arch }} -p:PublishProfile= -p:PublishReadyToRun=false
 
       - name: Test
-        run: dotnet test FieldCure.AssistStudio.slnx --no-build --configuration Release --verbosity normal
+        run: dotnet test FieldCure.AssistStudio.slnx --no-build --configuration Release -p:Platform=${{ matrix.arch }} --verbosity normal
