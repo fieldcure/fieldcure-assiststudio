@@ -8,6 +8,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
+    <Platforms>AnyCPU;ARM64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
@@ -25,8 +26,7 @@
        equality/hash semantics can be tested from net8.0 without pulling in
        AssistStudio.Controls's net8.0-windows TFM. -->
   <ItemGroup>
-    <Compile Include="..\..\src\AssistStudio.Controls\ModelPicker\ModelPickerEntry.cs"
-             Link="ModelPicker\ModelPickerEntry.cs" />
+    <Compile Include="..\..\src\AssistStudio.Controls\ModelPicker\ModelPickerEntry.cs" Link="ModelPicker\ModelPickerEntry.cs" />
   </ItemGroup>
 
 </Project>

@@ -23,6 +23,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;claude;openai;gemini;ollama;llm;provider;streaming</PackageTags>
     <PackageReleaseNotes>v0.19.2: Rebuilt against FieldCure.Ai.Providers 0.7.2 so the Claude Opus 4.7 adaptive thinking-shape fix flows transitively to consumers of FieldCure.AssistStudio.Controls.WinUI / .Core (NuGet's lowest-applicable resolver previously stayed pinned to 0.7.1 through Core 0.19.1). No code or public API changes.</PackageReleaseNotes>
+    <Platforms>AnyCPU;ARM64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -23,6 +23,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;agent;execution;sub-agent;tool-use;llm</PackageTags>
     <PackageReleaseNotes>v0.4.1: README-only patch. The SubAgentExecutor quick-start sample on nuget.org passed a defaultPresetName argument that was removed in 0.3.0; the page now compiles as written and the lambda parameter name matches the renamed SubAgentRequest.ModelName property. No code, dependency, or behaviour change from 0.4.0.</PackageReleaseNotes>
+    <Platforms>AnyCPU;ARM64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>

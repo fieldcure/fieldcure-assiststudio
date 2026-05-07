@@ -1,9 +1,13 @@
 <Solution>
 
   <Configuration Solution="Debug|x64" />
-  <Configuration Solution="Debug|arm64" />
+  <Configuration Solution="Debug|ARM64" />
   <Configuration Solution="Release|x64" />
-  <Configuration Solution="Release|arm64" />
+  <Configuration Solution="Release|ARM64" />
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="ARM64" />
+  </Configurations>
   <Folder Name="/docs/">
     <File Path="docs/dependencies.md" />
     <File Path="README.md" />
@@ -17,30 +21,56 @@
   </Folder>
 
   <Folder Name="/src/">
-    <Project Path="src/Ai.Execution/Ai.Execution.csproj" />
-    <Project Path="src/Ai.Providers/Ai.Providers.csproj" />
-    <Project Path="src/AssistStudio.Anthropic/AssistStudio.Anthropic.csproj" />
-    <Project Path="src/AssistStudio.Controls/AssistStudio.Controls.csproj" />
-    <Project Path="src/AssistStudio.Controls.Anthropic/AssistStudio.Controls.Anthropic.csproj" />
-    <Project Path="src/AssistStudio.Core/AssistStudio.Core.csproj" />
+    <Project Path="src/Ai.Execution/Ai.Execution.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+    </Project>
+    <Project Path="src/Ai.Providers/Ai.Providers.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+    </Project>
+    <Project Path="src/AssistStudio.Anthropic/AssistStudio.Anthropic.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+    </Project>
+    <Project Path="src/AssistStudio.Controls.Anthropic/AssistStudio.Controls.Anthropic.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+    </Project>
+    <Project Path="src/AssistStudio.Controls/AssistStudio.Controls.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+    </Project>
+    <Project Path="src/AssistStudio.Core/AssistStudio.Core.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+    </Project>
     <Project Path="src/AssistStudio/AssistStudio.csproj" Id="ad2171d6-2c2f-4c6a-b467-425f09c13247">
-      <Platform Project="x64" />
+      <Platform Solution="*|ARM64" Project="ARM64" />
+      <Platform Solution="*|x64" Project="x64" />
       <Deploy />
     </Project>
   </Folder>
 
   <Folder Name="/tests/">
-    <Project Path="tests/Ai.Execution.Tests/Ai.Execution.Tests.csproj" />
-    <Project Path="tests/Ai.Providers.Tests/Ai.Providers.Tests.csproj" />
-    <Project Path="tests/AssistStudio.App.Tests/AssistStudio.App.Tests.csproj" />
-    <Project Path="tests/AssistStudio.Anthropic.Tests/AssistStudio.Anthropic.Tests.csproj" />
-    <Project Path="tests/AssistStudio.Core.Tests/AssistStudio.Core.Tests.csproj" />
-    <Project Path="tests/TestMcpServer/TestMcpServer.csproj" />
+    <Project Path="tests/Ai.Execution.Tests/Ai.Execution.Tests.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+    </Project>
+    <Project Path="tests/Ai.Providers.Tests/Ai.Providers.Tests.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+    </Project>
+    <Project Path="tests/AssistStudio.Anthropic.Tests/AssistStudio.Anthropic.Tests.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+    </Project>
+    <Project Path="tests/AssistStudio.App.Tests/AssistStudio.App.Tests.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+    </Project>
+    <Project Path="tests/AssistStudio.Core.Tests/AssistStudio.Core.Tests.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+    </Project>
+    <Project Path="tests/TestMcpServer/TestMcpServer.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+    </Project>
   </Folder>
 
   <Folder Name="/samples/">
     <Project Path="samples/AnthropicSdkSample/AnthropicSdkSample.csproj">
-      <Platform Project="x64" />
+      <Platform Solution="*|ARM64" Project="ARM64" />
+      <Platform Solution="*|x64" Project="x64" />
       <Deploy />
     </Project>
   </Folder>

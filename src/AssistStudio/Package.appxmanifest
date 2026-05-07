@@ -11,7 +11,7 @@
   <Identity
     Name="FieldCure.AssistStudio"
     Publisher="CN=A80E919A-6580-4166-AB2F-FE2743DB5FE2"
-    Version="0.18.1.0" />
+    Version="0.18.5.0" />
 
   <mp:PhoneIdentity PhoneProductId="35a3b62a-fec5-4067-8206-6b7c969b6389" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 

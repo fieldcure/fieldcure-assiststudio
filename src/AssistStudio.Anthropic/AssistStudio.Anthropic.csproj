@@ -22,6 +22,7 @@
     <PackageReleaseNotes>v0.1.0-preview.3: Rebuilt against Ai.Providers 0.7.0 (ProviderPreset → ProviderModel rename) and AssistStudio.Core 0.19.0 (Profile.PreferredModelName). No public API changes. Internal: ConvertAssistantMessage &lt;remarks&gt; documents the thinking-block drop rule (text-only multi-turn vs. tool_use 422) and the deferred signature-round-trip plan.</PackageReleaseNotes>
     <PackageIcon>icon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <Platforms>AnyCPU;ARM64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>

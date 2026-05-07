@@ -44,6 +44,13 @@
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.7705" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260209005" />
+    <!-- Pin Microsoft.Windows.SDK.BuildTools.MSIX to a fixed version newer than the
+         transitive 1.7.20250829.1 pulled by WindowsAppSDK 1.8: that build's
+         Microsoft.Windows.SDK.BuildTools.MSIX.Packaging.targets line 2327 invokes a
+         WinAppSdkSignAppxPackageBundle task that the bundled MSIX task assembly does
+         not actually export — bundle creation in VS's Create App Packages wizard
+         fails with MSB4036. Newer builds (260xxx series) include the missing class. -->
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools.MSIX" Version="1.7.260501103" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="9.*" />
     <PackageReference Include="ModelContextProtocol" Version="1.2.0" />
     <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.119.2" />
@@ -76,12 +83,12 @@
     <PublishTrimmed Condition="'$(Configuration)' != 'Debug'">False</PublishTrimmed>
     <GenerateTemporaryStoreCertificate>True</GenerateTemporaryStoreCertificate>
     <GenerateAppInstallerFile>False</GenerateAppInstallerFile>
-    <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
+    <AppxPackageSigningEnabled>False</AppxPackageSigningEnabled>
     <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
     <AppxAutoIncrementPackageRevision>True</AppxAutoIncrementPackageRevision>
     <GenerateTestArtifacts>True</GenerateTestArtifacts>
     <AppxBundle>Always</AppxBundle>
-    <AppxBundlePlatforms>x64</AppxBundlePlatforms>
+    <AppxBundlePlatforms>x64|arm64</AppxBundlePlatforms>
     <HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
   </PropertyGroup>
 </Project>
