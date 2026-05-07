@@ -58,6 +58,17 @@ public sealed partial class ComposeBar
     #region Tool Flyout
 
     /// <summary>
+    /// Raised whenever the user toggles a server in the tool-selection flyout.
+    /// The argument is the new <see cref="EnabledToolNames"/> set (<see langword="null"/>
+    /// means "all enabled"). Hosts subscribe to react to per-conversation tool
+    /// enable/disable — for example, the per-tab Filesystem MCP server is
+    /// connected only when its placeholder appears enabled in this list and
+    /// workspace folders are configured (see
+    /// <c>ChatTabViewModel.OnEnabledToolsChanged</c> for the full principle).
+    /// </summary>
+    public event EventHandler<IReadOnlyList<string>?>? EnabledToolsChanged;
+
+    /// <summary>
     /// Ensures the tools flyout instance exists and is attached to the tool button, creating
     /// it lazily on first use. Subsequent calls are no-ops.
     /// </summary>
@@ -66,7 +77,11 @@ public sealed partial class ComposeBar
         if (_toolButton is null || _toolFlyout is not null) return;
 
         _toolFlyout = new ToolSelectionFlyout();
-        _toolFlyout.SelectionChanged += (_, enabled) => EnabledToolNames = enabled;
+        _toolFlyout.SelectionChanged += (_, enabled) =>
+        {
+            EnabledToolNames = enabled;
+            EnabledToolsChanged?.Invoke(this, enabled);
+        };
         _toolButton.Flyout = _toolFlyout;
     }
 

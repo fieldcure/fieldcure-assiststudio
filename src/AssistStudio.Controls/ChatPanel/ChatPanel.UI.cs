@@ -904,6 +904,15 @@ public sealed partial class ChatPanel
     public event EventHandler<Profile>? ProfileChanged;
 
     /// <summary>
+    /// Occurs when the user toggles a server in the compose bar's tool-selection
+    /// flyout. The argument is the new enabled-tool-name set, or
+    /// <see langword="null"/> when all are enabled. Hosts subscribe to react
+    /// to per-conversation tool enable/disable — notably, the per-tab
+    /// Filesystem MCP server lifecycle keys off this event.
+    /// </summary>
+    public event EventHandler<IReadOnlyList<string>?>? EnabledToolsChanged;
+
+    /// <summary>
     /// Occurs when the user clicks the title edit button.
     /// </summary>
     public event EventHandler<string>? TitleEditRequested;
@@ -964,6 +973,7 @@ public sealed partial class ChatPanel
             _inputArea.MessageSent -= OnMessageSent;
             _inputArea.ModelChanged -= OnInputModelChanged;
             _inputArea.ProfileChanged -= OnInputProfileChanged;
+            _inputArea.EnabledToolsChanged -= OnInputEnabledToolsChanged;
             _inputArea.StopRequested -= OnStopRequested;
             _inputArea.EditCanceled -= OnComposeBarEditCanceled;
         }
@@ -1108,6 +1118,7 @@ public sealed partial class ChatPanel
             _inputArea.MessageSent += OnMessageSent;
             _inputArea.ModelChanged += OnInputModelChanged;
             _inputArea.ProfileChanged += OnInputProfileChanged;
+            _inputArea.EnabledToolsChanged += OnInputEnabledToolsChanged;
             _inputArea.StopRequested += OnStopRequested;
             _inputArea.EditCanceled += OnComposeBarEditCanceled;
             // Push current values (may have been set before template was applied)
@@ -1278,6 +1289,16 @@ public sealed partial class ChatPanel
         SystemPrompt = profile.SystemPrompt;
         ProfileChanged?.Invoke(this, profile);
     }
+
+    /// <summary>
+    /// Forwards the compose bar's tool-flyout selection change as
+    /// <see cref="EnabledToolsChanged"/> so hosts can react to per-conversation
+    /// tool enable/disable (notably the per-tab Filesystem MCP server lifecycle).
+    /// </summary>
+    /// <param name="sender">Source compose bar.</param>
+    /// <param name="enabled">New enabled-tool-name list, or <see langword="null"/> when all are enabled.</param>
+    private void OnInputEnabledToolsChanged(object? sender, IReadOnlyList<string>? enabled)
+        => EnabledToolsChanged?.Invoke(this, enabled);
 
     #endregion
 

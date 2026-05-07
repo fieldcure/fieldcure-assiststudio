@@ -687,6 +687,41 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
+    /// Handles per-conversation tool toggles raised by the compose bar's
+    /// tool-selection flyout. The flyout writes a list of enabled server names
+    /// into <c>ChatPanel.EnabledToolNames</c> (or <see langword="null"/> when
+    /// every server is enabled); this handler reconciles the per-tab Filesystem
+    /// MCP server's lifecycle with that change. Workspace folders stay on the
+    /// panel so the user can re-check filesystem later without losing them.
+    /// </summary>
+    /// <param name="sender">Source <see cref="ChatPanel"/>.</param>
+    /// <param name="enabled">New enabled-tool-name list, or <see langword="null"/> when all are enabled.</param>
+    public void OnEnabledToolsChanged(object? sender, IReadOnlyList<string>? enabled)
+    {
+        var filesystemServerId = $"builtin_{BuiltInServerHelper.FilesystemKey}";
+        // null means "all enabled", which includes filesystem implicitly.
+        var filesystemEnabled = enabled is null || enabled.Contains(filesystemServerId);
+        LoggingService.LogInfo(
+            $"[Tab] EnabledToolsChanged: filesystem={filesystemEnabled}, " +
+            $"folders={(Panel?.WorkspaceFolders?.Count ?? 0)}");
+
+        if (!filesystemEnabled)
+        {
+            if (_filesystemConnection is not null)
+            {
+                var connectionToRemove = _filesystemConnection;
+                _filesystemConnection = null;
+                _ = App.McpRegistry.RemoveAsync(connectionToRemove);
+            }
+        }
+        else if (_filesystemConnection is null
+                 && Panel?.WorkspaceFolders is { Count: > 0 } folders)
+        {
+            _ = TryConnectFilesystemAsync(folders, "OnEnabledToolsChanged");
+        }
+    }
+
+    /// <summary>
     /// Handles tool settings changes from the shared <see cref="Profile"/> instance —
     /// specifically the tool-list checkboxes that toggle which servers the
     /// active profile exposes. This is the third filesystem-connect trigger:
@@ -1007,15 +1042,19 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// </list>
     /// <para>
     /// Connection is triggered at the moment those two conditions <i>become</i>
-    /// true together, by exactly four call sites — and no others. Adding new
+    /// true together, by exactly five call sites — and no others. Adding new
     /// triggers is a layering violation; if a new state-change should connect
-    /// filesystem, route it through one of the existing four paths.
+    /// filesystem, route it through one of the existing five paths.
     /// </para>
     /// <list type="bullet">
     /// <item><see cref="OnProfileChanged"/> — user switches profile and the new
     /// profile has filesystem checked while folders are present.</item>
+    /// <item><see cref="OnEnabledToolsChanged"/> — user toggles the filesystem
+    /// checkbox in the compose bar's tool-selection flyout (per-conversation
+    /// override of the profile defaults).</item>
     /// <item><see cref="OnProfileToolSettingsChanged"/> — user toggles the
-    /// filesystem checkbox in the tool list while folders are present.</item>
+    /// filesystem checkbox in Settings → Profiles, mutating
+    /// <c>profile.EnabledServers</c> directly.</item>
     /// <item><see cref="OnWorkspaceFoldersChanged"/> — user adds the first
     /// folder while filesystem is already checked.</item>
     /// <item><see cref="AttachPanel"/> — restoring an .astx whose saved state

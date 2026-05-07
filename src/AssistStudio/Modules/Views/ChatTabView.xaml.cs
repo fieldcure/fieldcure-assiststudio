@@ -88,6 +88,7 @@ public sealed partial class ChatTabView : UserControl
     {
         Panel.ModelChanged += vm.OnModelChanged;
         Panel.ProfileChanged += vm.OnProfileChanged;
+        Panel.EnabledToolsChanged += vm.OnEnabledToolsChanged;
         Panel.TitleGenerated += vm.OnTitleGenerated;
         Panel.MessageAdded += vm.OnMessageAdded;
         Panel.TitleEditRequested += vm.OnTitleEditRequested;
@@ -108,6 +109,7 @@ public sealed partial class ChatTabView : UserControl
     {
         Panel.ModelChanged -= vm.OnModelChanged;
         Panel.ProfileChanged -= vm.OnProfileChanged;
+        Panel.EnabledToolsChanged -= vm.OnEnabledToolsChanged;
         Panel.TitleGenerated -= vm.OnTitleGenerated;
         Panel.MessageAdded -= vm.OnMessageAdded;
         Panel.TitleEditRequested -= vm.OnTitleEditRequested;
