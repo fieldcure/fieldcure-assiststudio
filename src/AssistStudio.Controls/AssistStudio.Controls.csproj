@@ -9,7 +9,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
-    <Version>0.20.0</Version>
+    <Version>0.21.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
@@ -25,7 +25,7 @@
     <RepositoryUrl>https://github.com/fieldcure/fieldcure-assiststudio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ai;chat;winui;winui3;controls;claude;openai;gemini;ollama;webview2</PackageTags>
-    <PackageReleaseNotes>v0.20.0: New public API — ChatPanel.GroupDisplayNameResolver and ComposeBar.GroupDisplayNameResolver (Func&lt;string, string?&gt;) so hosts can map raw ProviderType IDs (e.g., "Custom_046A…") to readable display names (e.g., "MiniMax") in the model picker group headers and the selected-model summary; falls back to the raw ProviderType (Mock → "demo") when unset. Greeting picks one of seven localized variants per render (en-US + ko-KR). Empty-state header now falls back to the greeting whenever Title is empty — switching the model mid-conversation no longer clobbers an auto-generated/user-edited title, and a transient pre-first-reply state no longer flashes the model id. Thinking block anchors above the streamed assistant text (matches tool-block placement). ChatPanel.Dispose now resets imperative per-tab state (current turn, edit-mode flag, draft text, attachments, workspace folders, KB selection, conversation-active flag) so a recycled container can't leak the previous tab's UI state into the next. Rebuilt against same Core 0.19.1 + Ai.Providers 0.7.2.</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.21.0: New public surface — ChatPanel.EnabledToolNames getter plus ChatPanel.EnabledToolsChanged and ComposeBar.EnabledToolsChanged events let hosts react to the compose-bar tool-flyout toggle for per-conversation lifecycle decisions (notably the per-tab Filesystem MCP server in AssistStudio's reconciler). Workspace folder flyout now marks missing-on-disk folders with a Warning glyph (Segoe Fluent E7BA), re-evaluated on each Flyout.Opening so a re-attached external drive clears the icon naturally. Bug fixes: folder removal disappears immediately instead of lingering until the flyout reopens; multiple removals in one open session no longer resurrect each other; pasted-text attachment chips are now openable; attachment previews render inline within the user bubble; branch nav arrows lock during streaming. Rebuilt against same Core 0.19.2 + Ai.Providers 0.7.2.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

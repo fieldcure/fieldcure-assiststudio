@@ -1,5 +1,23 @@
 ﻿# Release Notes — FieldCure.AssistStudio.Controls.WinUI
 
+## v0.21.0 (2026-05-07)
+
+### Added
+- **`ChatPanel.EnabledToolNames` getter** + **`ChatPanel.EnabledToolsChanged` event** + **`ComposeBar.EnabledToolsChanged` event** — hosts can now react to per-conversation tool-flyout toggles. Read `EnabledToolNames` live (`null` = all enabled, otherwise the strict subset the user wants visible to the model on the next send) for lifecycle decisions tied to a per-conversation tool override; subscribe to the event to fire side effects when the user checks or unchecks a server. The compose-bar flyout already raised `SelectionChanged` internally; this release re-emits it as a public event chain (ToolSelectionFlyout → ComposeBar → ChatPanel) so the host does not have to subclass either control. Notably consumed by AssistStudio's per-tab Filesystem MCP reconciler.
+- **Workspace folder missing-on-disk indicator** — folder flyout now renders Segoe Fluent Icons E7BA (Warning) next to any folder that does not exist on disk (e.g., moved, renamed, or unmounted external drive). New resw key `FolderFlyout_FolderMissing` carries the tooltip; existence is re-evaluated each time the flyout opens, so a re-attached drive clears the icon naturally without a host-side refresh. Companion to host-side toast logic that downgrades severity to Warning when alive folders < total.
+
+### Fixed
+- **Workspace folder removal lingered in the flyout until reopen** — the trash button updated `WorkspaceFolders` and fired `WorkspaceFoldersChanged` but did not touch the bound `ObservableCollection<FolderFlyoutItemViewModel>`. The deleted row now disappears in the same frame.
+- **Multiple removals in one flyout open could resurrect a previously deleted folder** — the remove lambda used the snapshot captured when the flyout opened, so a second click would compute its update against the original list and write the first deletion back. The lambda now reads `WorkspaceFolders` live each click.
+- **Pasted-text attachment chips were inert** — clicking a pasted-text chip did nothing where file chips opened a preview. The chip now wires the same OpenAttachment handler as file attachments.
+- **Attachment previews now render inside the user bubble** — image and document previews previously sat above the bubble; they now appear inline alongside the message text, matching standard chat UX.
+- **Branch nav arrows lock during streaming** — clicking a branch arrow mid-stream could leave the conversation tree inconsistent. Arrows now disable while a turn is streaming.
+
+### Changed
+- Rebuilt against same **FieldCure.AssistStudio.Core 0.19.2** and **FieldCure.Ai.Providers 0.7.2**. No new transitive deps.
+
+---
+
 ## v0.20.0 (2026-05-05)
 
 ### Added
