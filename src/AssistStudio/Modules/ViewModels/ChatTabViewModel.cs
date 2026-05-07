@@ -66,6 +66,34 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     private McpServerConnection? _filesystemConnection;
 
     /// <summary>
+    /// Latest "should the per-tab Filesystem MCP server be running?" intent. Written
+    /// by every lifecycle trigger (<see cref="OnProfileChanged"/>, <see cref="OnEnabledToolsChanged"/>,
+    /// <see cref="OnProfileToolSettingsChanged"/>, <see cref="OnWorkspaceFoldersChanged"/>,
+    /// <see cref="AttachPanel"/>) right before they kick the reconciler. Read by
+    /// <see cref="ReconcileFilesystemAsync"/>'s post-apply verification loop so a
+    /// state change that arrived during the previous apply is not lost.
+    /// </summary>
+    /// <remarks>
+    /// Marked <see langword="volatile"/> as a low-cost guarantee: in the current
+    /// code base every reader and writer ends up on the UI synchronization
+    /// context (no <c>ConfigureAwait(false)</c> on the awaits), but a future
+    /// edit that drops the captured context elsewhere should not silently
+    /// reintroduce a cross-thread visibility bug. The keyword documents the
+    /// shared-flag intent more clearly than a comment alone.
+    /// </remarks>
+    private volatile bool _filesystemDesiredOn;
+
+    /// <summary>
+    /// Serializes per-tab Filesystem MCP server lifecycle work (connect, disconnect,
+    /// reconnect with new folders). Without this, rapid clicks in the compose bar
+    /// tool-selection flyout could spawn two concurrent connect tasks both writing
+    /// <see cref="_filesystemConnection"/>, leaking the loser as an orphaned subprocess
+    /// in the registry. Held only across the lifecycle method call; readers of
+    /// <see cref="_filesystemConnection"/> elsewhere do not contend on it.
+    /// </summary>
+    private readonly SemaphoreSlim _filesystemLifecycleLock = new(1, 1);
+
+    /// <summary>
     /// Cached sub-agent tool instance. Invalidated on preset change.
     /// </summary>
     private SubAgentTool? _subAgentTool;
@@ -468,47 +496,17 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
                 () => panel.FocusInput());
         }
 
-        // .astx restore is the fourth filesystem-connect trigger (alongside
-        // OnProfileChanged, OnWorkspaceFoldersChanged, and the tool-list
-        // toggle in OnProfileToolSettingsChanged). At this point the saved
-        // state has been applied: panel.IsWorkspaceEnabled reflects whether
-        // "filesystem" is checked in the active profile, and panel.WorkspaceFolders
-        // holds whatever the conversation had on save. If both are true,
-        // spawn the per-tab Filesystem MCP subprocess so the AI's tool list
-        // gets read_file / list_directory on the very first send rather than
-        // forcing the user to toggle Workspace off-and-on.
-        //
-        // Fire-and-forget intentionally — awaiting here would suspend
-        // AttachPanel for the duration of the dnx fetch + serve startup
-        // (1-3 s on a cold cache) and that would visibly delay the
-        // force-push tools block above. ConnectFilesystemAsync flows its own
-        // toast and triggers McpRegistry.ToolsChanged on completion, which
-        // the registry-level RefreshTools subscriber handles.
-        if (panel.IsWorkspaceEnabled
-            && panel.WorkspaceFolders is { Count: > 0 } restoredFolders)
-        {
-            _ = TryConnectFilesystemAsync(restoredFolders, "AttachPanel/.astx restore");
-        }
-    }
-
-    /// <summary>
-    /// Wraps <see cref="ConnectFilesystemAsync"/> in a try/catch for fire-and-forget
-    /// callers (such as <see cref="AttachPanel"/>) so an exception does not surface
-    /// as an unobserved task — the connect is best-effort and any failure is logged
-    /// rather than crashing the tab restore flow.
-    /// </summary>
-    /// <param name="folders">Folders to pass to <see cref="ConnectFilesystemAsync"/>.</param>
-    /// <param name="origin">Short label included in failure logs to identify the caller.</param>
-    private async Task TryConnectFilesystemAsync(IReadOnlyList<string> folders, string origin)
-    {
-        try
-        {
-            await ConnectFilesystemAsync(folders);
-        }
-        catch (Exception ex)
-        {
-            LoggingService.LogWarning($"[Tab] Filesystem connect failed ({origin}): {ex.Message}");
-        }
+        // .astx restore is the fifth filesystem-lifecycle trigger (alongside
+        // OnProfileChanged, OnEnabledToolsChanged, OnProfileToolSettingsChanged,
+        // and OnWorkspaceFoldersChanged). At this point the saved state has
+        // been applied: panel.IsWorkspaceEnabled reflects whether "filesystem"
+        // is checked in the active profile, and panel.WorkspaceFolders holds
+        // whatever the conversation had on save. The reconciler reads both
+        // and brings the connection up if appropriate, on its own task — we
+        // do not await here because that would suspend AttachPanel for the
+        // duration of the dnx fetch + serve startup (1–3 s on a cold cache)
+        // and visibly delay the force-push tools block above.
+        RequestFilesystemReconcile();
     }
 
     #endregion
@@ -690,73 +688,29 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// Handles per-conversation tool toggles raised by the compose bar's
     /// tool-selection flyout. The flyout writes a list of enabled server names
     /// into <c>ChatPanel.EnabledToolNames</c> (or <see langword="null"/> when
-    /// every server is enabled); this handler reconciles the per-tab Filesystem
-    /// MCP server's lifecycle with that change. Workspace folders stay on the
-    /// panel so the user can re-check filesystem later without losing them.
+    /// every server is enabled). All filesystem-lifecycle decisions go through
+    /// the reconciler, which reads <see cref="ChatPanel.EnabledToolNames"/>
+    /// live — passing the event argument here would be redundant and would
+    /// risk drift if the property and event ever disagree.
     /// </summary>
     /// <param name="sender">Source <see cref="ChatPanel"/>.</param>
-    /// <param name="enabled">New enabled-tool-name list, or <see langword="null"/> when all are enabled.</param>
+    /// <param name="enabled">New enabled-tool-name list (handled via reconciler reading live state).</param>
     public void OnEnabledToolsChanged(object? sender, IReadOnlyList<string>? enabled)
-    {
-        var filesystemServerId = $"builtin_{BuiltInServerHelper.FilesystemKey}";
-        // null means "all enabled", which includes filesystem implicitly.
-        var filesystemEnabled = enabled is null || enabled.Contains(filesystemServerId);
-        LoggingService.LogInfo(
-            $"[Tab] EnabledToolsChanged: filesystem={filesystemEnabled}, " +
-            $"folders={(Panel?.WorkspaceFolders?.Count ?? 0)}");
-
-        if (!filesystemEnabled)
-        {
-            if (_filesystemConnection is not null)
-            {
-                var connectionToRemove = _filesystemConnection;
-                _filesystemConnection = null;
-                _ = App.McpRegistry.RemoveAsync(connectionToRemove);
-            }
-        }
-        else if (_filesystemConnection is null
-                 && Panel?.WorkspaceFolders is { Count: > 0 } folders)
-        {
-            _ = TryConnectFilesystemAsync(folders, "OnEnabledToolsChanged");
-        }
-    }
+        => RequestFilesystemReconcile();
 
     /// <summary>
-    /// Handles tool settings changes from the shared <see cref="Profile"/> instance —
-    /// specifically the tool-list checkboxes that toggle which servers the
-    /// active profile exposes. This is the third filesystem-connect trigger:
-    /// when the user checks <c>filesystem</c> in the tool list while
-    /// <c>WorkspaceFolders</c> already has folders, the per-tab Filesystem
-    /// subprocess must come up; conversely, unchecking the tool tears the
-    /// connection down so the registry no longer advertises stale file tools.
+    /// Handles profile-level tool-settings changes (the per-server checkboxes
+    /// in Settings → Profiles, which mutate <see cref="Profile.EnabledServers"/>
+    /// directly). Differs from <see cref="OnEnabledToolsChanged"/>, which
+    /// handles the per-conversation override in the compose bar. Both
+    /// converge on <see cref="RequestFilesystemReconcile"/>.
     /// </summary>
     private void OnProfileToolSettingsChanged(object? sender, EventArgs e)
     {
         if (sender is not Profile profile) return;
         LoggingService.LogInfo($"[Tab] Profile.ToolSettingsChanged: {profile.Name}");
         RefreshTools();
-
-        // Reconcile filesystem connection state with the new "checked / not"
-        // setting. Folders are kept on the panel regardless of the toggle,
-        // matching the same disconnect-but-preserve behavior used by
-        // OnProfileChanged when the new profile turns workspace off.
-        var filesystemServerId = $"builtin_{BuiltInServerHelper.FilesystemKey}";
-        var isWorkspaceEnabled = profile.EnabledServers.Contains(filesystemServerId);
-
-        if (!isWorkspaceEnabled)
-        {
-            if (_filesystemConnection is not null)
-            {
-                var connectionToRemove = _filesystemConnection;
-                _filesystemConnection = null;
-                _ = App.McpRegistry.RemoveAsync(connectionToRemove);
-            }
-        }
-        else if (_filesystemConnection is null
-                 && Panel?.WorkspaceFolders is { Count: > 0 } folders)
-        {
-            _ = TryConnectFilesystemAsync(folders, "OnProfileToolSettingsChanged");
-        }
+        RequestFilesystemReconcile();
     }
 
     /// <summary>
@@ -824,8 +778,11 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// Handles profile changes by updating the system prompt, workspace folders, and registered tools.
+    /// Filesystem connection lifecycle goes through <see cref="RequestFilesystemReconcile"/>
+    /// (the reconciler reads the just-updated <c>panel.IsWorkspaceEnabled</c>
+    /// and live folder list).
     /// </summary>
-    public async void OnProfileChanged(object? _sender, Profile profile)
+    public void OnProfileChanged(object? _sender, Profile profile)
     {
         LoggingService.LogInfo($"[Tab] Profile changed: {profile.Name}");
 
@@ -837,35 +794,16 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         SystemPrompt = profile.SystemPrompt;
         AppendSpecialistGuideline(profile);
 
-        // Update workspace capability: profile decides if filesystem is enabled
+        // Update capability flags so the reconciler / UI both read consistent state.
         var filesystemServerId = $"builtin_{BuiltInServerHelper.FilesystemKey}";
-        var isWorkspaceEnabled = profile.EnabledServers.Contains(filesystemServerId);
-
+        var ragServerId = $"builtin_{BuiltInServerHelper.RagKey}";
         if (Panel is not null)
         {
-            Panel.IsWorkspaceEnabled = isWorkspaceEnabled;
-
-            if (!isWorkspaceEnabled)
-            {
-                // Workspace disabled: disconnect server but preserve folder data
-                if (_filesystemConnection is not null)
-                {
-                    await App.McpRegistry.RemoveAsync(_filesystemConnection);
-                    _filesystemConnection = null;
-                }
-            }
-            else
-            {
-                // Workspace enabled: reconnect if conversation has folders
-                var folders = Panel.WorkspaceFolders;
-                if (folders is { Count: > 0 })
-                    await ConnectFilesystemAsync(folders);
-            }
-
-            // Knowledge Base capability (shared server — no per-tab connect/disconnect)
-            var ragServerId = $"builtin_{BuiltInServerHelper.RagKey}";
+            Panel.IsWorkspaceEnabled = profile.EnabledServers.Contains(filesystemServerId);
             Panel.IsKnowledgeBaseEnabled = profile.EnabledServers.Contains(ragServerId);
         }
+
+        RequestFilesystemReconcile();
 
         // Resolve tools from both built-in and MCP sources
         ResolveTools(profile);
@@ -941,9 +879,16 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Handles workspace folder changes from the title bar flyout.
-    /// If the per-tab Filesystem server is already connected, updates folders via
-    /// roots protocol (no process restart). Otherwise connects a new server instance.
+    /// Handles workspace folder changes from the title bar flyout. Saves the
+    /// new folder list onto the conversation, then either:
+    /// <list type="bullet">
+    /// <item>updates the live MCP server's roots in-place when filesystem is
+    /// already connected and folders remain non-empty (cheap, no subprocess
+    /// restart), or</item>
+    /// <item>defers to <see cref="RequestFilesystemReconcile"/> for any state
+    /// transition that flips the desired connect/disconnect bit (first folder
+    /// added, last folder removed).</item>
+    /// </list>
     /// </summary>
     public async void OnWorkspaceFoldersChanged(object? _sender, IReadOnlyList<string> folders)
     {
@@ -958,22 +903,21 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
             : null;
         IsDirty = true;
 
-        // Only connect/update server if profile has Workspace enabled
-        var filesystemServerId = $"builtin_{BuiltInServerHelper.FilesystemKey}";
-        var isWorkspaceEnabled = Panel?.SelectedProfile?.EnabledServers.Contains(filesystemServerId) ?? false;
-
-        if (isWorkspaceEnabled)
+        // Roots-update fast path: already connected with at least one folder
+        // remaining means we are still in the "desiredOn=true" state and only
+        // the folder set changed. Notify the running server via roots protocol
+        // and avoid the reconciler's disconnect+reconnect cost.
+        if (_filesystemConnection is not null
+            && _filesystemConnection.IsConnected
+            && folders.Count > 0)
         {
-            // Already connected → roots notification only (no process restart)
-            if (_filesystemConnection is not null && _filesystemConnection.IsConnected && folders.Count > 0)
-            {
-                await _filesystemConnection.UpdateWorkspaceFoldersAsync(folders);
-            }
-            else
-            {
-                // First connection or all folders removed
-                await ConnectFilesystemAsync(folders);
-            }
+            await _filesystemConnection.UpdateWorkspaceFoldersAsync(folders);
+        }
+        else
+        {
+            // Any other state transition (first connect, last folder removed,
+            // filesystem disabled in profile) goes through the reconciler.
+            RequestFilesystemReconcile();
         }
 
         ResolveTools(Panel?.SelectedProfile);
@@ -1026,6 +970,121 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     #region Private Methods
 
     /// <summary>
+    /// Reads live state and computes whether the per-tab Filesystem MCP server
+    /// should be running. Returns <see langword="true"/> iff filesystem appears
+    /// in the conversation's effective tool list <i>and</i> at least one
+    /// workspace folder is configured. The effective check layers
+    /// <c>panel.IsWorkspaceEnabled</c> (profile says "filesystem allowed") on
+    /// top of <c>panel.EnabledToolNames</c> (per-conversation override that may
+    /// hide it). Pure read — does not touch the connection.
+    /// </summary>
+    private bool ComputeFilesystemDesiredOn()
+    {
+        if (Panel?.IsWorkspaceEnabled != true) return false;
+
+        var enabled = Panel.EnabledToolNames;
+        var fsId = $"builtin_{BuiltInServerHelper.FilesystemKey}";
+        // null means "no override → all profile servers enabled", so filesystem
+        // is implicitly on. A non-null list is the strict subset to keep.
+        if (enabled is not null && !enabled.Contains(fsId, StringComparer.OrdinalIgnoreCase))
+            return false;
+
+        return Panel.WorkspaceFolders is { Count: > 0 };
+    }
+
+    /// <summary>
+    /// Single entry point for filesystem-lifecycle triggers. Records the
+    /// current desired state into <see cref="_filesystemDesiredOn"/> and
+    /// kicks off <see cref="ReconcileFilesystemAsync"/>. Multiple concurrent
+    /// callers (e.g., rapid clicks in the compose-bar tool flyout) collapse
+    /// safely: the last writer wins via the do-while verification loop
+    /// inside the reconciler, and the <see cref="_filesystemLifecycleLock"/>
+    /// semaphore prevents two AddAndConnectAsync calls from racing on the
+    /// same per-tab id.
+    /// </summary>
+    private void RequestFilesystemReconcile()
+    {
+        _filesystemDesiredOn = ComputeFilesystemDesiredOn();
+        LoggingService.LogInfo(
+            $"[Tab] Filesystem reconcile requested: desired={_filesystemDesiredOn}, " +
+            $"current={(_filesystemConnection is not null ? "connected" : "none")}");
+        _ = ReconcileFilesystemAsync();
+    }
+
+    /// <summary>
+    /// Drives <see cref="_filesystemConnection"/> toward
+    /// <see cref="_filesystemDesiredOn"/>. The semaphore serializes lifecycle
+    /// ops so two connect calls cannot race on the per-tab id. Loop re-checks
+    /// desired after await; collapses superseded toggles into idempotent
+    /// no-ops without releasing the lock. A small iteration cap turns a
+    /// hypothetical reentry bug (a future edit that calls
+    /// <see cref="RequestFilesystemReconcile"/> from inside an apply) into a
+    /// loud warning instead of a hung reconciler.
+    /// </summary>
+    private async Task ReconcileFilesystemAsync()
+    {
+        const int MaxIterations = 8;
+        await _filesystemLifecycleLock.WaitAsync();
+        try
+        {
+            bool last;
+            var iterations = 0;
+            do
+            {
+                last = _filesystemDesiredOn;
+                await ApplyFilesystemDesiredAsync(last);
+                if (++iterations >= MaxIterations)
+                {
+                    // Either a user is flipping the toggle faster than apply
+                    // completes (extremely unlikely past a couple of cycles)
+                    // or the reconciler is being re-triggered from inside an
+                    // apply. Either way, stop instead of looping forever and
+                    // log so the cause is visible.
+                    LoggingService.LogWarning(
+                        $"[Tab] Filesystem reconcile capped at {MaxIterations} iterations " +
+                        $"(last desired={_filesystemDesiredOn}); breaking to avoid lock starvation.");
+                    break;
+                }
+            } while (last != _filesystemDesiredOn);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.LogWarning($"[Tab] Filesystem reconcile failed: {ex.Message}");
+        }
+        finally
+        {
+            _filesystemLifecycleLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Performs one apply step toward the given desired state. Idempotent:
+    /// connect when off-but-want-on (and folders are present), disconnect
+    /// when on-but-want-off, no-op otherwise.
+    /// </summary>
+    /// <param name="desiredOn">Target state for this apply pass.</param>
+    private async Task ApplyFilesystemDesiredAsync(bool desiredOn)
+    {
+        if (desiredOn)
+        {
+            if (_filesystemConnection is null
+                && Panel?.WorkspaceFolders is { Count: > 0 } folders)
+            {
+                await ConnectFilesystemAsync(folders);
+            }
+        }
+        else
+        {
+            if (_filesystemConnection is not null)
+            {
+                var conn = _filesystemConnection;
+                _filesystemConnection = null;
+                await App.McpRegistry.RemoveAsync(conn);
+            }
+        }
+    }
+
+    /// <summary>
     /// Connects (or reconnects) the per-tab Filesystem MCP server with the folders
     /// that currently exist on disk.
     /// </summary>
@@ -1035,31 +1094,34 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// The per-tab Filesystem subprocess exists if and only if <i>both</i> of:
     /// </para>
     /// <list type="number">
-    /// <item><c>filesystem</c> is checked in the active profile's tool list
-    /// (i.e., <c>profile.EnabledServers</c> contains
-    /// <c>builtin_filesystem</c>), AND</item>
+    /// <item><c>filesystem</c> is enabled in the conversation's effective tool
+    /// list — that is, <c>profile.EnabledServers</c> contains
+    /// <c>builtin_filesystem</c> <i>and</i> the per-conversation override
+    /// (<see cref="ChatPanel.EnabledToolNames"/>) does not strip it out, AND</item>
     /// <item>at least one workspace folder is configured on the panel.</item>
     /// </list>
     /// <para>
-    /// Connection is triggered at the moment those two conditions <i>become</i>
-    /// true together, by exactly five call sites — and no others. Adding new
-    /// triggers is a layering violation; if a new state-change should connect
-    /// filesystem, route it through one of the existing five paths.
+    /// All lifecycle work goes through a single reconciler entry point,
+    /// <see cref="RequestFilesystemReconcile"/>, which records the desired
+    /// state into <see cref="_filesystemDesiredOn"/> and drives the connection
+    /// toward it under <see cref="_filesystemLifecycleLock"/>. The five
+    /// trigger sites listed below each just call <c>RequestFilesystemReconcile</c> —
+    /// they do not call <c>ConnectFilesystemAsync</c> or <c>RemoveAsync</c>
+    /// directly. Bypassing the reconciler is a layering violation that
+    /// re-opens the rage-click subprocess-leak race.
     /// </para>
     /// <list type="bullet">
-    /// <item><see cref="OnProfileChanged"/> — user switches profile and the new
-    /// profile has filesystem checked while folders are present.</item>
-    /// <item><see cref="OnEnabledToolsChanged"/> — user toggles the filesystem
-    /// checkbox in the compose bar's tool-selection flyout (per-conversation
-    /// override of the profile defaults).</item>
-    /// <item><see cref="OnProfileToolSettingsChanged"/> — user toggles the
-    /// filesystem checkbox in Settings → Profiles, mutating
-    /// <c>profile.EnabledServers</c> directly.</item>
-    /// <item><see cref="OnWorkspaceFoldersChanged"/> — user adds the first
-    /// folder while filesystem is already checked.</item>
+    /// <item><see cref="OnProfileChanged"/> — user switches profile.</item>
+    /// <item><see cref="OnEnabledToolsChanged"/> — user toggles a server in
+    /// the compose bar's tool-selection flyout (per-conversation override).</item>
+    /// <item><see cref="OnProfileToolSettingsChanged"/> — user toggles a
+    /// server in Settings → Profiles, mutating <c>profile.EnabledServers</c>.</item>
+    /// <item><see cref="OnWorkspaceFoldersChanged"/> — user adds or removes a
+    /// folder. Already-connected + folder-set-changed takes the cheap roots
+    /// notification fast path; any state transition that flips the
+    /// connect/disconnect bit goes through the reconciler.</item>
     /// <item><see cref="AttachPanel"/> — restoring an .astx whose saved state
-    /// already satisfies both conditions (fire-and-forget at the end of the
-    /// method so the compose bar's force-push tools block is not delayed).</item>
+    /// already satisfies both conditions.</item>
     /// </list>
     /// <para>
     /// Send-time logic in <see cref="PrepareToolsForSendAsync"/> is for

@@ -866,6 +866,17 @@ public sealed partial class ChatPanel
     }
 
     /// <summary>
+    /// Gets the per-conversation tool override set chosen by the user via the
+    /// compose bar's tool-selection flyout. <see langword="null"/> means
+    /// "every server in <see cref="RegisteredTools"/> is enabled" (the default).
+    /// A non-null list is the strict subset the user wants visible to the
+    /// model on the next send. Hosts read this for lifecycle decisions that
+    /// depend on the override (e.g., the per-tab Filesystem MCP reconciler
+    /// needs to know whether <c>builtin_filesystem</c> survived the override).
+    /// </summary>
+    public IReadOnlyList<string>? EnabledToolNames => _inputArea?.EnabledToolNames;
+
+    /// <summary>
     /// Gets or sets the conversation title displayed in the title bar.
     /// </summary>
     public string? Title
