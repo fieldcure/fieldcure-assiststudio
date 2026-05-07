@@ -58,11 +58,33 @@ jobs:
           "AppxMSBuildToolsPath=$appxToolsPath\" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Using AppxPackage tools from $appxToolsPath"
 
+      # SDK 9's slnx metaproj generator rejects -p:Platform=x64/arm64 with
+      # MSB4126 ("solution configuration is invalid") even though the slnx
+      # declares those configs. csproj-direct invocations don't go through
+      # the metaproj path and accept -p:Platform cleanly. So:
+      #   - Restore at slnx level (no -p:Platform) — pulls platform-agnostic
+      #     NuGet assets for every project in the solution at once.
+      #   - Build + Test invoke each csproj directly with -p:Platform so the
+      #     matrix actually exercises x64 and arm64 code paths instead of
+      #     defaulting to slnx's first config.
       - name: Restore
-        run: dotnet restore FieldCure.AssistStudio.slnx -p:Platform=${{ matrix.arch }}
+        run: dotnet restore FieldCure.AssistStudio.slnx
 
-      - name: Build
-        run: dotnet build FieldCure.AssistStudio.slnx --no-restore --configuration Release -p:Platform=${{ matrix.arch }} -p:PublishProfile= -p:PublishReadyToRun=false
+      - name: Build (AssistStudio app + transitive deps)
+        run: dotnet build src/AssistStudio/AssistStudio.csproj --no-restore --configuration Release -p:Platform=${{ matrix.arch }} -p:PublishProfile= -p:PublishReadyToRun=false
 
       - name: Test
-        run: dotnet test FieldCure.AssistStudio.slnx --no-build --configuration Release -p:Platform=${{ matrix.arch }} --verbosity normal
+        shell: pwsh
+        run: |
+          $tests = @(
+            'tests/Ai.Execution.Tests/Ai.Execution.Tests.csproj',
+            'tests/Ai.Providers.Tests/Ai.Providers.Tests.csproj',
+            'tests/AssistStudio.App.Tests/AssistStudio.App.Tests.csproj',
+            'tests/AssistStudio.Anthropic.Tests/AssistStudio.Anthropic.Tests.csproj',
+            'tests/AssistStudio.Core.Tests/AssistStudio.Core.Tests.csproj'
+          )
+          foreach ($t in $tests) {
+            Write-Host "=== $t ==="
+            dotnet test $t --configuration Release -p:Platform=${{ matrix.arch }} --verbosity normal
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
