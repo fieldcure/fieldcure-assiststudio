@@ -981,6 +981,14 @@ public sealed partial class ChatPanel
                     DiagnosticLogger.LogInfo($"[Tool] Result: {call.FunctionName}, length={execResult.Text.Length}");
                     LogStructuredToolResult(call.FunctionName, execResult.Text);
                 }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                {
+                    // User pressed STOP during tool execution — not an error.
+                    DiagnosticLogger.LogInfo($"[Tool] Cancelled by user: {call.FunctionName}");
+                    execResult = new ToolExecutionResult(
+                        System.Text.Json.JsonSerializer.Serialize(new { error = "The operation was canceled." }));
+                    isError = true;
+                }
                 catch (Exception ex)
                 {
                     DiagnosticLogger.LogWarning($"[Tool] Execution error: {call.FunctionName} — {ex.Message}");
@@ -1097,6 +1105,16 @@ public sealed partial class ChatPanel
                             DiagnosticLogger.LogInfo($"[Tool] Sub-Agent result: {call.Id}, length={execResult.Text.Length}");
                             LogStructuredToolResult(call.FunctionName, execResult.Text);
                             noteForPending = approvedEntry.UserNote;
+                        }
+                        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                        {
+                            // User pressed STOP — not an error, no stack trace needed.
+                            // Distinguish from sub-agent internal timeout (where ct stays uncancelled)
+                            // and from any other unexpected cancellation.
+                            DiagnosticLogger.LogInfo($"[Tool] Sub-Agent cancelled by user: {call.Id}");
+                            execResult = new ToolExecutionResult(
+                                System.Text.Json.JsonSerializer.Serialize(new { error = "The operation was canceled." }));
+                            isError = true;
                         }
                         catch (Exception ex)
                         {
