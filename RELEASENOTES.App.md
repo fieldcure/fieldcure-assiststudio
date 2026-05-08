@@ -1,5 +1,44 @@
 ﻿# Release Notes — AssistStudio App
 
+## v1.0.0 (2026-05-08)
+
+**General Availability — Microsoft Store release.**
+
+The 1.0 milestone marks the Microsoft Store debut of AssistStudio. The app ships as a multi-architecture MSIX bundle (Windows x64 and ARM64), with the six built-in MCP servers (Essentials, Filesystem, Knowledge Base, Outbox, PublicData.Kr, Runner) fetched on first launch from NuGet and cached locally. There are no functional removals from the 0.18 line — most of the diff is first-launch hardening, lifecycle hygiene, and Store packaging.
+
+### Added
+- **Windows on ARM** — multi-arch MSIX bundle (`x64|arm64`) for Snapdragon X and Copilot+ PCs. CI gained a `windows-11-arm` matrix that builds and tests directly through csproj entries to bypass the current `slnx` limitation on the ARM runner image.
+- **Filesystem MCP lifecycle reconciler** — a single state-driven reconciler now owns connect/disconnect for the workspace-folders set. Toggling the compose-bar tool, restoring an `.astx` file, and editing folders all converge through the same path; spurious mid-stream connects and orphan roots are gone.
+- **Auto-reconnect Filesystem MCP on `.astx` restore** — opening a saved conversation now wires up the workspace folders captured in the archive (deferred to the end of `AttachPanel` so it never races the chat surface).
+- **Unified MCP startup infobar** — built-in and external MCP servers share one progress infobar at launch instead of stacking two banners. Per-connection elapsed time is logged for diagnostic transparency.
+- **Workspace-folder UX polish** — connect toast on add, missing folders surfaced in the attach flyout with an explicit re-add affordance, immediate row removal on remove click (no full flyout repaint).
+- **Inline attachment previews** — attachments render inside the user bubble (image thumbs, document chips with filename/extension), not as generic external chips.
+- **Pasted-text chips are now openable** — click to inspect the captured text.
+- **Custom-provider display names in ModelPicker** — providers added through the OpenAI-compatible custom flow show their display name in the model picker, not the internal `Custom_<id>` key.
+- **Provider models persisted as a JSON file** — provider/model state lives in its own JSON next to settings, decoupling model migrations from the main settings schema.
+
+### Changed
+- **Thinking block renders above the streamed content** — visually upstream of the answer, matching the chronology of the model's chain-of-thought.
+- **Adaptive thinking shape for Claude Opus 4.7+** — matches the SDK's new thinking-block shape.
+- **Empty title falls back to the empty-state header** — no more visually empty title bar on first launch or fresh tabs.
+
+### Fixed
+- **Branch nav arrows are locked while a turn streams** — prevents the corruption that occurred when the user clicked between branches mid-response.
+- **Attachments and tool media restore on inactive branches** — older `.astx` files with branched histories no longer drop attachments off the non-active branch on reload.
+- **RAG `already_running` recovery** — when the RAG server reports an indexing run is already in progress but no run actually exists, the App treats it as a benign idempotent retry instead of surfacing an error.
+- **Clean-PC first-launch RAG failure** — the App no longer spawns a separate `prune-orphans` step at startup. RAG `serve` self-prunes orphan KB folders since v2.4.4, eliminating the race that previously broke RAG on a fresh machine.
+
+### Removed
+- **Dead memory tools in Core** — the legacy memory subsystem was superseded by the Essentials MCP server's persistent memory tools and is now deleted.
+
+### Rebuilt against
+- `FieldCure.AssistStudio.Controls.WinUI` 0.21.0 (filesystem reconciler integration, attachment preview surface, workspace-folder UX polish, ARM64-clean assets)
+- `FieldCure.AssistStudio.Core` 0.19.2 (provider-models JSON persistence; legacy memory tools removed)
+- `FieldCure.Ai.Providers` 0.7.2 (adaptive thinking shape for Opus 4.7+, custom-provider display name surfaced)
+- `FieldCure.Ai.Execution` 0.4.1 (rebuild only)
+
+---
+
 ## v0.18.0 (2026-05-04)
 
 ### Added

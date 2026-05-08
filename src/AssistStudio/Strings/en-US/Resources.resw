@@ -451,7 +451,7 @@
     <value>About</value>
   </data>
   <data name="About_Description.Text" xml:space="preserve">
-    <value>AI Chat UI Control for WinUI 3.</value>
+    <value>Multi-provider AI workspace for Windows. Bring your own API keys; conversations and data stay on your device.</value>
   </data>
   <data name="About_Providers.Text" xml:space="preserve">
     <value>Supports Claude, OpenAI, Ollama, Gemini, Groq and more.</value>
@@ -467,6 +467,15 @@
   </data>
   <data name="About_GitHubRepo.Content" xml:space="preserve">
     <value>GitHub Repository</value>
+  </data>
+  <data name="About_PrivacyPolicy.Content" xml:space="preserve">
+    <value>Privacy Policy</value>
+  </data>
+  <data name="About_PrivacyPolicy.NavigateUri" xml:space="preserve">
+    <value>https://fieldcure.com/eng/customer/privacy.php</value>
+  </data>
+  <data name="About_Support.Content" xml:space="preserve">
+    <value>Support — support@fieldcure.com</value>
   </data>
   <data name="About_SystemSpec.Text" xml:space="preserve">
     <value>System Specification</value>

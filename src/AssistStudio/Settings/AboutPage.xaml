@@ -48,7 +48,7 @@
 
                 <!-- Copyright -->
                 <TextBlock
-                    Text="Copyright (c) 2026 FieldCure"
+                    Text="Copyright (c) 2026 FieldCure Co., Ltd."
                     Style="{StaticResource BodyTextBlockStyle}"
                     Opacity="0.8" />
 
@@ -76,6 +76,16 @@
                 <HyperlinkButton
                     x:Uid="About_GitHubRepo" Content="GitHub Repository"
                     NavigateUri="https://github.com/fieldcure/fieldcure-assiststudio"
+                    Padding="0" />
+
+                <HyperlinkButton
+                    x:Uid="About_PrivacyPolicy" Content="Privacy Policy"
+                    NavigateUri="https://fieldcure.com/eng/customer/privacy.php"
+                    Padding="0" />
+
+                <HyperlinkButton
+                    x:Uid="About_Support" Content="Support — support@fieldcure.com"
+                    NavigateUri="mailto:support@fieldcure.com"
                     Padding="0" />
 
                 <!-- System Specification -->

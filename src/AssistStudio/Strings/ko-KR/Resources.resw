@@ -451,7 +451,7 @@
     <value>정보</value>
   </data>
   <data name="About_Description.Text" xml:space="preserve">
-    <value>WinUI 3용 AI 채팅 UI 컨트롤.</value>
+    <value>Windows용 멀티 프로바이더 AI 워크스페이스. 내 API 키로 직접 연결하며, 대화와 데이터는 사용자 기기에만 저장됩니다.</value>
   </data>
   <data name="About_Providers.Text" xml:space="preserve">
     <value>Claude, OpenAI, Ollama, Gemini, Groq 등을 지원합니다.</value>
@@ -467,6 +467,15 @@
   </data>
   <data name="About_GitHubRepo.Content" xml:space="preserve">
     <value>GitHub 저장소</value>
+  </data>
+  <data name="About_PrivacyPolicy.Content" xml:space="preserve">
+    <value>개인정보 처리방침</value>
+  </data>
+  <data name="About_PrivacyPolicy.NavigateUri" xml:space="preserve">
+    <value>https://fieldcure.com/kor/customer/privacy.php</value>
+  </data>
+  <data name="About_Support.Content" xml:space="preserve">
+    <value>고객 지원 — support@fieldcure.com</value>
   </data>
   <data name="About_SystemSpec.Text" xml:space="preserve">
     <value>시스템 사양</value>
