@@ -181,16 +181,10 @@ public partial class GeminiProvider : IAiProvider, IDisposable
         // Parse parts — may contain text and/or functionCall
         string? textContent = null;
         var toolCalls = new List<ToolCall>();
-        var fcIndex = 0;
 
         if (firstCandidate.TryGetProperty("content", out var contentEl) &&
             contentEl.TryGetProperty("parts", out var partsEl))
         {
-            // Count functionCall parts to decide if suffix is needed
-            var fcCount = 0;
-            foreach (var p in partsEl.EnumerateArray())
-                if (p.TryGetProperty("functionCall", out _)) fcCount++;
-
             foreach (var part in partsEl.EnumerateArray())
             {
                 if (part.TryGetProperty("text", out var textEl))
@@ -202,16 +196,11 @@ public partial class GeminiProvider : IAiProvider, IDisposable
                     var funcName = fc.GetProperty("name").GetString()!;
                     toolCalls.Add(new ToolCall
                     {
-                        // Gemini has no tool call IDs; use function name so
-                        // ToolCallId in the result message carries the name
-                        // needed by functionResponse. Add index suffix for
-                        // uniqueness when multiple calls exist.
-                        Id = fcCount > 1 ? $"{funcName}_{fcIndex}" : funcName,
+                        Id = SynthesizeToolCallId(funcName),
                         FunctionName = funcName,
                         Arguments = fc.GetProperty("args").GetRawText(),
                         ProviderSignature = ExtractThoughtSignature(part),
                     });
-                    fcIndex++;
                 }
             }
         }
@@ -268,12 +257,6 @@ public partial class GeminiProvider : IAiProvider, IDisposable
                 if (candidate.TryGetProperty("content", out var content) &&
                     content.TryGetProperty("parts", out var parts))
                 {
-                    var fcIndex = 0;
-                    // Count functionCall parts for ID suffix logic
-                    var fcCount = 0;
-                    foreach (var p in parts.EnumerateArray())
-                        if (p.TryGetProperty("functionCall", out _)) fcCount++;
-
                     foreach (var part in parts.EnumerateArray())
                     {
                         if (part.TryGetProperty("text", out var textEl))
@@ -303,12 +286,11 @@ public partial class GeminiProvider : IAiProvider, IDisposable
                         else if (part.TryGetProperty("functionCall", out var fc))
                         {
                             var funcName = fc.GetProperty("name").GetString()!;
-                            var id = fcCount > 1 ? $"{funcName}_{fcIndex}" : funcName;
+                            var id = SynthesizeToolCallId(funcName);
                             var argsJson = fc.GetProperty("args").GetRawText();
                             var signature = ExtractThoughtSignature(part);
                             yield return new StreamEvent.ToolCallStart(id, funcName, signature);
                             yield return new StreamEvent.ToolCallDelta(id, argsJson);
-                            fcIndex++;
                         }
                     }
                 }
@@ -396,13 +378,9 @@ public partial class GeminiProvider : IAiProvider, IDisposable
                 if (responseNode is not JsonObject)
                     responseNode = new JsonObject { ["result"] = responseNode };
 
-                // Strip index suffix (e.g. "scan_directory_0" → "scan_directory")
+                // Strip the synthesized suffix to recover the original function name.
                 var toolCallId = msg.ToolCallId ?? "unknown";
-                var lastUnderscore = toolCallId.LastIndexOf('_');
-                var funcName = lastUnderscore > 0 &&
-                               int.TryParse(toolCallId[(lastUnderscore + 1)..], out _)
-                    ? toolCallId[..lastUnderscore]
-                    : toolCallId;
+                var funcName = StripToolCallIdSuffix(toolCallId);
 
                 contents.Add(new JsonObject
                 {
@@ -630,6 +608,57 @@ public partial class GeminiProvider : IAiProvider, IDisposable
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Synthesizes a globally-unique tool call id for a Gemini function call.
+    /// </summary>
+    /// <remarks>
+    /// Gemini has no native tool_use_id, so we synthesize one in the form
+    /// <c>{funcName}_{8-hex}</c>. The hex suffix is stripped at send-build
+    /// time (see <see cref="StripToolCallIdSuffix"/>) so the outgoing
+    /// <c>functionResponse.name</c> matches the original function name.
+    /// Globally-unique ids prevent cross-turn collisions that would
+    /// otherwise reject the conversation if it were later sent to a
+    /// strict-matching provider (e.g., Anthropic).
+    /// </remarks>
+    internal static string SynthesizeToolCallId(string funcName)
+        => $"{funcName}_{Guid.NewGuid().ToString("N")[..8]}";
+
+    /// <summary>
+    /// Recovers the original function name from a Gemini tool call id by
+    /// stripping the synthesized suffix.
+    /// </summary>
+    /// <remarks>
+    /// Handles three formats for backward compatibility with .astx archives
+    /// produced by older builds:
+    /// <list type="number">
+    /// <item><c>funcName</c> — legacy single-call form (no underscore tail), kept as-is.</item>
+    /// <item><c>funcName_&lt;int&gt;</c> — legacy multi-call positional suffix.</item>
+    /// <item><c>funcName_&lt;8-hex&gt;</c> — current GUID-derived suffix.</item>
+    /// </list>
+    /// A function name whose own tail happens to match <c>_&lt;8-hex&gt;</c> would
+    /// be incorrectly stripped, but this is extraordinarily unlikely in practice.
+    /// </remarks>
+    internal static string StripToolCallIdSuffix(string toolCallId)
+    {
+        var lastUnderscore = toolCallId.LastIndexOf('_');
+        if (lastUnderscore <= 0) return toolCallId;
+        var suffix = toolCallId.AsSpan(lastUnderscore + 1);
+        if (suffix.Length == 8 && IsAsciiHex(suffix)) return toolCallId[..lastUnderscore];
+        if (int.TryParse(suffix, out _)) return toolCallId[..lastUnderscore];
+        return toolCallId;
+    }
+
+    /// <summary>Returns true iff every character in <paramref name="s"/> is an ASCII hex digit.</summary>
+    private static bool IsAsciiHex(ReadOnlySpan<char> s)
+    {
+        foreach (var c in s)
+        {
+            if (c is < '0' or > '9' && c is < 'a' or > 'f' && c is < 'A' or > 'F')
+                return false;
+        }
+        return true;
     }
 
     private static JsonNode? NormalizeSchemaForGemini(JsonNode? node)

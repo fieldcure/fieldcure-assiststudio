@@ -676,11 +676,12 @@ public class StreamAsyncTests
         var events = await CollectEventsAsync(provider, SimpleRequest());
 
         var toolStart = events.OfType<StreamEvent.ToolCallStart>().Single();
-        Assert.AreEqual("search", toolStart.Id); // Single call uses funcName as ID
+        // Synthesized id: "{funcName}_{8-hex}" (Gemini has no native tool_use_id).
+        Assert.IsTrue(toolStart.Id.StartsWith("search_"), $"id={toolStart.Id}");
         Assert.AreEqual("search", toolStart.FunctionName);
 
         var toolDelta = events.OfType<StreamEvent.ToolCallDelta>().Single();
-        Assert.AreEqual("search", toolDelta.Id);
+        Assert.AreEqual(toolStart.Id, toolDelta.Id); // Start and delta share the synthesized id.
         Assert.AreEqual("""{"query":"test"}""", toolDelta.ArgumentsChunk);
     }
 
