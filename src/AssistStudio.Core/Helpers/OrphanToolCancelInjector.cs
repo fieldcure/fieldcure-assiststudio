@@ -28,6 +28,7 @@ public static class OrphanToolCancelInjector
     public static IReadOnlyList<ChatMessage> Inject(IReadOnlyList<ChatMessage> messages)
     {
         var result = new List<ChatMessage>(messages.Count);
+        var synthesizedCount = 0;
         for (var i = 0; i < messages.Count; i++)
         {
             var msg = messages[i];
@@ -54,14 +55,21 @@ public static class OrphanToolCancelInjector
                 if (followers.TryGetValue(tc.Id, out var matched))
                     result.Add(matched);
                 else
+                {
                     result.Add(new ChatMessage(ChatRole.Tool, CanceledToolResultContent)
                     {
                         ToolCallId = tc.Id
                     });
+                    synthesizedCount++;
+                }
             }
 
             i = j - 1; // skip the original follower span — already emitted in corrected order
         }
+
+        if (synthesizedCount > 0)
+            DiagnosticLogger.LogInfo($"[Cancel] Synthesized {synthesizedCount} orphan tool_result(s) for outgoing request.");
+
         return result;
     }
 }
