@@ -1,6 +1,11 @@
 ﻿using Anthropic.Models.Messages;
 using FieldCure.Ai.Providers.Models;
 using System.Runtime.CompilerServices;
+// FieldCure.Ai.Providers.Models.StopReason (our domain enum) collides with the
+// Anthropic SDK's per-message StopReason. Alias the SDK type so this file can
+// keep reading the SDK's stop_reason field while the rest of the assembly still
+// refers to the domain enum implicitly.
+using SdkStopReason = Anthropic.Models.Messages.StopReason;
 
 namespace FieldCure.AssistStudio.Anthropic;
 
@@ -97,7 +102,7 @@ public sealed class AnthropicStreamEventMapper
                 };
                 yield return new StreamEvent.Usage(usage);
 
-                var isTruncated = msgDelta.Delta.StopReason is { } sr && sr.Value() == StopReason.MaxTokens;
+                var isTruncated = msgDelta.Delta.StopReason is { } sr && sr.Value() == SdkStopReason.MaxTokens;
                 _streamCompleted = true;
                 yield return new StreamEvent.StreamCompleted(isTruncated);
                 continue;

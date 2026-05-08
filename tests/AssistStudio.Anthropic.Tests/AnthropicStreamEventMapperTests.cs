@@ -1,5 +1,7 @@
 ﻿using Anthropic.Models.Messages;
 using FieldCure.Ai.Providers.Models;
+// Disambiguate from FieldCure.Ai.Providers.Models.StopReason (Phase 2 cancellation enum).
+using SdkStopReason = Anthropic.Models.Messages.StopReason;
 
 namespace FieldCure.AssistStudio.Anthropic.Tests;
 
@@ -105,7 +107,7 @@ public class AnthropicStreamEventMapperTests
             SdkEvents.TextBlockStart(0),
             SdkEvents.TextDeltaEvent(0, "partial"),
             SdkEvents.BlockStop(0),
-            SdkEvents.MessageDelta(outputTokens: 4096, stopReason: StopReason.MaxTokens),
+            SdkEvents.MessageDelta(outputTokens: 4096, stopReason: SdkStopReason.MaxTokens),
             SdkEvents.MessageStop()
         );
 
