@@ -185,7 +185,8 @@ public sealed partial class ChatPanel
                 assistantMessage.TokenCount = result.Usage?.TotalTokens;
                 assistantMessage.IsTruncated = result.IsTruncated;
                 await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content,
-                    result.IsTruncated, result.Usage?.TotalTokens ?? 0);
+                    result.IsTruncated, result.Usage?.TotalTokens ?? 0,
+                    elapsedSeconds: CaptureElapsed(elapsedSw, assistantMessage));
                 DiagnosticLogger.LogInfo($"[Chat] Response complete — tokens={result.Usage?.TotalTokens ?? 0}, truncated={result.IsTruncated}, cache_write={result.Usage?.CacheCreationInputTokens ?? 0}, cache_read={result.Usage?.CacheReadInputTokens ?? 0}");
             }
 
@@ -204,18 +205,22 @@ public sealed partial class ChatPanel
         catch (OperationCanceledException)
         {
             DiagnosticLogger.LogInfo("[Chat] Streaming cancelled by user");
-            await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content);
+            await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content,
+                elapsedSeconds: CaptureElapsed(elapsedSw, assistantMessage));
         }
         catch (Exception ex)
         {
             DiagnosticLogger.LogException(ex);
             assistantMessage.Content += $"\n\n[Error: {ex.Message}]";
-            await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content);
+            await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content,
+                elapsedSeconds: CaptureElapsed(elapsedSw, assistantMessage));
         }
         finally
         {
-            elapsedSw.Stop();
-            assistantMessage.ElapsedSeconds = elapsedSw.Elapsed.TotalSeconds;
+            // CaptureElapsed already stopped the stopwatch and stored ElapsedSeconds
+            // on the message; this is a defensive re-stop in case an early exit (e.g.,
+            // an exception thrown before any FinalizeMessageAsync call) skipped it.
+            if (elapsedSw.IsRunning) CaptureElapsed(elapsedSw, assistantMessage);
             assistantMessage.IsStreaming = false;
             await _renderer.SetStreamingAsync(false);
             if (_inputArea is not null)
@@ -229,6 +234,21 @@ public sealed partial class ChatPanel
     #endregion
 
     #region Continue & Stop
+
+    /// <summary>
+    /// Stops the supplied stopwatch, writes the elapsed seconds onto the
+    /// message, and returns the value so the caller can pass it through to
+    /// <c>FinalizeMessageAsync</c>. Centralises the elapsed-capture step so
+    /// cancel/error paths no longer skip it (which previously rendered as
+    /// <c>0.0s</c> in the bubble footer).
+    /// </summary>
+    private static double CaptureElapsed(System.Diagnostics.Stopwatch sw, ChatMessage message)
+    {
+        sw.Stop();
+        var seconds = sw.Elapsed.TotalSeconds;
+        message.ElapsedSeconds = seconds;
+        return seconds;
+    }
 
     /// <summary>
     /// Handles the continue request from the renderer when the user clicks the
@@ -281,6 +301,7 @@ public sealed partial class ChatPanel
             isContinuation: true);
         MessageAdded?.Invoke(this, continuationAssistant);
 
+        var elapsedSw = System.Diagnostics.Stopwatch.StartNew();
         try
         {
             if (_inputArea is not null)
@@ -296,7 +317,9 @@ public sealed partial class ChatPanel
             DiagnosticLogger.LogInfo($"[Chat] Continue complete — appended={continuationAssistant.Content.Length} chars, tokens={result.Usage?.TotalTokens ?? 0}, truncated={result.IsTruncated}");
 
             continuationAssistant.IsTruncated = result.IsTruncated;
-            await _renderer.FinalizeMessageAsync(continuationAssistant.Id, continuationAssistant.Content, result.IsTruncated, result.Usage?.TotalTokens ?? 0);
+            await _renderer.FinalizeMessageAsync(continuationAssistant.Id, continuationAssistant.Content,
+                result.IsTruncated, result.Usage?.TotalTokens ?? 0,
+                elapsedSeconds: CaptureElapsed(elapsedSw, continuationAssistant));
 
             if (IsDebugMode)
                 await _renderer.SetDebugDataAsync(continueMessage.Id, Provider.LastRequestBody, continuationAssistant.Id, Provider.LastRawResponse);
@@ -304,16 +327,19 @@ public sealed partial class ChatPanel
         catch (OperationCanceledException)
         {
             DiagnosticLogger.LogInfo("[Chat] Continue cancelled by user");
-            await _renderer.FinalizeMessageAsync(continuationAssistant.Id, continuationAssistant.Content);
+            await _renderer.FinalizeMessageAsync(continuationAssistant.Id, continuationAssistant.Content,
+                elapsedSeconds: CaptureElapsed(elapsedSw, continuationAssistant));
         }
         catch (Exception ex)
         {
             DiagnosticLogger.LogException(ex);
             continuationAssistant.Content += $"\n\n[Error: {ex.Message}]";
-            await _renderer.FinalizeMessageAsync(continuationAssistant.Id, continuationAssistant.Content);
+            await _renderer.FinalizeMessageAsync(continuationAssistant.Id, continuationAssistant.Content,
+                elapsedSeconds: CaptureElapsed(elapsedSw, continuationAssistant));
         }
         finally
         {
+            if (elapsedSw.IsRunning) CaptureElapsed(elapsedSw, continuationAssistant);
             continuationAssistant.IsStreaming = false;
 
             // Mid-flight orphan guard. If the stream produced nothing — user
@@ -1229,7 +1255,9 @@ public sealed partial class ChatPanel
             assistantMessage.TokenCount = result.Usage?.TotalTokens;
             assistantMessage.IsTruncated = result.IsTruncated;
 
-            await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content, result.IsTruncated, result.Usage?.TotalTokens ?? 0);
+            await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content,
+                result.IsTruncated, result.Usage?.TotalTokens ?? 0,
+                elapsedSeconds: CaptureElapsed(elapsedSw, assistantMessage));
 
             if (IsDebugMode)
                 await _renderer.SetDebugDataAsync(userMessage.Id, Provider.LastRequestBody, assistantMessage.Id, Provider.LastRawResponse);
@@ -1243,18 +1271,19 @@ public sealed partial class ChatPanel
         catch (OperationCanceledException)
         {
             DiagnosticLogger.LogInfo("[Chat] Streaming cancelled by user");
-            await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content);
+            await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content,
+                elapsedSeconds: CaptureElapsed(elapsedSw, assistantMessage));
         }
         catch (Exception ex)
         {
             DiagnosticLogger.LogException(ex);
             assistantMessage.Content += $"\n\n[Error: {ex.Message}]";
-            await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content);
+            await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content,
+                elapsedSeconds: CaptureElapsed(elapsedSw, assistantMessage));
         }
         finally
         {
-            elapsedSw.Stop();
-            assistantMessage.ElapsedSeconds = elapsedSw.Elapsed.TotalSeconds;
+            if (elapsedSw.IsRunning) CaptureElapsed(elapsedSw, assistantMessage);
             assistantMessage.IsStreaming = false;
             await _renderer.SetStreamingAsync(false);
             if (_inputArea is not null)
@@ -1344,23 +1373,25 @@ public sealed partial class ChatPanel
             var summaryTokens = result.Usage?.OutputTokens ?? 0;
             summaryMessage.IsTruncated = result.IsTruncated;
             await _renderer.FinalizeMessageAsync(summaryMessage.Id, summaryMessage.Content, result.IsTruncated,
-                tokenCount: summaryTokens, coveredTokenCount: coveredTokens);
+                tokenCount: summaryTokens, coveredTokenCount: coveredTokens,
+                elapsedSeconds: CaptureElapsed(elapsedSw, summaryMessage));
             DiagnosticLogger.LogInfo($"[Chat] StreamSummary complete — covered {coveredMessages.Count} messages, tokens {coveredTokens} → {summaryTokens}");
         }
         catch (OperationCanceledException)
         {
-            await _renderer.FinalizeMessageAsync(summaryMessage.Id, summaryMessage.Content);
+            await _renderer.FinalizeMessageAsync(summaryMessage.Id, summaryMessage.Content,
+                elapsedSeconds: CaptureElapsed(elapsedSw, summaryMessage));
         }
         catch (Exception ex)
         {
             DiagnosticLogger.LogException(ex);
             summaryMessage.Content += $"\n\n[Error: {ex.Message}]";
-            await _renderer.FinalizeMessageAsync(summaryMessage.Id, summaryMessage.Content);
+            await _renderer.FinalizeMessageAsync(summaryMessage.Id, summaryMessage.Content,
+                elapsedSeconds: CaptureElapsed(elapsedSw, summaryMessage));
         }
         finally
         {
-            elapsedSw.Stop();
-            summaryMessage.ElapsedSeconds = elapsedSw.Elapsed.TotalSeconds;
+            if (elapsedSw.IsRunning) CaptureElapsed(elapsedSw, summaryMessage);
             summaryMessage.IsStreaming = false;
         }
     }
