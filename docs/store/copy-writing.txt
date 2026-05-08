@@ -1,0 +1,195 @@
+================================================================
+PLAIN TEXT VERSION FOR MICROSOFT STORE LISTING
+================================================================
+Markdown is NOT rendered in the Store description field.
+Section headers use the ■ marker (matches KakaoTalk and other
+mainstream Korean Store listings — looks clean in MS Store).
+
+Section markers (------) below are FOR YOUR REFERENCE ONLY —
+do NOT paste them into the listing fields.
+================================================================
+
+
+----------------------------------------------------------------
+SHORT DESCRIPTION (English)
+----------------------------------------------------------------
+
+Multi-provider AI chat for Windows (x64 + ARM64). Bring your own API keys for Claude, OpenAI, Gemini, Groq, or run local Ollama models. Built-in MCP tools, branching conversations, and your data stays on your device.
+
+
+----------------------------------------------------------------
+SHORT DESCRIPTION (Korean)
+----------------------------------------------------------------
+
+Windows용 멀티 프로바이더 AI 채팅 (x64 + ARM64). 내 API 키로 Claude, OpenAI, Gemini, Groq, 로컬 Ollama를 한 곳에서. 빌트인 MCP 도구와 분기 대화를 네이티브 앱으로.
+
+
+----------------------------------------------------------------
+LONG DESCRIPTION (English)
+----------------------------------------------------------------
+
+■ AI on your terms
+Most AI chat apps lock you into one provider, add a monthly fee on top of API costs, and route your conversations through their servers. AssistStudio doesn't.
+
+AssistStudio is a Windows-native AI workspace that connects to any provider you choose — Claude, OpenAI, Gemini, Groq, local Ollama models, or any OpenAI-compatible endpoint — using your own API keys. No proxy. No markup. Your conversations stay on your machine.
+
+■ Pick any provider, switch any time
+Connect multiple providers and switch models mid-conversation. Compare Claude's reasoning to GPT's tool use without leaving the chat. Run open-weight models locally with Ollama when nothing should leave your device. Add custom OpenAI-compatible endpoints for self-hosted or enterprise gateways.
+
+■ Tools that actually do things
+AssistStudio is built around the Model Context Protocol (MCP). Five first-party servers ship with the app and give your AI real capabilities the moment you launch:
+
+- Essentials — HTTP, web search (Bing default plus DuckDuckGo, Serper, Tavily, SerpApi), web and document fetch (PDF, DOCX, HWPX, PPTX, XLSX → Markdown), URL file downloads, sandboxed JavaScript, shell, persistent memory, and Wolfram|Alpha
+- Filesystem — sandboxed read/write/search inside the workspace folders you choose, with built-in document parsing
+- Knowledge Base (RAG) — multi-KB hybrid BM25 + vector search with Reciprocal Rank Fusion, OCR for scanned PDFs (Tesseract eng+kor), Whisper audio transcription, and bilingual Korean ↔ English cross-lingual retrieval
+- Outbox — one send_message tool, five channels: Slack, Discord, Telegram, KakaoTalk, and Email (Gmail / Naver / SMTP / Microsoft Graph)
+- Runner — headless LLM task automation with Windows Task Scheduler integration
+
+Connect any third-party MCP server too — the protocol is open.
+
+■ Delegate the busywork
+Send research, critique, or parallel exploration to specialist sub-agents that work autonomously while the main thread stays focused. Multiple sub-agents run in parallel and stream results back as they complete.
+
+■ Schedule recurring tasks
+Run AI tasks on a schedule with built-in cron support backed by Windows Task Scheduler. Daily summaries, scheduled web checks, periodic exports — anything you can express as a prompt can fire on its own. Results land in your task history alongside the cost and duration of each run.
+
+■ Branching conversations, not lost context
+Edit any message to explore an alternative without destroying the original thread. Navigate between branches with one click. Your full reasoning history is preserved.
+
+■ Vision, documents, and Korean formats
+Attach images, PDFs, DOCX, HWPX (Hangul), XLSX, and PPTX directly into the conversation. Provider-aware handling routes documents through the right path for each model.
+
+■ Privacy by architecture
+API keys are encrypted in the Windows Credential Manager (Password Vault). Conversations save to local .astx archive files. AssistStudio runs no backend — every request goes directly from your machine to the provider you selected. No telemetry, no analytics, no crash reporting collected by FieldCure. We don't see your data because we have no way to.
+
+■ Bilingual, with first-class Korean
+Full English and Korean UI localization, plus features built for Korean workflows: HWPX (Hangul) document parsing, KakaoTalk messaging, EUC-KR auto-detection on data.go.kr APIs, and bilingual Korean ↔ English cross-lingual RAG search.
+
+■ Free to use
+AssistStudio itself is free. You pay only for the AI providers you choose to use — billing is handled directly by each provider (Anthropic, OpenAI, Google, etc.) at their published rates. No subscription, no usage caps imposed by us.
+
+■ System requirements
+Windows 10 version 1809 (build 17763) or later, on x64 or ARM64 (Snapdragon X / Copilot+ PC). Required runtimes (Windows App SDK, .NET 9) are provided automatically by the package. Internet connection for cloud providers and the one-time first-launch fetch of MCP server packages; not required for local Ollama models thereafter.
+
+* Some features (Outbox messaging, knowledge bases, scheduled runs) require the user to provide credentials or local resources.
+※ "AssistStudio", "FieldCure" are trademarks of FieldCure Co., Ltd. All other product names mentioned are trademarks of their respective owners.
+
+
+----------------------------------------------------------------
+LONG DESCRIPTION (Korean)
+----------------------------------------------------------------
+
+■ 내가 정하는 AI 환경
+대부분의 AI 채팅 앱은 한 제공자에 묶이고, API 비용 위에 월 구독료를 더하고, 대화를 자기 서버로 거쳐 보냅니다. AssistStudio는 다릅니다.
+
+AssistStudio는 Windows 네이티브 AI 워크스페이스로, 사용자가 직접 입력한 API 키로 원하는 제공자에 직접 연결됩니다 — Claude, OpenAI, Gemini, Groq, 로컬 Ollama, 그리고 OpenAI 호환 엔드포인트라면 무엇이든. 중간 프록시 없음. 마크업 없음. 대화는 사용자 기기에 그대로 남습니다.
+
+■ 원하는 제공자, 원하는 순간에
+여러 제공자를 동시에 연결해두고 대화 중에도 모델을 자유롭게 전환하세요. 같은 화면에서 Claude의 추론력과 GPT의 도구 호출을 비교할 수 있습니다. 어떤 데이터도 외부로 내보내고 싶지 않다면 Ollama로 로컬 오픈웨이트 모델을 돌리세요. 사내 게이트웨이를 위한 OpenAI 호환 커스텀 엔드포인트도 추가 가능합니다.
+
+■ 실제로 일을 하는 도구들
+AssistStudio는 Model Context Protocol(MCP)을 중심으로 설계되었습니다. 앱과 함께 5개의 자체 MCP 서버가 제공되어 실행 즉시 AI에 연결됩니다.
+
+- Essentials — HTTP, 웹 검색(기본 Bing과 DuckDuckGo, Serper, Tavily, SerpApi), 웹·문서 페치(PDF, DOCX, HWPX, PPTX, XLSX → Markdown), URL 파일 다운로드, 샌드박스 JavaScript, 셸, 영구 메모리, Wolfram|Alpha
+- Filesystem — 사용자가 지정한 워크스페이스 폴더 안에서만 동작하는 샌드박스 파일 읽기/쓰기/검색 + 문서 파싱
+- Knowledge Base (RAG) — 다중 지식베이스, BM25 + 벡터 하이브리드 검색(RRF 융합), 스캔 PDF OCR(Tesseract 영문+한글), Whisper 음성 전사, 한국어↔영어 교차언어 검색
+- Outbox — 단일 send_message 도구로 5개 채널: Slack, Discord, Telegram, 카카오톡, 이메일(Gmail / Naver / SMTP / Microsoft Graph)
+- Runner — Windows 작업 스케줄러 연동 헤드리스 LLM 작업 자동화
+
+제3자 MCP 서버도 자유롭게 추가할 수 있습니다 — 프로토콜은 개방형입니다.
+
+■ 잡일은 위임하세요
+리서치, 비판적 검토, 병렬 탐색은 전담 서브 에이전트에게 위임하고, 메인 대화는 흐름을 잃지 않도록 유지하세요. 여러 서브 에이전트가 동시에 실행되며, 완료되는 대로 결과가 돌아옵니다.
+
+■ 정기 작업을 자동으로
+Windows 작업 스케줄러 기반 내장 cron 지원으로 AI 작업을 정기 실행하세요. 매일 요약, 정기 웹 체크, 주기적 익스포트 — 프롬프트로 표현할 수 있는 어떤 작업이든 자동으로 실행됩니다. 실행 결과는 비용과 소요 시간과 함께 작업 이력에 누적됩니다.
+
+■ 분기형 대화, 사라지지 않는 맥락
+어떤 메시지든 편집해서 다른 흐름을 탐색하되, 원본 대화는 그대로 보존됩니다. 클릭 한 번으로 분기 사이를 이동하세요. 모든 사고 과정이 기록으로 남습니다.
+
+■ 이미지, 문서, 그리고 한국어 포맷
+이미지, PDF, DOCX, HWPX(한글), XLSX, PPTX를 대화에 직접 첨부하세요. 각 모델의 지원 범위에 맞춰 자동으로 적절한 경로로 처리됩니다.
+
+■ 아키텍처로 지키는 프라이버시
+API 키는 Windows Credential Manager(Password Vault)에 암호화되어 저장됩니다. 대화는 로컬 .astx 아카이브 파일에 저장됩니다. AssistStudio는 자체 백엔드를 운영하지 않습니다 — 모든 요청은 사용자 기기에서 선택한 제공자로 직접 전송됩니다. 텔레메트리, 분석, 크래시 리포트 모두 FieldCure가 수집하지 않습니다. 우리가 사용자 데이터를 볼 일이 없는 이유는, 볼 방법 자체가 없기 때문입니다.
+
+■ 한국어, 영어 모두 정식 지원
+UI 전체 한국어 로컬라이즈와 함께 한국 사용자를 위한 기능을 1급으로 지원합니다 — HWPX(한글) 문서 파싱, 카카오톡 메시지 발송, data.go.kr API의 EUC-KR 자동 인식, 그리고 한국어↔영어 교차언어 RAG 검색까지.
+
+■ 무료로 사용하세요
+AssistStudio 자체는 무료입니다. AI 사용료는 사용자가 선택한 제공자(Anthropic, OpenAI, Google 등)가 공표된 요금으로 직접 청구합니다. 구독료 없음. 회사가 임의로 두는 사용량 제한 없음.
+
+■ 시스템 요구사항
+Windows 10 버전 1809(빌드 17763) 이상, x64 또는 ARM64(Snapdragon X / Copilot+ PC). 필요한 런타임(Windows App SDK, .NET 9)은 패키지가 자동으로 처리합니다. 클라우드 제공자 사용과 첫 실행 시 MCP 서버 패키지 다운로드에는 인터넷 연결이 필요하며, 그 후 로컬 Ollama 모델은 오프라인에서도 동작합니다.
+
+* 일부 기능(Outbox 메시징, 지식베이스, 정기 실행 작업)은 사용자가 자격증명 또는 로컬 리소스를 직접 제공해야 동작합니다.
+※ 'AssistStudio', 'FieldCure'는 (주)필드큐어의 상표입니다. 그 외 언급된 제품명은 각 권리자의 상표입니다.
+
+
+----------------------------------------------------------------
+FEATURES (English)
+----------------------------------------------------------------
+
+- Bring your own API keys — Claude, OpenAI, Gemini, Groq, and any OpenAI-compatible endpoint
+- Run open-weight models locally with Ollama
+- Five built-in MCP servers — Essentials (HTTP / web search / fetch / shell / JS / Wolfram|Alpha / memory), Filesystem, Knowledge Base (RAG), Outbox messaging, Runner
+- Multi-knowledge-base RAG — hybrid BM25 + vector with Reciprocal Rank Fusion, OCR for scanned PDFs, Whisper audio transcription, bilingual Korean ↔ English retrieval
+- Conversation branching — edit any message to explore alternatives without losing the original thread
+- Sub-agent delegation with parallel execution and specialists
+- HTML / JSX artifact preview rendered in a sandboxed iframe with a curated CDN allowlist
+- Extended thinking visible for Claude, OpenAI o-series, and supported Ollama models
+- Vision and documents — images, PDFs, DOCX, HWPX (Hangul), XLSX, PPTX
+- English and Korean fully localized, with first-class Korean (HWPX, KakaoTalk, EUC-KR, cross-lingual RAG)
+- Schedule recurring AI tasks with built-in cron, backed by Windows Task Scheduler
+- Multi-arch native package — Windows x64 and ARM64 (Snapdragon X / Copilot+ PC)
+- Privacy by architecture — keys, conversations, and indexes stay on your device
+
+
+----------------------------------------------------------------
+FEATURES (Korean)
+----------------------------------------------------------------
+
+- 내 API 키로 직접 연결 — Claude, OpenAI, Gemini, Groq, OpenAI 호환 엔드포인트
+- Ollama로 로컬 오픈웨이트 모델 실행
+- 5개 빌트인 MCP 서버 — Essentials(HTTP·웹검색·페치·셸·JS·Wolfram|Alpha·메모리), Filesystem, Knowledge Base(RAG), Outbox 메시징, Runner
+- 다중 지식베이스 RAG — BM25 + 벡터 하이브리드(RRF 융합), 스캔 PDF OCR, Whisper 음성 전사, 한국어↔영어 교차언어 검색
+- 분기형 대화 — 원본을 잃지 않고 메시지를 편집해 새 흐름을 탐색
+- 서브 에이전트 위임 — 전담 스페셜리스트와 병렬 실행
+- HTML / JSX 아티팩트 미리보기 — 샌드박스 iframe + 화이트리스트 CDN
+- Claude, OpenAI o-시리즈, 일부 Ollama 모델의 추론 과정 표시
+- 이미지·PDF·DOCX·HWPX(한글)·XLSX·PPTX 첨부
+- 한국어/영어 전체 로컬라이즈 + 한국 사용자 1급 지원(HWPX, 카카오톡, EUC-KR, 교차언어 RAG)
+- 내장 cron + Windows 작업 스케줄러로 정기 AI 작업 자동화
+- 멀티아치 네이티브 패키지 — Windows x64 및 ARM64 (Snapdragon X / Copilot+ PC)
+- 키, 대화, 인덱스는 사용자 기기에만 저장
+
+
+----------------------------------------------------------------
+SEARCH KEYWORDS
+----------------------------------------------------------------
+
+English (separate by Enter in Partner Center):
+AI chat, Claude, OpenAI, Gemini, Ollama, MCP, AI assistant
+
+Korean:
+AI 채팅, 클로드, 제미나이, AI 비서, MCP, Ollama, 챗봇
+
+
+----------------------------------------------------------------
+COPYRIGHT / ADDITIONAL LISTING FIELDS
+----------------------------------------------------------------
+
+Copyright and trademark info:
+© 2026 FieldCure Co., Ltd. All rights reserved.
+
+Applicable license terms:
+MIT License — see https://github.com/fieldcure/fieldcure-assiststudio/blob/main/LICENSE
+
+Privacy policy URL:
+https://fieldcure.com/eng/customer/privacy.php
+
+Website:
+https://github.com/fieldcure/fieldcure-assiststudio
+
+Support contact info:
+support@fieldcure.com (primary) — https://github.com/fieldcure/fieldcure-assiststudio/issues (issue tracker)
