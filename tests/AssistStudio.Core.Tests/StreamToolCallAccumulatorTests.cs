@@ -85,4 +85,38 @@ public class StreamToolCallAccumulatorTests
         acc.HandleDelta(new StreamEvent.ToolCallDelta("unknown", "data"));
         Assert.IsFalse(acc.HasToolCalls);
     }
+
+    [TestMethod]
+    public void IncompleteJson_IsDroppedOnDrain()
+    {
+        // STOP mid input_json_delta leaves unparseable JSON in the buffer.
+        var acc = new StreamToolCallAccumulator();
+        acc.HandleStart(new StreamEvent.ToolCallStart("tc1", "search"));
+        acc.HandleDelta(new StreamEvent.ToolCallDelta("tc1", "{\"q\":"));
+
+        var calls = acc.Drain();
+        Assert.AreEqual(0, calls.Count);
+    }
+
+    [TestMethod]
+    public void MixedComplete_AndIncomplete_OnlyCompleteSurvives()
+    {
+        var acc = new StreamToolCallAccumulator();
+        acc.HandleStart(new StreamEvent.ToolCallStart("ok", "fn_ok"));
+        acc.HandleStart(new StreamEvent.ToolCallStart("bad", "fn_bad"));
+        acc.HandleStart(new StreamEvent.ToolCallStart("empty", "fn_empty"));
+
+        acc.HandleDelta(new StreamEvent.ToolCallDelta("ok", "{\"x\":1}"));
+        acc.HandleDelta(new StreamEvent.ToolCallDelta("bad", "{\"y\":")); // truncated mid-stream
+        // "empty" gets no delta — empty/whitespace args are normalized to {} and kept.
+
+        var calls = acc.Drain();
+        Assert.AreEqual(2, calls.Count);
+        Assert.IsTrue(calls.Any(c => c.Id == "ok"));
+        Assert.IsTrue(calls.Any(c => c.Id == "empty"));
+        Assert.IsFalse(calls.Any(c => c.Id == "bad"));
+
+        var emptyCall = calls.Single(c => c.Id == "empty");
+        Assert.AreEqual("", emptyCall.Arguments); // original empty string preserved
+    }
 }

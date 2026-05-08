@@ -1,5 +1,7 @@
 ﻿using FieldCure.Ai.Providers.Models;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace FieldCure.AssistStudio.Core.Helpers;
 
@@ -28,16 +30,31 @@ public sealed class StreamToolCallAccumulator
     /// <summary>
     /// Returns the accumulated tool calls and resets internal state.
     /// </summary>
+    /// <remarks>
+    /// Entries whose accumulated argument JSON is unparseable are dropped silently.
+    /// This happens when the stream is interrupted mid <c>input_json_delta</c>
+    /// (e.g., user STOP) — the partial JSON cannot be sent to the provider on the
+    /// next turn (Anthropic rejects, Gemini/OpenAI build-side <c>JsonNode.Parse</c>
+    /// throws), and there is no coherent input from which a synthesized cancel
+    /// <c>tool_result</c> could be derived.
+    /// Empty/whitespace arguments are treated as <c>{}</c> and kept (matches each
+    /// provider's send-build normalization).
+    /// </remarks>
     public List<ToolCall> Drain()
     {
         var result = new List<ToolCall>(_pending.Count);
         foreach (var (id, (funcName, args, signature)) in _pending)
         {
+            var argsStr = args.ToString();
+            var normalized = string.IsNullOrWhiteSpace(argsStr) ? "{}" : argsStr;
+            try { JsonNode.Parse(normalized); }
+            catch (JsonException) { continue; }
+
             result.Add(new ToolCall
             {
                 Id = id,
                 FunctionName = funcName,
-                Arguments = args.ToString(),
+                Arguments = argsStr,
                 ProviderSignature = signature,
             });
         }

@@ -1413,7 +1413,7 @@ public sealed partial class ChatPanel
         var preset = SelectedModel;
         return new AiRequest
         {
-            Messages = ApplySummaryTruncation(messages),
+            Messages = OrphanToolCancelInjector.Inject(ApplySummaryTruncation(messages)),
             SystemPrompt = systemPrompt ?? SystemPrompt,
             MemoryText = MemoryText,
             WorkspaceText = workspaceText,
