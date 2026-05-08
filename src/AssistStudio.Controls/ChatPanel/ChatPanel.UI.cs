@@ -1354,6 +1354,7 @@ public sealed partial class ChatPanel
                 ["continue_label"] = Res.GetString("Chat_Continue"),
                 ["continuationLabel"] = Res.GetString("Chat_ContinuationLabel"),
                 ["truncatedHint"] = Res.GetString("Chat_TruncatedHint"),
+                ["userCancelledHint"] = Res.GetString("Chat_UserCancelledHint"),
                 ["code"] = Res.GetString("Chat_Code"),
                 ["copyPrompt"] = Res.GetString("Chat_CopyPrompt"),
                 ["copyMessage"] = Res.GetString("Chat_CopyMessage"),

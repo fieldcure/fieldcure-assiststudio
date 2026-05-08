@@ -3004,7 +3004,7 @@
             }
         },
 
-        finalizeMessage: function(id, fullText, truncated, tokenCount, timestamp, elapsedSeconds, coveredTokenCount, restoredTruncated) {
+        finalizeMessage: function(id, fullText, truncated, tokenCount, timestamp, elapsedSeconds, coveredTokenCount, restoredTruncated, stopReason) {
             // Clean up progressive state
             var ps = _progressiveState[id];
             if (ps) clearTimeout(ps.timer);
@@ -3089,11 +3089,12 @@
                 var timeStr = formatTimestamp(isoTime);
                 var parts = [];
 
-                // Restored truncated hint: prefixes the timestamp line so the user can
-                // tell at a glance that this saved bubble was cut off by max-tokens.
-                // Live truncated responses use the Continue button instead — this path
-                // is only taken when restoring a conversation from disk.
-                if (restoredTruncated && _L.truncatedHint) {
+                // Footer prefix: at most one of these wins.
+                //   UserCanceled → "Stopped" (live + reload), takes precedence
+                //   restoredTruncated → "truncated" (reload only — live MaxTokens uses Continue button)
+                if (stopReason === 'UserCanceled' && _L.userCancelledHint) {
+                    parts.push(_L.userCancelledHint);
+                } else if (restoredTruncated && _L.truncatedHint) {
                     parts.push(_L.truncatedHint);
                 }
 

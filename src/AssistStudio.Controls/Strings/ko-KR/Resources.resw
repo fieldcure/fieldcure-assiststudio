@@ -134,6 +134,10 @@
     <value>끊긴 응답</value>
     <comment>Inline hint shown in the timestamp line of the last assistant bubble when a saved conversation is reloaded and that bubble was truncated by max-tokens. Tells the user they may want to send "계속" themselves.</comment>
   </data>
+  <data name="Chat_UserCancelledHint" xml:space="preserve">
+    <value>취소됨</value>
+    <comment>Inline hint shown in the timestamp line of an assistant bubble whose stream was canceled by the user pressing the Stop button. Rendered both during the live session and after reload from .astx.</comment>
+  </data>
   <data name="Chat_Code" xml:space="preserve">
     <value>코드</value>
   </data>

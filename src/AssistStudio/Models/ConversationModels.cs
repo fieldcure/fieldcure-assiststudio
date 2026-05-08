@@ -146,14 +146,33 @@ public class SavedMessage
     public bool IsContinuation { get; set; }
 
     /// <summary>
-    /// True if the assistant response was cut off by a max-tokens / length
-    /// limit. Mirrors <see cref="ChatMessage.IsTruncated"/>. Surfaced after
-    /// reload as a "truncated" hint on the last assistant bubble so the user
-    /// can decide to send a manual "continue" (we don't auto-restore the live
-    /// Continue button). Default <c>false</c> omitted.
+    /// Why this assistant turn stopped. Mirrors <see cref="ChatMessage.StopReason"/>.
+    /// Drives the reload-time footer prefix ("Stopped" for UserCanceled, "truncated"
+    /// for MaxTokens). Default <c>Completed</c> omitted from JSON.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public bool IsTruncated { get; set; }
+    [JsonConverter(typeof(JsonStringEnumConverter<StopReason>))]
+    public StopReason StopReason { get; set; } = StopReason.Completed;
+
+    /// <summary>
+    /// Legacy alias for <see cref="StopReason"/> in v2 .astx files. The setter
+    /// promotes <c>IsTruncated:true</c> from older archives to
+    /// <see cref="Models.StopReason.MaxTokens"/>; the getter always returns the
+    /// default so <c>JsonIgnoreCondition.WhenWritingDefault</c> suppresses it
+    /// on save (the new <see cref="StopReason"/> field is the persisted source
+    /// of truth).
+    /// </summary>
+    [JsonPropertyName("IsTruncated")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool LegacyIsTruncated
+    {
+        get => false;
+        set
+        {
+            if (value && StopReason == StopReason.Completed)
+                StopReason = StopReason.MaxTokens;
+        }
+    }
 
     #endregion
 }

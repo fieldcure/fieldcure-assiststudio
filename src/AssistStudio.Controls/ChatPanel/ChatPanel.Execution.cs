@@ -183,7 +183,7 @@ public sealed partial class ChatPanel
             {
                 var result = await StreamAndExecuteAsync(assistantMessage, ct);
                 assistantMessage.TokenCount = result.Usage?.TotalTokens;
-                assistantMessage.IsTruncated = result.IsTruncated;
+                assistantMessage.StopReason = result.IsTruncated ? StopReason.MaxTokens : StopReason.Completed;
                 await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content,
                     result.IsTruncated, result.Usage?.TotalTokens ?? 0,
                     elapsedSeconds: CaptureElapsed(elapsedSw, assistantMessage));
@@ -205,8 +205,10 @@ public sealed partial class ChatPanel
         catch (OperationCanceledException)
         {
             DiagnosticLogger.LogInfo("[Chat] Streaming cancelled by user");
+            assistantMessage.StopReason = StopReason.UserCanceled;
             await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content,
-                elapsedSeconds: CaptureElapsed(elapsedSw, assistantMessage));
+                elapsedSeconds: CaptureElapsed(elapsedSw, assistantMessage),
+                stopReason: assistantMessage.StopReason);
         }
         catch (Exception ex)
         {
@@ -316,7 +318,7 @@ public sealed partial class ChatPanel
             var result = await ConsumeStreamAsync(Provider.StreamAsync(request, ct), continuationAssistant, ct);
             DiagnosticLogger.LogInfo($"[Chat] Continue complete — appended={continuationAssistant.Content.Length} chars, tokens={result.Usage?.TotalTokens ?? 0}, truncated={result.IsTruncated}");
 
-            continuationAssistant.IsTruncated = result.IsTruncated;
+            continuationAssistant.StopReason = result.IsTruncated ? StopReason.MaxTokens : StopReason.Completed;
             await _renderer.FinalizeMessageAsync(continuationAssistant.Id, continuationAssistant.Content,
                 result.IsTruncated, result.Usage?.TotalTokens ?? 0,
                 elapsedSeconds: CaptureElapsed(elapsedSw, continuationAssistant));
@@ -327,8 +329,10 @@ public sealed partial class ChatPanel
         catch (OperationCanceledException)
         {
             DiagnosticLogger.LogInfo("[Chat] Continue cancelled by user");
+            continuationAssistant.StopReason = StopReason.UserCanceled;
             await _renderer.FinalizeMessageAsync(continuationAssistant.Id, continuationAssistant.Content,
-                elapsedSeconds: CaptureElapsed(elapsedSw, continuationAssistant));
+                elapsedSeconds: CaptureElapsed(elapsedSw, continuationAssistant),
+                stopReason: continuationAssistant.StopReason);
         }
         catch (Exception ex)
         {
@@ -1253,7 +1257,7 @@ public sealed partial class ChatPanel
         {
             var result = await StreamAndExecuteAsync(assistantMessage, ct);
             assistantMessage.TokenCount = result.Usage?.TotalTokens;
-            assistantMessage.IsTruncated = result.IsTruncated;
+            assistantMessage.StopReason = result.IsTruncated ? StopReason.MaxTokens : StopReason.Completed;
 
             await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content,
                 result.IsTruncated, result.Usage?.TotalTokens ?? 0,
@@ -1271,8 +1275,10 @@ public sealed partial class ChatPanel
         catch (OperationCanceledException)
         {
             DiagnosticLogger.LogInfo("[Chat] Streaming cancelled by user");
+            assistantMessage.StopReason = StopReason.UserCanceled;
             await _renderer.FinalizeMessageAsync(assistantMessage.Id, assistantMessage.Content,
-                elapsedSeconds: CaptureElapsed(elapsedSw, assistantMessage));
+                elapsedSeconds: CaptureElapsed(elapsedSw, assistantMessage),
+                stopReason: assistantMessage.StopReason);
         }
         catch (Exception ex)
         {
@@ -1371,7 +1377,7 @@ public sealed partial class ChatPanel
 
             var coveredTokens = result.Usage?.InputTokens ?? 0;
             var summaryTokens = result.Usage?.OutputTokens ?? 0;
-            summaryMessage.IsTruncated = result.IsTruncated;
+            summaryMessage.StopReason = result.IsTruncated ? StopReason.MaxTokens : StopReason.Completed;
             await _renderer.FinalizeMessageAsync(summaryMessage.Id, summaryMessage.Content, result.IsTruncated,
                 tokenCount: summaryTokens, coveredTokenCount: coveredTokens,
                 elapsedSeconds: CaptureElapsed(elapsedSw, summaryMessage));
@@ -1379,8 +1385,10 @@ public sealed partial class ChatPanel
         }
         catch (OperationCanceledException)
         {
+            summaryMessage.StopReason = StopReason.UserCanceled;
             await _renderer.FinalizeMessageAsync(summaryMessage.Id, summaryMessage.Content,
-                elapsedSeconds: CaptureElapsed(elapsedSw, summaryMessage));
+                elapsedSeconds: CaptureElapsed(elapsedSw, summaryMessage),
+                stopReason: summaryMessage.StopReason);
         }
         catch (Exception ex)
         {

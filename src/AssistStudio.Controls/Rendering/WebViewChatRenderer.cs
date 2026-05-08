@@ -440,11 +440,14 @@ internal partial class WebViewChatRenderer
     /// </summary>
     public Task FinalizeMessageAsync(string id, string fullMarkdown, bool truncated = false, int tokenCount = 0,
         string? timestamp = null, double? elapsedSeconds = null, int coveredTokenCount = 0,
-        bool restoredTruncated = false)
+        bool restoredTruncated = false, StopReason stopReason = StopReason.Completed)
     {
         var tsArg = timestamp is not null ? Js(timestamp) : "null";
         var elapsedArg = elapsedSeconds.HasValue ? elapsedSeconds.Value.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) : "null";
-        var script = $"window.assistChat.finalizeMessage({Js(id)}, {Js(fullMarkdown)}, {(truncated ? "true" : "false")}, {tokenCount}, {tsArg}, {elapsedArg}, {coveredTokenCount}, {(restoredTruncated ? "true" : "false")})";
+        // Stop-reason marker drives the bubble footer prefix (e.g., "Stopped · 12.3s").
+        // Default Completed produces no prefix, matching pre-Phase-2 rendering.
+        var stopReasonArg = Js(stopReason.ToString());
+        var script = $"window.assistChat.finalizeMessage({Js(id)}, {Js(fullMarkdown)}, {(truncated ? "true" : "false")}, {tokenCount}, {tsArg}, {elapsedArg}, {coveredTokenCount}, {(restoredTruncated ? "true" : "false")}, {stopReasonArg})";
         return _webView.ExecuteScriptAsync(script).AsTask();
     }
 

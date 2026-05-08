@@ -99,7 +99,7 @@ public static class ConversationManager
                 Summary = m.Summary,
                 IsHidden = m.IsHidden,
                 IsContinuation = m.IsContinuation,
-                IsTruncated = m.IsTruncated,
+                StopReason = m.StopReason,
             };
 
             // Persist user attachments (images + text files including pasted text)

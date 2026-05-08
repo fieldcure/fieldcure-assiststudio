@@ -183,11 +183,11 @@ public sealed partial class ChatPanel
         SummaryMeta? summary = null,
         bool isHidden = false,
         bool isContinuation = false,
-        bool isTruncated = false)
+        StopReason stopReason = StopReason.Completed)
     {
         var msg = id is not null
-            ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, ThinkingContent = thinkingContent, Timestamp = timestamp ?? DateTime.UtcNow, ElapsedSeconds = elapsedSeconds, TokenCount = tokenCount, Summary = summary, IsHidden = isHidden, IsContinuation = isContinuation, IsTruncated = isTruncated }
-            : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, ThinkingContent = thinkingContent, Timestamp = timestamp ?? DateTime.UtcNow, ElapsedSeconds = elapsedSeconds, TokenCount = tokenCount, Summary = summary, IsHidden = isHidden, IsContinuation = isContinuation, IsTruncated = isTruncated };
+            ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, ThinkingContent = thinkingContent, Timestamp = timestamp ?? DateTime.UtcNow, ElapsedSeconds = elapsedSeconds, TokenCount = tokenCount, Summary = summary, IsHidden = isHidden, IsContinuation = isContinuation, StopReason = stopReason }
+            : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, ThinkingContent = thinkingContent, Timestamp = timestamp ?? DateTime.UtcNow, ElapsedSeconds = elapsedSeconds, TokenCount = tokenCount, Summary = summary, IsHidden = isHidden, IsContinuation = isContinuation, StopReason = stopReason };
         RegisterInTree(msg);
         _messages.Add(msg);
     }
@@ -469,7 +469,8 @@ public sealed partial class ChatPanel
             timestamp: root.Timestamp.ToString("O"),
             elapsedSeconds: root.ElapsedSeconds,
             coveredTokenCount: root.Summary?.CoveredTokenCount ?? 0,
-            restoredTruncated: isLastInRestore && root.IsTruncated && !isSummary);
+            restoredTruncated: isLastInRestore && root.IsTruncated && !isSummary,
+            stopReason: root.StopReason);
 
         // Restore assistant-generated inline media (e.g., Gemini image-generation output).
         if (root.ToolMedia is { Count: > 0 } generatedMedia)

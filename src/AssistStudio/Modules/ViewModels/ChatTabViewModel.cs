@@ -264,13 +264,13 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Messages queued before the ChatPanel is available (during conversation loading).
     /// </summary>
-    private readonly List<(ChatRole Role, string Content, string? ProviderName, string? ModelId, string? Id, string? ParentId, IReadOnlyList<ToolCall>? ToolCalls, string? ToolCallId, string? ActiveChildId, IReadOnlyList<ChatAttachment>? Attachments, IReadOnlyList<MediaContent>? ToolMedia, string? ThinkingContent, DateTime? Timestamp, double? ElapsedSeconds, int? TokenCount, SummaryMeta? Summary, bool IsHidden, bool IsContinuation, bool IsTruncated)> _pendingMessages = [];
+    private readonly List<(ChatRole Role, string Content, string? ProviderName, string? ModelId, string? Id, string? ParentId, IReadOnlyList<ToolCall>? ToolCalls, string? ToolCallId, string? ActiveChildId, IReadOnlyList<ChatAttachment>? Attachments, IReadOnlyList<MediaContent>? ToolMedia, string? ThinkingContent, DateTime? Timestamp, double? ElapsedSeconds, int? TokenCount, SummaryMeta? Summary, bool IsHidden, bool IsContinuation, StopReason StopReason)> _pendingMessages = [];
 
     /// <summary>
     /// Branch-only messages queued before the ChatPanel is available.
     /// These are registered in the tree but not added to the active path.
     /// </summary>
-    private readonly List<(ChatRole Role, string Content, string? ProviderName, string? ModelId, string? Id, string? ParentId, IReadOnlyList<ToolCall>? ToolCalls, string? ToolCallId, string? ActiveChildId, IReadOnlyList<ChatAttachment>? Attachments, IReadOnlyList<MediaContent>? ToolMedia, DateTime? Timestamp, bool IsHidden, bool IsContinuation, bool IsTruncated)> _pendingBranchMessages = [];
+    private readonly List<(ChatRole Role, string Content, string? ProviderName, string? ModelId, string? Id, string? ParentId, IReadOnlyList<ToolCall>? ToolCalls, string? ToolCallId, string? ActiveChildId, IReadOnlyList<ChatAttachment>? Attachments, IReadOnlyList<MediaContent>? ToolMedia, DateTime? Timestamp, bool IsHidden, bool IsContinuation, StopReason StopReason)> _pendingBranchMessages = [];
 
     #endregion
 
@@ -453,19 +453,19 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         // Attachments and ToolMedia must be set on the inactive-branch ChatMessage
         // here, otherwise switching back to that branch later would render an
         // empty bubble (the branch's media wasn't restored from disk).
-        foreach (var (role, content, providerName, modelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia, timestamp, isHidden, isContinuation, isTruncated) in _pendingBranchMessages)
+        foreach (var (role, content, providerName, modelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia, timestamp, isHidden, isContinuation, stopReason) in _pendingBranchMessages)
         {
             var msg = id is not null
-                ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = modelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, Timestamp = timestamp ?? DateTime.UtcNow, IsHidden = isHidden, IsContinuation = isContinuation, IsTruncated = isTruncated }
-                : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = modelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, Timestamp = timestamp ?? DateTime.UtcNow, IsHidden = isHidden, IsContinuation = isContinuation, IsTruncated = isTruncated };
+                ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = modelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, Timestamp = timestamp ?? DateTime.UtcNow, IsHidden = isHidden, IsContinuation = isContinuation, StopReason = stopReason }
+                : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = modelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, Timestamp = timestamp ?? DateTime.UtcNow, IsHidden = isHidden, IsContinuation = isContinuation, StopReason = stopReason };
             panel.RegisterBranchMessage(msg);
         }
         _pendingBranchMessages.Clear();
 
         // Flush active path messages
-        foreach (var (role, content, providerName, modelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia, thinkingContent, timestamp, elapsedSeconds, tokenCount, summary, isHidden, isContinuation, isTruncated) in _pendingMessages)
+        foreach (var (role, content, providerName, modelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia, thinkingContent, timestamp, elapsedSeconds, tokenCount, summary, isHidden, isContinuation, stopReason) in _pendingMessages)
         {
-            panel.AddRestoredMessage(role, content, providerName, modelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia, thinkingContent, timestamp, elapsedSeconds, tokenCount, summary, isHidden, isContinuation, isTruncated);
+            panel.AddRestoredMessage(role, content, providerName, modelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia, thinkingContent, timestamp, elapsedSeconds, tokenCount, summary, isHidden, isContinuation, stopReason);
         }
         var hadPending = _pendingMessages.Count > 0;
         _pendingMessages.Clear();
@@ -530,12 +530,12 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         SummaryMeta? summary = null,
         bool isHidden = false,
         bool isContinuation = false,
-        bool isTruncated = false)
+        StopReason stopReason = StopReason.Completed)
     {
         if (Panel is not null)
-            Panel.AddRestoredMessage(role, content, providerName, providerModelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia, thinkingContent, timestamp, elapsedSeconds, tokenCount, summary, isHidden, isContinuation, isTruncated);
+            Panel.AddRestoredMessage(role, content, providerName, providerModelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia, thinkingContent, timestamp, elapsedSeconds, tokenCount, summary, isHidden, isContinuation, stopReason);
         else
-            _pendingMessages.Add((role, content, providerName, providerModelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia, thinkingContent, timestamp, elapsedSeconds, tokenCount, summary, isHidden, isContinuation, isTruncated));
+            _pendingMessages.Add((role, content, providerName, providerModelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia, thinkingContent, timestamp, elapsedSeconds, tokenCount, summary, isHidden, isContinuation, stopReason));
     }
 
     /// <summary>
@@ -551,18 +551,18 @@ public partial class ChatTabViewModel : ObservableObject, IDisposable
         DateTime? timestamp = null,
         bool isHidden = false,
         bool isContinuation = false,
-        bool isTruncated = false)
+        StopReason stopReason = StopReason.Completed)
     {
         if (Panel is not null)
         {
             var msg = id is not null
-                ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, Timestamp = timestamp ?? DateTime.UtcNow, IsHidden = isHidden, IsContinuation = isContinuation, IsTruncated = isTruncated }
-                : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, Timestamp = timestamp ?? DateTime.UtcNow, IsHidden = isHidden, IsContinuation = isContinuation, IsTruncated = isTruncated };
+                ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, Timestamp = timestamp ?? DateTime.UtcNow, IsHidden = isHidden, IsContinuation = isContinuation, StopReason = stopReason }
+                : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, Timestamp = timestamp ?? DateTime.UtcNow, IsHidden = isHidden, IsContinuation = isContinuation, StopReason = stopReason };
             Panel.RegisterBranchMessage(msg);
         }
         else
         {
-            _pendingBranchMessages.Add((role, content, providerName, providerModelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia, timestamp, isHidden, isContinuation, isTruncated));
+            _pendingBranchMessages.Add((role, content, providerName, providerModelId, id, parentId, toolCalls, toolCallId, activeChildId, attachments, toolMedia, timestamp, isHidden, isContinuation, stopReason));
         }
     }
 

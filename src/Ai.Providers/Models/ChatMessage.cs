@@ -23,6 +23,22 @@ public enum ChatRole
 }
 
 /// <summary>
+/// Why an assistant message stopped streaming. Persisted on the message and used
+/// by the renderer to decorate the bubble footer (e.g. <c>"Stopped · 12.3s"</c>).
+/// </summary>
+public enum StopReason
+{
+    /// <summary>Default: the model finished naturally (end_turn / stop_sequence / etc.).</summary>
+    Completed,
+
+    /// <summary>The user pressed STOP before the stream completed.</summary>
+    UserCanceled,
+
+    /// <summary>The provider cut the response short at its max_tokens limit.</summary>
+    MaxTokens,
+}
+
+/// <summary>
 /// Represents a single message in a chat conversation, with support for property change notifications and streaming.
 /// </summary>
 public partial class ChatMessage : INotifyPropertyChanged
@@ -202,17 +218,24 @@ public partial class ChatMessage : INotifyPropertyChanged
     public bool IsContinuation { get; init; }
 
     /// <summary>
-    /// True if the provider stopped this assistant response because of a
-    /// max-tokens / length limit rather than a clean end-of-turn. Set on the
-    /// in-memory message at finalize time using the same flag the renderer
-    /// uses to draw the live Continue button. Persisted so a saved
-    /// conversation can show a discreet "truncated" hint on the last assistant
-    /// bubble after reload — letting the user choose to resume themselves
-    /// rather than auto-restoring the Continue button (which is a live-only
-    /// affordance). Default <c>false</c> omitted.
+    /// Why this assistant turn stopped. Defaults to <see cref="Models.StopReason.Completed"/>
+    /// (clean end-of-turn). The renderer uses this to render footer prefixes such as
+    /// <c>"Stopped · 12.3s"</c> for <see cref="Models.StopReason.UserCanceled"/> or
+    /// <c>"truncated"</c> on reload of <see cref="Models.StopReason.MaxTokens"/> turns.
+    /// Persisted so reload restores the marker; default <c>Completed</c> omitted from JSON.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public bool IsTruncated { get; set; }
+    [JsonConverter(typeof(JsonStringEnumConverter<StopReason>))]
+    public StopReason StopReason { get; set; } = StopReason.Completed;
+
+    /// <summary>
+    /// Convenience read-only alias for <c>StopReason == MaxTokens</c>. Drives the
+    /// live Continue button and the reload-time "truncated" hint. Setters were
+    /// removed in v3; callers now write <see cref="StopReason"/> directly.
+    /// Not persisted — <see cref="StopReason"/> is the single source of truth.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsTruncated => StopReason == StopReason.MaxTokens;
 
     #endregion
 
