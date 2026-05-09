@@ -1,5 +1,10 @@
 ﻿# FieldCure AssistStudio
 
+<picture>
+  <source srcset="docs/hero-en.webp" type="image/webp">
+  <img src="docs/hero-en.png" alt="AssistStudio — Switch the AI. Keep the work. Provider-agnostic AI workspace for Windows." width="100%">
+</picture>
+
 **AI Chat Controls for WinUI 3 + Windows AI Workspace App — Bring Your Own Key, pick any provider.**
 
 [![NuGet Providers](https://img.shields.io/nuget/v/FieldCure.Ai.Providers?label=Ai.Providers)](https://www.nuget.org/packages/FieldCure.Ai.Providers)
