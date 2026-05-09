@@ -86,11 +86,16 @@ summary on purpose, so the partial marker doesn't apply.
 
 ## Tool execution order
 
-Within a single round, AgentLoop executes the model's `tool_use` blocks
-**sequentially** (`foreach` over `response.ToolCalls`). Parallel dispatch
-of independent tool calls is not a responsibility of this package —
-callers that need it (e.g., AssistStudio's ChatPanel for `delegate_task`
-fan-out) implement it at their own level on top of `SubAgentExecutor`.
+Two layers, two policies:
+
+| Layer | Behavior |
+|-------|----------|
+| `AgentLoop` (this package) — tool calls within a single LLM round | **Sequential** (`foreach` over `response.ToolCalls`) |
+| Caller-level dispatch of independent agent invocations | **Caller's responsibility** — e.g., AssistStudio's ChatPanel runs `delegate_task` sub-agent calls in parallel via `Task.WhenAll` over `SubAgentExecutor.ExecuteWithoutConfirmationAsync`. |
+
+In short: AgentLoop is intentionally simple (one round = sequential tool
+execution), and parallel fan-out across multiple sub-agents is layered on
+top by the host application.
 
 ## Design Principles
 
