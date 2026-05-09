@@ -10,6 +10,8 @@
   </Configurations>
   <Folder Name="/docs/">
     <File Path="docs/dependencies.md" />
+    <File Path="docs/POSITIONING.md" />
+    <File Path="README.ko.md" />
     <File Path="README.md" />
     <File Path="RELEASENOTES.Anthropic.md" />
     <File Path="RELEASENOTES.App.md" />
