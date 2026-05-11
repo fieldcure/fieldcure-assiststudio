@@ -5,7 +5,13 @@ Microsoft Store listing — paste-ready copy, image captions, screenshots, and t
 store-tile logo masters.
 
 > **Listing submitted:** 2026-05-08 (App v1.0.0, commit `f79bb2e`).
-> **Status:** live in Partner Center.
+> **Status:** live in Microsoft Store as of 2026-05-11.
+> **Store ID:** `9N09D0QGSTZD` — deep link `https://apps.microsoft.com/detail/9N09D0QGSTZD`.
+> **IARC age rating:** 3+. **Global Rating ID:** `8f652986-296a-8e9e-86f0-3f2ccb43a96e` —
+> reusable on other IARC-licensed storefronts (Google Play, Nintendo eShop, etc.) to
+> skip re-filling the questionnaire. Re-rating is only required if a future update
+> changes the questionnaire answers (e.g. adds in-app purchases, social features,
+> ads, or user-generated content sharing).
 
 ## Public — `docs/store/` (this folder, tracked)
 
@@ -84,10 +90,20 @@ The reason these stay private:
 
 ## Open work
 
+All bundled into the **v1.1 submission** (v1.0.1 is being skipped). The
+"Assist Studio" display name is also reserved on the same product (Partner
+Center → Manage app names). Deadline for using the reserved name in a
+submission: **2026-08-11** (3 months from reservation), so v1.1 must publish
+before then to keep the name.
+
+- [ ] **Display name change** — switch the Store-visible name from `AssistStudio`
+  to `Assist Studio` (with a space) for better tokenized search. Reserved name
+  already attached to the same package identity (PFN unchanged → existing users
+  receive the v1.1 update automatically). Sync `Package.appxmanifest`
+  `<DisplayName>` and `<uap:VisualElements DisplayName>` to the new name.
 - [ ] **Kakao-style v2 screenshots** — large left-side copy + tilted app window on
   dark slate (#1F1F1F) + sparkle accents. Headlines come from `copy-writing.txt`
-  long-description H2 sections. Replace `screenshots/01–08*.png` in a v1.0.1
-  listing update.
+  long-description H2 sections. Replace `screenshots/01–08*.png`.
 - [ ] **9:16 Poster art** (720×1080 + 1440×2160) for hero placements (Store carousel,
   Xbox display). Use the same dark-slate + sparkle motif.
 - [ ] **1:1 Box art** (1080×1080 + 2160×2160) for variable layouts.
