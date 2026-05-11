@@ -11,6 +11,11 @@
 
 **AI는 갈아끼워도, 도구는 멈추지 않습니다.**
 
+<a href="https://apps.microsoft.com/detail/9N09D0QGSTZD">
+  <img src="https://get.microsoft.com/images/ko%20dark.svg" alt="Microsoft Store에서 AssistStudio 다운로드" height="56">
+</a>
+
+[![Microsoft Store](https://img.shields.io/badge/Microsoft%20Store-Download-0078D4?logo=microsoft&logoColor=white)](https://apps.microsoft.com/detail/9N09D0QGSTZD)
 [![NuGet Providers](https://img.shields.io/nuget/v/FieldCure.Ai.Providers?label=Ai.Providers)](https://www.nuget.org/packages/FieldCure.Ai.Providers)
 [![NuGet Core](https://img.shields.io/nuget/v/FieldCure.AssistStudio.Core?label=Core)](https://www.nuget.org/packages/FieldCure.AssistStudio.Core)
 [![NuGet Controls](https://img.shields.io/nuget/v/FieldCure.AssistStudio.Controls.WinUI?label=Controls.WinUI)](https://www.nuget.org/packages/FieldCure.AssistStudio.Controls.WinUI)
@@ -33,7 +38,7 @@ Claude · GPT · Gemini · Ollama 등 어떤 AI 모델을 쓰든 **같은 도구
 
 ## 핵심 가치 — Foundation + 3 Pillars
 
-### Foundation: Provider 추상화 *(사용자가 의식 안 해도 됨)*
+### ① Foundation: Provider 추상화 *(사용자가 의식 안 해도 됨)*
 
 > *"어떤 AI든 같은 방식으로 부린다."*
 
@@ -102,13 +107,11 @@ Chat.Provider = provider;
 
 ## 워크스페이스 앱 실행
 
-소스에서 빌드:
+[Microsoft Store에서 설치](https://apps.microsoft.com/detail/9N09D0QGSTZD)하거나, 소스에서 빌드:
 
 ```bash
 dotnet run --project src/AssistStudio
 ```
-
-또는 Microsoft Store 출시 진행 중 — v1.0 정식 출시 후 링크 제공 예정.
 
 ---
 
@@ -121,7 +124,6 @@ dotnet run --project src/AssistStudio
 - [English README](README.md) — 전체 기술 문서 (영문)
 - [Custom Provider 작성 가이드](docs/CustomProvider.md) (영문)
 - [의존성 그래프](docs/dependencies.md) (영문)
-- [ADR-001 MCP 자격증명 정책](docs/ADR-001-MCP-Credential-Management.md) (영문)
 
 ---
 

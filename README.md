@@ -11,6 +11,11 @@
 
 **AI Chat Controls for WinUI 3 + Windows AI Workspace App — Bring Your Own Key, pick any provider.**
 
+<a href="https://apps.microsoft.com/detail/9N09D0QGSTZD">
+  <img src="https://get.microsoft.com/images/en-us%20dark.svg" alt="Download AssistStudio from the Microsoft Store" height="56">
+</a>
+
+[![Microsoft Store](https://img.shields.io/badge/Microsoft%20Store-Download-0078D4?logo=microsoft&logoColor=white)](https://apps.microsoft.com/detail/9N09D0QGSTZD)
 [![NuGet Providers](https://img.shields.io/nuget/v/FieldCure.Ai.Providers?label=Ai.Providers)](https://www.nuget.org/packages/FieldCure.Ai.Providers)
 [![NuGet Core](https://img.shields.io/nuget/v/FieldCure.AssistStudio.Core?label=Core)](https://www.nuget.org/packages/FieldCure.AssistStudio.Core)
 [![NuGet Controls](https://img.shields.io/nuget/v/FieldCure.AssistStudio.Controls.WinUI?label=Controls.WinUI)](https://www.nuget.org/packages/FieldCure.AssistStudio.Controls.WinUI)
@@ -109,7 +114,7 @@ See [Dependency Graph](docs/dependencies.md) for the full cross-repository packa
 
 **Choose your path:**
 - **Building with the libraries** — start with [Quick Start](#quick-start) below; the [Controls package README](src/AssistStudio.Controls/README.md) covers ChatPanel template parts and the full property reference.
-- **Running the workspace app** — clone this repo and `dotnet run --project src/AssistStudio` (Microsoft Store release coming soon).
+- **Running the workspace app** — install from the [Microsoft Store](https://apps.microsoft.com/detail/9N09D0QGSTZD), or clone this repo and `dotnet run --project src/AssistStudio`.
 
 ---
 
