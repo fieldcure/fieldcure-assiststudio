@@ -137,6 +137,14 @@ internal partial class WebViewChatRenderer
     {
         _webView = webView;
 
+        // InitializeAsync always navigates a fresh chat.html DOM (see
+        // NavigateToString below), so any previously lazy-injected Plotly
+        // runtime is gone. Reset the guard — otherwise a reused renderer
+        // (tab close → reopen, ClearConversation) keeps _plotlyInjected
+        // stale-true, EnsurePlotlyInjectedAsync skips the re-injection, and
+        // restored chart blocks render empty against an undefined Plotly.
+        _plotlyInjected = false;
+
         await _webView.EnsureCoreWebView2Async();
 
         _webView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
