@@ -625,11 +625,16 @@ public sealed partial class ConnectPage : Page
             config.Url = urlBox.Text.Trim();
         }
 
-        // Parse env vars
+        // Parse env vars. Split on BOTH '\r' and '\n': a multi-line WinUI TextBox
+        // (AcceptsReturn=true) reports its line breaks as bare '\r' (U+000D), not
+        // '\n', so splitting on '\n' alone collapses every line into one entry —
+        // the dialog would then set only the first KEY with a garbage value
+        // containing the rest. RemoveEmptyEntries also absorbs the empty token a
+        // "\r\n" pair would otherwise produce.
         if (!string.IsNullOrWhiteSpace(envBox.Text))
         {
             config.EnvironmentVariables = [];
-            foreach (var line in envBox.Text.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            foreach (var line in envBox.Text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
             {
                 var eq = line.IndexOf('=');
                 if (eq > 0)
