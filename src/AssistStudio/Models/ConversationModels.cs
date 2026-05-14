@@ -1,5 +1,6 @@
 ﻿using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Core.Models;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace AssistStudio.Models;
@@ -105,6 +106,16 @@ public class SavedMessage
 
     /// <summary>Media files associated with this message (images, audio, video).</summary>
     public List<MediaReference>? Media { get; set; }
+
+    /// <summary>
+    /// Raw <c>structuredContent</c> from an MCP tool result, preserved verbatim.
+    /// Mirrors <see cref="ChatMessage.StructuredContent"/> — a host-side render
+    /// channel (e.g. a Plotly chart spec from <c>ls_get_chart</c>) the chat panel
+    /// re-draws on reload. Only set for tool-role messages whose tool returned
+    /// structured content. Omitted from JSON when absent.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public JsonElement? StructuredContent { get; set; }
 
     /// <summary>
     /// Elapsed time in seconds for generating this assistant response.

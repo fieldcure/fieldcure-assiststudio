@@ -100,6 +100,7 @@ public static class ConversationManager
                 IsHidden = m.IsHidden,
                 IsContinuation = m.IsContinuation,
                 StopReason = m.StopReason,
+                StructuredContent = m.StructuredContent,
             };
 
             // Persist user attachments (images + text files including pasted text)

@@ -408,7 +408,8 @@ public partial class MainViewModel : ObservableObject
                 msg.Summary,
                 msg.IsHidden,
                 msg.IsContinuation,
-                msg.StopReason);
+                msg.StopReason,
+                msg.StructuredContent);
 
         // Build parent→children map
         var childrenMap = new Dictionary<string, List<SavedMessage>>();
@@ -475,7 +476,7 @@ public partial class MainViewModel : ObservableObject
         {
             var branchAtts = msg.Id is not null && loadedAttachments?.TryGetValue(msg.Id, out var ba) == true ? ba : null;
             var branchTm = msg.Id is not null && loadedToolMedia?.TryGetValue(msg.Id, out var bt) == true ? bt : null;
-            vm.RegisterBranchMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId, msg.Id, msg.ParentId, msg.ToolCalls, msg.ToolCallId, msg.ActiveChildId, branchAtts, branchTm, msg.Timestamp, msg.IsHidden, msg.IsContinuation, msg.StopReason);
+            vm.RegisterBranchMessage(msg.Role, msg.Content, msg.ProviderName, msg.ProviderModelId, msg.Id, msg.ParentId, msg.ToolCalls, msg.ToolCallId, msg.ActiveChildId, branchAtts, branchTm, msg.Timestamp, msg.IsHidden, msg.IsContinuation, msg.StopReason, msg.StructuredContent);
         }
 
         // Second pass: add active path messages in tree-walk order (parent→child chain)
