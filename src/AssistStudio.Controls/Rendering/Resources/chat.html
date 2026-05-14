@@ -1015,6 +1015,24 @@
     .diagram-block[data-view="preview"] .code-view { display: none; }
     .diagram-block[data-view="code"] .html-frame { display: none; }
 
+    /* Inline chart block (Plotly spec from a tool's structuredContent).
+       Reuses the .diagram-block frame; the chart canvas is rendered by
+       Plotly.js into .chart-frame. Resizable like the HTML preview frame. */
+    .chart-block .chart-frame {
+        margin: 0;
+        padding: 0;
+        background: var(--code-bg);
+        min-height: 320px;
+        height: 440px;
+        resize: vertical;
+        overflow: hidden;
+    }
+    .chart-block .chart-frame .plotly,
+    .chart-block .chart-frame .js-plotly-plot {
+        width: 100% !important;
+        height: 100% !important;
+    }
+
     /* Segmented Preview/Code toggle inside the diagram header. */
     .view-toggle-group {
         display: inline-flex;
@@ -2168,6 +2186,79 @@
         runMermaid();
     }
 
+    /// Overlays theme-dependent colors onto a Plotly layout. The tool ships a
+    /// theme-agnostic spec (PlotlyChartBuilder picks trace colors but no
+    /// backgrounds), so the chat surface owns paper/plot backgrounds, font
+    /// color, and axis grid/line colors — keeping the chart legible in both
+    /// light and dark mode. Returns a fresh layout object; the input is not
+    /// mutated so the stashed spec stays theme-neutral for the next switch.
+    function applyChartTheme(layout, isDark) {
+        var L;
+        try { L = JSON.parse(JSON.stringify(layout || {})); } catch (e) { L = {}; }
+        var bg = isDark ? '#1e1e1e' : '#ffffff';
+        var fg = isDark ? '#e0e0e0' : '#202020';
+        var grid = isDark ? '#3a3a3a' : '#e8e8e8';
+        L.paper_bgcolor = bg;
+        L.plot_bgcolor = bg;
+        // Base font sized for the chat column — the tool ships a theme-neutral
+        // spec with no font sizes, and Plotly's 12px default crowds a ~440px
+        // embedded chart.
+        L.font = Object.assign({ size: 11 }, L.font, { color: fg });
+        if (L.title) L.title.font = Object.assign({ size: 14 }, L.title.font);
+        if (L.legend) L.legend.font = Object.assign({ size: 10 }, L.legend.font);
+        ['xaxis', 'yaxis', 'yaxis2', 'yaxis3'].forEach(function (ax) {
+            if (L[ax]) {
+                L[ax].gridcolor = grid;
+                L[ax].zerolinecolor = grid;
+                L[ax].linecolor = grid;
+                L[ax].tickfont = Object.assign({ size: 10 }, L[ax].tickfont);
+                // Let Plotly auto-grow margins to fit tick labels / axis titles
+                // instead of guessing fixed margins — fixes the cramped rotated
+                // date labels and the side-axis title overlap.
+                L[ax].automargin = true;
+            }
+        });
+        // The .chart-frame CSS box drives sizing; let Plotly fill it. Margins are
+        // a tight floor — automargin above grows each side as its labels need.
+        L.autosize = true;
+        delete L.width;
+        delete L.height;
+        L.margin = { l: 16, r: 16, t: 40, b: 16 };
+        return L;
+    }
+
+    /// Draws (or redraws) a Plotly spec into a .chart-frame element using the
+    /// current app theme. Plotly.react is idempotent — safe to call again on
+    /// theme switches without tearing down the chart.
+    function renderPlotlyInto(frame, spec) {
+        if (typeof Plotly === 'undefined' || !frame || !spec || !spec.data) return;
+        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        var layout = applyChartTheme(spec.layout, isDark);
+        var config = { responsive: true, displaylogo: false, displayModeBar: 'hover' };
+        try {
+            Plotly.react(frame, spec.data, layout, config);
+        } catch (e) {
+            frame.textContent = 'Chart render failed: ' + ((e && e.message) || e);
+        }
+    }
+
+    /// Re-skins every on-screen Plotly chart for the active theme. Called from
+    /// setTheme. The original chart spec is stashed verbatim on the block's
+    /// data-chart-spec attribute, so this never needs the host to re-send it.
+    function rerenderChartsWithCurrentTheme() {
+        if (typeof Plotly === 'undefined') return;
+        var blocks = document.querySelectorAll('.chart-block[data-chart-spec]');
+        for (var i = 0; i < blocks.length; i++) {
+            var spec;
+            try {
+                var chart = JSON.parse(blocks[i].getAttribute('data-chart-spec'));
+                spec = chart && chart.spec;
+            } catch (e) { continue; }
+            var frame = blocks[i].querySelector('.chart-frame');
+            if (frame && spec) renderPlotlyInto(frame, spec);
+        }
+    }
+
     /// Wires SVG/PNG/Copy buttons inside each .diagram-block once.
     /// Called after renderMarkdown produces .diagram-block and after mermaid.run completes.
     function attachDiagramToolbars() {
@@ -2983,6 +3074,97 @@
             doScroll('instant');
         },
 
+        /**
+         * Appends an inline chart block rendered from a tool result's
+         * structuredContent (a Plotly spec, e.g. from ls_get_chart). The host
+         * (WebViewChatRenderer.AppendChartBlockAsync) guarantees the Plotly.js
+         * runtime is injected before this is called. Positioned below the
+         * collapsible tool block, mirroring appendToolMedia placement.
+         *
+         * @param {string} id        - Assistant message id.
+         * @param {string} chartJson - Raw `chart` JSON object:
+         *                              { type, version, spec: { data, layout } }.
+         */
+        appendChartBlock: function(id, chartJson) {
+            var msg = document.getElementById('msg-' + id);
+            if (!msg) return;
+            var bubble = msg.querySelector('.message-bubble');
+            if (!bubble) return;
+
+            var chart;
+            try { chart = JSON.parse(chartJson); } catch (e) { return; }
+            var spec = chart && chart.spec;
+            if (!spec || !spec.data) return;
+
+            var L = window._L || {};
+            var block = document.createElement('div');
+            block.className = 'diagram-block chart-block';
+            block.setAttribute('data-kind', 'chart');
+            // Stash the verbatim spec so theme switches can re-skin the chart
+            // without the host re-sending it. setAttribute/getAttribute round-trip
+            // the JSON string safely — no escaping or base64 needed.
+            block.setAttribute('data-chart-spec', chartJson);
+
+            // Header mirrors the mermaid / SVG / HTML / JSX blocks (.code-header)
+            // so chart output sits in the same visual frame as every other
+            // artifact type.
+            var header = document.createElement('div');
+            header.className = 'code-header';
+            header.innerHTML = '<span class="code-lang">chart</span>' +
+                '<span class="diagram-actions">' +
+                    '<button class="diagram-btn" data-act="png" title="' +
+                        (L.diagramSavePng || 'Save as PNG') + '">PNG</button>' +
+                    '<button class="diagram-btn" data-act="copy" title="' +
+                        (L.chartCopyTooltip || 'Copy chart as image') + '">' +
+                        (L.diagramCopyLabel || 'Copy') + '</button>' +
+                '</span>';
+            block.appendChild(header);
+
+            var frame = document.createElement('div');
+            frame.className = 'chart-frame';
+            block.appendChild(frame);
+
+            // Insert right before the trailing .content (same slot as tool media).
+            var contentSpan = bubble.querySelector('.content');
+            if (contentSpan) {
+                bubble.insertBefore(block, contentSpan);
+            } else {
+                bubble.appendChild(block);
+            }
+
+            renderPlotlyInto(frame, spec);
+
+            // Wire PNG / Copy — rasterize the live Plotly graph and route through
+            // the existing host image channels (saveImage: / copyImage:), the same
+            // ones the tool-result image toolbar uses.
+            function chartToPng(then) {
+                if (typeof Plotly === 'undefined') return;
+                Plotly.toImage(frame, {
+                    format: 'png',
+                    width: frame.offsetWidth || 800,
+                    height: frame.offsetHeight || 440,
+                    scale: 2
+                }).then(then).catch(function () { /* export failed — no-op */ });
+            }
+            var pngBtn = header.querySelector('[data-act="png"]');
+            var copyBtn = header.querySelector('[data-act="copy"]');
+            if (pngBtn) pngBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                chartToPng(function (uri) {
+                    window.chrome.webview.postMessage('saveImage:' + uri);
+                });
+            });
+            if (copyBtn) copyBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                chartToPng(function (uri) {
+                    window.chrome.webview.postMessage('copyImage:' + uri);
+                    flashCopied(copyBtn);
+                });
+            });
+
+            doScroll('instant');
+        },
+
         appendRenderedSegment: function(id, markdownText) {
             var msg = document.getElementById('msg-' + id);
             if (!msg) return;
@@ -3182,6 +3364,8 @@
                 // Re-render existing diagrams from the preserved source
                 rerenderMermaidWithCurrentTheme();
             }
+            // Re-skin any inline Plotly charts to match the new theme.
+            rerenderChartsWithCurrentTheme();
         },
 
         setDebugMode: function(enabled) {

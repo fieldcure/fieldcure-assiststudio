@@ -43,6 +43,15 @@ internal partial class WebViewChatRenderer
     /// </summary>
     private TaskCompletionSource? _navigationTcs;
 
+    /// <summary>
+    /// Whether the Plotly.js bundle has been injected into the WebView2 yet.
+    /// Injection is lazy — deferred until the first chart block is rendered —
+    /// because the bundle is ~4.5 MB and most conversations never show a chart.
+    /// Set once by <see cref="EnsurePlotlyInjectedAsync"/>; the renderer is
+    /// driven sequentially on the UI thread so no locking is required.
+    /// </summary>
+    private bool _plotlyInjected;
+
     #endregion
 
     #region Properties
@@ -394,6 +403,26 @@ internal partial class WebViewChatRenderer
     {
         var script = $"window.assistChat.appendSearchResultBlock({Js(id)}, {Js(searchResultJson)}, {Js(displayName)})";
         return _webView.ExecuteScriptAsync(script).AsTask();
+    }
+
+    /// <summary>
+    /// Appends an inline chart block to an assistant message, rendering a chart
+    /// spec carried by a tool result's <c>structuredContent</c> (e.g. a Plotly
+    /// spec shipped by <c>ls_get_chart</c>). The Plotly.js runtime is injected
+    /// lazily on the first call via <see cref="EnsurePlotlyInjectedAsync"/>, so
+    /// a chart-free session never pays the bundle cost. Used on both the live
+    /// tool-execution path and the conversation-restore path.
+    /// </summary>
+    /// <param name="id">Assistant message id the chart attaches to.</param>
+    /// <param name="chartJson">
+    /// The raw <c>chart</c> JSON object —
+    /// <c>{ "type": "plotly", "version": "5", "spec": { "data": [...], "layout": {...} } }</c>.
+    /// </param>
+    public async Task AppendChartBlockAsync(string id, string chartJson)
+    {
+        await EnsurePlotlyInjectedAsync();
+        var script = $"window.assistChat.appendChartBlock({Js(id)}, {Js(chartJson)})";
+        await _webView.ExecuteScriptAsync(script).AsTask();
     }
 
     /// <summary>
@@ -1139,6 +1168,27 @@ internal partial class WebViewChatRenderer
             })();
             """;
         await _webView.ExecuteScriptAsync(configScript).AsTask();
+    }
+
+    /// <summary>
+    /// Injects the bundled Plotly.js runtime into the WebView2 the first time a
+    /// chart needs it, then no-ops on every subsequent call.
+    /// <para/>
+    /// The bundle is an embedded resource (see AssistStudio.Controls.csproj) so
+    /// charts render air-gapped, and deferring injection keeps the ~4.5 MB
+    /// script off the initialization path for the common case — conversations
+    /// that never surface a chart. On the restore path, the first
+    /// <see cref="AppendChartBlockAsync"/> call for a chart-bearing saved
+    /// conversation triggers this naturally, so no separate pre-scan is needed.
+    /// </summary>
+    private async Task EnsurePlotlyInjectedAsync()
+    {
+        if (_plotlyInjected)
+            return;
+
+        var plotlyJs = LoadEmbeddedResource("plotly.min.js");
+        await _webView.ExecuteScriptAsync(plotlyJs).AsTask();
+        _plotlyInjected = true;
     }
 
     /// <summary>

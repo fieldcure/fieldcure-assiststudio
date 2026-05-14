@@ -1,5 +1,6 @@
 ﻿using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Core.Helpers;
+using System.Text.Json;
 
 namespace FieldCure.AssistStudio.Controls;
 
@@ -183,11 +184,12 @@ public sealed partial class ChatPanel
         SummaryMeta? summary = null,
         bool isHidden = false,
         bool isContinuation = false,
-        StopReason stopReason = StopReason.Completed)
+        StopReason stopReason = StopReason.Completed,
+        JsonElement? structuredContent = null)
     {
         var msg = id is not null
-            ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, ThinkingContent = thinkingContent, Timestamp = timestamp ?? DateTime.UtcNow, ElapsedSeconds = elapsedSeconds, TokenCount = tokenCount, Summary = summary, IsHidden = isHidden, IsContinuation = isContinuation, StopReason = stopReason }
-            : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, ThinkingContent = thinkingContent, Timestamp = timestamp ?? DateTime.UtcNow, ElapsedSeconds = elapsedSeconds, TokenCount = tokenCount, Summary = summary, IsHidden = isHidden, IsContinuation = isContinuation, StopReason = stopReason };
+            ? new ChatMessage(id, role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, StructuredContent = structuredContent, ThinkingContent = thinkingContent, Timestamp = timestamp ?? DateTime.UtcNow, ElapsedSeconds = elapsedSeconds, TokenCount = tokenCount, Summary = summary, IsHidden = isHidden, IsContinuation = isContinuation, StopReason = stopReason }
+            : new ChatMessage(role, content) { ProviderName = providerName, ProviderModelId = providerModelId, ParentId = parentId, ToolCalls = toolCalls, ToolCallId = toolCallId, ActiveChildId = activeChildId, Attachments = attachments ?? [], ToolMedia = toolMedia, StructuredContent = structuredContent, ThinkingContent = thinkingContent, Timestamp = timestamp ?? DateTime.UtcNow, ElapsedSeconds = elapsedSeconds, TokenCount = tokenCount, Summary = summary, IsHidden = isHidden, IsContinuation = isContinuation, StopReason = stopReason };
         RegisterInTree(msg);
         _messages.Add(msg);
     }
@@ -443,6 +445,15 @@ public sealed partial class ChatPanel
                             resultMsg?.Content, null,
                             resultMsg?.Content?.Contains("\"error\"") == true);
                     }
+
+                    // Inline chart recovered from the tool result's persisted
+                    // structuredContent (e.g. a Plotly spec from ls_get_chart).
+                    // Re-rendered below the tool block. AppendChartBlockAsync lazily
+                    // injects the Plotly bundle on its first call, so a reloaded
+                    // chart-bearing conversation pulls in the runtime even though the
+                    // live injection path never ran this session.
+                    if (TryExtractInlineChart(resultMsg?.StructuredContent) is { } chartElement)
+                        await _renderer.AppendChartBlockAsync(root.Id, chartElement.GetRawText());
 
                     if (resultMsg?.ToolMedia is { Count: > 0 } mediaItems)
                     {

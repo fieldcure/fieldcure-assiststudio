@@ -537,7 +537,9 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
             var result = await mcpTool.CallAsync(argsDict, cancellationToken: ct);
             var text = ExtractTextResult(result);
             var media = ExtractMediaContents(result);
-            return new ToolExecutionResult(text, media);
+            // structuredContent is a host-side rendering channel (not fed to the
+            // model). The chat panel inspects it for an inline chart spec.
+            return new ToolExecutionResult(text, media, result.StructuredContent);
         }
         finally
         {

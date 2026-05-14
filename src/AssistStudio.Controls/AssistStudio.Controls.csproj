@@ -55,6 +55,16 @@
     <EmbeddedResource Include="Rendering\Resources\vendor\highlight.min.js" />
     <EmbeddedResource Include="Rendering\Resources\vendor\katex.min.js" />
     <EmbeddedResource Include="Rendering\Resources\vendor\mermaid.min.js" />
+    <!--
+      Plotly.js full bundle. Lazy-injected into the chat WebView2 only when a
+      tool result carries a Plotly chart spec via structuredContent (e.g.
+      ls_get_chart's candlestick, ls_get_etf_holdings' treemap). The "finance"
+      partial bundle is smaller (~1.2 MB) but omits the hierarchy traces
+      (treemap / sunburst / icicle), so a treemap spec rendered as a blank
+      cartesian plot. The full build (~4.5 MB) covers every trace type a tool
+      might emit; lazy injection keeps it off chart-free conversations.
+    -->
+    <EmbeddedResource Include="Rendering\Resources\vendor\plotly.min.js" />
     <EmbeddedResource Include="Rendering\Resources\vendor\katex.min.css" />
     <EmbeddedResource Include="Rendering\Resources\vendor\katex-fonts\*.woff2" />
     <!--

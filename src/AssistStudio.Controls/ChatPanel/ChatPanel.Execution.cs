@@ -535,6 +535,47 @@ public sealed partial class ChatPanel
     }
 
     /// <summary>
+    /// Extracts a renderable inline chart from a tool result's <c>structuredContent</c>.
+    /// <para/>
+    /// Looks for a <c>chart</c> object with <c>type == "plotly"</c> — the shape
+    /// shipped by tools like <c>ls_get_chart</c>. Called at render time on both
+    /// the live tool-execution path and the conversation-restore path; the raw
+    /// <c>structuredContent</c> itself is what gets persisted (on
+    /// <see cref="ChatMessage.StructuredContent"/>), this just picks the chart
+    /// node out of it. The returned element is cloned (<c>JsonElement.Clone</c>)
+    /// so it is independent of the input's backing
+    /// <see cref="System.Text.Json.JsonDocument"/>.
+    /// </summary>
+    /// <param name="structuredContent">The tool result's structured content, if any.</param>
+    /// <returns>The cloned <c>chart</c> JSON object, or <see langword="null"/> when absent or not a recognized chart type.</returns>
+    private static System.Text.Json.JsonElement? TryExtractInlineChart(System.Text.Json.JsonElement? structuredContent)
+    {
+        if (structuredContent is not { } root ||
+            root.ValueKind != System.Text.Json.JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        if (!root.TryGetProperty("chart", out var chart) ||
+            chart.ValueKind != System.Text.Json.JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        // Only "plotly" charts are renderable today. An unknown discriminator is
+        // ignored rather than rendered, so a future chart type a server adds does
+        // not surface as a broken block in an older client.
+        if (!chart.TryGetProperty("type", out var type) ||
+            type.ValueKind != System.Text.Json.JsonValueKind.String ||
+            !string.Equals(type.GetString(), "plotly", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return chart.Clone();
+    }
+
+    /// <summary>
     /// Formats a rich label for fetch_url tool blocks: "fetch_url("url") — N chars".
     /// Falls back to plain "fetch_url" on parse failure.
     /// </summary>
@@ -1033,12 +1074,16 @@ public sealed partial class ChatPanel
                     pendingUserNote = executor.LastUserNote;
 
                 var toolResult = GuardToolResultSize(execResult.Text, call.FunctionName);
+                // Clone so the persisted element stays valid after the originating
+                // JsonDocument (owned by the MCP SDK's CallToolResult) is released.
+                var structuredContent = execResult.StructuredContent?.Clone();
 
                 var toolResultMsg = new ChatMessage(ChatRole.Tool, toolResult)
                 {
                     ToolCallId = call.Id,
                     ParentId = toolCallMsg.Id,
-                    ToolMedia = execResult.MediaContents
+                    ToolMedia = execResult.MediaContents,
+                    StructuredContent = structuredContent
                 };
                 RegisterInTree(toolResultMsg);
                 _messages.Add(toolResultMsg);
@@ -1049,6 +1094,14 @@ public sealed partial class ChatPanel
                     await _renderer.AppendToolBlockAsync(
                         assistantMessage.Id, call.FunctionName, call.Arguments,
                         toolResult, sw.ElapsedMilliseconds, isError);
+
+                // Inline chart shipped via structuredContent (e.g. a Plotly spec from
+                // ls_get_chart). Rendered as its own block below the collapsible tool
+                // block — independent of tool name, and zero token cost since the spec
+                // never entered the model's text context.
+                if (TryExtractInlineChart(structuredContent) is { } chartElement)
+                    await _renderer.AppendChartBlockAsync(
+                        assistantMessage.Id, chartElement.GetRawText());
 
                 if (execResult.MediaContents is { Count: > 0 } mediaItems)
                 {

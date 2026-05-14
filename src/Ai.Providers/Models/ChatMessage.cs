@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace FieldCure.Ai.Providers.Models;
@@ -163,6 +164,21 @@ public partial class ChatMessage : INotifyPropertyChanged
         _toolMedia.Add(media);
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ToolMedia)));
     }
+
+    /// <summary>
+    /// Raw <c>structuredContent</c> from an MCP tool result (MCP spec
+    /// <c>CallToolResult.structuredContent</c>), preserved verbatim as a
+    /// <see cref="JsonElement"/>. Unlike <see cref="Content"/>, this never
+    /// entered the model's context — it is a host-side rendering channel.
+    /// The chat panel inspects it for renderable payloads (today: a
+    /// <c>chart</c> object such as a Plotly spec from <c>ls_get_chart</c>);
+    /// keeping the whole blob means future structured-render features need
+    /// no new field. Only set for <see cref="ChatRole.Tool"/> messages whose
+    /// tool returned structured content. Persisted in <c>.astx</c> files;
+    /// omitted from JSON when absent for backwards-compat with older files.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public JsonElement? StructuredContent { get; init; }
 
     /// <summary>
     /// Thinking/reasoning content from the AI model (e.g., Claude extended thinking).
