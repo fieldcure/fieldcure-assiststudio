@@ -1,5 +1,6 @@
 ﻿using Anthropic;
 using AnthropicSdkSample.Controls;
+using AnthropicSdkSample.Tools;
 using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Controls;
 using FieldCure.AssistStudio.Controls.Anthropic;
@@ -8,6 +9,7 @@ using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using System.Text.Json;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Security.Credentials;
 using Windows.Storage;
@@ -53,6 +55,21 @@ public sealed partial class MainWindow : Window
     /// <see cref="OnContentLoaded"/> once the user enters one through the prompt.
     /// </summary>
     private AnthropicClient? _client;
+
+    /// <summary>
+    /// Tools exposed to the model on every turn. The sample ships a single fetch tool to
+    /// demonstrate the adapter's tool plumbing without pulling in an external MCP server.
+    /// Consumers normally build this list from their own <see cref="IAssistTool"/> implementations
+    /// (or by adapting MCP server tools to <see cref="IAssistTool"/>) and pass it to
+    /// <see cref="ChatPanelExtensions.BuildAnthropicParams"/> on each turn.
+    /// </summary>
+    private readonly IList<IAssistTool> _tools = [new FetchTool()];
+
+    /// <summary>
+    /// Hard ceiling on tool-result rounds within a single user turn — guards against a
+    /// runaway loop if the model keeps calling tools without ever returning prose.
+    /// </summary>
+    private const int MaxToolRounds = 8;
 
     /// <summary>Initializes the window, sets up the custom title bar, and subscribes to events.</summary>
     public MainWindow()
@@ -426,49 +443,107 @@ public sealed partial class MainWindow : Window
     #endregion
 
     /// <summary>Handles user message submission by streaming from the Anthropic API into the ChatPanel.</summary>
+    /// <remarks>
+    /// Runs a multi-turn loop: each round produces one assistant message. If the assistant
+    /// emits <c>tool_use</c> blocks (<see cref="StreamResult.HasToolCalls"/>), the matching
+    /// <see cref="IAssistTool.ExecuteAsync"/> runs, its output is added to the conversation
+    /// as a <see cref="ChatRole.Tool"/> message, and the loop calls the API again so the
+    /// model can incorporate the result. The loop terminates on the first round with no
+    /// tool calls, on cancellation, or when <see cref="MaxToolRounds"/> is reached.
+    /// </remarks>
     private async void OnUserMessageSubmitted(object? sender, MessageSentEventArgs e)
     {
         if (_client is null) return;
 
         var modelId = ChatPanel.SelectedModel?.ModelId ?? "claude-sonnet-4-6";
 
-        // Begin an assistant turn — this creates the message bubble and shows the streaming cursor
-        await using var handle = ChatPanel.BeginAnthropicTurn("Claude", modelId);
+        // Single CancellationToken from the first turn's Stop button governs the whole
+        // multi-turn loop — if the user stops mid-loop, the next round is not begun.
+        CancellationToken loopCt = default;
 
-        // Build SDK params via the Controls.Anthropic helper. The helper enables Anthropic
-        // prompt caching by default, so consumers benefit from cache hits on repeated prefixes
-        // (system prompt, attachments, tool results) simply by using this entry point.
-        //
-        // MaxTokens caps the assistant response length. 16k is comfortable for typical
-        // artifacts (Lorenz/Mandelbrot visualizers, dashboard JSX, ~200-line React
-        // components) without tripping the truncated-hint banner. Per-model output caps
-        // (Anthropic, late 2025): claude-opus-4-7 = 32k, claude-sonnet-4-6 = 64k,
-        // claude-haiku-4-5 = 16k (64k with the extended-output beta header). Bump this
-        // when you routinely see truncated responses, or wire it to a per-model lookup
-        // if you ship multiple model choices to end users.
-        var parameters = ChatPanel.BuildAnthropicParams(modelId, maxTokens: 16384);
+        for (var round = 0; round < MaxToolRounds; round++)
+        {
+            await using var handle = ChatPanel.BeginAnthropicTurn("Claude", modelId);
+            if (round == 0) loopCt = handle.CancellationToken;
 
-        // Stream directly from the Anthropic SDK, wired to the Stop button
-        var ct = handle.CancellationToken;
-        var stream = _client.Messages.CreateStreaming(parameters, ct);
+            // BuildAnthropicParams forwards the tool list as the SDK's Tool[] and enables
+            // Anthropic prompt caching by default. MaxTokens caps each assistant response
+            // (Anthropic per-model caps late 2025: opus-4-7 = 32k, sonnet-4-6 = 64k,
+            // haiku-4-5 = 16k / 64k with the extended-output beta header).
+            var parameters = ChatPanel.BuildAnthropicParams(modelId, maxTokens: 16384, _tools);
+
+            var stream = _client.Messages.CreateStreaming(parameters, loopCt);
+
+            StreamResult? result = null;
+            try
+            {
+                result = await handle.StreamAnthropicAsync(stream, loopCt);
+                Helpers.LoggingService.LogInfo(
+                    $"[SdkSample] Round {round} complete — tokens={result.Usage?.TotalTokens ?? 0}, " +
+                    $"toolCalls={result.ToolCalls?.Count ?? 0}, " +
+                    $"cache_write={result.Usage?.CacheCreationInputTokens ?? 0}, " +
+                    $"cache_read={result.Usage?.CacheReadInputTokens ?? 0}");
+            }
+            catch (OperationCanceledException)
+            {
+                // User clicked Stop. Partial content is preserved by DisposeAsync; abort the loop.
+                return;
+            }
+            catch (Exception ex)
+            {
+                handle.Message.Content += $"\n\n[Error: {ex.Message}]";
+                return;
+            }
+
+            // No tool calls → assistant produced its final reply; loop ends.
+            if (result is null || !result.HasToolCalls)
+                return;
+
+            // Persist the tool_use intent on the just-finished assistant message so the
+            // next turn's BuildAnthropicParams emits ToolUseBlockParam alongside any text
+            // prelude. Without this the converter sees a text-only assistant message,
+            // the API spots an unanswered tool_use_id from the previous round, and 422s.
+            handle.Message.ToolCalls = result.ToolCalls;
+
+            // Execute every requested tool and post the JSON output back as a Tool message.
+            // Anthropic groups consecutive Tool messages into one user MessageParam carrying
+            // all ToolResultBlockParams (see AnthropicMessageConverter.cs) — no special
+            // batching needed here.
+            foreach (var call in result.ToolCalls!)
+            {
+                var output = await ExecuteToolAsync(call, loopCt);
+                ChatPanel.AddRestoredMessage(ChatRole.Tool, output, toolCallId: call.Id);
+            }
+        }
+
+        Helpers.LoggingService.LogInfo($"[SdkSample] Tool loop hit MaxToolRounds={MaxToolRounds}.");
+    }
+
+    /// <summary>
+    /// Routes a single <see cref="ToolCall"/> to the matching <see cref="IAssistTool"/> and
+    /// returns the JSON payload to surface back to the model. Unknown tools and execution
+    /// failures are turned into <c>{"error": "..."}</c> responses so the model can recover.
+    /// </summary>
+    private async Task<string> ExecuteToolAsync(ToolCall call, CancellationToken ct)
+    {
+        var tool = _tools.FirstOrDefault(t =>
+            string.Equals(t.Name, call.FunctionName, StringComparison.Ordinal));
+
+        if (tool is null)
+            return JsonSerializer.Serialize(new { error = $"Unknown tool: {call.FunctionName}" });
 
         try
         {
-            var result = await handle.StreamAnthropicAsync(stream, ct);
-            Helpers.LoggingService.LogInfo(
-                $"[SdkSample] Response complete — tokens={result.Usage?.TotalTokens ?? 0}, " +
-                $"cache_write={result.Usage?.CacheCreationInputTokens ?? 0}, " +
-                $"cache_read={result.Usage?.CacheReadInputTokens ?? 0}");
+            using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(call.Arguments) ? "{}" : call.Arguments);
+            return await tool.ExecuteAsync(doc.RootElement, ct);
         }
         catch (OperationCanceledException)
         {
-            // User clicked Stop — partial content is preserved by DisposeAsync
+            throw;
         }
         catch (Exception ex)
         {
-            // Best-effort error display. Renderer may not pick up post-finalize updates;
-            // a ContentDialog would be more reliable for production code.
-            handle.Message.Content += $"\n\n[Error: {ex.Message}]";
+            return JsonSerializer.Serialize(new { error = $"{tool.Name} failed: {ex.Message}" });
         }
     }
 

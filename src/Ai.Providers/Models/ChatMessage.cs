@@ -134,8 +134,12 @@ public partial class ChatMessage : INotifyPropertyChanged
 
     /// <summary>
     /// Tool calls requested by the assistant in this message. Only set for <see cref="ChatRole.Assistant"/> messages.
+    /// Mutable so SDK consumers can attach tool calls after a streaming turn completes —
+    /// the stream surfaces tool calls via <c>StreamResult.ToolCalls</c>, and the consumer's
+    /// multi-turn loop assigns them here before issuing the follow-up request so the
+    /// converter can emit the matching <c>tool_use</c> blocks.
     /// </summary>
-    public IReadOnlyList<ToolCall>? ToolCalls { get; init; }
+    public IReadOnlyList<ToolCall>? ToolCalls { get; set; }
 
     /// <summary>
     /// The ID of the tool call this message is a result for. Only set for <see cref="ChatRole.Tool"/> messages.
