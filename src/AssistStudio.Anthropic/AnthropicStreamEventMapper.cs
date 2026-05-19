@@ -34,7 +34,7 @@ public sealed class AnthropicStreamEventMapper
     private bool _streamCompleted;
 
     /// <summary>Identifies the kind of content block being streamed.</summary>
-    private enum BlockKind { Text, Thinking, ToolUse, Unknown }
+    private enum BlockKind { Text, Thinking, ToolUse, ServerToolUse, Unknown }
 
     /// <summary>Metadata for a registered content block: its kind and optional tool call ID.</summary>
     private readonly record struct BlockInfo(BlockKind Kind, string? ToolCallId);
@@ -67,7 +67,16 @@ public sealed class AnthropicStreamEventMapper
                     if (info.Kind == BlockKind.Thinking)
                         yield return new StreamEvent.ThinkingDelta(thinkingDelta.Thinking);
                 }
-                // InputJsonDelta, CitationsDelta, SignatureDelta — silently ignored
+                else if (blockDelta.Delta.TryPickInputJson(out var inputJsonDelta))
+                {
+                    // Tool input streams incrementally as PartialJson chunks. Forward only
+                    // when the block is a regular ToolUse (not ServerToolUse); the latter
+                    // is handled internally by the SDK and not surfaced to consumers.
+                    if (info.Kind == BlockKind.ToolUse && info.ToolCallId is { } toolId)
+                        yield return new StreamEvent.ToolCallDelta(toolId, inputJsonDelta.PartialJson);
+                }
+                // CitationsDelta, SignatureDelta — silently ignored (SignatureDelta becomes
+                // relevant in Phase B for tool_use + thinking signature round-trip).
                 continue;
             }
 
@@ -77,17 +86,30 @@ public sealed class AnthropicStreamEventMapper
                 var cb = blockStart.ContentBlock;
 
                 if (cb.TryPickText(out _))
+                {
                     _blocks[blockStart.Index] = new BlockInfo(BlockKind.Text, null);
+                }
                 else if (cb.TryPickThinking(out _))
+                {
                     _blocks[blockStart.Index] = new BlockInfo(BlockKind.Thinking, null);
+                }
                 else if (cb.TryPickToolUse(out var toolUse))
+                {
                     _blocks[blockStart.Index] = new BlockInfo(BlockKind.ToolUse, toolUse.ID);
+                    yield return new StreamEvent.ToolCallStart(toolUse.ID, toolUse.Name);
+                }
                 else if (cb.TryPickServerToolUse(out var serverTool))
-                    _blocks[blockStart.Index] = new BlockInfo(BlockKind.ToolUse, serverTool.ID);
+                {
+                    // ServerToolUse is intentionally not emitted as ToolCallStart — these are
+                    // Anthropic-hosted tools (web_search, code_execution) whose lifecycle is
+                    // handled inside the SDK; consumers cannot intercept or execute them.
+                    _blocks[blockStart.Index] = new BlockInfo(BlockKind.ServerToolUse, serverTool.ID);
+                }
                 else
+                {
                     _blocks[blockStart.Index] = new BlockInfo(BlockKind.Unknown, null);
+                }
 
-                // No events emitted for block starts (tool emit deferred to future phases)
                 continue;
             }
 

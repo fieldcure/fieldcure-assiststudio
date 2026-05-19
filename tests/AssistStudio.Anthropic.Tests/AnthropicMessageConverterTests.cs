@@ -94,7 +94,7 @@ public class AnthropicMessageConverterTests
     }
 
     [TestMethod]
-    public void ToolMessages_SkippedSilently()
+    public void ToolMessages_GroupedAsUserToolResultBlocks()
     {
         var messages = new List<ChatMessage>
         {
@@ -106,10 +106,72 @@ public class AnthropicMessageConverterTests
 
         var result = AnthropicMessageConverter.Convert(messages);
 
-        // Tool message should be skipped
-        Assert.AreEqual(3, result.Messages.Count);
+        // Tool message is wrapped as a User message containing one ToolResultBlockParam.
+        Assert.AreEqual(4, result.Messages.Count);
         Assert.AreEqual(Role.User, (Role)result.Messages[0].Role);
         Assert.AreEqual(Role.Assistant, (Role)result.Messages[1].Role);
-        Assert.AreEqual(Role.Assistant, (Role)result.Messages[2].Role);
+        Assert.AreEqual(Role.User, (Role)result.Messages[2].Role);
+        Assert.AreEqual(Role.Assistant, (Role)result.Messages[3].Role);
+
+        Assert.IsTrue(result.Messages[2].Content.TryPickContentBlockParams(out var blocks));
+        Assert.AreEqual(1, blocks.Count);
+        Assert.IsTrue(blocks[0].TryPickToolResult(out var toolResult));
+        Assert.AreEqual("call_1", toolResult.ToolUseID);
+    }
+
+    [TestMethod]
+    public void ConsecutiveToolMessages_MergedIntoOneUserMessage()
+    {
+        var messages = new List<ChatMessage>
+        {
+            new(ChatRole.User, "Run both checks"),
+            new(ChatRole.Assistant, "Running."),
+            new(ChatRole.Tool, "Check A passed") { ToolCallId = "call_a" },
+            new(ChatRole.Tool, "Check B passed") { ToolCallId = "call_b" },
+            new(ChatRole.Assistant, "All good."),
+        };
+
+        var result = AnthropicMessageConverter.Convert(messages);
+
+        // Two consecutive Tool messages collapse into a single User message with two blocks.
+        Assert.AreEqual(4, result.Messages.Count);
+        Assert.AreEqual(Role.User, (Role)result.Messages[2].Role);
+        Assert.IsTrue(result.Messages[2].Content.TryPickContentBlockParams(out var blocks));
+        Assert.AreEqual(2, blocks.Count);
+        Assert.IsTrue(blocks[0].TryPickToolResult(out var first));
+        Assert.IsTrue(blocks[1].TryPickToolResult(out var second));
+        Assert.AreEqual("call_a", first.ToolUseID);
+        Assert.AreEqual("call_b", second.ToolUseID);
+    }
+
+    [TestMethod]
+    public void AssistantToolCalls_EmitToolUseBlock()
+    {
+        var messages = new List<ChatMessage>
+        {
+            new(ChatRole.User, "What's 2 + 2?"),
+            new(ChatRole.Assistant, "Let me calculate.")
+            {
+                ToolCalls =
+                [
+                    new ToolCall
+                    {
+                        Id = "call_1",
+                        FunctionName = "calculate",
+                        Arguments = """{"expression":"2+2"}""",
+                    },
+                ],
+            },
+        };
+
+        var result = AnthropicMessageConverter.Convert(messages);
+
+        Assert.AreEqual(2, result.Messages.Count);
+        Assert.AreEqual(Role.Assistant, (Role)result.Messages[1].Role);
+        Assert.IsTrue(result.Messages[1].Content.TryPickContentBlockParams(out var blocks));
+        Assert.AreEqual(2, blocks.Count); // text + tool_use
+        Assert.IsTrue(blocks[1].TryPickToolUse(out var toolUse));
+        Assert.AreEqual("call_1", toolUse.ID);
+        Assert.AreEqual("calculate", toolUse.Name);
     }
 }

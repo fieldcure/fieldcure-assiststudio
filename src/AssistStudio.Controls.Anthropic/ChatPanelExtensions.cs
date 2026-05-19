@@ -1,4 +1,5 @@
-﻿using Anthropic.Models.Messages;
+﻿using System.Text.Json;
+using Anthropic.Models.Messages;
 using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Anthropic;
 
@@ -39,17 +40,41 @@ public static class ChatPanelExtensions
     /// <param name="panel">The chat panel.</param>
     /// <param name="model">Model identifier (e.g., "claude-sonnet-4-6").</param>
     /// <param name="maxTokens">Maximum output tokens.</param>
+    /// <param name="tools">
+    /// Optional list of tools to expose to the model. Each tool's
+    /// <see cref="IAssistTool.ParameterSchema"/> must be a JSON Schema object describing
+    /// its <c>input</c> shape; it is forwarded as-is to <see cref="Tool.InputSchema"/>.
+    /// Pass null or an empty list when the turn does not need tool calling.
+    /// </param>
     /// <returns>Populated <see cref="MessageCreateParams"/> suitable for <c>client.Messages.CreateAsync</c> or streaming.</returns>
     public static MessageCreateParams BuildAnthropicParams(
-        this ChatPanel panel, string model, long maxTokens)
+        this ChatPanel panel, string model, long maxTokens,
+        IList<IAssistTool>? tools = null)
     {
         var conv = panel.GetConversationAsAnthropicMessages();
+
+        List<ToolUnion>? toolList = null;
+        if (tools is { Count: > 0 })
+        {
+            toolList = new List<ToolUnion>(tools.Count);
+            foreach (var t in tools)
+            {
+                toolList.Add(new Tool
+                {
+                    Name = t.Name,
+                    Description = t.Description,
+                    InputSchema = ParseInputSchema(t.ParameterSchema),
+                });
+            }
+        }
+
         return new MessageCreateParams
         {
             Model = model,
             MaxTokens = maxTokens,
             Messages = conv.Messages,
             System = conv.SystemPrompt is null ? null : new MessageCreateParamsSystem(conv.SystemPrompt),
+            Tools = toolList,
 
             // v1.0 attachment caching — top-level marker enables Anthropic automatic
             // prompt caching. API places the breakpoint at the last cacheable block
@@ -57,6 +82,21 @@ public static class ChatPanelExtensions
             // https://docs.claude.com/en/docs/build-with-claude/prompt-caching
             CacheControl = new CacheControlEphemeral { Ttl = Ttl.Ttl5m },
         };
+    }
+
+    /// <summary>
+    /// Parses an <see cref="IAssistTool.ParameterSchema"/> JSON string into an Anthropic SDK
+    /// <see cref="InputSchema"/>. The schema is expected to be a JSON object whose top-level
+    /// keys (typically <c>type</c>, <c>properties</c>, <c>required</c>) are forwarded as raw
+    /// JSON elements.
+    /// </summary>
+    private static InputSchema ParseInputSchema(string schemaJson)
+    {
+        using var doc = JsonDocument.Parse(schemaJson);
+        var dict = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
+        foreach (var prop in doc.RootElement.EnumerateObject())
+            dict[prop.Name] = prop.Value.Clone();
+        return InputSchema.FromRawUnchecked(dict);
     }
 
     /// <summary>

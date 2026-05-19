@@ -1,4 +1,5 @@
-﻿using Anthropic.Models.Messages;
+﻿using System.Text.Json;
+using Anthropic.Models.Messages;
 using FieldCure.Ai.Providers.Models;
 using Role = Anthropic.Models.Messages.Role;
 
@@ -20,8 +21,9 @@ public static class AnthropicMessageConverter
         var systemParts = new List<string>();
         var result = new List<MessageParam>();
 
-        foreach (var msg in messages)
+        for (var i = 0; i < messages.Count; i++)
         {
+            var msg = messages[i];
             switch (msg.Role)
             {
                 case ChatRole.System:
@@ -38,8 +40,21 @@ public static class AnthropicMessageConverter
                     break;
 
                 case ChatRole.Tool:
-                    // Tool messages are out of scope for text-only integration.
-                    // Skip silently — callers using tool calling should extend this converter.
+                    // Anthropic requires consecutive tool results to be combined into a
+                    // single user message whose content is a list of ToolResultBlockParams.
+                    // Sending each tool result as its own user message produces a 422.
+                    var blocks = new List<ContentBlockParam>();
+                    while (i < messages.Count && messages[i].Role == ChatRole.Tool)
+                    {
+                        blocks.Add(BuildToolResultBlock(messages[i]));
+                        i++;
+                    }
+                    i--; // step back so the for-loop's i++ lands on the next non-tool message
+                    result.Add(new MessageParam
+                    {
+                        Role = Role.User,
+                        Content = new MessageParamContent(blocks),
+                    });
                     break;
             }
         }
@@ -109,24 +124,84 @@ public static class AnthropicMessageConverter
     /// <summary>Converts a <see cref="ChatRole.Assistant"/> message to an Anthropic <see cref="MessageParam"/>.</summary>
     /// <remarks>
     /// Drops thinking blocks when reconstructing assistant messages for the API.
-    /// This is correct for text-only multi-turn — Anthropic accepts assistant
-    /// messages without thinking blocks even when extended thinking is enabled.
-    /// However, when a <c>tool_use</c> block is present, Anthropic requires the
-    /// preceding thinking block (with its original signature) to be included;
-    /// dropping it causes a 422 in that scenario. Tool support is currently
-    /// out of scope for this converter (see the <see cref="ChatRole.Tool"/>
-    /// branch in <see cref="Convert"/>). When tool + thinking are added,
-    /// implement signature round-trip per ADR-### (Extended Thinking Signature
-    /// Round-trip) before relaxing this drop.
+    /// This is correct for text-only and tool-only multi-turn — Anthropic accepts
+    /// assistant messages without thinking blocks even when extended thinking is
+    /// enabled, as long as no <c>tool_use</c> block is present *immediately after*
+    /// a thinking block. When tool_use + thinking are combined in the same turn
+    /// (Phase B), Anthropic requires the preceding thinking block (with its
+    /// original signature) to be included; dropping it causes a 422. Implement
+    /// signature round-trip per ADR-### before relaxing this drop.
     /// </remarks>
     private static MessageParam ConvertAssistantMessage(ChatMessage msg)
     {
-        // Text-only content — use simple string representation
+        var hasToolCalls = msg.ToolCalls is { Count: > 0 };
+
+        if (!hasToolCalls)
+        {
+            // Text-only content — use simple string representation
+            return new MessageParam
+            {
+                Role = Role.Assistant,
+                Content = new MessageParamContent(msg.Content ?? ""),
+            };
+        }
+
+        // Tool-use turn: emit [TextBlockParam?, ToolUseBlockParam, ...]. Anthropic
+        // permits a leading text block (the model's reasoning prelude) followed by
+        // one or more tool_use blocks in the same assistant message.
+        var blocks = new List<ContentBlockParam>();
+
+        if (!string.IsNullOrEmpty(msg.Content))
+            blocks.Add(new TextBlockParam { Text = msg.Content });
+
+        foreach (var call in msg.ToolCalls!)
+        {
+            blocks.Add(new ToolUseBlockParam
+            {
+                ID = call.Id,
+                Name = call.FunctionName,
+                Input = ParseToolInput(call.Arguments),
+            });
+        }
+
         return new MessageParam
         {
             Role = Role.Assistant,
-            Content = new MessageParamContent(msg.Content ?? ""),
+            Content = new MessageParamContent(blocks),
         };
+    }
+
+    /// <summary>
+    /// Builds a <see cref="ToolResultBlockParam"/> from a <see cref="ChatRole.Tool"/>
+    /// message. Anthropic expects each tool_use to be answered by a tool_result block
+    /// with a matching <c>ToolUseId</c>; the content is forwarded as plain text.
+    /// </summary>
+    private static ToolResultBlockParam BuildToolResultBlock(ChatMessage msg)
+    {
+        return new ToolResultBlockParam
+        {
+            ToolUseID = msg.ToolCallId ?? "",
+            Content = new ToolResultBlockParamContent(msg.Content ?? ""),
+        };
+    }
+
+    /// <summary>
+    /// Parses a tool call's arguments JSON string into the dictionary representation
+    /// that Anthropic's <see cref="ToolUseBlockParam.Input"/> expects.
+    /// </summary>
+    private static IReadOnlyDictionary<string, JsonElement> ParseToolInput(string argumentsJson)
+    {
+        if (string.IsNullOrWhiteSpace(argumentsJson))
+            return new Dictionary<string, JsonElement>();
+
+        using var doc = JsonDocument.Parse(argumentsJson);
+        if (doc.RootElement.ValueKind != JsonValueKind.Object)
+            return new Dictionary<string, JsonElement>();
+
+        var dict = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
+        foreach (var prop in doc.RootElement.EnumerateObject())
+            dict[prop.Name] = prop.Value.Clone();
+        return dict;
     }
 
     /// <summary>Maps a MIME type string to the Anthropic SDK <see cref="MediaType"/> enum.</summary>
