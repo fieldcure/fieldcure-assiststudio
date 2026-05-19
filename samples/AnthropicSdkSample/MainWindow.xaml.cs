@@ -74,20 +74,17 @@ public sealed partial class MainWindow : Window
         ChatPanel.UserMessageSubmitted += OnUserMessageSubmitted;
         ChatPanel.ModelChanged += OnChatPanelModelChanged;
 
-        // Block input until the client exists. Two paths flip this back to true:
-        //   - vault hit  → here in the ctor, so the user can type the moment the
-        //                  window is drawn (no race with the Loaded event firing later);
-        //   - vault miss → after the prompt dialog returns a valid key in OnContentLoaded.
-        // Previously the client was only assigned in OnContentLoaded, which left a
-        // ~100–500 ms gap during which an early "send" was silently dropped by the
-        // `if (_client is null) return;` guard in OnUserMessageSubmitted.
-        ChatPanel.IsEnabled = false;
-
+        // Vault hit is the common case. Constructing the client here (synchronously,
+        // before the window is drawn) closes the Loaded-event race that previously
+        // dropped an early "hi" message. The vault-miss path is handled in
+        // OnContentLoaded, where ChatPanel sits behind a modal prompt dialog and the
+        // user cannot send until the dialog returns — so no IsEnabled toggling is
+        // required (an earlier attempt to gate ChatPanel.IsEnabled broke the WebView2
+        // hosting layer and prevented send entirely).
         var apiKey = LoadApiKeyFromVault();
         if (!string.IsNullOrWhiteSpace(apiKey))
         {
             _client = new AnthropicClient { ApiKey = apiKey };
-            ChatPanel.IsEnabled = true;
         }
 
         ((FrameworkElement)Content).Loaded += OnContentLoaded;
@@ -272,7 +269,8 @@ public sealed partial class MainWindow : Window
 
         if (_client is null)
         {
-            // Vault-miss path. ChatPanel stays disabled until the user enters a key.
+            // Vault-miss path. The modal prompt blocks send attempts naturally — the
+            // user cannot interact with ChatPanel until the dialog returns.
             var apiKey = await PromptForApiKeyAsync();
             if (string.IsNullOrWhiteSpace(apiKey))
             {
@@ -281,7 +279,6 @@ public sealed partial class MainWindow : Window
             }
             SaveApiKeyToVault(apiKey);
             _client = new AnthropicClient { ApiKey = apiKey };
-            ChatPanel.IsEnabled = true;
             await LoadModelsAsync(apiKey);
         }
         else
@@ -309,11 +306,8 @@ public sealed partial class MainWindow : Window
 
         RemoveApiKeyFromVault();
         _client = null;
-        // Mirror the ctor pattern: block input while we have no client. Without this,
-        // a send between RemoveApiKeyFromVault and the new client assignment would be
-        // silently dropped by the null-guard in OnUserMessageSubmitted.
-        ChatPanel.IsEnabled = false;
 
+        // The new-key prompt is modal — the user can't send during that window.
         var newKey = await PromptForApiKeyAsync();
         if (string.IsNullOrWhiteSpace(newKey))
         {
@@ -323,7 +317,6 @@ public sealed partial class MainWindow : Window
 
         SaveApiKeyToVault(newKey);
         _client = new AnthropicClient { ApiKey = newKey };
-        ChatPanel.IsEnabled = true;
         await LoadModelsAsync(newKey);
     }
 
