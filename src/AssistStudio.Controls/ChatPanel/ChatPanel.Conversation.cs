@@ -200,6 +200,64 @@ public sealed partial class ChatPanel
     public IReadOnlyList<ChatMessage> GetConversationSnapshot() => [.. _messages];
 
     /// <summary>
+    /// Records one round of tool interactions on the active assistant turn: appends the
+    /// invisible tool-call assistant message and its <see cref="ChatRole.Tool"/> result
+    /// messages to the conversation, and renders inline tool blocks in the chat UI under
+    /// the turn's root assistant bubble. SDK consumers driving a multi-turn tool loop
+    /// should call this after each round of <see cref="IAssistTool.ExecuteAsync"/> so
+    /// the follow-up request emits the matching tool_use / tool_result blocks and the
+    /// user sees what the model called.
+    /// </summary>
+    /// <param name="handle">
+    /// The active assistant turn handle. Its <see cref="AssistantTurnHandle.Message"/>
+    /// is used as the parent for inline tool-block rendering.
+    /// </param>
+    /// <param name="interactions">
+    /// The model-issued tool calls paired with the JSON results returned by the consumer's
+    /// <see cref="IAssistTool.ExecuteAsync"/>. <paramref name="interactions"/> may be
+    /// empty (no-op).
+    /// </param>
+    public async Task AppendToolRoundAsync(
+        AssistantTurnHandle handle,
+        IReadOnlyList<ToolInteraction> interactions)
+    {
+        ArgumentNullException.ThrowIfNull(handle);
+        ArgumentNullException.ThrowIfNull(interactions);
+        if (interactions.Count == 0) return;
+
+        // Mirror the internal multi-round flow (see ChatPanel.Execution.cs around the
+        // toolCallMsg / toolResultMsg construction): the tool-call assistant message is
+        // invisible-in-tree but carries the ToolCalls collection so the next call to
+        // BuildAnthropicParams emits ToolUseBlockParam entries instead of a bare text turn.
+        var toolCallParentId = _messages.Count > 0 ? _messages[^1].Id : handle.Message.Id;
+        var toolCallMsg = new ChatMessage(ChatRole.Assistant)
+        {
+            ToolCalls = [.. interactions.Select(i => i.Call)],
+            Content = string.Empty,
+            ParentId = toolCallParentId,
+            ProviderName = handle.Message.ProviderName,
+            ProviderModelId = handle.Message.ProviderModelId,
+        };
+        RegisterInTree(toolCallMsg);
+        _messages.Add(toolCallMsg);
+
+        foreach (var (call, result, isError) in interactions)
+        {
+            var toolResultMsg = new ChatMessage(ChatRole.Tool, result)
+            {
+                ToolCallId = call.Id,
+                ParentId = toolCallMsg.Id,
+            };
+            RegisterInTree(toolResultMsg);
+            _messages.Add(toolResultMsg);
+
+            await _renderer.AppendToolBlockAsync(
+                handle.Message.Id, call.FunctionName, call.Arguments,
+                result, durationMs: null, isError);
+        }
+    }
+
+    /// <summary>
     /// Clears all messages and resets the chat panel to its empty state.
     /// </summary>
     public async void ClearConversation()
