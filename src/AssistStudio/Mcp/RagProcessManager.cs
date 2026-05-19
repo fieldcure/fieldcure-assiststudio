@@ -1,5 +1,5 @@
-using System.Diagnostics;
 using AssistStudio.Helpers;
+using Microsoft.Extensions.DependencyInjection;
 
 #pragma warning disable CA1416 // PasswordVaultHelper uses Windows PasswordVault — AssistStudio is Windows-only
 
@@ -58,44 +58,64 @@ public static class RagProcessManager
     /// </param>
     public static void StartQueueOrchestrator(bool sweepAll = false)
     {
-        var (command, prefixArgs) = BuiltInServerHelper.GetLaunchSpecForProcess(BuiltInServerHelper.RagKey);
-        if (string.IsNullOrEmpty(command))
-        {
-            LoggingService.LogError("[RAG] exec-queue failed — no launch spec for RAG");
-            return;
-        }
+        // Fire-and-forget: launch the queue orchestrator via IDnxHost on a background task
+        // so we don't block the caller (typically app-shutdown path) on NuGet resolution.
+        _ = Task.Run(StartQueueOrchestratorAsync);
 
-        var psi = new ProcessStartInfo
+        async Task StartQueueOrchestratorAsync()
         {
-            FileName = command,
-            CreateNoWindow = true,
-            UseShellExecute = false,
-        };
-        foreach (var a in prefixArgs) psi.ArgumentList.Add(a);
-        psi.ArgumentList.Add("exec-queue");
-        psi.ArgumentList.Add("--queue-file");
-        psi.ArgumentList.Add(DeferredQueueStore.QueueFilePath);
-        if (sweepAll) psi.ArgumentList.Add("--sweep-all");
+            try
+            {
+                var dnxHost = App.Services.GetRequiredService<IDnxHost>();
 
-        LoggingService.LogInfo($"[RAG] Starting exec-queue orchestrator: {command} {string.Join(' ', psi.ArgumentList)}");
+                var args = new List<string>
+                {
+                    "exec-queue",
+                    "--queue-file",
+                    DeferredQueueStore.QueueFilePath,
+                };
+                if (sweepAll) args.Add("--sweep-all");
 
-        try
-        {
-            InjectApiKeys(psi);
-            Process.Start(psi);
-        }
-        catch (Exception ex)
-        {
-            LoggingService.LogError($"[RAG] Failed to start exec-queue: {ex.Message}");
+                var env = LoadApiKeysEnv();
+
+                LoggingService.LogInfo(
+                    $"[RAG] Starting exec-queue orchestrator: FieldCure.Mcp.Rag@2.* {string.Join(' ', args)}");
+
+                // Detached: we don't retain the Process. ToolHost returns it with stdio
+                // redirected, but we don't need to read the streams — drain them onto null
+                // sinks so the OS pipe buffers don't fill and block the child.
+                var proc = await dnxHost.StartAsync(
+                    packageId: "FieldCure.Mcp.Rag",
+                    versionRange: "2.*",
+                    args: args,
+                    environmentVariables: env);
+
+                proc.OutputDataReceived += static (_, _) => { };
+                proc.ErrorDataReceived += static (_, e) =>
+                {
+                    if (e.Data is { Length: > 0 } line)
+                        LoggingService.LogWarning($"[RAG:exec-queue] {line}");
+                };
+                proc.BeginOutputReadLine();
+                proc.BeginErrorReadLine();
+
+                // Close our handle to stdin so the child sees EOF if it ever tries to read.
+                try { proc.StandardInput.Close(); } catch { }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError($"[RAG] Failed to start exec-queue: {ex.Message}");
+            }
         }
     }
 
     /// <summary>
-    /// Injects API keys from AssistStudio's PasswordVault into the child process
-    /// environment. The RAG process reads these via <c>Environment.GetEnvironmentVariable</c>
-    /// instead of accessing PasswordVault directly, keeping it platform-agnostic.
+    /// Loads provider API keys from <see cref="PasswordVaultHelper"/> into a child-process
+    /// environment dictionary. The RAG process reads these via
+    /// <c>Environment.GetEnvironmentVariable</c> instead of accessing PasswordVault directly,
+    /// keeping it platform-agnostic.
     /// </summary>
-    private static void InjectApiKeys(ProcessStartInfo psi)
+    private static IReadOnlyDictionary<string, string?> LoadApiKeysEnv()
     {
         (string presetName, string envVarName)[] mappings =
         [
@@ -106,11 +126,13 @@ public static class RagProcessManager
             ("Groq", "GROQ_API_KEY"),
         ];
 
+        var env = new Dictionary<string, string?>(mappings.Length, StringComparer.Ordinal);
         foreach (var (preset, envVar) in mappings)
         {
             var key = PasswordVaultHelper.LoadApiKey(preset);
             if (!string.IsNullOrEmpty(key))
-                psi.Environment[envVar] = key;
+                env[envVar] = key;
         }
+        return env;
     }
 }

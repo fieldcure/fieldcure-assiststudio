@@ -1,6 +1,8 @@
 ﻿using AssistStudio.Helpers;
 using FieldCure.Ai.Providers.Models;
 using FieldCure.AssistStudio.Core.Models;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using System.ComponentModel;
@@ -51,6 +53,22 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
     private readonly List<ElicitationPresenterScope> _elicitationPresenterScopes = [];
     private IElicitationPresenter? _activeElicitationPresenter;
     private ElicitationPresenterScope? _activeElicitationPresenterScope;
+
+    /// <summary>
+    /// The child <see cref="Process"/> when this connection was launched through
+    /// <see cref="IDnxHost"/> (i.e. <c>Config.Command == "dnx"</c>). <see langword="null"/>
+    /// for HTTP transports and for legacy stdio servers spawned by the MCP SDK itself.
+    /// Owned by this connection — stdin/stdout are wired to the <see cref="StreamClientTransport"/>
+    /// and the process is killed/disposed in <see cref="DisposeAsync"/>.
+    /// </summary>
+    private Process? _dnxProcess;
+
+    /// <summary>
+    /// Set to <see langword="true"/> at the start of teardown so the
+    /// <see cref="Process.Exited"/> handler can distinguish "we asked for this" from
+    /// "the server crashed". Volatile because the handler runs on a thread-pool thread.
+    /// </summary>
+    private volatile bool _isShuttingDown;
 
     #endregion
 
@@ -148,7 +166,7 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
 
         try
         {
-            var transport = CreateTransport();
+            var transport = await CreateTransportAsync(ct);
 
             var capabilities = new ClientCapabilities();
             var handlers = new McpClientHandlers();
@@ -247,6 +265,9 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
     public async Task DisconnectAsync()
     {
         LoggingService.LogInfo($"[MCP] Disconnecting: {Config.Name}");
+        _isShuttingDown = true;
+        DetachDnxProcessHandlers();
+
         if (_client is not null)
         {
             try
@@ -266,6 +287,8 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
             _client = null;
         }
 
+        await DisposeDnxProcessAsync(TimeSpan.FromSeconds(2));
+
         Tools = [];
         _mcpTools = [];
         State = McpConnectionState.Disconnected;
@@ -280,6 +303,9 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
     /// </summary>
     public void ForceKill()
     {
+        _isShuttingDown = true;
+        DetachDnxProcessHandlers();
+
         if (_client is not null)
         {
             try
@@ -291,6 +317,13 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
             _client = null;
         }
 
+        if (_dnxProcess is { } proc)
+        {
+            try { if (!proc.HasExited) proc.Kill(entireProcessTree: true); } catch { }
+            try { proc.Dispose(); } catch { }
+            _dnxProcess = null;
+        }
+
         Tools = [];
         State = McpConnectionState.Disconnected;
     }
@@ -300,6 +333,9 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
     /// </summary>
     public async ValueTask ForceKillAsync()
     {
+        _isShuttingDown = true;
+        DetachDnxProcessHandlers();
+
         if (_client is not null)
         {
             try
@@ -313,8 +349,48 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
             _client = null;
         }
 
+        await DisposeDnxProcessAsync(TimeSpan.FromSeconds(2));
+
         Tools = [];
         State = McpConnectionState.Disconnected;
+    }
+
+    /// <summary>
+    /// Detaches the <see cref="OnDnxStderrReceived"/> / <see cref="OnDnxProcessExited"/> handlers
+    /// from <see cref="_dnxProcess"/>. Called first in every teardown path so a graceful
+    /// shutdown does not surface as a spurious "exited unexpectedly" warning.
+    /// </summary>
+    private void DetachDnxProcessHandlers()
+    {
+        if (_dnxProcess is not { } proc) return;
+        try { proc.Exited -= OnDnxProcessExited; } catch { }
+        try { proc.ErrorDataReceived -= OnDnxStderrReceived; } catch { }
+    }
+
+    /// <summary>
+    /// Waits up to <paramref name="gracePeriod"/> for the dnx process to exit on its own
+    /// (typically driven by stdin EOF after the SDK closes streams), then force-kills the
+    /// process tree if it is still alive. Always disposes the <see cref="Process"/> handle
+    /// and clears <see cref="_dnxProcess"/>. Idempotent.
+    /// </summary>
+    private async Task DisposeDnxProcessAsync(TimeSpan gracePeriod)
+    {
+        if (_dnxProcess is not { } proc) return;
+        _dnxProcess = null;
+
+        try
+        {
+            using var cts = new CancellationTokenSource(gracePeriod);
+            await proc.WaitForExitAsync(cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            try { if (!proc.HasExited) proc.Kill(entireProcessTree: true); } catch { }
+            try { await proc.WaitForExitAsync(); } catch { }
+        }
+        catch { }
+
+        try { proc.Dispose(); } catch { }
     }
 
     /// <summary>
@@ -349,27 +425,115 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
 
     #region Private Methods
 
-    private IClientTransport CreateTransport()
+    /// <summary>
+    /// Builds the MCP transport for this connection. For stdio servers whose <c>Command</c>
+    /// is the <c>"dnx"</c> sentinel, the process is spawned through <see cref="IDnxHost"/>
+    /// (embedded ToolHost runner) and wrapped in a <see cref="StreamClientTransport"/>;
+    /// for everything else, the SDK's <see cref="StdioClientTransport"/> /
+    /// <see cref="HttpClientTransport"/> handles the spawn itself.
+    /// </summary>
+    private async Task<IClientTransport> CreateTransportAsync(CancellationToken ct)
     {
-        return Config.TransportType switch
+        switch (Config.TransportType)
         {
-            McpTransportType.Stdio => new StdioClientTransport(new StdioClientTransportOptions
-            {
-                Command = Config.Command ?? throw new InvalidOperationException("Stdio transport requires a command."),
-                Arguments = Config.Arguments,
-                Name = Config.Name,
-                EnvironmentVariables = Config.EnvironmentVariables!,
-                ShutdownTimeout = TimeSpan.FromSeconds(2),
-            }),
+            case McpTransportType.Stdio:
+                var command = Config.Command
+                    ?? throw new InvalidOperationException("Stdio transport requires a command.");
 
-            McpTransportType.Http => new HttpClientTransport(new HttpClientTransportOptions
-            {
-                Endpoint = new Uri(Config.Url ?? throw new InvalidOperationException("HTTP transport requires a URL.")),
-                Name = Config.Name,
-            }),
+                if (string.Equals(command, "dnx", StringComparison.OrdinalIgnoreCase))
+                    return await CreateDnxTransportAsync(ct);
 
-            _ => throw new NotSupportedException($"Transport type {Config.TransportType} is not supported.")
-        };
+                return new StdioClientTransport(new StdioClientTransportOptions
+                {
+                    Command = command,
+                    Arguments = Config.Arguments,
+                    Name = Config.Name,
+                    EnvironmentVariables = Config.EnvironmentVariables!,
+                    ShutdownTimeout = TimeSpan.FromSeconds(2),
+                });
+
+            case McpTransportType.Http:
+                return new HttpClientTransport(new HttpClientTransportOptions
+                {
+                    Endpoint = new Uri(Config.Url
+                        ?? throw new InvalidOperationException("HTTP transport requires a URL.")),
+                    Name = Config.Name,
+                });
+
+            default:
+                throw new NotSupportedException($"Transport type {Config.TransportType} is not supported.");
+        }
+    }
+
+    /// <summary>
+    /// Launches the configured tool through <see cref="IDnxHost"/> and wraps its stdio in a
+    /// <see cref="StreamClientTransport"/>. Wires <see cref="Process.ErrorDataReceived"/>
+    /// (forwarded to <see cref="LoggingService"/>) and <see cref="Process.Exited"/>
+    /// (logged as a crash unless <see cref="_isShuttingDown"/> is set) before returning.
+    /// </summary>
+    private async Task<IClientTransport> CreateDnxTransportAsync(CancellationToken ct)
+    {
+        var spec = BuiltInServerHelper.ParseDnxInvocation(
+            Config.Arguments,
+            contextLabel: $"MCP:{Config.Name}");
+
+        var dnxHost = App.Services.GetRequiredService<IDnxHost>();
+
+        IReadOnlyDictionary<string, string?>? env = null;
+        if (Config.EnvironmentVariables is { Count: > 0 } envVars)
+        {
+            var dict = new Dictionary<string, string?>(envVars.Count, StringComparer.Ordinal);
+            foreach (var kvp in envVars)
+                dict[kvp.Key] = kvp.Value;
+            env = dict;
+        }
+
+        _dnxProcess = await dnxHost.StartAsync(
+            spec.PackageId,
+            spec.VersionRange,
+            spec.ToolArguments,
+            env,
+            ct);
+
+        LoggingService.LogInfo(
+            $"[MCP] Launched via IDnxHost: {Config.Name} pkg={spec.PackageId}" +
+            $"@{spec.VersionRange ?? "latest"} pid={_dnxProcess.Id}");
+
+        _dnxProcess.ErrorDataReceived += OnDnxStderrReceived;
+        _dnxProcess.BeginErrorReadLine();
+        _dnxProcess.EnableRaisingEvents = true;
+        _dnxProcess.Exited += OnDnxProcessExited;
+
+        return new StreamClientTransport(
+            serverInput: _dnxProcess.StandardInput.BaseStream,
+            serverOutput: _dnxProcess.StandardOutput.BaseStream,
+            loggerFactory: NullLoggerFactory.Instance);
+    }
+
+    /// <summary>
+    /// Forwards <c>stderr</c> from the dnx-launched MCP server to the app log. Without this,
+    /// server startup errors (missing API keys, malformed config, native dependency load
+    /// failures) would vanish silently because the SDK only reads <c>stdout</c>.
+    /// </summary>
+    private void OnDnxStderrReceived(object? sender, DataReceivedEventArgs e)
+    {
+        if (e.Data is null) return;
+        LoggingService.LogWarning($"[MCP:{Config.Name}] stderr: {e.Data}");
+    }
+
+    /// <summary>
+    /// Handler for the dnx process's <see cref="Process.Exited"/> event. Suppressed during
+    /// expected teardown (<see cref="_isShuttingDown"/> is set first in <see cref="DisposeAsync"/>);
+    /// otherwise logs the unexpected exit so the user sees why their MCP server stopped.
+    /// </summary>
+    private void OnDnxProcessExited(object? sender, EventArgs e)
+    {
+        if (_isShuttingDown) return;
+
+        int? code = null;
+        try { code = _dnxProcess?.ExitCode; } catch { }
+        LoggingService.LogWarning(
+            $"[MCP:{Config.Name}] Server process exited unexpectedly (code={code?.ToString() ?? "?"}).");
     }
 
     /// <summary>

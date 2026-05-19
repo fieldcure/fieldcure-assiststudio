@@ -2,7 +2,6 @@
 using FieldCure.AssistStudio.Core.Models;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.ApplicationModel.Resources;
-using System.Diagnostics;
 using System.Text.Json;
 
 namespace AssistStudio.Mcp;
@@ -23,9 +22,9 @@ public static class BuiltInServerHelper
     #region Constants
 
     /// <summary>
-    /// Maps server keys to their NuGet package IDs. Packages are run via <c>dnx</c>
-    /// (NuGet's npx-equivalent, .NET 10+), which fetches and executes them directly
-    /// from NuGet — no global install step is required.
+    /// Maps server keys to their NuGet package IDs. Packages are launched via
+    /// <see cref="IDnxHost"/> (an embedded <c>FieldCure.ToolHost</c> runner) which
+    /// fetches and executes them directly from NuGet — no .NET SDK install required.
     /// </summary>
     private static readonly Dictionary<string, string> NuGetPackages = new()
     {
@@ -37,11 +36,11 @@ public static class BuiltInServerHelper
     };
 
     /// <summary>
-    /// Major-version ranges for built-in packages. <c>dnx</c> resolves the
-    /// latest available version within the range on every invocation (subject
-    /// to its own cache). Bumping a major here is an intentional AssistStudio
-    /// release-coupled decision — new majors ship breaking changes and must be
-    /// validated against the host before being picked up.
+    /// Major-version ranges for built-in packages. <see cref="IDnxHost"/> resolves
+    /// the latest available version within the range subject to the
+    /// <c>CachedWithRefresh</c> TTL. Bumping a major here is an intentional
+    /// AssistStudio release-coupled decision — new majors ship breaking changes
+    /// and must be validated against the host before being picked up.
     /// </summary>
     private static readonly Dictionary<string, string> MajorVersionRanges = new()
     {
@@ -168,8 +167,9 @@ public static class BuiltInServerHelper
     /// <summary>
     /// Creates a <see cref="McpServerConfig"/> for a built-in server.
     /// Returns <see langword="null"/> if the server is disabled or has no folders
-    /// (for folder-based servers). The command is always <c>dnx</c>, which fetches
-    /// the package from NuGet on first use and caches subsequent invocations.
+    /// (for folder-based servers). The command is always the marker string <c>"dnx"</c>;
+    /// <see cref="McpServerConnection"/> routes it through <see cref="IDnxHost"/> at
+    /// transport-creation time rather than spawning a literal <c>dnx</c> binary.
     /// </summary>
     public static McpServerConfig? CreateMcpServerConfig(string serverKey, BuiltInServerConfig config)
     {
@@ -289,14 +289,12 @@ public static class BuiltInServerHelper
     }
 
     /// <summary>
-    /// Returns the <c>dnx</c> invocation spec for a built-in server. Command is
-    /// the literal string <c>"dnx"</c> — MCP stdio transports resolve it through
-    /// the shell so PATHEXT lookup works. For direct <see cref="Process.Start"/>
-    /// callers (which do not search PATHEXT), use
-    /// <see cref="GetLaunchSpecForProcess"/> which substitutes a resolved
-    /// absolute path to <c>dnx.cmd</c>/<c>dnx</c>. Prefix args pin the package
-    /// id with its major-version range (e.g. <c>FieldCure.Mcp.Rag@2.*</c>)
-    /// followed by <c>--yes</c> to suppress the first-run install prompt.
+    /// Returns the marker invocation spec for a built-in server. <c>Command</c> is the
+    /// sentinel string <c>"dnx"</c> — not a literal binary on PATH. <see cref="McpServerConnection"/>
+    /// detects this sentinel and routes the launch through <see cref="IDnxHost"/> at
+    /// transport-creation time. Prefix args pin the package id with its major-version range
+    /// (e.g. <c>FieldCure.Mcp.Rag@2.*</c>) followed by <c>--yes</c> for legacy compatibility
+    /// — the actual fetch-without-prompt behavior comes from ToolHost defaults.
     /// </summary>
     public static (string Command, string[] PrefixArgs) GetLaunchSpec(string serverKey)
     {
@@ -308,54 +306,84 @@ public static class BuiltInServerHelper
     }
 
     /// <summary>
-    /// Variant of <see cref="GetLaunchSpec"/> for code paths that spawn the
-    /// built-in server with <see cref="Process.Start(ProcessStartInfo)"/> and
-    /// <c>UseShellExecute=false</c>. On Windows <c>dnx</c> ships as a
-    /// <c>.cmd</c> shim which <c>Process.Start</c> will not find via bare name,
-    /// so we substitute the resolved absolute path. Returns an empty command
-    /// when <c>dnx</c> is not on PATH — callers should log and skip.
+    /// Parsed view of a <c>dnx</c>-style invocation. <see cref="ToolArguments"/> excludes the
+    /// leading <c>pkg[@range]</c> token and the recognized dnx flags (<c>--yes</c>/<c>-y</c>,
+    /// <c>--prerelease</c>); whatever remains is forwarded to the tool entry point unchanged.
     /// </summary>
-    public static (string Command, string[] PrefixArgs) GetLaunchSpecForProcess(string serverKey)
-    {
-        var (_, prefixArgs) = GetLaunchSpec(serverKey);
-        if (prefixArgs.Length == 0) return ("", []);
+    internal sealed record DnxInvocationSpec(
+        string PackageId,
+        string? VersionRange,
+        bool AllowPrerelease,
+        IReadOnlyList<string> ToolArguments);
 
-        var dnx = _dnxPath.Value;
-        return string.IsNullOrEmpty(dnx) ? ("", []) : (dnx, prefixArgs);
+    /// <summary>
+    /// Splits a <c>pkg[@range]</c> token into its parts. dnx-compatible: accepts
+    /// <c>"pkg"</c>, <c>"pkg@1.0.0"</c>, <c>"pkg@1.*"</c>, <c>"pkg@[1.0.0,2.0.0)"</c>.
+    /// </summary>
+    /// <exception cref="ArgumentException">Token is empty or starts with <c>@</c>.</exception>
+    internal static (string PackageId, string? Range) ParseDnxArg(string arg)
+    {
+        if (string.IsNullOrWhiteSpace(arg))
+            throw new ArgumentException("dnx package token cannot be empty.", nameof(arg));
+
+        var at = arg.IndexOf('@');
+        if (at == 0)
+            throw new ArgumentException($"Invalid dnx package spec '{arg}' — missing package id before '@'.", nameof(arg));
+        if (at < 0)
+            return (arg, null);
+
+        var range = at + 1 < arg.Length ? arg[(at + 1)..] : null;
+        return (arg[..at], string.IsNullOrEmpty(range) ? null : range);
     }
 
     /// <summary>
-    /// Cached absolute path to the <c>dnx</c> launcher. On Windows <c>dnx</c>
-    /// ships as a <c>.cmd</c> shim; <see cref="Process.Start(ProcessStartInfo)"/>
-    /// with <c>UseShellExecute=false</c> only searches PATH for <c>.exe</c> by
-    /// default, so we resolve the full path once here and reuse it.
+    /// Parses an MCP server <c>Arguments</c> list whose <c>Command</c> is the <c>"dnx"</c>
+    /// sentinel into a structured spec. Recognized dnx flags (<c>--yes</c>, <c>--prerelease</c>)
+    /// are mapped to their <see cref="DnxInvocationSpec"/> equivalents; unrecognized flags
+    /// (e.g. <c>--source</c>, <c>--configfile</c>) are passed through to the tool with a
+    /// warning logged — the v1 host does not honor dnx CLI flags beyond <c>--yes</c>/
+    /// <c>--prerelease</c>.
     /// </summary>
-    private static readonly Lazy<string?> _dnxPath = new(ResolveDnxPath);
-
-    /// <summary>
-    /// Walks the PATH environment variable looking for a <c>dnx</c> launcher.
-    /// Returns <see langword="null"/> when not found (e.g. user has not installed
-    /// the .NET 10 SDK); callers should handle the absence gracefully.
-    /// </summary>
-    private static string? ResolveDnxPath()
+    internal static DnxInvocationSpec ParseDnxInvocation(IReadOnlyList<string>? arguments, string contextLabel)
     {
-        var pathVar = Environment.GetEnvironmentVariable("PATH");
-        if (string.IsNullOrEmpty(pathVar)) return null;
+        if (arguments is null || arguments.Count == 0)
+            throw new ArgumentException("dnx invocation requires at least a package id.", nameof(arguments));
 
-        string[] extensions = OperatingSystem.IsWindows()
-            ? [".cmd", ".exe", ".bat", ".ps1"]
-            : [""];
+        var (packageId, range) = ParseDnxArg(arguments[0]);
 
-        foreach (var dir in pathVar.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+        var toolArgs = new List<string>(arguments.Count - 1);
+        bool allowPrerelease = false;
+
+        for (var i = 1; i < arguments.Count; i++)
         {
-            foreach (var ext in extensions)
+            var token = arguments[i];
+
+            if (token.Equals("--yes", StringComparison.OrdinalIgnoreCase)
+                || token.Equals("-y", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (token.Equals("--prerelease", StringComparison.OrdinalIgnoreCase))
             {
-                var candidate = Path.Combine(dir, $"dnx{ext}");
-                if (File.Exists(candidate))
-                    return candidate;
+                allowPrerelease = true;
+                continue;
             }
+
+            if (token.StartsWith("--", StringComparison.Ordinal))
+            {
+                LoggingService.LogWarning(
+                    $"[{contextLabel}] dnx flag '{token}' is not honored by the embedded host; forwarding to tool args.");
+            }
+
+            toolArgs.Add(token);
         }
-        return null;
+
+        if (allowPrerelease)
+        {
+            LoggingService.LogWarning(
+                $"[{contextLabel}] dnx '--prerelease' flag is parsed but not yet wired through IDnxHost in v1.0; ignoring.");
+        }
+
+        return new DnxInvocationSpec(packageId, range, allowPrerelease, toolArgs);
     }
 
     /// <summary>

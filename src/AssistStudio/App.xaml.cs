@@ -4,6 +4,7 @@ using FieldCure.Ai.Providers;
 using FieldCure.AssistStudio.Controls;
 using FieldCure.AssistStudio.Core.Helpers;
 using FieldCure.DocumentParsers.Imaging;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -42,6 +43,13 @@ public partial class App : Application
     /// Gets the app-level MCP server registry singleton.
     /// </summary>
     public static McpServerRegistry McpRegistry { get; } = new();
+
+    /// <summary>
+    /// App-wide service provider. Set in <see cref="OnLaunched"/> and used as a service-locator
+    /// from <see cref="McpServerConnection"/> and <see cref="RagProcessManager"/> for the
+    /// embedded <see cref="IDnxHost"/> (built-in MCP server launcher).
+    /// </summary>
+    public static IServiceProvider Services { get; private set; } = null!;
 
     // Memory is now managed by Essentials MCP server (memory.db)
 
@@ -83,6 +91,28 @@ public partial class App : Application
             ProviderFactory.RegisterCustomProvider(config);
 
         LoggingService.LogInfo("[App] Startup — services initialized");
+
+        // Build the DI container and initialize the embedded NuGet tool host. All built-in
+        // MCP servers (Filesystem/RAG/Outbox/Runner/Essentials) and the RAG queue
+        // orchestrator are launched through IDnxHost — replacing the prior dependency on
+        // the .NET 10 SDK's `dnx` command, which is unavailable on MS Store installs.
+        // The init is awaited synchronously here so downstream callers can rely on a ready
+        // host without their own retry/wait logic.
+        Services = BuildServices();
+        try
+        {
+            await Services.GetRequiredService<IDnxHost>().InitializeAsync();
+        }
+        catch (Exception ex)
+        {
+            LoggingService.LogError($"[App] DnxHost initialization failed: {ex.Message}");
+            ShowFatalStartupError(
+                "AssistStudio could not start.\n\n" +
+                "The .NET runtime is required but was not found on this system.\n\n" +
+                $"Details: {ex.Message}");
+            Exit();
+            return;
+        }
 
         // Wire elicitation presenter before connecting MCP servers.
         McpRegistry.ElicitationPresenter = new ChatPanelElicitationPresenter(() =>
@@ -222,9 +252,40 @@ public partial class App : Application
     [DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(nint hWnd);
 
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "MessageBoxW")]
+    private static extern int MessageBoxW(nint hWnd, string text, string caption, uint type);
+
+    /// <summary>
+    /// Shows a fatal startup error via Win32 <c>MessageBox</c>. Used during the brief window
+    /// after activation but before <see cref="MainWindow"/> exists (so no XamlRoot is yet
+    /// available for a WinUI <c>ContentDialog</c>).
+    /// </summary>
+    private static void ShowFatalStartupError(string message)
+    {
+        const uint MB_OK = 0x0;
+        const uint MB_ICONERROR = 0x10;
+        _ = MessageBoxW(nint.Zero, message, "AssistStudio", MB_OK | MB_ICONERROR);
+    }
+
     #endregion
 
     #region Private Methods
+
+    /// <summary>
+    /// Builds the app-wide <see cref="IServiceProvider"/>. Loads <c>appsettings.json</c> from
+    /// the install folder, binds <see cref="ToolHostOptions"/>, and registers
+    /// <see cref="IDnxHost"/> as a singleton.
+    /// </summary>
+    private static IServiceProvider BuildServices()
+    {
+        var appSettingsPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+        var toolHostOptions = ToolHostOptions.LoadFromJson(appSettingsPath);
+
+        var services = new ServiceCollection();
+        services.AddSingleton(toolHostOptions);
+        services.AddSingleton<IDnxHost, DnxHost>();
+        return services.BuildServiceProvider();
+    }
 
     /// <summary>
     /// Loads saved MCP server configurations and connects to enabled servers.
