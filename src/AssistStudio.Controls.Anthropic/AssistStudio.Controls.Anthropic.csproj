@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0-windows10.0.19041.0;net9.0-windows10.0.19041.0</TargetFrameworks>
+    <TargetFrameworks>net8.0-windows10.0.19041.0;net10.0-windows10.0.19041.0</TargetFrameworks>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>FieldCure.AssistStudio.Controls.Anthropic</RootNamespace>
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
