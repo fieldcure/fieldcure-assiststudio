@@ -33,6 +33,23 @@
                     Style="{StaticResource CaptionTextBlockStyle}" Opacity="0.7"
                     TextWrapping="Wrap" />
 
+                <!-- ".NET 10 Runtime missing" notice — visible only when App.IsDnxHostReady is
+                     false. IsClosable=False because dismissing it on a tools-management page
+                     would hide the root cause of every built-in card showing Error. -->
+                <InfoBar
+                    x:Name="DnxNotReadyNotice"
+                    x:Uid="Mcp_DnxNotReady_ConnectPageNotice"
+                    IsOpen="False"
+                    IsIconVisible="True"
+                    IsClosable="False"
+                    Severity="Warning">
+                    <InfoBar.ActionButton>
+                        <HyperlinkButton
+                            x:Uid="Mcp_DnxNotReady_InstallButton"
+                            NavigateUri="https://dotnet.microsoft.com/download/dotnet/10.0/runtime" />
+                    </InfoBar.ActionButton>
+                </InfoBar>
+
                 <!-- Built-in servers (grouped, tight spacing) -->
                 <StackPanel Spacing="8">
 

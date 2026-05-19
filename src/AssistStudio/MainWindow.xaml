@@ -30,10 +30,18 @@
             <Frame x:Name="SettingsFrame" />
         </SplitView.Pane>
 
-        <!-- Main Content: TabView + Notification overlay -->
+        <!-- Main Content: TabView + Notification overlay + Dnx-not-ready banner -->
         <SplitView.Content>
             <Grid>
+                <Grid.RowDefinitions>
+                    <!-- Row 0: TabView + transient toast overlay -->
+                    <RowDefinition Height="*" />
+                    <!-- Row 1: persistent DnxNotReady banner (Auto → collapses when closed) -->
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
                 <TabView
+                    Grid.Row="0"
                     x:Name="Tabs"
                     TabItemsSource="{x:Bind ViewModel.Tabs}"
                     SelectedItem="{x:Bind ViewModel.SelectedTab, Mode=TwoWay}"
@@ -189,8 +197,9 @@
                     </TabView.TabStripFooter>
                 </TabView>
 
-                <!-- Notification -->
+                <!-- Transient toast (slides up from bottom of row 0) -->
                 <InfoBar
+                    Grid.Row="0"
                     x:Name="StatusNotification"
                     IsIconVisible="True"
                     HorizontalAlignment="Center"
@@ -199,6 +208,26 @@
                     <InfoBar.RenderTransform>
                         <TranslateTransform x:Name="NotificationTranslate" Y="80" />
                     </InfoBar.RenderTransform>
+                </InfoBar>
+
+                <!-- Persistent ".NET 10 Runtime missing" banner. IsOpen is toggled in
+                     code-behind based on App.IsDnxHostReady + App.DnxBannerDismissed.
+                     Closing it sets DnxBannerDismissed for the session so the banner
+                     stays hidden until the next launch. -->
+                <InfoBar
+                    Grid.Row="1"
+                    x:Name="DnxNotReadyBar"
+                    x:Uid="Mcp_DnxNotReady_InfoBar"
+                    IsOpen="False"
+                    IsIconVisible="True"
+                    IsClosable="True"
+                    Severity="Informational"
+                    Closed="OnDnxNotReadyBarClosed">
+                    <InfoBar.ActionButton>
+                        <HyperlinkButton
+                            x:Uid="Mcp_DnxNotReady_InstallButton"
+                            NavigateUri="https://dotnet.microsoft.com/download/dotnet/10.0/runtime" />
+                    </InfoBar.ActionButton>
                 </InfoBar>
             </Grid>
         </SplitView.Content>

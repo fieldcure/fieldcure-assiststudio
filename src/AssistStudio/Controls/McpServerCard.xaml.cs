@@ -172,6 +172,14 @@ public sealed partial class McpServerCard : UserControl
             {
                 detailText = $"{connection.Tools.Count} {toolsLabel}";
             }
+            else if (connection.State == McpConnectionState.Error
+                     && !string.IsNullOrEmpty(connection.ErrorMessage))
+            {
+                // Surface the error on built-in cards too — without this, a red status dot
+                // is silent (the dot color was set above but the detail row would fall
+                // through to the descriptive placeholder text, hiding the actual cause).
+                detailText = connection.ErrorMessage;
+            }
             else
             {
                 detailText = config.Description ?? "";

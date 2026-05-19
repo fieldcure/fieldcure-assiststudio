@@ -975,6 +975,24 @@
   <data name="Connect_Description.Text" xml:space="preserve">
     <value>Register MCP (Model Context Protocol) servers to extend AI capabilities with external tools. Connected servers provide tools that can be used during conversations.</value>
   </data>
+  <data name="Mcp_DnxNotReady_InfoBar.Title" xml:space="preserve">
+    <value>MCP tools are disabled</value>
+  </data>
+  <data name="Mcp_DnxNotReady_InfoBar.Message" xml:space="preserve">
+    <value>Install the .NET 10 Desktop Runtime to enable the built-in MCP servers (Workspace Folders, Knowledge Base, Outbox, Runner, Essentials).</value>
+  </data>
+  <data name="Mcp_DnxNotReady_ConnectPageNotice.Title" xml:space="preserve">
+    <value>.NET 10 Desktop Runtime required</value>
+  </data>
+  <data name="Mcp_DnxNotReady_ConnectPageNotice.Message" xml:space="preserve">
+    <value>The built-in MCP servers cannot launch until the runtime is installed.</value>
+  </data>
+  <data name="Mcp_DnxNotReady_InstallButton.Content" xml:space="preserve">
+    <value>Install .NET 10 Runtime</value>
+  </data>
+  <data name="Mcp_DnxNotReady_CardError" xml:space="preserve">
+    <value>Requires .NET 10 Desktop Runtime</value>
+  </data>
   <data name="Connect_AddServer" xml:space="preserve">
     <value>Add Server</value>
   </data>

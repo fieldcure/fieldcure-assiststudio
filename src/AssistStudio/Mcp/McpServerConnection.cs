@@ -143,6 +143,19 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
     /// </summary>
     public bool SupportsRoots { get; init; }
 
+    /// <summary>
+    /// Forces this connection into <see cref="McpConnectionState.Error"/> with the supplied
+    /// message. Used by <see cref="ConnectPage"/> to render placeholder cards (Filesystem,
+    /// or any built-in card while .NET runtime is missing) as red-dot + error so the user
+    /// sees a precondition failure without an actual connect attempt having been made.
+    /// Never call on a connection that may also be driven by <see cref="ConnectAsync"/>.
+    /// </summary>
+    internal void SetPlaceholderError(string message)
+    {
+        ErrorMessage = message;
+        State = McpConnectionState.Error;
+    }
+
     #endregion
 
     #region Methods

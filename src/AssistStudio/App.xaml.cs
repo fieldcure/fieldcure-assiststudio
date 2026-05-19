@@ -51,6 +51,29 @@ public partial class App : Application
     /// </summary>
     public static IServiceProvider Services { get; private set; } = null!;
 
+    /// <summary>
+    /// True iff <see cref="IDnxHost.InitializeAsync"/> succeeded at startup. When false, every
+    /// dnx-launched MCP server (built-in suite + any user server with <c>Command="dnx"</c>)
+    /// will fast-fail in <see cref="IDnxHost.StartAsync"/>. The rest of the app (chat, provider
+    /// calls, HTTP MCP servers) is unaffected — this is a graceful degradation, not a fatal error.
+    /// </summary>
+    public static bool IsDnxHostReady { get; private set; }
+
+    /// <summary>
+    /// Diagnostic message from the failed <see cref="IDnxHost.InitializeAsync"/> call, or
+    /// <see langword="null"/> when initialization succeeded. Typically the inner exception
+    /// message from <c>DotnetEnvironment.DetectAsync</c> (e.g. "The 'dotnet' muxer was not
+    /// found on PATH"). Surfaced verbatim in the MainWindow InfoBar and ConnectPage notice.
+    /// </summary>
+    public static string? DnxHostError { get; private set; }
+
+    /// <summary>
+    /// Session-local flag set by <see cref="MainWindow"/> when the user closes the
+    /// "MCP tools disabled" InfoBar. Not persisted — the banner re-appears next launch if
+    /// <see cref="IsDnxHostReady"/> is still false.
+    /// </summary>
+    public static bool DnxBannerDismissed { get; set; }
+
     // Memory is now managed by Essentials MCP server (memory.db)
 
     #endregion
@@ -92,26 +115,29 @@ public partial class App : Application
 
         LoggingService.LogInfo("[App] Startup — services initialized");
 
-        // Build the DI container and initialize the embedded NuGet tool host. All built-in
-        // MCP servers (Filesystem/RAG/Outbox/Runner/Essentials) and the RAG queue
-        // orchestrator are launched through IDnxHost — replacing the prior dependency on
-        // the .NET 10 SDK's `dnx` command, which is unavailable on MS Store installs.
-        // The init is awaited synchronously here so downstream callers can rely on a ready
-        // host without their own retry/wait logic.
+        // Build the DI container and initialize the embedded NuGet tool host. Built-in MCP
+        // servers (Filesystem/RAG/Outbox/Runner/Essentials) and the RAG queue orchestrator
+        // are launched through IDnxHost.
+        //
+        // If the host fails to initialize — typically because the .NET runtime is not
+        // installed on this PC — the app continues in a degraded mode: chat and provider
+        // calls work, dnx-launched MCP servers do not. IsDnxHostReady / DnxHostError carry
+        // the state to the UI (bottom InfoBar in MainWindow, notice on ConnectPage). This
+        // is intentionally NOT fatal: AssistStudio is self-contained and MS Store users
+        // without a system-installed .NET runtime should still be able to use the chat.
         Services = BuildServices();
         try
         {
             await Services.GetRequiredService<IDnxHost>().InitializeAsync();
+            IsDnxHostReady = true;
         }
         catch (Exception ex)
         {
-            LoggingService.LogError($"[App] DnxHost initialization failed: {ex.Message}");
-            ShowFatalStartupError(
-                "AssistStudio could not start.\n\n" +
-                "The .NET runtime is required but was not found on this system.\n\n" +
+            IsDnxHostReady = false;
+            DnxHostError = ex.Message;
+            LoggingService.LogWarning(
+                $"[App] DnxHost not available; MCP tools will be disabled until .NET runtime is installed. " +
                 $"Details: {ex.Message}");
-            Exit();
-            return;
         }
 
         // Wire elicitation presenter before connecting MCP servers.
@@ -251,21 +277,6 @@ public partial class App : Application
 
     [DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(nint hWnd);
-
-    [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "MessageBoxW")]
-    private static extern int MessageBoxW(nint hWnd, string text, string caption, uint type);
-
-    /// <summary>
-    /// Shows a fatal startup error via Win32 <c>MessageBox</c>. Used during the brief window
-    /// after activation but before <see cref="MainWindow"/> exists (so no XamlRoot is yet
-    /// available for a WinUI <c>ContentDialog</c>).
-    /// </summary>
-    private static void ShowFatalStartupError(string message)
-    {
-        const uint MB_OK = 0x0;
-        const uint MB_ICONERROR = 0x10;
-        _ = MessageBoxW(nint.Zero, message, "AssistStudio", MB_OK | MB_ICONERROR);
-    }
 
     #endregion
 

@@ -975,6 +975,24 @@
   <data name="Connect_Description.Text" xml:space="preserve">
     <value>MCP(Model Context Protocol) 서버를 등록하여 외부 도구로 AI 기능을 확장합니다. 연결된 서버의 도구는 대화 중에 사용할 수 있습니다.</value>
   </data>
+  <data name="Mcp_DnxNotReady_InfoBar.Title" xml:space="preserve">
+    <value>MCP 도구가 비활성화되어 있습니다</value>
+  </data>
+  <data name="Mcp_DnxNotReady_InfoBar.Message" xml:space="preserve">
+    <value>.NET 10 Desktop Runtime을 설치하면 내장 MCP 서버(워크스페이스 폴더, 지식 베이스, Outbox, Runner, Essentials)를 사용할 수 있습니다.</value>
+  </data>
+  <data name="Mcp_DnxNotReady_ConnectPageNotice.Title" xml:space="preserve">
+    <value>.NET 10 Desktop Runtime이 필요합니다</value>
+  </data>
+  <data name="Mcp_DnxNotReady_ConnectPageNotice.Message" xml:space="preserve">
+    <value>런타임을 설치할 때까지 내장 MCP 서버를 실행할 수 없습니다.</value>
+  </data>
+  <data name="Mcp_DnxNotReady_InstallButton.Content" xml:space="preserve">
+    <value>.NET 10 Runtime 설치</value>
+  </data>
+  <data name="Mcp_DnxNotReady_CardError" xml:space="preserve">
+    <value>.NET 10 Desktop Runtime 필요</value>
+  </data>
   <data name="Connect_AddServer" xml:space="preserve">
     <value>서버 추가</value>
   </data>

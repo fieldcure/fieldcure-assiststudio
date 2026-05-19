@@ -166,6 +166,24 @@ public sealed partial class MainWindow : Window
 
         // Notification system
         InitializeNotificationCenter();
+
+        // Show the persistent ".NET 10 Runtime missing" banner once per session when the
+        // host failed to initialize. DnxBannerDismissed is set in OnDnxNotReadyBarClosed,
+        // so closing the banner keeps it hidden until the app restarts.
+        if (!App.IsDnxHostReady && !App.DnxBannerDismissed)
+        {
+            DnxNotReadyBar.IsOpen = true;
+        }
+    }
+
+    /// <summary>
+    /// Marks the dnx-not-ready banner as dismissed for the rest of the session, so it does
+    /// not re-appear if any code path toggles <c>IsOpen</c> later. The flag resets on app
+    /// restart — if the user still hasn't installed the .NET runtime, the banner returns.
+    /// </summary>
+    private void OnDnxNotReadyBarClosed(InfoBar sender, InfoBarClosedEventArgs args)
+    {
+        App.DnxBannerDismissed = true;
     }
 
     #endregion

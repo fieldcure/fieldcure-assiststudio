@@ -75,6 +75,11 @@ public sealed class DnxHost : IDnxHost
         {
             if (_initialized) return;
 
+            // Mark as "attempted" up front so a failure won't be retried on every
+            // subsequent StartAsync call — DotnetEnvironment.DetectAsync spawns dotnet
+            // subprocesses and we don't want a hot loop.
+            _initialized = true;
+
             _environment = await DotnetEnvironment.DetectAsync(ct).ConfigureAwait(false);
             LoggingService.LogInfo(
                 $"[DnxHost] dotnet detected at {_environment.DotnetMuxerPath}; " +
@@ -94,14 +99,19 @@ public sealed class DnxHost : IDnxHost
                 new NuGetPackageResolver(resolverOptions, new ToolCacheIndexStore()),
                 new NuGetToolExtractor(_environment),
                 new ToolLauncher());
-
-            _initialized = true;
         }
         finally
         {
             _initGate.Release();
         }
     }
+
+    /// <summary>
+    /// Returns <see langword="true"/> when <see cref="InitializeAsync"/> completed and a
+    /// runner is ready to launch tools. <see langword="false"/> until initialization runs
+    /// (or after it fails — typically because the .NET runtime is missing on this PC).
+    /// </summary>
+    public bool IsReady => _runner is not null;
 
     /// <inheritdoc />
     public Task<Process> StartAsync(
@@ -114,10 +124,16 @@ public sealed class DnxHost : IDnxHost
         ArgumentException.ThrowIfNullOrWhiteSpace(packageId);
         ArgumentNullException.ThrowIfNull(args);
 
-        if (!_initialized || _runner is null)
+        if (_runner is null)
         {
-            throw new InvalidOperationException(
-                $"{nameof(DnxHost)}.{nameof(InitializeAsync)} must complete before {nameof(StartAsync)} is called.");
+            // Two reasons we can be here: (1) InitializeAsync was never awaited (programming
+            // error); (2) InitializeAsync was awaited but DotnetEnvironment.DetectAsync threw
+            // because no .NET runtime is installed (the common fresh-PC case). Both surface
+            // the same user-visible symptom — MCP tools can't launch — so we use one short
+            // message that lands well on the per-card status text. The longer "Install from
+            // dotnet.microsoft.com" guidance lives on the MainWindow InfoBar and the
+            // ConnectPage notice, where the user can also click an install link.
+            throw new InvalidOperationException("Requires .NET 10 Desktop Runtime");
         }
 
         var request = new ToolInvocationRequest

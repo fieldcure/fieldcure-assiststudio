@@ -52,6 +52,11 @@ public sealed partial class ConnectPage : Page
         ImportText.Text = _loader.GetString("Connect_ImportFrom");
         EmptyStateText.Text = _loader.GetString("Connect_EmptyState");
 
+        // Surface the ".NET 10 Runtime missing" notice whenever the dnx host failed to
+        // initialize. Re-checked on every navigation so users who install the runtime
+        // mid-session see the notice disappear after returning to this page.
+        DnxNotReadyNotice.IsOpen = !App.IsDnxHostReady;
+
         // Initialize built-in card sections (created lazily to avoid XAML parse overhead)
         if (_registry is not null)
         {
@@ -329,7 +334,16 @@ public sealed partial class ConnectPage : Page
             return;
         }
 
-        // Filesystem card — standalone placeholder at top
+        // ".NET 10 Runtime missing" affects every dnx-launched server. When that's the case,
+        // we render each built-in card as a red-dot Error with a consistent short message
+        // (the ConnectPage notice and MainWindow InfoBar carry the install link).
+        var dnxNotReadyMessage = !App.IsDnxHostReady
+            ? _loader.GetString("Mcp_DnxNotReady_CardError")
+            : null;
+
+        // Filesystem card — multi-instance (per-tab), so the card never binds to a single
+        // real connection. We synthesize a placeholder connection whose State reflects either
+        // the active-instance summary (gray dot) or the dnx precondition error (red dot).
         var fsPrefix = $"builtin_{BuiltInServerHelper.FilesystemKey}";
         var activeTabCount = _registry.Connections
             .Count(c => c.Config.Id.StartsWith(fsPrefix, StringComparison.Ordinal) && c.IsConnected);
@@ -345,85 +359,39 @@ public sealed partial class ConnectPage : Page
                 ? $"{_loader.GetString("Connect_FilesystemActiveInstances")}\n{string.Format(_loader.GetString("Connect_FilesystemActiveCount"), activeTabCount)}"
                 : _loader.GetString("Connect_FilesystemNeedsFolders"),
         };
-        FilesystemCard.Connection = new McpServerConnection(fsPlaceholder);
+        var fsConn = new McpServerConnection(fsPlaceholder);
+        if (dnxNotReadyMessage is not null)
+            fsConn.SetPlaceholderError(dnxNotReadyMessage);
+        FilesystemCard.Connection = fsConn;
 
-        // RAG card — same pattern as Filesystem
-        var ragPrefix = $"builtin_{BuiltInServerHelper.RagKey}";
-        var ragActiveCount = _registry.Connections
-            .Count(c => c.Config.Id.StartsWith(ragPrefix, StringComparison.Ordinal) && c.IsConnected);
-        var embeddingModel = AppSettings.EmbeddingModel;
-        string ragDescription;
-        if (ragActiveCount > 0)
-        {
-            ragDescription = $"{_loader.GetString("Connect_RagActiveInstances")}\n{string.Format(_loader.GetString("Connect_RagActiveCount"), ragActiveCount)}";
-            if (!string.IsNullOrEmpty(embeddingModel))
-                ragDescription += $"  ·  {embeddingModel}";
-        }
-        else if (!string.IsNullOrEmpty(embeddingModel))
-        {
-            ragDescription = $"{_loader.GetString("Connect_RagNeedsFolders")}\n{embeddingModel}";
-        }
-        else
-        {
-            ragDescription = _loader.GetString("Connect_RagNeedsFolders");
-        }
+        // RAG, Outbox, Runner, Essentials are all *shared* (single instance per app). When
+        // a real connection exists in the registry, bind it directly so the card's status
+        // dot reflects the live State (Connected / Connecting / Error). When no connection
+        // exists (disabled, or RAG with zero KBs), fall back to a descriptive placeholder.
+        // The dnx-not-ready override takes precedence over both paths.
+        RagCard.Connection = BuildSharedBuiltInConnection(
+            BuiltInServerHelper.RagKey,
+            BuiltInServerHelper.RagDisplayName,
+            BuildRagPlaceholderDescription(),
+            dnxNotReadyMessage);
 
-        var ragPlaceholder = new McpServerConfig
-        {
-            Id = ragPrefix,
-            Name = BuiltInServerHelper.RagDisplayName,
-            TransportType = McpTransportType.Stdio,
-            Command = "dnx",
-            IsBuiltIn = true,
-            IsEnabled = false,
-            Description = ragDescription,
-        };
-        RagCard.Connection = new McpServerConnection(ragPlaceholder);
+        OutboxCard.Connection = BuildSharedBuiltInConnection(
+            BuiltInServerHelper.OutboxKey,
+            BuiltInServerHelper.OutboxDisplayName,
+            _loader.GetString("Connect_OutboxDescription"),
+            dnxNotReadyMessage);
 
-        // Outbox card — shared instance, no folders
-        var outboxPrefix = $"builtin_{BuiltInServerHelper.OutboxKey}";
-        var outboxConn = _registry.GetBuiltInConnection(BuiltInServerHelper.OutboxKey);
-        var outboxPlaceholder = new McpServerConfig
-        {
-            Id = outboxPrefix,
-            Name = BuiltInServerHelper.OutboxDisplayName,
-            TransportType = McpTransportType.Stdio,
-            Command = "dnx",
-            IsBuiltIn = true,
-            IsEnabled = false,
-            Description = _loader.GetString("Connect_OutboxDescription"),
-        };
-        OutboxCard.Connection = new McpServerConnection(outboxPlaceholder);
+        RunnerCard.Connection = BuildSharedBuiltInConnection(
+            BuiltInServerHelper.RunnerKey,
+            BuiltInServerHelper.RunnerDisplayName,
+            _loader.GetString("Connect_RunnerDescription"),
+            dnxNotReadyMessage);
 
-        // Runner card — shared instance, no folders
-        var runnerPrefix = $"builtin_{BuiltInServerHelper.RunnerKey}";
-        var runnerConn = _registry.GetBuiltInConnection(BuiltInServerHelper.RunnerKey);
-        var runnerPlaceholder = new McpServerConfig
-        {
-            Id = runnerPrefix,
-            Name = BuiltInServerHelper.RunnerDisplayName,
-            TransportType = McpTransportType.Stdio,
-            Command = "dnx",
-            IsBuiltIn = true,
-            IsEnabled = false,
-            Description = _loader.GetString("Connect_RunnerDescription"),
-        };
-        RunnerCard.Connection = new McpServerConnection(runnerPlaceholder);
-
-        // Essentials card — shared instance, no folders
-        var essentialsPrefix = $"builtin_{BuiltInServerHelper.EssentialsKey}";
-        var essentialsConn = _registry.GetBuiltInConnection(BuiltInServerHelper.EssentialsKey);
-        var essentialsPlaceholder = new McpServerConfig
-        {
-            Id = essentialsPrefix,
-            Name = BuiltInServerHelper.EssentialsDisplayName,
-            TransportType = McpTransportType.Stdio,
-            Command = "dnx",
-            IsBuiltIn = true,
-            IsEnabled = false,
-            Description = _loader.GetString("Connect_EssentialsDescription"),
-        };
-        EssentialsCard.Connection = new McpServerConnection(essentialsPlaceholder);
+        EssentialsCard.Connection = BuildSharedBuiltInConnection(
+            BuiltInServerHelper.EssentialsKey,
+            BuiltInServerHelper.EssentialsDisplayName,
+            _loader.GetString("Connect_EssentialsDescription"),
+            dnxNotReadyMessage);
 
         // User-configured servers only (exclude all built-in connections)
         var displayList = _registry.Connections
@@ -434,6 +402,67 @@ public sealed partial class ConnectPage : Page
         EmptyStateText.Visibility = displayList.Count == 0
             ? Visibility.Visible
             : Visibility.Collapsed;
+    }
+
+    /// <summary>
+    /// Returns the live registered <see cref="McpServerConnection"/> for a shared built-in
+    /// server when one exists (so its <c>State</c>/<c>ErrorMessage</c> drive the card's
+    /// status dot directly). Otherwise synthesizes a disabled placeholder so the card has
+    /// something to render; when <paramref name="dnxNotReadyMessage"/> is non-null, the
+    /// placeholder is forced into <see cref="McpConnectionState.Error"/> so the card shows
+    /// a red dot + that message.
+    /// </summary>
+    private McpServerConnection BuildSharedBuiltInConnection(
+        string serverKey,
+        string displayName,
+        string fallbackDescription,
+        string? dnxNotReadyMessage)
+    {
+        var real = _registry!.GetBuiltInConnection(serverKey);
+        if (real is not null)
+            return real;
+
+        var placeholder = new McpServerConnection(new McpServerConfig
+        {
+            Id = $"builtin_{serverKey}",
+            Name = displayName,
+            TransportType = McpTransportType.Stdio,
+            Command = "dnx",
+            IsBuiltIn = true,
+            IsEnabled = false,
+            Description = fallbackDescription,
+        });
+        if (dnxNotReadyMessage is not null)
+            placeholder.SetPlaceholderError(dnxNotReadyMessage);
+        return placeholder;
+    }
+
+    /// <summary>
+    /// Builds the placeholder description for the RAG card when no shared connection
+    /// exists (typically because no Knowledge Base has been created yet). Mirrors the
+    /// active-instance / embedding-model formatting the page used before the card was
+    /// switched to bind a live connection.
+    /// </summary>
+    private string BuildRagPlaceholderDescription()
+    {
+        var ragPrefix = $"builtin_{BuiltInServerHelper.RagKey}";
+        var activeCount = _registry!.Connections
+            .Count(c => c.Config.Id.StartsWith(ragPrefix, StringComparison.Ordinal) && c.IsConnected);
+        var embeddingModel = AppSettings.EmbeddingModel;
+
+        if (activeCount > 0)
+        {
+            var text = $"{_loader.GetString("Connect_RagActiveInstances")}\n" +
+                       string.Format(_loader.GetString("Connect_RagActiveCount"), activeCount);
+            if (!string.IsNullOrEmpty(embeddingModel))
+                text += $"  ·  {embeddingModel}";
+            return text;
+        }
+
+        if (!string.IsNullOrEmpty(embeddingModel))
+            return $"{_loader.GetString("Connect_RagNeedsFolders")}\n{embeddingModel}";
+
+        return _loader.GetString("Connect_RagNeedsFolders");
     }
 
     #endregion
