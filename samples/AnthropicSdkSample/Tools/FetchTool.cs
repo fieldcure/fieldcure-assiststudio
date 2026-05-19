@@ -11,9 +11,13 @@ namespace AnthropicSdkSample.Tools;
 /// inside <see cref="ExecuteAsync"/>, and return a JSON string the model can read.
 /// </summary>
 /// <remarks>
-/// This implementation mirrors <c>FieldCure.Mcp.Essentials.HttpRequestTool</c>: SSRF
-/// guard against private IPs, per-request timeout, hard 1 MB byte cap, and an optional
-/// character-level <c>max_chars</c> truncation suitable for HTML responses.
+/// Adapted from <c>FieldCure.Mcp.Essentials.HttpRequestTool</c>. Defenses kept:
+/// DNS-resolve SSRF guard against private IPs, per-request timeout, hard 1 MB
+/// byte cap, character-level <c>max_chars</c> truncation. Defaults are tuned so
+/// the model rarely has to think about them — a sensible <c>User-Agent</c> is
+/// injected when absent (avoids GitHub/Reddit 403s), <c>max_chars</c> defaults
+/// to 20000 (enough for most page summaries), and a clear truncation hint tells
+/// the model when to narrow its URL instead of refetching with a larger window.
 /// </remarks>
 internal sealed class FetchTool : IAssistTool
 {
@@ -26,15 +30,40 @@ internal sealed class FetchTool : IAssistTool
     /// <summary>Maximum response body size (1 MB) before the byte stream is cut off.</summary>
     private const int MaxResponseBytes = 1_048_576;
 
+    /// <summary>Default character cap when the caller doesn't specify <c>max_chars</c>.</summary>
+    private const int DefaultMaxChars = 20_000;
+
+    /// <summary>Default User-Agent injected when the caller doesn't supply one.</summary>
+    private const string DefaultUserAgent = "FieldCure-Sample-Fetch/1.0 (+https://github.com/FieldCure)";
+
+    /// <summary>
+    /// Headers the model is not allowed to set. Some are hop-by-hop or framing-critical
+    /// (HttpClient owns them), and <c>Authorization</c> is blocked outright to keep
+    /// prompt-injection attacks from exfiltrating credentials embedded in chat history
+    /// to attacker-controlled URLs. Real auth flows should add a dedicated parameter
+    /// the host controls — not flow auth through model-authored JSON.
+    /// </summary>
+    private static readonly HashSet<string> ForbiddenHeaders = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Host",
+        "Content-Length",
+        "Transfer-Encoding",
+        "Connection",
+        "Authorization",
+        "Cookie",
+        "Proxy-Authorization",
+    };
+
     /// <inheritdoc/>
     public string Name => "fetch";
 
     /// <inheritdoc/>
     public string Description =>
         "Fetch the contents of an http(s) URL. Returns JSON with statusCode, headers, " +
-        "body, and elapsedMs. Use max_chars (e.g., 3000-5000) for HTML pages when you " +
-        "only need a portion. Do NOT use max_chars for JSON API responses — truncated " +
-        "JSON cannot be parsed.";
+        "body, and elapsedMs. A sensible User-Agent is sent automatically. max_chars " +
+        "defaults to 20000; if the body is truncated the response includes an explicit " +
+        "notice — narrow the URL or raise max_chars rather than refetching the same page. " +
+        "Do NOT use max_chars for JSON API responses where you need to parse the result.";
 
     /// <inheritdoc/>
     public string ParameterSchema => """
@@ -47,7 +76,7 @@ internal sealed class FetchTool : IAssistTool
             },
             "max_chars": {
               "type": "integer",
-              "description": "Maximum characters of the response body to return. Omit for unlimited (up to 1 MB).",
+              "description": "Maximum characters of the response body to return. Default 20000. Raise for long pages, or set to a small value when you only need a preview. Do not use for JSON APIs you intend to parse.",
               "minimum": 1
             },
             "timeout_seconds": {
@@ -55,6 +84,11 @@ internal sealed class FetchTool : IAssistTool
               "description": "Per-request timeout (default 30, max 120).",
               "minimum": 1,
               "maximum": 120
+            },
+            "headers": {
+              "type": "object",
+              "description": "Optional request headers. User-Agent is set automatically if not provided. Examples: {\"Accept\": \"application/json\"} for JSON APIs, {\"Accept\": \"application/vnd.github+json\"} for the GitHub REST API, {\"Accept-Language\": \"en-US,en;q=0.9\"} to prefer English content. Authorization, Cookie, and hop-by-hop headers are not accepted from the model.",
+              "additionalProperties": { "type": "string" }
             }
           },
           "required": ["url"]
@@ -73,9 +107,10 @@ internal sealed class FetchTool : IAssistTool
     {
         var url = parameters.TryGetProperty("url", out var urlEl) ? urlEl.GetString() ?? "" : "";
         var maxChars = parameters.TryGetProperty("max_chars", out var mcEl) && mcEl.ValueKind == JsonValueKind.Number
-            ? mcEl.GetInt32() : (int?)null;
+            ? mcEl.GetInt32() : DefaultMaxChars;
         var timeoutSeconds = parameters.TryGetProperty("timeout_seconds", out var tsEl) && tsEl.ValueKind == JsonValueKind.Number
             ? Math.Clamp(tsEl.GetInt32(), 1, 120) : 30;
+        var requestedHeaders = ParseHeaders(parameters);
 
         try
         {
@@ -88,6 +123,8 @@ internal sealed class FetchTool : IAssistTool
                 return SerializeError(ssrfError);
 
             using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+            ApplyHeaders(request, requestedHeaders);
+
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             cts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
 
@@ -109,23 +146,27 @@ internal sealed class FetchTool : IAssistTool
                 totalRead += read;
             }
 
-            var truncated = totalRead >= MaxResponseBytes;
+            var bodyByteCap = totalRead >= MaxResponseBytes;
             var bodyText = Encoding.UTF8.GetString(buffer, 0, totalRead);
 
             // Character-level cap is applied after UTF-8 decoding so the model sees a
             // character count it can reason about — byte truncation alone can leave
-            // half a multi-byte sequence at the tail.
-            if (maxChars is > 0 && bodyText.Length > maxChars.Value)
+            // half a multi-byte sequence at the tail. The explicit notice tells the
+            // model to narrow the URL rather than ratchet max_chars up indefinitely.
+            var charTruncated = false;
+            if (maxChars > 0 && bodyText.Length > maxChars)
             {
-                var limit = maxChars.Value;
+                var limit = maxChars;
                 if (limit > 0 && char.IsHighSurrogate(bodyText[limit - 1]))
                     limit--;
 
                 var remaining = bodyText.Length - limit;
                 bodyText = bodyText[..limit]
-                    + $"\n\n[Truncated: {remaining:N0} more chars omitted. "
-                    + "Use a smaller max_chars or fetch a more specific URL.]";
-                truncated = true;
+                    + $"\n\n[TRUNCATED: response was {bodyText.Length:N0} chars, "
+                    + $"showing first {limit:N0}. If you need more, re-call with a larger "
+                    + "max_chars OR (better) request a more specific URL. Do not refetch the "
+                    + "same URL hoping for different content.]";
+                charTruncated = true;
             }
 
             var result = new
@@ -134,8 +175,8 @@ internal sealed class FetchTool : IAssistTool
                 headers = responseHeaders,
                 body = bodyText,
                 elapsedMs = sw.ElapsedMilliseconds,
-                truncated = truncated ? (bool?)true : null,
-                maxChars = maxChars,
+                truncated = (bodyByteCap || charTruncated) ? (bool?)true : null,
+                maxChars,
             };
 
             return JsonSerializer.Serialize(result, JsonOpts);
@@ -147,6 +188,43 @@ internal sealed class FetchTool : IAssistTool
         catch (Exception ex)
         {
             return SerializeError(ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Parses the optional <c>headers</c> argument into a case-insensitive dictionary,
+    /// silently dropping non-string values. Returns an empty dictionary when the caller
+    /// didn't pass a <c>headers</c> object.
+    /// </summary>
+    private static Dictionary<string, string> ParseHeaders(JsonElement parameters)
+    {
+        var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (!parameters.TryGetProperty("headers", out var headersEl) || headersEl.ValueKind != JsonValueKind.Object)
+            return dict;
+
+        foreach (var prop in headersEl.EnumerateObject())
+        {
+            if (prop.Value.ValueKind == JsonValueKind.String)
+                dict[prop.Name] = prop.Value.GetString() ?? "";
+        }
+        return dict;
+    }
+
+    /// <summary>
+    /// Applies the requested headers to <paramref name="request"/>, dropping forbidden
+    /// names, and guarantees a default <c>User-Agent</c> when the caller didn't supply one.
+    /// </summary>
+    private static void ApplyHeaders(HttpRequestMessage request, Dictionary<string, string> requested)
+    {
+        if (!requested.ContainsKey("User-Agent"))
+            requested["User-Agent"] = DefaultUserAgent;
+
+        foreach (var (key, value) in requested)
+        {
+            if (ForbiddenHeaders.Contains(key)) continue;
+            // TryAddWithoutValidation lets the model use less-common headers (e.g. Accept-Language)
+            // without HttpClient rejecting them; framing/hop-by-hop headers are already filtered.
+            request.Headers.TryAddWithoutValidation(key, value);
         }
     }
 
