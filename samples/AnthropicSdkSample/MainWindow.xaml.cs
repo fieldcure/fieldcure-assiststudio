@@ -47,7 +47,11 @@ public sealed partial class MainWindow : Window
     /// <summary>PasswordVault user name (single-key app, so a fixed name suffices).</summary>
     private const string VaultUser = "ApiKey";
 
-    /// <summary>Anthropic SDK client. Null until API key is verified on first load.</summary>
+    /// <summary>
+    /// Anthropic SDK client. Initialized in the ctor when the Credential Manager has a
+    /// stored API key (the common case after first run), otherwise in
+    /// <see cref="OnContentLoaded"/> once the user enters one through the prompt.
+    /// </summary>
     private AnthropicClient? _client;
 
     /// <summary>Initializes the window, sets up the custom title bar, and subscribes to events.</summary>
@@ -69,6 +73,23 @@ public sealed partial class MainWindow : Window
 
         ChatPanel.UserMessageSubmitted += OnUserMessageSubmitted;
         ChatPanel.ModelChanged += OnChatPanelModelChanged;
+
+        // Block input until the client exists. Two paths flip this back to true:
+        //   - vault hit  → here in the ctor, so the user can type the moment the
+        //                  window is drawn (no race with the Loaded event firing later);
+        //   - vault miss → after the prompt dialog returns a valid key in OnContentLoaded.
+        // Previously the client was only assigned in OnContentLoaded, which left a
+        // ~100–500 ms gap during which an early "send" was silently dropped by the
+        // `if (_client is null) return;` guard in OnUserMessageSubmitted.
+        ChatPanel.IsEnabled = false;
+
+        var apiKey = LoadApiKeyFromVault();
+        if (!string.IsNullOrWhiteSpace(apiKey))
+        {
+            _client = new AnthropicClient { ApiKey = apiKey };
+            ChatPanel.IsEnabled = true;
+        }
+
         ((FrameworkElement)Content).Loaded += OnContentLoaded;
     }
 
@@ -240,26 +261,34 @@ public sealed partial class MainWindow : Window
 
     #region API Key Lifecycle
 
-    /// <summary>Loads or prompts for the API key once the visual tree is ready.</summary>
+    /// <summary>
+    /// Post-layout initialization: prompts for the API key when the vault was empty
+    /// (the ctor already handled the vault-hit path), then loads the model list. Runs
+    /// after the visual tree is up so dialogs have a XamlRoot to attach to.
+    /// </summary>
     private async void OnContentLoaded(object sender, RoutedEventArgs args)
     {
         ((FrameworkElement)Content).Loaded -= OnContentLoaded;
 
-        var apiKey = LoadApiKeyFromVault();
-
-        if (string.IsNullOrWhiteSpace(apiKey))
+        if (_client is null)
         {
-            apiKey = await PromptForApiKeyAsync();
+            // Vault-miss path. ChatPanel stays disabled until the user enters a key.
+            var apiKey = await PromptForApiKeyAsync();
             if (string.IsNullOrWhiteSpace(apiKey))
             {
                 Close();
                 return;
             }
             SaveApiKeyToVault(apiKey);
+            _client = new AnthropicClient { ApiKey = apiKey };
+            ChatPanel.IsEnabled = true;
+            await LoadModelsAsync(apiKey);
         }
-
-        _client = new AnthropicClient { ApiKey = apiKey };
-        await LoadModelsAsync(apiKey);
+        else
+        {
+            // Vault-hit path. Client was wired in the ctor; just populate the model list.
+            await LoadModelsAsync(_client.ApiKey ?? string.Empty);
+        }
     }
 
     /// <summary>Handles the Reset API Key button click.</summary>
@@ -280,6 +309,10 @@ public sealed partial class MainWindow : Window
 
         RemoveApiKeyFromVault();
         _client = null;
+        // Mirror the ctor pattern: block input while we have no client. Without this,
+        // a send between RemoveApiKeyFromVault and the new client assignment would be
+        // silently dropped by the null-guard in OnUserMessageSubmitted.
+        ChatPanel.IsEnabled = false;
 
         var newKey = await PromptForApiKeyAsync();
         if (string.IsNullOrWhiteSpace(newKey))
@@ -290,6 +323,7 @@ public sealed partial class MainWindow : Window
 
         SaveApiKeyToVault(newKey);
         _client = new AnthropicClient { ApiKey = newKey };
+        ChatPanel.IsEnabled = true;
         await LoadModelsAsync(newKey);
     }
 
