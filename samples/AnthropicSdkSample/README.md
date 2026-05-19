@@ -26,7 +26,10 @@ chat application.
 - Thinking block streaming (`ThinkingDelta` mapping)
 - Image and text file attachments (vision + inline text)
 - Multi-turn conversations (`GetConversationAsAnthropicMessages` converts full history)
-- Runtime model switching (Opus 4.6 / Sonnet 4.6 / Haiku 4.5)
+- **Tool calling** — built-in `fetch` tool (HTTP GET with SSRF guard) wired through
+  `IAssistTool` + `BuildAnthropicParams(... tools)`, with a single-handle multi-round
+  loop and inline tool blocks rendered under the assistant bubble (see [Tool calling](#tool-calling) below)
+- Runtime model switching (Opus / Sonnet / Haiku)
 - Stop button — cancels the active stream mid-response via `CancellationToken`
 - Secure API key storage via Windows Credential Manager (DPAPI)
 - Markdown, code highlighting, and KaTeX rendering (WebView2-based)
@@ -34,12 +37,14 @@ chat application.
 **What this sample does not include:**
 
 - System prompts (no UI — can be enabled by one line in `OnUserMessageSubmitted`)
-- Tool calling (out of scope for v1.0; `AssistantTurnHandle.AppendToolResultAsync` not exposed)
+- Tool approval UI (`ToolApprovalPanel`) — the built-in `fetch` tool auto-approves;
+  flip `FetchTool.RequiresConfirmation` to `true` and wire the panel's approval/decline
+  events to demonstrate the interactive path
+- Thinking signature round-trip when combined with tool use (Phase B of the adapter
+  integration — required when extended thinking is enabled alongside tool calls)
 - Conversation persistence (history is lost on app close)
 - Auto-title / auto-summarize (requires `UtilityProvider` configuration)
 - PDF / DOCX attachments (converter currently handles images and text files only)
-- Thinking content round-trip (received OK, but dropped when sent back in history —
-  signature preservation requires a `ChatMessage` extension)
 - Conversation branching / edit-retry (routes through the internal provider path,
   which is disabled in this sample)
 
@@ -54,6 +59,67 @@ The key is stored securely in **Windows Credential Manager** (PasswordVault, DPA
 and loaded automatically on subsequent launches.
 
 To change the saved key, click the **Reset API Key** button in the title bar.
+
+## Tool calling
+
+The sample ships a single in-process `IAssistTool` — **`fetch`** — that the model
+can call to read public HTTP(S) URLs. It exists to demonstrate the adapter's tool
+plumbing end-to-end without pulling in an external MCP server.
+
+**What the tool does** ([`Tools/FetchTool.cs`](Tools/FetchTool.cs)):
+
+- HTTP GET with DNS-resolve **SSRF guard** (private / loopback / link-local addresses
+  blocked) and a 1 MB hard byte cap on response bodies
+- Optional `headers` parameter — a default `User-Agent` is always injected (so GitHub,
+  Reddit, etc. don't return 403); forbidden names (`Authorization`, `Cookie`,
+  `Host`, `Content-Length`, `Transfer-Encoding`, `Connection`, `Proxy-Authorization`)
+  are silently dropped to keep prompt-injection attacks from leaking credentials
+- `max_chars` defaults to **20 000**; a truncation notice instructs the model to
+  narrow the URL rather than refetch the same page hoping for different content
+- `timeout_seconds` (default 30, max 120)
+
+**How the multi-round loop is wired** ([`MainWindow.OnUserMessageSubmitted`](MainWindow.xaml.cs)):
+
+```csharp
+private readonly IList<IAssistTool> _tools = [new FetchTool()];
+
+// One handle covers the whole user turn — every tool round streams into the
+// same root assistant bubble, with inline 'fetch URL' blocks expanding under it.
+await using var handle = ChatPanel.BeginAnthropicTurn("Claude", modelId);
+var ct = handle.CancellationToken;
+
+for (var round = 0; round < MaxToolRounds; round++)
+{
+    var parameters = ChatPanel.BuildAnthropicParams(modelId, maxTokens: 16384, _tools);
+    var stream = _client.Messages.CreateStreaming(parameters, ct);
+    var result = await handle.StreamAnthropicAsync(stream, ct);
+
+    if (!result.HasToolCalls) return; // final reply — loop ends
+
+    var interactions = new List<ToolInteraction>(result.ToolCalls!.Count);
+    foreach (var call in result.ToolCalls!)
+    {
+        var (output, isError) = await ExecuteToolAsync(call, ct);
+        interactions.Add(new ToolInteraction(call, output, isError));
+    }
+    // Appends invisible tool_use / tool_result history (so the next request emits
+    // matching tool_use_id pairs and avoids a 422) AND renders inline tool blocks.
+    await ChatPanel.AppendToolRoundAsync(handle, interactions);
+}
+```
+
+**Try it** — sample prompts that exercise the loop:
+
+| Prompt | What you should see |
+|---|---|
+| `https://example.com 가져와서 어떤 페이지인지 한 줄로 알려줘` | One `fetch example.com` inline block, then a one-line summary |
+| `https://api.github.com/repos/anthropics/anthropic-sdk-python 을 가져와서 stars 수 알려줘` | One inline `fetch api.github.com/…` block, then a formatted summary (the default `User-Agent` keeps GitHub from 403-ing) |
+| `https://en.wikipedia.org/wiki/Anthropic 첫 200자만 가져와서 요약해줘` | Model recognizes the 200-char prefix is HTML head and pivots to the Wikipedia summary REST endpoint (two further inline blocks) |
+| `http://127.0.0.1 가져와줘` | `SSRF blocked: 127.0.0.1 resolves to private address…` — the model surfaces the guard's refusal |
+
+**Adapting this to your own tool** — implement `IAssistTool` (`Name`, `Description`,
+`ParameterSchema` as a JSON Schema object, `ExecuteAsync` returning a JSON string),
+add an instance to the `_tools` list, and the loop above runs unchanged.
 
 ## Adding a System Prompt
 
@@ -117,10 +183,15 @@ First launch
 
 User types a message
     → ChatPanel.UserMessageSubmitted fires
-    → BeginAnthropicTurn() creates the assistant message bubble
-    → GetConversationAsAnthropicMessages() converts history to SDK format
-    → client.Messages.CreateStreaming() calls the Anthropic API
-    → handle.StreamAnthropicAsync() maps SDK events → ChatPanel rendering
+    → BeginAnthropicTurn() creates the assistant message bubble (one per user turn)
+    → Loop: until the model returns a turn with no tool calls
+        → BuildAnthropicParams(model, maxTokens, tools) → SDK MessageCreateParams
+        → client.Messages.CreateStreaming() calls the Anthropic API
+        → handle.StreamAnthropicAsync() maps SDK events → ChatPanel rendering
+        → if StreamResult.HasToolCalls:
+            → ExecuteToolAsync() runs each IAssistTool
+            → ChatPanel.AppendToolRoundAsync() records tool_use / tool_result
+              in the conversation and draws inline tool blocks
     → handle.DisposeAsync() finalizes the message
 ```
 
