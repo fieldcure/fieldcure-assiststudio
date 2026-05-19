@@ -362,6 +362,8 @@ public sealed partial class ConnectPage : Page
         var fsConn = new McpServerConnection(fsPlaceholder);
         if (dnxNotReadyMessage is not null)
             fsConn.SetPlaceholderError(dnxNotReadyMessage);
+        else if (activeTabCount > 0)
+            fsConn.SetPlaceholderConnected();
         FilesystemCard.Connection = fsConn;
 
         // RAG, Outbox, Runner, Essentials are all *shared* (single instance per app). When

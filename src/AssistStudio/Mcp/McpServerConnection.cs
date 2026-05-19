@@ -156,6 +156,21 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
         State = McpConnectionState.Error;
     }
 
+    /// <summary>
+    /// Forces this connection into <see cref="McpConnectionState.Connected"/>. Used by
+    /// <see cref="ConnectPage"/> for the Filesystem placeholder card when at least one
+    /// per-tab instance is actually connected — the card has no single connection to
+    /// bind to, so we paint it green to mirror the underlying instance health. Tools
+    /// remain empty; <see cref="McpServerCard"/> falls back to the placeholder
+    /// <see cref="McpServerConfig.Description"/> ("N active instance(s)") for the
+    /// detail row.
+    /// </summary>
+    internal void SetPlaceholderConnected()
+    {
+        ErrorMessage = null;
+        State = McpConnectionState.Connected;
+    }
+
     #endregion
 
     #region Methods

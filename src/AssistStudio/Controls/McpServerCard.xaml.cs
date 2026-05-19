@@ -168,7 +168,7 @@ public sealed partial class McpServerCard : UserControl
         string detailText;
         if (config.IsBuiltIn)
         {
-            if (connection.IsConnected)
+            if (connection.IsConnected && connection.Tools.Count > 0)
             {
                 detailText = $"{connection.Tools.Count} {toolsLabel}";
             }
@@ -182,6 +182,12 @@ public sealed partial class McpServerCard : UserControl
             }
             else
             {
+                // Covers two cases: (a) genuinely disconnected (gray dot, default
+                // placeholder description), and (b) Filesystem placeholder forced
+                // Connected via SetPlaceholderConnected — the card has no Tools of its
+                // own because each per-tab instance owns them, so we show the
+                // active-instance description ("N active instance(s)") instead of
+                // a misleading "0 tools".
                 detailText = config.Description ?? "";
             }
         }
