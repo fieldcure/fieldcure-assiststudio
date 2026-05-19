@@ -46,7 +46,7 @@
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.1839" />
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.0.1" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.0.*" />
     <!-- Pin Microsoft.Windows.SDK.BuildTools.MSIX to the version that WindowsAppSDK
          2.0 expects as its paired MSIX task assembly. The pin originally existed to
          skip the broken 1.7.20250829.1 transitive that WindowsAppSDK 1.8 pulled in
