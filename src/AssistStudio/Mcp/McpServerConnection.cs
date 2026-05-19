@@ -515,10 +515,42 @@ public partial class McpServerConnection : INotifyPropertyChanged, IAsyncDisposa
     /// server startup errors (missing API keys, malformed config, native dependency load
     /// failures) would vanish silently because the SDK only reads <c>stdout</c>.
     /// </summary>
+    /// <remarks>
+    /// MCP stdio servers use <c>stderr</c> as a diagnostic channel — <c>stdout</c> is
+    /// reserved for JSON-RPC. ASP.NET Core generic-host servers route every <c>ILogger</c>
+    /// line (including <c>info:</c>/<c>dbug:</c>) through it, so blindly logging every
+    /// stderr line as <c>Warning</c> drowns real signals. We map by prefix instead:
+    /// <c>fail:</c>/<c>crit:</c>/<c>[Error]</c>/<c>[Fail]</c>/<c>[Critical]</c> →
+    /// <see cref="LoggingService.LogError"/>; <c>warn:</c>/<c>[Warn]</c> →
+    /// <see cref="LoggingService.LogWarning"/>; everything else →
+    /// <see cref="LoggingService.LogInfo"/>. Continuation lines (indented bodies of
+    /// multi-line log entries) lose their level — acceptable since the header line
+    /// carries the severity.
+    /// </remarks>
     private void OnDnxStderrReceived(object? sender, DataReceivedEventArgs e)
     {
         if (e.Data is null) return;
-        LoggingService.LogWarning($"[MCP:{Config.Name}] stderr: {e.Data}");
+        var line = e.Data;
+        var message = $"[MCP:{Config.Name}] stderr: {line}";
+
+        if (line.StartsWith("fail:", StringComparison.Ordinal)
+            || line.StartsWith("crit:", StringComparison.Ordinal)
+            || line.StartsWith("[Error", StringComparison.OrdinalIgnoreCase)
+            || line.StartsWith("[Fail", StringComparison.OrdinalIgnoreCase)
+            || line.StartsWith("[Critical", StringComparison.OrdinalIgnoreCase)
+            || line.Contains("Unhandled exception", StringComparison.OrdinalIgnoreCase))
+        {
+            LoggingService.LogError(message);
+        }
+        else if (line.StartsWith("warn:", StringComparison.Ordinal)
+                 || line.StartsWith("[Warn", StringComparison.OrdinalIgnoreCase))
+        {
+            LoggingService.LogWarning(message);
+        }
+        else
+        {
+            LoggingService.LogInfo(message);
+        }
     }
 
     /// <summary>

@@ -338,11 +338,10 @@ public static class BuiltInServerHelper
 
     /// <summary>
     /// Parses an MCP server <c>Arguments</c> list whose <c>Command</c> is the <c>"dnx"</c>
-    /// sentinel into a structured spec. Recognized dnx flags (<c>--yes</c>, <c>--prerelease</c>)
-    /// are mapped to their <see cref="DnxInvocationSpec"/> equivalents; unrecognized flags
-    /// (e.g. <c>--source</c>, <c>--configfile</c>) are passed through to the tool with a
-    /// warning logged — the v1 host does not honor dnx CLI flags beyond <c>--yes</c>/
-    /// <c>--prerelease</c>.
+    /// sentinel into a structured spec. Strips the recognized dnx flags
+    /// (<c>--yes</c>/<c>-y</c>, <c>--prerelease</c>) and forwards everything else verbatim
+    /// to the tool — tool arguments that happen to start with <c>--</c>
+    /// (e.g. RAG's <c>--base-path</c>) are common and should not generate warnings.
     /// </summary>
     internal static DnxInvocationSpec ParseDnxInvocation(IReadOnlyList<string>? arguments, string contextLabel)
     {
@@ -368,19 +367,16 @@ public static class BuiltInServerHelper
                 continue;
             }
 
-            if (token.StartsWith("--", StringComparison.Ordinal))
-            {
-                LoggingService.LogWarning(
-                    $"[{contextLabel}] dnx flag '{token}' is not honored by the embedded host; forwarding to tool args.");
-            }
-
             toolArgs.Add(token);
         }
 
         if (allowPrerelease)
         {
+            // --prerelease arrived from user-config, but IDnxHost.StartAsync does not yet
+            // expose AllowPrerelease so the flag is observed-but-ignored. Surfacing this
+            // helps users debug why a prerelease version isn't being picked.
             LoggingService.LogWarning(
-                $"[{contextLabel}] dnx '--prerelease' flag is parsed but not yet wired through IDnxHost in v1.0; ignoring.");
+                $"[{contextLabel}] dnx '--prerelease' is parsed but not yet wired through IDnxHost; ignoring.");
         }
 
         return new DnxInvocationSpec(packageId, range, allowPrerelease, toolArgs);

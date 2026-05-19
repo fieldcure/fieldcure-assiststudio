@@ -8,24 +8,45 @@ using System.Diagnostics;
 namespace AssistStudio.Mcp;
 
 /// <summary>
-/// Default <see cref="IDnxHost"/>. Owns two <see cref="DnxLiteRunner"/> instances that share the
-/// detected <see cref="DotnetEnvironment"/> but differ in NuGet source policy:
-/// <list type="bullet">
-/// <item><description><c>_trustedRunner</c> — <see cref="NuGetPackageResolverOptions.RestrictToSource"/>
-/// pinned to <see cref="ToolHostOptions.TrustedSource"/>; ignores user feeds entirely.</description></item>
-/// <item><description><c>_userConfigRunner</c> — honors the user's <c>NuGet.Config</c> as-is, for
-/// packages outside <see cref="ToolHostOptions.TrustedNamespaces"/>.</description></item>
-/// </list>
-/// Both share the 24h (default) <c>RefreshTtl</c> from <see cref="ToolHostOptions.VersionCheckTtlHours"/>.
+/// Default <see cref="IDnxHost"/>. Owns a single <see cref="DnxLiteRunner"/> backed by
+/// the user's <c>NuGet.Config</c> plus a <see cref="NuGetOrgV3Index"/> fallback added
+/// via <see cref="NuGetPackageResolverOptions.AdditionalSources"/>.
 /// </summary>
+/// <remarks>
+/// <para>
+/// The fallback exists because fresh Windows installs (MS Store path is the motivating
+/// case) ship without a user-level <c>NuGet.Config</c>: <see cref="Settings.LoadDefaultSettings"/>
+/// then returns an empty source list and resolution would throw
+/// <see cref="InvalidOperationException"/> on the very first launch. Adding
+/// <c>nuget.org</c> as an extra source makes the resolver fall through to the public feed
+/// whenever the user's configured sources are absent or do not satisfy the request.
+/// </para>
+/// <para>
+/// Earlier drafts of this class kept two runners — a "trusted" one pinned to nuget.org
+/// via <see cref="NuGetPackageResolverOptions.RestrictToSource"/> for first-party packages,
+/// and a "user-config" one for everything else — to defend against dependency-confusion
+/// attacks on corporate feeds. That design has been removed: it forced every new first-party
+/// package id into a TrustedNamespaces allow-list (the omission of <c>FieldCure.AssistStudio.</c>
+/// silently broke the Runner on fresh PCs, exactly the scenario this whole migration
+/// targeted), and the threat it defended against is better handled by NuGet's own
+/// Package Source Mapping than by a runtime branch in this host. Anyone who wants the
+/// stronger guarantee can configure source mapping in their <c>NuGet.Config</c>.
+/// </para>
+/// </remarks>
 public sealed class DnxHost : IDnxHost
 {
+    #region Constants
+
+    /// <summary>Public nuget.org v3 service index, added as an <c>AdditionalSources</c> fallback.</summary>
+    private const string NuGetOrgV3Index = "https://api.nuget.org/v3/index.json";
+
+    #endregion
+
     #region Fields
 
     private readonly ToolHostOptions _options;
     private DotnetEnvironment? _environment;
-    private DnxLiteRunner? _trustedRunner;
-    private DnxLiteRunner? _userConfigRunner;
+    private DnxLiteRunner? _runner;
     private readonly SemaphoreSlim _initGate = new(1, 1);
     private bool _initialized;
 
@@ -61,29 +82,16 @@ public sealed class DnxHost : IDnxHost
                 $"runtimes=[{string.Join(", ", _environment.InstalledRuntimes)}]; " +
                 $"RID={_environment.RuntimeIdentifier}");
 
-            var refreshTtl = TimeSpan.FromHours(_options.VersionCheckTtlHours);
-            var indexStore = new ToolCacheIndexStore();
-
-            var trustedOptions = new NuGetPackageResolverOptions
+            var resolverOptions = new NuGetPackageResolverOptions
             {
-                RestrictToSource = _options.TrustedSource,
-                RefreshTtl = refreshTtl,
-                IgnoreFailedSources = false,
-            };
-            _trustedRunner = new DnxLiteRunner(
-                _environment,
-                new NuGetPackageResolver(trustedOptions, indexStore),
-                new NuGetToolExtractor(_environment),
-                new ToolLauncher());
-
-            var userOptions = new NuGetPackageResolverOptions
-            {
-                RefreshTtl = refreshTtl,
+                AdditionalSources = [NuGetOrgV3Index],
+                RefreshTtl = TimeSpan.FromHours(_options.VersionCheckTtlHours),
                 IgnoreFailedSources = true,
             };
-            _userConfigRunner = new DnxLiteRunner(
+
+            _runner = new DnxLiteRunner(
                 _environment,
-                new NuGetPackageResolver(userOptions, indexStore),
+                new NuGetPackageResolver(resolverOptions, new ToolCacheIndexStore()),
                 new NuGetToolExtractor(_environment),
                 new ToolLauncher());
 
@@ -106,13 +114,11 @@ public sealed class DnxHost : IDnxHost
         ArgumentException.ThrowIfNullOrWhiteSpace(packageId);
         ArgumentNullException.ThrowIfNull(args);
 
-        if (!_initialized || _trustedRunner is null || _userConfigRunner is null)
+        if (!_initialized || _runner is null)
         {
             throw new InvalidOperationException(
                 $"{nameof(DnxHost)}.{nameof(InitializeAsync)} must complete before {nameof(StartAsync)} is called.");
         }
-
-        var runner = _options.IsTrusted(packageId) ? _trustedRunner : _userConfigRunner;
 
         var request = new ToolInvocationRequest
         {
@@ -123,7 +129,7 @@ public sealed class DnxHost : IDnxHost
             AdditionalEnvironment = environmentVariables,
         };
 
-        return runner.StartAsync(request, ct);
+        return _runner.StartAsync(request, ct);
     }
 
     #endregion

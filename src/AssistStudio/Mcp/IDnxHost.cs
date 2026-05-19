@@ -8,10 +8,9 @@ namespace AssistStudio.Mcp;
 /// launches .NET tool packages without requiring the .NET 10 SDK.
 /// </summary>
 /// <remarks>
-/// Implementations apply trusted-namespace source restriction automatically based on
-/// <paramref name="packageId"/> prefix (see <see cref="ToolHostOptions.TrustedNamespaces"/>):
-/// packages in trusted namespaces resolve only from <see cref="ToolHostOptions.TrustedSource"/>;
-/// other packages honor the user's <c>NuGet.Config</c>.
+/// Implementations honor the user's <c>NuGet.Config</c> as the primary source list and add
+/// <c>nuget.org</c> as an <c>AdditionalSources</c> fallback so first launches on fresh PCs
+/// — where no user-level <c>NuGet.Config</c> exists yet — can still resolve packages.
 /// </remarks>
 public interface IDnxHost
 {
