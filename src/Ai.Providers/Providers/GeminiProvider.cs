@@ -58,7 +58,7 @@ public partial class GeminiProvider : IAiProvider, IDisposable
     /// <inheritdoc/>
     public AudioCapability AudioCapability =>
         // Image-generation variants reject audio input modality entirely.
-        ModelId.Contains("-image", StringComparison.OrdinalIgnoreCase)
+        IsImageGenerationModel(ModelId)
             ? AudioCapability.NotSupported
             : AudioCapability.NativeAudio;
 
@@ -67,10 +67,24 @@ public partial class GeminiProvider : IAiProvider, IDisposable
         // Image-generation variants reject tools[] structurally (HTTP 400).
         // Flash-Lite accepts tools but tends to hallucinate phantom tool names
         // (e.g. fabricated run_code calls); disabled here pending evaluation.
-        (ModelId.Contains("-image", StringComparison.OrdinalIgnoreCase)
+        (IsImageGenerationModel(ModelId)
          || ModelId.Contains("flash-lite", StringComparison.OrdinalIgnoreCase))
             ? ToolCallingSupport.NotSupported
             : ToolCallingSupport.Supported;
+
+    #endregion
+
+    #region Model Variant Detection
+
+    /// <summary>
+    /// Returns whether the given Gemini model is an image-generation variant
+    /// (e.g., <c>gemini-2.5-flash-image-preview</c>, <c>gemini-3-pro-image-preview</c>).
+    /// Image variants need <c>responseModalities</c> to include <c>IMAGE</c> and reject
+    /// <c>thinkingConfig</c>/<c>tools</c>/audio input modality.
+    /// </summary>
+    private static bool IsImageGenerationModel(string? modelId)
+        => !string.IsNullOrEmpty(modelId)
+           && modelId.Contains("-image", StringComparison.OrdinalIgnoreCase);
 
     #endregion
 
@@ -121,7 +135,7 @@ public partial class GeminiProvider : IAiProvider, IDisposable
 
         // Image-generation variants (e.g., gemini-2.5-flash-image) reject thinkingConfig
         // entirely; even thinkingBudget=0 returns "Thinking is not enabled for this model".
-        if (modelId.Contains("-image", StringComparison.OrdinalIgnoreCase))
+        if (IsImageGenerationModel(modelId))
             return ThinkingSupport.NotSupported;
 
         // gemini-3*/3.1* with "pro" → thinking is always on and cannot be disabled
@@ -543,6 +557,13 @@ public partial class GeminiProvider : IAiProvider, IDisposable
             {
                 ["thinkingBudget"] = 0
             };
+        }
+
+        // Image-generation variants require responseModalities to include IMAGE; without it
+        // the API defaults to text-only and inlineData parts are never produced.
+        if (IsImageGenerationModel(ModelId))
+        {
+            genConfig["responseModalities"] = new JsonArray { "TEXT", "IMAGE" };
         }
 
         if (systemText is not null)
