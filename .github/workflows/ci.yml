@@ -27,19 +27,7 @@ jobs:
         with:
           dotnet-version: |
             8.0.x
-            9.0.x
-
-      # Local dev pins SDK 10 preview via global.json, but the hosted runners
-      # ship SDK 10.0.201 as the highest installed and lack the matching VS 18
-      # AppxPackage tooling, so WindowsAppSDK's MrtCore.PriGen fails. Rewrite
-      # global.json to pin SDK 9 for CI only. Same fix applies to both x64 and
-      # ARM64 runners.
-      - name: Pin SDK to 9.0 for CI
-        shell: pwsh
-        run: |
-          '{ "sdk": { "version": "9.0.100", "rollForward": "latestFeature" } }' |
-            Set-Content -Path global.json -Encoding utf8
-          dotnet --version
+            10.0.x
 
       - name: Locate Visual Studio AppxPackage tools
         shell: pwsh
